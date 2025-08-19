@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import { AreaTecnica } from '@/types';
 import { Ronda } from '@/types';
 import { Contrato } from '@/types';
@@ -89,7 +89,7 @@ export const PrintRonda = forwardRef<HTMLDivElement, PrintRondaProps>(
             Áreas Técnicas Verificadas
           </h2>
           <div className="grid grid-cols-2 gap-4 print-grid">
-            {areasTecnicas.map((area, index) => (
+            {areasTecnicas.map((area) => (
               <div key={area.id} className="print-card-container">
                 <AreaTecnicaCard
                   areaTecnica={area}
@@ -109,7 +109,7 @@ export const PrintRonda = forwardRef<HTMLDivElement, PrintRondaProps>(
               Itens Abertura de Chamado
             </h2>
             <div className="grid grid-cols-2 gap-4 print-grid">
-              {ronda.fotosRonda.map((foto, index) => (
+              {ronda.fotosRonda.map((foto) => (
                 <div key={foto.id} className="print-card-container">
                   <FotoRondaCard
                     fotoRonda={foto}
@@ -130,7 +130,7 @@ export const PrintRonda = forwardRef<HTMLDivElement, PrintRondaProps>(
               Outros Itens Corrigidos
             </h2>
             <div className="grid grid-cols-2 gap-4 print-grid">
-              {ronda.outrosItensCorrigidos.map((item, index) => (
+              {ronda.outrosItensCorrigidos.map((item) => (
                 <div key={item.id} className="print-card-container">
                   <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                     <div className="flex items-start justify-between mb-3">

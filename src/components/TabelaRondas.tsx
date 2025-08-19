@@ -86,7 +86,7 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
             <button
               onClick={() => setActiveTab('medicoes')}
               className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                activeTab === 'medicoes'
+                activeTab === 'rondas'
                   ? 'bg-blue-600 text-white border-b-2 border-blue-600'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
               }`}
