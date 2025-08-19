@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Impressão - App Ronda</title>
+    <style>
+        /* Estilos base */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .print-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .print-section {
+            margin-bottom: 2rem;
+        }
+        
+        .print-section-title {
+            color: #1e40af;
+            border-bottom: 2px solid #1e40af;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .print-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+        
+        .print-card-container {
+            height: 280px;
+            min-height: 280px;
+            max-height: 280px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .print-card {
+            height: 100%;
+            min-height: 100%;
+            max-height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        
+        .card-title {
+            font-weight: 600;
+            color: #111827;
+            margin: 0;
+        }
+        
+        .badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .badge-success {
+            background-color: #10b981;
+            color: white;
+        }
+        
+        .badge-warning {
+            background-color: #f59e0b;
+            color: white;
+        }
+        
+        .badge-attention {
+            background-color: #f97316;
+            color: white;
+        }
+        
+        .card-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .card-info {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 1rem;
+        }
+        
+        .card-image {
+            height: 120px;
+            min-height: 120px;
+            max-height: 120px;
+            object-fit: cover;
+            width: 100%;
+            border-radius: 4px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .test-button {
+            background: #1e40af;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        
+        .test-button:hover {
+            background: #1e3a8a;
+        }
+        
+                 /* Estilos para impressão */
+         @media print {
+             @page {
+                 margin: 1cm;
+                 size: A4;
+             }
+             
+             body {
+                 background: white;
+                 padding: 0;
+             }
+             
+             .print-container {
+                 box-shadow: none;
+                 padding: 0;
+                 margin: 0;
+                 page-break-inside: auto;
+             }
+             
+             .print-section {
+                 page-break-inside: auto;
+                 break-inside: auto;
+                 margin-bottom: 2rem;
+             }
+             
+             .print-section-title {
+                 page-break-after: avoid;
+                 break-after: avoid;
+                 margin-bottom: 1.5rem;
+             }
+             
+             .print-grid {
+                 display: grid !important;
+                 grid-template-columns: repeat(2, 1fr) !important;
+                 gap: 1.5rem !important;
+                 page-break-inside: auto !important;
+                 break-inside: auto !important;
+             }
+             
+             /* Primeira página: 2 cards grandes */
+             .print-grid:first-of-type {
+                 grid-template-columns: repeat(2, 1fr) !important;
+                 gap: 2rem !important;
+             }
+             
+             /* Primeira página: cards maiores */
+             .print-grid:first-of-type .print-card-container {
+                 height: 400px !important;
+                 min-height: 400px !important;
+                 max-height: 400px !important;
+             }
+             
+             /* Primeira página: imagens maiores */
+             .print-grid:first-of-type .print-card img {
+                 height: 180px !important;
+                 min-height: 180px !important;
+                 max-height: 180px !important;
+             }
+             
+             /* Páginas seguintes: 4 cards menores */
+             .print-grid:not(:first-of-type) {
+                 grid-template-columns: repeat(2, 1fr) !important;
+                 gap: 1rem !important;
+             }
+             
+             /* Páginas seguintes: cards menores */
+             .print-grid:not(:first-of-type) .print-card-container {
+                 height: 200px !important;
+                 min-height: 200px !important;
+                 max-height: 200px !important;
+             }
+             
+             /* Páginas seguintes: imagens menores */
+             .print-grid:not(:first-of-type) .print-card img {
+                 height: 80px !important;
+                 min-height: 80px !important;
+                 max-height: 80px !important;
+             }
+             
+             .print-card-container {
+                 break-inside: avoid !important;
+                 page-break-inside: avoid !important;
+                 height: 280px !important;
+                 min-height: 280px !important;
+                 max-height: 280px !important;
+                 overflow: hidden !important;
+                 display: flex !important;
+                 flex-direction: column !important;
+             }
+             
+             .print-card {
+                 height: 100% !important;
+                 min-height: 100% !important;
+                 max-height: 100% !important;
+                 display: flex !important;
+                 flex-direction: column !important;
+                 justify-content: space-between !important;
+             }
+             
+             .print-card > *:last-child {
+                 margin-top: auto !important;
+             }
+             
+             .print-card .space-y-3 > * + * {
+                 margin-top: 0.75rem !important;
+             }
+             
+             .print-card img {
+                 height: 120px !important;
+                 min-height: 120px !important;
+                 max-height: 120px !important;
+                 object-fit: cover !important;
+                 width: 100% !important;
+             }
+             
+             .test-button {
+                 display: none !important;
+             }
+             
+             * {
+                 orphans: 3 !important;
+                 widows: 3 !important;
+             }
+         }
+    </style>
+</head>
+<body>
+    <div class="print-container">
+        <h1 style="color: #1e40af; text-align: center; margin-bottom: 2rem;">
+            🚀 Teste de Impressão - App Ronda
+        </h1>
+        
+        <button class="test-button" onclick="window.print()">
+            🖨️ Testar Impressão
+        </button>
+        
+        <div class="print-section">
+            <h2 class="print-section-title">Áreas Técnicas Verificadas</h2>
+            <div class="print-grid">
+                <div class="print-card-container">
+                    <div class="print-card">
+                        <div class="card-header">
+                            <h3 class="card-title">🔧 Gerador</h3>
+                            <span class="badge badge-success">Ativo</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="card-info">
+                                <div><strong>Contrato:</strong> Edifício Central</div>
+                                <div><strong>Observações:</strong> Funcionando perfeitamente</div>
+                            </div>
+                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjZGRkIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2VtIGRlIFRlc3RlPC90ZXh0Pgo8L3N2Zz4K" alt="Teste" class="card-image">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="print-card-container">
+                    <div class="print-card">
+                        <div class="card-header">
+                            <h3 class="card-title">💧 Bombas de Água</h3>
+                            <span class="badge badge-warning">Em Manutenção</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="card-info">
+                                <div><strong>Contrato:</strong> Residencial Solar</div>
+                                <div><strong>Observações:</strong> Necessita revisão</div>
+                            </div>
+                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjZGRkIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2VtIGRlIFRlc3RlPC90ZXh0Pgo8L3N2Zz4K" alt="Teste" class="card-image">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="print-card-container">
+                    <div class="print-card">
+                        <div class="card-header">
+                            <h3 class="card-title">🔥 Central de Incêndio</h3>
+                            <span class="badge badge-attention">Atenção</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="card-info">
+                                <div><strong>Contrato:</strong> Shopping Center</div>
+                                <div><strong>Observações:</strong> Verificar sensores</div>
+                            </div>
+                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjZGRkIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2VtIGRlIFRlc3RlPC90ZXh0Pgo8L3N2Zz4K" alt="Teste" class="card-image">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="print-card-container">
+                    <div class="print-card">
+                        <div class="card-header">
+                            <h3 class="card-title">🌡️ Ar Condicionado</h3>
+                            <span class="badge badge-success">Ativo</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="card-info">
+                                <div><strong>Contrato:</strong> Escritório Central</div>
+                                <div><strong>Observações:</strong> Temperatura ideal</div>
+                            </div>
+                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjZGRkIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2VtIGRlIFRlc3RlPC90ZXh0Pgo8L3N2Zz4K" alt="Teste" class="card-image">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+                 <div class="print-section">
+             <h2 class="print-section-title">Itens Abertura de Chamado</h2>
+             <div class="print-grid">
+                 <div class="print-card-container">
+                     <div class="print-card">
+                         <div class="card-header">
+                             <h3 class="card-title">⚠️ Item de Chamado</h3>
+                             <span class="badge badge-warning">Média</span>
+                         </div>
+                         <div class="card-content">
+                             <div class="card-info">
+                                 <div><strong>Local:</strong> Subsolo</div>
+                                 <div><strong>Especialidade:</strong> Elétrica</div>
+                                 <div><strong>Data:</strong> 15/12/2024</div>
+                                 <div><strong>Hora:</strong> 14:30</div>
+                             </div>
+                             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjZGRkIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2VtIGRlIFRlc3RlPC90ZXh0Pgo8L3N2Zz4K" alt="Teste" class="card-image">
+                         </div>
+                     </div>
+                 </div>
+                 
+                 <div class="print-card-container">
+                     <div class="print-card">
+                         <div class="card-header">
+                             <h3 class="card-title">⚠️ Item de Chamado</h3>
+                             <span class="badge badge-attention">Alta</span>
+                         </div>
+                         <div class="card-content">
+                             <div class="card-info">
+                                 <div><strong>Local:</strong> Térreo</div>
+                                 <div><strong>Especialidade:</strong> Hidráulica</div>
+                                 <div><strong>Data:</strong> 15/12/2024</div>
+                                 <div><strong>Hora:</strong> 15:45</div>
+                             </div>
+                             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjZGRkIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2VtIGRlIFRlc3RlPC90ZXh0Pgo8L3N2Zz4K" alt="Teste" class="card-image">
+                         </div>
+                     </div>
+                 </div>
+                 
+                 <div class="print-card-container">
+                     <div class="print-card">
+                         <div class="card-header">
+                             <h3 class="card-title">⚠️ Item de Chamado</h3>
+                             <span class="badge badge-success">Baixa</span>
+                         </div>
+                         <div class="card-content">
+                             <div class="card-info">
+                                 <div><strong>Local:</strong> 1º Andar</div>
+                                 <div><strong>Especialidade:</strong> Ar Condicionado</div>
+                                 <div><strong>Data:</strong> 15/12/2024</div>
+                                 <div><strong>Hora:</strong> 16:00</div>
+                             </div>
+                             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjZGRkIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2VtIGRlIFRlc3RlPC90ZXh0Pgo8L3N2Zz4K" alt="Teste" class="card-image">
+                         </div>
+                     </div>
+                 </div>
+                 
+                 <div class="print-card-container">
+                     <div class="print-card">
+                         <div class="card-header">
+                             <h3 class="card-title">⚠️ Item de Chamado</h3>
+                             <span class="badge badge-warning">Média</span>
+                         </div>
+                         <div class="card-content">
+                             <div class="card-info">
+                                 <div><strong>Local:</strong> 2º Andar</div>
+                                 <div><strong>Especialidade:</strong> Segurança</div>
+                                 <div><strong>Data:</strong> 15/12/2024</div>
+                                 <div><strong>Hora:</strong> 16:15</div>
+                             </div>
+                             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyMCIgdmlld0JveD0iMCAwIDIwMCAxMjAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTIwIiBmaWxsPSIjZGRkIi8+Cjx0ZXh0IHg9IjEwMCIgeT0iNjAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2VtIGRlIFRlc3RlPC90ZXh0Pgo8L3N2Zz4K" alt="Teste" class="card-image">
+                         </div>
+                     </div>
+                 </div>
+             </div>
+         </div>
+        
+        <div style="text-align: center; margin-top: 2rem; color: #6b7280; font-size: 0.875rem;">
+            <p>📄 Este é um teste de impressão para verificar a quebra de página e tamanho dos cards</p>
+            <p>🖨️ Use Ctrl+P para imprimir ou clique no botão acima</p>
+        </div>
+    </div>
+</body>
+</html>

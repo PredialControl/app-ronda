@@ -1,0 +1,330 @@
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Ronda, Contrato, AreaTecnica, OutroItemCorrigido } from '@/types';
+import { AREAS_TECNICAS_PREDEFINIDAS } from '@/data/areasTecnicas';
+import { X, Calendar, Clock, User, FileText, Plus, Wrench } from 'lucide-react';
+
+interface NovaRondaModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (ronda: Ronda) => void;
+  contratoSelecionado?: Contrato | null;
+}
+
+export function NovaRondaModal({
+  isOpen,
+  onClose,
+  onSave,
+  contratoSelecionado
+}: NovaRondaModalProps) {
+  const [formData, setFormData] = useState({
+    nome: '',
+    contrato: '',
+    data: new Date().toISOString().split('T')[0],
+    hora: new Date().toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }),
+    responsavel: '',
+    observacoesGerais: ''
+  });
+
+  const [outrosItensCorrigidos, setOutrosItensCorrigidos] = useState<OutroItemCorrigido[]>([]);
+
+  useEffect(() => {
+    if (contratoSelecionado) {
+      setFormData(prev => ({
+        ...prev,
+        contrato: contratoSelecionado.nome
+      }));
+    }
+  }, [contratoSelecionado]);
+
+  const handleInputChange = (field: keyof typeof formData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddOutroItem = () => {
+    const novoItem: OutroItemCorrigido = {
+      id: Date.now().toString(),
+      nome: '',
+      descricao: '',
+      local: '',
+      tipo: 'CORREÇÃO',
+      prioridade: 'MÉDIA',
+      status: 'PENDENTE',
+      contrato: formData.contrato,
+      endereco: contratoSelecionado?.endereco || '',
+      data: formData.data,
+      hora: formData.hora,
+      foto: null,
+      observacoes: '',
+      responsavel: formData.responsavel
+    };
+    setOutrosItensCorrigidos(prev => [...prev, novoItem]);
+  };
+
+  const handleUpdateOutroItem = (id: string, updatedItem: OutroItemCorrigido) => {
+    setOutrosItensCorrigidos(prev => 
+      prev.map(item => item.id === id ? updatedItem : item)
+    );
+  };
+
+  const handleDeleteOutroItem = (id: string) => {
+    setOutrosItensCorrigidos(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.nome || !formData.contrato) {
+      alert('Por favor, preencha o nome da ronda e o contrato');
+      return;
+    }
+
+    // Criar áreas técnicas pré-definidas automaticamente
+    const areasTecnicasPredefinidas: AreaTecnica[] = AREAS_TECNICAS_PREDEFINIDAS.map((nome, index) => ({
+      id: `area-${Date.now()}-${index}`,
+      nome: nome,
+      status: 'ATIVO',
+      contrato: formData.contrato,
+      endereco: contratoSelecionado?.endereco || '',
+      data: formData.data,
+      hora: formData.hora,
+      foto: null,
+      observacoes: ''
+    }));
+
+    const novaRonda: Ronda = {
+      id: Date.now().toString(),
+      nome: formData.nome,
+      contrato: formData.contrato,
+      data: formData.data,
+      hora: formData.hora,
+      responsavel: formData.responsavel,
+      observacoesGerais: formData.observacoesGerais,
+      areasTecnicas: areasTecnicasPredefinidas,
+      outrosItensCorrigidos: outrosItensCorrigidos,
+      fotosRonda: []
+    };
+
+    onSave(novaRonda);
+    onClose();
+
+    // Reset form
+    setFormData({
+      nome: '',
+      contrato: contratoSelecionado?.nome || '',
+      data: new Date().toISOString().split('T')[0],
+      hora: new Date().toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      responsavel: '',
+      observacoesGerais: ''
+    });
+    setOutrosItensCorrigidos([]);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Nova Ronda
+          </h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Nome da Ronda *</label>
+            <Input
+              value={formData.nome}
+              onChange={(e) => handleInputChange('nome', e.target.value)}
+              placeholder="Ex: Ronda Matutina - Centro"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Contrato *</label>
+            <Input
+              value={formData.contrato}
+              onChange={(e) => handleInputChange('contrato', e.target.value)}
+              placeholder="Ex: CT001/2024 - Manutenção Preventiva"
+              required
+              readOnly={!!contratoSelecionado}
+              className={contratoSelecionado ? 'bg-gray-100' : ''}
+            />
+            {contratoSelecionado && (
+              <p className="text-xs text-gray-500 mt-1">
+                Contrato selecionado automaticamente
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                Data *
+              </label>
+              <Input
+                type="date"
+                value={formData.data}
+                onChange={(e) => handleInputChange('data', e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                Hora *
+              </label>
+              <Input
+                type="time"
+                value={formData.hora}
+                onChange={(e) => handleInputChange('hora', e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+              <User className="w-4 h-4" />
+              Responsável
+            </label>
+            <Input
+              value={formData.responsavel}
+              onChange={(e) => handleInputChange('responsavel', e.target.value)}
+              placeholder="Nome do responsável pela ronda"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Observações Gerais</label>
+            <Input
+              value={formData.observacoesGerais}
+              onChange={(e) => handleInputChange('observacoesGerais', e.target.value)}
+              placeholder="Observações sobre a ronda"
+            />
+          </div>
+
+          {/* Info sobre áreas técnicas pré-definidas */}
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <p className="text-sm text-blue-800 font-medium mb-2">
+              ✅ Áreas Técnicas serão criadas automaticamente:
+            </p>
+            <div className="text-xs text-blue-700 space-y-1">
+              {AREAS_TECNICAS_PREDEFINIDAS.map((area, index) => (
+                <div key={index}>• {area}</div>
+              ))}
+            </div>
+          </div>
+
+          {/* Seção de Outros Itens Corrigidos */}
+          <div className="border-t pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Wrench className="w-5 h-5" />
+                Outros Itens Corrigidos
+              </h3>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddOutroItem}
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Adicionar Item
+              </Button>
+            </div>
+
+            {outrosItensCorrigidos.length === 0 ? (
+              <div className="text-center py-6 text-gray-500">
+                <Wrench className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                <p>Nenhum item adicionado</p>
+                <p className="text-sm">Clique em "Adicionar Item" para incluir correções, melhorias ou manutenções</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {outrosItensCorrigidos.map((item, index) => (
+                  <div key={item.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Item {index + 1}: {item.nome || 'Sem nome'}
+                      </span>
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const updatedItem = { ...item };
+                            const nome = prompt('Nome do item:', item.nome);
+                            if (nome !== null) {
+                              updatedItem.nome = nome;
+                              const descricao = prompt('Descrição:', item.descricao);
+                              if (descricao !== null) {
+                                updatedItem.descricao = descricao;
+                                const local = prompt('Local:', item.local);
+                                if (local !== null) {
+                                  updatedItem.local = local;
+                                  handleUpdateOutroItem(item.id, updatedItem);
+                                }
+                              }
+                            }
+                          }}
+                          className="h-6 w-6 p-0 text-xs"
+                        >
+                          ✏️
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteOutroItem(item.id)}
+                          className="h-6 w-6 p-0 text-xs text-red-600 hover:text-red-700"
+                        >
+                          🗑️
+                        </Button>
+                      </div>
+                    </div>
+                    {item.nome && (
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div><strong>Descrição:</strong> {item.descricao || 'Não informada'}</div>
+                        <div><strong>Local:</strong> {item.local || 'Não informado'}</div>
+                        <div><strong>Tipo:</strong> {item.tipo}</div>
+                        <div><strong>Prioridade:</strong> {item.prioridade}</div>
+                        <div><strong>Status:</strong> {item.status}</div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+              Cancelar
+            </Button>
+            <Button type="submit" className="flex-1">
+              Criar Ronda
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+

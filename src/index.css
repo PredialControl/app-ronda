@@ -1,0 +1,341 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Estilos específicos para impressão */
+@media print {
+  /* Configurações gerais de impressão */
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 1rem !important;
+  }
+  
+  /* Controle perfeito de quebra de página */
+  .print-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    page-break-inside: auto !important;
+  }
+  
+  /* Evitar quebra de página em elementos importantes */
+  .print-container > div:first-child,
+  .print-container h2,
+  .print-container h3 {
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-after: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  /* Cards com tamanho flexível para observações longas */
+  .print-card-container {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    min-height: 280px !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  /* Tamanho padrão das imagens */
+  .print-card img {
+    height: 120px !important;
+    min-height: 120px !important;
+    max-height: 120px !important;
+    object-fit: cover !important;
+    width: 100% !important;
+  }
+  
+  /* Grid responsivo para impressão */
+  .print-container .grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem !important;
+    page-break-inside: auto !important;
+  }
+  
+  /* Forçar quebra de página antes de seções importantes */
+  .print-container h2 {
+    page-break-before: auto !important;
+    break-before: auto !important;
+  }
+  
+  /* Evitar quebra de página dentro de cards individuais */
+  .print-container .print-card {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  /* Esconder elementos desnecessários na impressão */
+  .print-container button,
+  .print-container .no-print {
+    display: none !important;
+  }
+  
+  /* Garantir que as fotos sejam visíveis na impressão */
+  .print-container img {
+    max-width: 100% !important;
+    height: auto !important;
+    object-fit: cover !important;
+  }
+  
+  /* Estilos para a logo na impressão */
+  .print-container .bg-blue-800 {
+    background-color: #1e40af !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  .print-container .text-white {
+    color: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  .print-container .text-blue-800 {
+    color: #1e40af !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Garantir que o SVG da logo seja visível na impressão */
+  .print-container svg {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Estilos para bordas pontilhadas na impressão */
+  .print-container .border-dashed {
+    border-style: dashed !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Garantir que as bordas cinzas sejam visíveis na impressão */
+  .print-container .border-gray-300 {
+    border-color: #d1d5db !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Otimizações para quebra de página perfeita */
+  .print-container * {
+    orphans: 3 !important;
+    widows: 3 !important;
+  }
+  
+  /* Seções de impressão com controle de quebra */
+  .print-container .print-section {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+    margin-bottom: 2rem !important;
+  }
+  
+  .print-container .print-section-title {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    margin-bottom: 1.5rem !important;
+  }
+  
+  /* Grid responsivo para impressão com quebra controlada */
+  .print-container .print-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1.5rem !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+  
+  /* Primeira página: 2 cards grandes */
+  .print-container .print-grid:first-of-type {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 2rem !important;
+  }
+  
+  /* Primeira página: cards maiores mas flexíveis */
+  .print-container .print-grid:first-of-type .print-card-container {
+    min-height: 400px !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  
+  /* Primeira página: imagens maiores */
+  .print-container .print-grid:first-of-type .print-card img {
+    height: 180px !important;
+    min-height: 180px !important;
+    max-height: 180px !important;
+  }
+  
+  /* Páginas seguintes: 4 cards menores */
+  .print-container .print-grid:not(:first-of-type) {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 1rem !important;
+  }
+  
+  /* Páginas seguintes: cards menores mas flexíveis */
+  .print-container .print-grid:not(:first-of-type) .print-card-container {
+    min-height: 200px !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  
+  /* Páginas seguintes: imagens menores */
+  .print-container .print-grid:not(:first-of-type) .print-card img {
+    height: 80px !important;
+    min-height: 80px !important;
+    max-height: 80px !important;
+  }
+  
+  /* Forçar quebra de página em seções específicas se necessário */
+  .print-container .force-page-break {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+  
+  /* Ajustar espaçamento para impressão */
+  .print-container .mb-6,
+  .print-container .mb-8 {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .print-container .p-4,
+  .print-container .p-6,
+  .print-container .p-8 {
+    padding: 1rem !important;
+  }
+  
+  /* Garantir que os cards sejam flexíveis para observações longas */
+  .print-container .print-card-container {
+    min-height: 280px !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  /* Ajustar o conteúdo dos cards para caber perfeitamente */
+  .print-container .print-card-container > * {
+    flex: 1 !important;
+    height: 100% !important;
+  }
+  
+  /* Garantir que os cards tenham altura consistente */
+  .print-container .print-card {
+    height: 100% !important;
+    min-height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+  
+  /* Distribuir o conteúdo dos cards uniformemente */
+  .print-container .print-card > *:last-child {
+    margin-top: auto !important;
+  }
+  
+  /* Ajustar espaçamento interno dos cards para impressão */
+  .print-container .print-card .space-y-3 > * + * {
+    margin-top: 0.75rem !important;
+  }
+  
+  /* Melhorar exibição das observações longas na impressão */
+  .print-container .print-card .whitespace-pre-wrap {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    max-width: 100% !important;
+  }
+  
+  /* Garantir que as observações não sejam cortadas */
+  .print-container .print-card .break-words {
+    word-break: break-word !important;
+    hyphens: auto !important;
+  }
+  
+  /* Ajustar espaçamento das observações para melhor legibilidade */
+  .print-container .print-card .leading-relaxed {
+    line-height: 1.6 !important;
+  }
+  
+  /* Garantir que as bordas das observações sejam visíveis */
+  .print-container .print-card .border-t {
+    border-top-width: 1px !important;
+    border-top-style: solid !important;
+    border-top-color: #e5e7eb !important;
+  }
+  
+
+}
