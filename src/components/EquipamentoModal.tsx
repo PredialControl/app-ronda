@@ -2,14 +2,14 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Equipamento } from '@/types';
+// import { Equipamento } from '@/types';
 import { Camera, X, Upload } from 'lucide-react';
 
 interface EquipamentoModalProps {
-  equipamento?: Equipamento | null;
+  equipamento?: any | null; // Temporariamente comentado
   isOpen: boolean;
   onClose: () => void;
-  onSave: (equipamento: Equipamento) => void;
+  onSave: (equipamento: any) => void;
   contratoRonda?: string;
 }
 
@@ -20,7 +20,7 @@ export function EquipamentoModal({
   onSave,
   contratoRonda = ''
 }: EquipamentoModalProps) {
-  const [formData, setFormData] = useState<Partial<Equipamento>>({
+  const [formData, setFormData] = useState<Partial<any>>({
     nome: equipamento?.nome || '',
     status: equipamento?.status || 'ATIVO',
     contrato: equipamento?.contrato || contratoRonda,
@@ -37,7 +37,7 @@ export function EquipamentoModal({
   const [fotoPreview, setFotoPreview] = useState<string | null>(equipamento?.foto || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleInputChange = (field: keyof Equipamento, value: string) => {
+  const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -62,7 +62,7 @@ export function EquipamentoModal({
       return;
     }
 
-    const equipamentoData: Equipamento = {
+    const equipamentoData: any = {
       id: equipamento?.id || Date.now().toString(),
       nome: formData.nome!,
       status: formData.status as 'ATIVO' | 'EM MANUTENÇÃO',
