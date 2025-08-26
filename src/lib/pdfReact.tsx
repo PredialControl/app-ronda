@@ -136,7 +136,7 @@ const CardArea: React.FC<{ area: AreaTecnica }> = ({ area }) => (
   </View>
 );
 
-const CardFoto: React.FC<{ foto: FotoRonda | { id: string; foto: any; local: string; especialidade: string; pendencia: string; observacoes?: string; responsavel?: string } }> = ({ foto }) => (
+const CardFoto: React.FC<{ foto: FotoRonda | { id: string; foto: any; local: string; especialidade: string; pendencia: string; observacoes?: string; responsavel?: string; criticidade?: string } }> = ({ foto }) => (
   <View style={styles.gridItem4}>
     {foto.foto ? (
       <PDFImage src={foto.foto as any} style={{ width: '100%', height: 5.5 * CM_TO_PT }} />
@@ -147,7 +147,7 @@ const CardFoto: React.FC<{ foto: FotoRonda | { id: string; foto: any; local: str
     )}
     <Text style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>{foto.local}</Text>
     <Text style={{ fontSize: 10 }}>Pendência: {foto.pendencia}</Text>
-    <Text style={{ fontSize: 10 }}>Criticidade: {foto.pendencia}</Text>
+    <Text style={{ fontSize: 10 }}>Criticidade: {(foto as any).criticidade || '—'}</Text>
     {('responsavel' in foto) && (
       <Text style={{ fontSize: 10 }}>Responsável: {(foto as any).responsavel}</Text>
     )}
@@ -157,7 +157,7 @@ const CardFoto: React.FC<{ foto: FotoRonda | { id: string; foto: any; local: str
 );
 
 export type PdfImage = { data: Uint8Array; format: 'jpeg' | 'png' };
-export type PdfFotoItem = { id: string; src: PdfImage | string | null; local: string; especialidade: string; pendencia: string; observacoes?: string };
+export type PdfFotoItem = { id: string; src: PdfImage | string | null; local: string; especialidade: string; pendencia: string; observacoes?: string; responsavel?: string; criticidade?: string };
 
 export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: AreaTecnica[]; fotos?: PdfFotoItem[]; headerImage?: string | null }> = ({ ronda, contrato, areas, fotos = [], headerImage = null }) => {
   // Página 1: cabeçalho, faixa, 2 cards largos (metade da altura útil cada um)
@@ -165,7 +165,7 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
   const restantes = areas.slice(2);
   const fotosToUse: PdfFotoItem[] = fotos.length
     ? fotos
-    : (ronda.fotosRonda || []).map((f) => ({ id: f.id, src: f.foto, local: f.local, especialidade: f.especialidade, pendencia: f.pendencia, observacoes: f.observacoes }));
+    : (ronda.fotosRonda || []).map((f) => ({ id: f.id, src: f.foto, local: f.local, especialidade: f.especialidade, pendencia: f.pendencia, observacoes: f.observacoes, responsavel: (f as any).responsavel, criticidade: (f as any).criticidade }));
 
   // Resumo Executivo (mesma lógica da interface)
   const resumo = (() => {
@@ -253,7 +253,7 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
           )}
           <View style={styles.grid4Wrap}>
             {fotosToUse.slice(pageIndex * 4, pageIndex * 4 + 4).map((f) => (
-              <CardFoto key={f.id} foto={{ id: f.id, foto: f.src as any, local: f.local, especialidade: f.especialidade, pendencia: f.pendencia, observacoes: f.observacoes }} />
+              <CardFoto key={f.id} foto={{ id: f.id, foto: f.src as any, local: f.local, especialidade: f.especialidade, pendencia: f.pendencia, observacoes: f.observacoes, responsavel: f.responsavel, criticidade: f.criticidade }} />
             ))}
           </View>
           <View style={styles.footerContainer} fixed>

@@ -366,7 +366,7 @@ export function VisualizarRonda({
                   <div className="space-y-2 text-sm text-gray-600">
                     <div><span className="font-medium">Local:</span> {item.local}</div>
                     <div><span className="font-medium">Pendência:</span> {item.pendencia}</div>
-                    <div><span className="font-medium">Criticidade:</span> {item.pendencia}</div>
+                    <div><span className="font-medium">Criticidade:</span> {item.criticidade || '—'}</div>
                     <div><span className="font-medium">Responsável:</span> {item.responsavel}</div>
                     <div><span className="font-medium">Especialidade:</span> {item.especialidade}</div>
                   </div>

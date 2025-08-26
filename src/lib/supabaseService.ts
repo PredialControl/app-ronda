@@ -488,7 +488,8 @@ export const fotoRondaService = {
         responsavel: foto.responsavel,
         observacoes: foto.observacoes,
         data: foto.data,
-        hora: foto.hora
+        hora: foto.hora,
+        criticidade: (foto as any).criticidade
       }])
       .select()
       .single()
@@ -516,7 +517,8 @@ export const fotoRondaService = {
           responsavel: updates.responsavel,
           observacoes: updates.observacoes,
           data: updates.data,
-          hora: updates.hora
+          hora: updates.hora,
+          criticidade: (updates as any).criticidade
         })
         .eq('id', id)
         .select()

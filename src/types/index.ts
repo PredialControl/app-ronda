@@ -76,4 +76,5 @@ export interface FotoRonda {
   observacoes?: string;
   data: string;
   hora: string;
+  criticidade?: 'Baixa' | 'Média' | 'Alta' | 'BAIXA' | 'MÉDIA' | 'ALTA';
 }
