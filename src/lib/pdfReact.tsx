@@ -100,6 +100,22 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginBottom: 12,
   },
+  resumoSectionOrange: {
+    backgroundColor: '#ffedd5',
+    borderLeftWidth: 4,
+    borderColor: '#f97316',
+    padding: 10,
+    borderRadius: 4,
+    marginBottom: 12,
+  },
+  resumoSectionRed: {
+    backgroundColor: '#fee2e2',
+    borderLeftWidth: 4,
+    borderColor: '#ef4444',
+    padding: 10,
+    borderRadius: 4,
+    marginBottom: 12,
+  },
   resumoSectionGreen: {
     backgroundColor: '#dcfce7',
     borderLeftWidth: 4,
@@ -171,6 +187,8 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
   const resumo = (() => {
     const chamadosAbertos: string[] = [];
     const situacaoNormal: string[] = [];
+    const emAtencao: string[] = [];
+    const emManutencao: string[] = [];
 
     (ronda.fotosRonda || []).forEach(item => {
       const base = `${item.especialidade} – ${item.local}`;
@@ -179,11 +197,15 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
     });
 
     areas.forEach(area => {
-      if (area.status !== 'ATENÇÃO' && area.status !== 'EM MANUTENÇÃO') {
+      if (area.status === 'ATENÇÃO') {
+        emAtencao.push(`${area.nome}${area.observacoes ? `: ${area.observacoes}` : ''}`);
+      } else if (area.status === 'EM MANUTENÇÃO') {
+        emManutencao.push(`${area.nome}${area.observacoes ? `: ${area.observacoes}` : ''}`);
+      } else {
         situacaoNormal.push(`${area.nome}: Operacional`);
       }
     });
-    return { chamadosAbertos, situacaoNormal };
+    return { chamadosAbertos, situacaoNormal, emAtencao, emManutencao };
   })();
 
   return (
@@ -272,6 +294,26 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
             <View style={styles.resumoSectionYellow}>
               <Text style={styles.resumoSectionTitle}>Chamados Abertos</Text>
               {resumo.chamadosAbertos.map((t, i) => (
+                <Text key={i} style={styles.bullet}>• {t}</Text>
+              ))}
+            </View>
+          )}
+
+          {/* Áreas em ATENÇÃO */}
+          {resumo.emAtencao.length > 0 && (
+            <View style={styles.resumoSectionOrange}>
+              <Text style={styles.resumoSectionTitle}>Áreas em ATENÇÃO</Text>
+              {resumo.emAtencao.map((t, i) => (
+                <Text key={i} style={styles.bullet}>• {t}</Text>
+              ))}
+            </View>
+          )}
+
+          {/* Áreas EM MANUTENÇÃO */}
+          {resumo.emManutencao.length > 0 && (
+            <View style={styles.resumoSectionRed}>
+              <Text style={styles.resumoSectionTitle}>Áreas em MANUTENÇÃO</Text>
+              {resumo.emManutencao.map((t, i) => (
                 <Text key={i} style={styles.bullet}>• {t}</Text>
               ))}
             </View>
