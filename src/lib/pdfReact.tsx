@@ -24,6 +24,13 @@ const styles = StyleSheet.create({
   headerText: {
     flexGrow: 1,
   },
+  footerContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 1.6 * CM_TO_PT,
+  },
   footerImage: {
     position: 'absolute',
     bottom: 0.5 * CM_TO_PT,
@@ -59,6 +66,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 0.5 * CM_TO_PT,
+    paddingBottom: 1.8 * CM_TO_PT, // espaço reservado para rodapé
   },
   gridItem4: {
     width: (29.7 * CM_TO_PT - 2 * CM_TO_PT - 2 * CM_TO_PT - 0.5 * CM_TO_PT) / 2,
@@ -216,7 +224,9 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
             </View>
           ))}
         </View>
-        {headerImage ? (<PDFImage src={headerImage} style={styles.footerImage} />) : null}
+        <View style={styles.footerContainer} fixed>
+          {headerImage ? (<PDFImage src={headerImage} style={styles.footerImage} />) : null}
+        </View>
       </Page>
 
       {/* Páginas seguintes: áreas técnicas 2x2 por página */}
@@ -227,7 +237,9 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
               <CardArea key={a.id} area={a} />
             ))}
           </View>
-          {headerImage ? (<PDFImage src={headerImage} style={styles.footerImage} />) : null}
+          <View style={styles.footerContainer} fixed>
+            {headerImage ? (<PDFImage src={headerImage} style={styles.footerImage} />) : null}
+          </View>
         </Page>
       ))}
 
@@ -244,7 +256,9 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
               <CardFoto key={f.id} foto={{ id: f.id, foto: f.src as any, local: f.local, especialidade: f.especialidade, pendencia: f.pendencia, observacoes: f.observacoes }} />
             ))}
           </View>
-          {headerImage ? (<PDFImage src={headerImage} style={styles.footerImage} />) : null}
+          <View style={styles.footerContainer} fixed>
+            {headerImage ? (<PDFImage src={headerImage} style={styles.footerImage} />) : null}
+          </View>
         </Page>
       ))}
 
@@ -273,7 +287,9 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
             </View>
           )}
         </View>
-        {headerImage ? (<PDFImage src={headerImage} style={styles.footerImage} />) : null}
+        <View style={styles.footerContainer} fixed>
+          {headerImage ? (<PDFImage src={headerImage} style={styles.footerImage} />) : null}
+        </View>
       </Page>
     </Document>
   );
