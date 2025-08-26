@@ -63,7 +63,7 @@ export function EquipamentoModal({
     }
 
     const equipamentoData: any = {
-      id: equipamento?.id || Date.now().toString(),
+              id: equipamento?.id || crypto.randomUUID(),
       nome: formData.nome!,
       status: formData.status as 'ATIVO' | 'EM MANUTENÇÃO',
       contrato: formData.contrato!,

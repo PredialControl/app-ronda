@@ -3,20 +3,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Contrato } from '@/types';
-import { X, FileText, User, MapPin, Calendar, Clock } from 'lucide-react';
+import { X, FileText, User, MapPin, Calendar, Clock, ArrowLeft } from 'lucide-react';
 
 interface ContratoModalProps {
   contrato?: Contrato | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (contrato: Contrato) => void;
+  onVoltarContratos?: () => void;
 }
 
 export function ContratoModal({
   contrato,
   isOpen,
   onClose,
-  onSave
+  onSave,
+  onVoltarContratos
 }: ContratoModalProps) {
   const [formData, setFormData] = useState({
     nome: '',
@@ -59,7 +61,7 @@ export function ContratoModal({
     }
 
     const contratoData: Contrato = {
-      id: contrato?.id || Date.now().toString(),
+      id: contrato?.id || '', // ID vazio para novos contratos
       nome: formData.nome,
       sindico: formData.sindico,
       endereco: formData.endereco,
@@ -79,17 +81,26 @@ export function ContratoModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            {contrato ? 'Editar Contrato' : 'Novo Contrato'}
-          </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <X className="w-5 h-5" />
-          </button>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-md max-h-[95vh] overflow-y-auto">
+        {/* Header fixo */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 rounded-t-lg">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              {contrato ? 'Editar Contrato' : 'Novo Contrato'}
+            </h2>
+            <button 
+              onClick={onClose} 
+              className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+        
+        {/* Conteúdo do formulário */}
+        <div className="p-4">
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -133,24 +144,21 @@ export function ContratoModal({
               <Calendar className="w-4 h-4" />
               Periodicidade *
             </label>
-            <Select
+            <select
               value={formData.periodicidade}
-              onValueChange={(value) => handleInputChange('periodicidade', value)}
+              onChange={(e) => handleInputChange('periodicidade', e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a periodicidade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="DIARIA">Diária</SelectItem>
-                <SelectItem value="SEMANAL">Semanal</SelectItem>
-                <SelectItem value="QUINZENAL">Quinzenal</SelectItem>
-                <SelectItem value="MENSAL">Mensal</SelectItem>
-                <SelectItem value="BIMESTRAL">Bimestral</SelectItem>
-                <SelectItem value="TRIMESTRAL">Trimestral</SelectItem>
-                <SelectItem value="SEMESTRAL">Semestral</SelectItem>
-                <SelectItem value="ANUAL">Anual</SelectItem>
-              </SelectContent>
-            </Select>
+              <option value="DIARIA">Diária</option>
+              <option value="SEMANAL">Semanal</option>
+              <option value="QUINZENAL">Quinzenal</option>
+              <option value="MENSAL">Mensal</option>
+              <option value="BIMESTRAL">Bimestral</option>
+              <option value="TRIMESTRAL">Trimestral</option>
+              <option value="SEMESTRAL">Semestral</option>
+              <option value="ANUAL">Anual</option>
+            </select>
           </div>
 
           <div>
@@ -163,6 +171,12 @@ export function ContratoModal({
           </div>
 
           <div className="flex gap-2 pt-4">
+            {onVoltarContratos && (
+              <Button type="button" variant="outline" onClick={onVoltarContratos} className="flex-1">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar aos Contratos
+              </Button>
+            )}
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancelar
             </Button>
@@ -171,6 +185,7 @@ export function ContratoModal({
             </Button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

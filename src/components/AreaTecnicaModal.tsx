@@ -131,7 +131,7 @@ export function AreaTecnicaModal({
     }
 
     const areaTecnicaData: AreaTecnica = {
-      id: areaTecnica?.id || Date.now().toString(),
+              id: areaTecnica?.id || crypto.randomUUID(),
       nome: formData.nome,
       status: formData.status as 'ATIVO' | 'EM MANUTENÇÃO' | 'ATENÇÃO',
       contrato: contratoRonda,
@@ -156,86 +156,57 @@ export function AreaTecnicaModal({
   console.log('Modal está aberto, renderizando...');
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
-      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto border-4 border-red-500">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Wrench className="w-5 h-5" />
-            Editar Área Técnica
-          </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <X className="w-5 h-5" />
-          </button>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+      <div className="bg-white rounded-lg w-full max-w-md max-h-[95vh] overflow-y-auto">
+        {/* Header fixo */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 rounded-t-lg">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Wrench className="w-5 h-5" />
+              Editar Área Técnica
+            </h2>
+            <button 
+              onClick={onClose} 
+              className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+        
+        {/* Conteúdo do formulário */}
+        <div className="p-4">
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Área Técnica *</label>
-            <Select
+            <select
               value={formData.nome}
-              onValueChange={(value) => handleInputChange('nome', value)}
+              onChange={(e) => handleInputChange('nome', e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a área técnica" />
-              </SelectTrigger>
-              <SelectContent>
-                {AREAS_TECNICAS_PREDEFINIDAS.map((area) => (
-                  <SelectItem key={area} value={area}>
-                    {area}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <option value="">Selecione a área técnica</option>
+              {AREAS_TECNICAS_PREDEFINIDAS.map((area) => (
+                <option key={area} value={area}>
+                  {area}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1">Status *</label>
-            <Select
+            <select
               value={formData.status}
-              onValueChange={(value) => {
-                console.log('🎯 Status selecionado:', value);
-                console.log('🎯 formData atual:', formData);
-                console.log('🎯 Stack trace:', new Error().stack);
-                handleInputChange('status', value);
-              }}
+              onChange={(e) => handleInputChange('status', e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o status" />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status === 'ATIVO' ? 'Ativo' : 
-                     status === 'EM MANUTENÇÃO' ? 'Em Manutenção' : 
-                     status === 'ATENÇÃO' ? 'Atenção' : status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            {/* Select alternativo para debug */}
-            <div className="mt-2">
-              <label className="block text-xs text-gray-500 mb-1">DEBUG - Select Simples:</label>
-              <select 
-                value={formData.status} 
-                onChange={(e) => {
-                  console.log('🎯 Select simples alterado:', e.target.value);
-                  handleInputChange('status', e.target.value);
-                }}
-                className="w-full p-2 border border-gray-300 rounded"
-              >
-                <option value="ATIVO">Ativo</option>
-                <option value="EM MANUTENÇÃO">Em Manutenção</option>
-                <option value="ATENÇÃO">Atenção</option>
-              </select>
-            </div>
-            
-            <p className="text-xs text-gray-500 mt-1">
-              Status atual: {formData.status}
-            </p>
-            <p className="text-xs text-red-500 mt-1">
-              DEBUG: formData.status = "{formData.status}"
-            </p>
+              <option value="ATIVO">Ativo</option>
+              <option value="EM MANUTENÇÃO">Em Manutenção</option>
+              <option value="ATENÇÃO">Atenção</option>
+            </select>
           </div>
 
           <div>
@@ -252,13 +223,73 @@ export function AreaTecnicaModal({
 
           <div>
             <label className="block text-sm font-medium mb-1">Endereço</label>
-            <Input
-              value={enderecoRonda}
-              readOnly
-              className="bg-gray-100"
-            />
+            <div className="space-y-2">
+              <Input
+                value={formData.endereco || enderecoRonda}
+                onChange={(e) => handleInputChange('endereco', e.target.value)}
+                placeholder="Digite o endereço ou capture automaticamente"
+                className="bg-white"
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                          async (position) => {
+                            const { latitude, longitude } = position.coords;
+                            console.log('📍 Coordenadas capturadas:', { latitude, longitude });
+                            
+                            // Tentar obter endereço via coordenadas
+                            try {
+                              const response = await fetch(
+                                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+                              );
+                              const data = await response.json();
+                              const endereco = data.display_name || `${latitude}, ${longitude}`;
+                              
+                              setFormData(prev => ({ ...prev, endereco }));
+                              console.log('📍 Endereço obtido:', endereco);
+                            } catch (error) {
+                              console.error('❌ Erro ao obter endereço:', error);
+                              const coordenadas = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                              setFormData(prev => ({ ...prev, endereco: coordenadas }));
+                            }
+                          },
+                          (error) => {
+                            console.error('❌ Erro de geolocalização:', error);
+                            alert('Não foi possível obter sua localização. Verifique as permissões do navegador.');
+                          },
+                          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+                        );
+                      } else {
+                        alert('Geolocalização não é suportada neste navegador.');
+                      }
+                    } catch (error) {
+                      console.error('❌ Erro ao capturar localização:', error);
+                      alert('Erro ao capturar localização.');
+                    }
+                  }}
+                  className="flex-1 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                >
+                  📍 Capturar Localização
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData(prev => ({ ...prev, endereco: enderecoRonda }))}
+                  className="flex-1"
+                >
+                  🔄 Usar da Ronda
+                </Button>
+              </div>
+            </div>
             <p className="text-xs text-gray-500 mt-1">
-              Preenchido automaticamente da ronda
+              Use "Capturar Localização" para obter endereço automático via GPS
             </p>
           </div>
 
@@ -291,7 +322,29 @@ export function AreaTecnicaModal({
 
           <div>
             <label className="block text-sm font-medium mb-1">Foto</label>
-            <div className="space-y-2">
+            <div className="space-y-3">
+              {/* Botão para tirar foto */}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.capture = 'environment'; // Usar câmera traseira
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) handleFotoChange({ target: { files: [file] } } as any);
+                  };
+                  input.click();
+                }}
+                className="w-full bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+              >
+                <Camera className="w-4 h-4 mr-2" />
+                📸 Tirar Foto Agora
+              </Button>
+              
+              {/* Botão para selecionar arquivo */}
               <Button
                 type="button"
                 variant="outline"
@@ -299,9 +352,11 @@ export function AreaTecnicaModal({
                 className="w-full"
               >
                 <Upload className="w-4 h-4 mr-2" />
-                Selecionar Foto
+                📁 Selecionar Arquivo
               </Button>
             </div>
+            
+            {/* Input para arquivo (oculto) */}
             <input
               ref={fileInputRef}
               type="file"
@@ -309,10 +364,28 @@ export function AreaTecnicaModal({
               onChange={handleFotoChange}
               className="hidden"
             />
+            
+            {/* Preview da foto */}
             {formData.foto && (
-              <p className="text-xs text-green-600 mt-1">
-                ✓ Foto selecionada
-              </p>
+              <div className="mt-3">
+                <p className="text-xs text-green-600 mb-2">
+                  ✓ Foto capturada/selecionada
+                </p>
+                <img
+                  src={formData.foto}
+                  alt="Preview da foto"
+                  className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData(prev => ({ ...prev, foto: null }))}
+                  className="w-full mt-2 text-red-600 hover:text-red-700"
+                >
+                  🗑️ Remover Foto
+                </Button>
+              </div>
             )}
           </div>
 
@@ -334,6 +407,7 @@ export function AreaTecnicaModal({
             </Button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

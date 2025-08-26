@@ -34,7 +34,7 @@ export function AreaTecnicaCard({
 
   if (isPrintMode) {
     return (
-      <div className="print-card bg-white border rounded-lg p-4 space-y-3">
+      <div className="print-card print-card-container area-tecnica-card bg-white border rounded-lg p-4 space-y-3 avoid-break">
         <div className="flex items-start justify-between">
           <h3 className="font-semibold text-gray-900 flex items-center gap-2">
             <Wrench className="w-4 h-4 text-blue-600" />
@@ -84,7 +84,7 @@ export function AreaTecnicaCard({
   }
 
   return (
-    <Card className="hover:shadow-md transition-shadow duration-200">
+    <Card className="hover:shadow-md transition-shadow duration-200 print-card print-card-container area-tecnica-card avoid-break">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">

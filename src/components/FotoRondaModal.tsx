@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertTriangle, X, Upload } from 'lucide-react';
+import { AlertTriangle, X, Upload, FileImage, Info } from 'lucide-react';
+import { otimizarFoto, calcularTamanhoBase64, formatarTamanho } from '@/lib/utils';
 
 interface FotoRonda {
   id: string;
@@ -30,17 +31,12 @@ const ESPECIALIDADES = [
   'Incêndio',
   'Segurança',
   'Limpeza',
+  'Civil',
   'Jardinagem',
   'Outros'
 ];
 
-const PENDENCIAS = [
-  'Nenhuma',
-  'Pequena',
-  'Média',
-  'Alta',
-  'Crítica'
-];
+const CRITICIDADES = ['Baixa', 'Média', 'Alta'];
 
 export function FotoRondaModal({
   fotoRonda,
@@ -48,9 +44,10 @@ export function FotoRondaModal({
   onClose,
   onSave
 }: FotoRondaModalProps) {
-  const [formData, setFormData] = useState<Partial<FotoRonda>>({
+  const [formData, setFormData] = useState<Partial<FotoRonda> & { criticidade?: 'Baixa' | 'Média' | 'Alta' }>({
     local: '',
-    pendencia: 'Nenhuma',
+    pendencia: '',
+    criticidade: 'Média',
     especialidade: 'Outros',
     responsavel: 'CONDOMÍNIO',
     observacoes: '',
@@ -74,6 +71,7 @@ export function FotoRondaModal({
       setFormData({
         local: fotoRonda.local,
         pendencia: fotoRonda.pendencia,
+        criticidade: (fotoRonda as any).criticidade || 'Média',
         especialidade: fotoRonda.especialidade,
         responsavel: fotoRonda.responsavel,
         observacoes: fotoRonda.observacoes || '',
@@ -86,7 +84,8 @@ export function FotoRondaModal({
       console.log('🔄 Criando novo item - limpando dados');
       setFormData({
         local: '',
-        pendencia: 'Nenhuma',
+        pendencia: '',
+        criticidade: 'Média',
         especialidade: 'Outros',
         responsavel: 'CONDOMÍNIO',
         observacoes: '',
@@ -104,17 +103,49 @@ export function FotoRondaModal({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
+      try {
+        // Mostrar loading
+        setFormData(prev => ({ ...prev, foto: 'Carregando...' }));
+        
+        console.log(`📸 Foto selecionada: ${file.name} (${formatarTamanho(file.size)})`);
+        
+        // Otimizar foto
+        const fotoOtimizada = await otimizarFoto(file, 1200, 1200, 0.8);
+        
+        // Calcular tamanho otimizado
+        const tamanhoOriginal = file.size;
+        const tamanhoOtimizado = calcularTamanhoBase64(fotoOtimizada);
+        const economia = ((tamanhoOriginal - tamanhoOtimizado) / tamanhoOriginal * 100).toFixed(1);
+        
+        console.log(`✅ Otimização concluída: ${formatarTamanho(tamanhoOriginal)} → ${formatarTamanho(tamanhoOtimizado)} (${economia}% de economia)`);
+        
         setFormData(prev => ({
           ...prev,
-          foto: reader.result as string
+          foto: fotoOtimizada
         }));
-      };
-      reader.readAsDataURL(file);
+        
+        // Mostrar alerta de economia
+        if (parseFloat(economia) > 20) {
+          alert(`🎉 Foto otimizada com sucesso!\n\nTamanho original: ${formatarTamanho(tamanhoOriginal)}\nTamanho otimizado: ${formatarTamanho(tamanhoOtimizado)}\nEconomia: ${economia}%`);
+        }
+        
+      } catch (error) {
+        console.error('❌ Erro ao otimizar foto:', error);
+        alert('Erro ao otimizar foto. Usando foto original.');
+        
+        // Fallback para método original
+        const reader = new FileReader();
+        reader.onload = () => {
+          setFormData(prev => ({
+            ...prev,
+            foto: reader.result as string
+          }));
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -126,11 +157,12 @@ export function FotoRondaModal({
       return;
     }
 
-    const fotoRondaData: FotoRonda = {
-      id: fotoRonda?.id || Date.now().toString(),
+    const fotoRondaData: any = {
+              id: fotoRonda?.id || crypto.randomUUID(),
       foto: formData.foto,
       local: formData.local,
       pendencia: formData.pendencia as string,
+      criticidade: formData.criticidade,
       especialidade: formData.especialidade,
       responsavel: formData.responsavel as 'CONSTRUTORA' | 'CONDOMÍNIO',
       observacoes: formData.observacoes,
@@ -158,39 +190,66 @@ export function FotoRondaModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Foto/Evidência *</label>
-            <div className="space-y-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Selecionar Foto/Evidência
-              </Button>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFotoChange}
-              className="hidden"
-            />
-            {formData.foto && (
-              <div className="mt-2">
-                <img 
-                  src={formData.foto} 
-                  alt="Preview" 
-                  className="w-full h-24 object-cover rounded border"
-                />
-                <p className="text-xs text-green-600 mt-1">
-                  ✓ Foto selecionada
-                </p>
-              </div>
-            )}
-          </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <FileImage className="w-5 h-5 text-blue-600" />
+                      <span className="font-medium">Foto da Ronda</span>
+                    </div>
+                    
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFotoChange}
+                        className="hidden"
+                      />
+                      
+                      {formData.foto && formData.foto !== 'Carregando...' ? (
+                        <div className="space-y-3">
+                          <img 
+                            src={formData.foto} 
+                            alt="Preview da foto" 
+                            className="mx-auto max-w-full h-48 object-cover rounded-lg border shadow-sm"
+                          />
+                          <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+                            <Info className="w-4 h-4" />
+                            <span>Foto otimizada automaticamente para economizar espaço</span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Trocar Foto
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <Upload className="w-8 h-8 text-gray-400 mx-auto" />
+                          <div>
+                            <p className="text-sm text-gray-600">
+                              {formData.foto === 'Carregando...' ? 'Otimizando foto...' : 'Clique para selecionar uma foto'}
+                            </p>
+                            {formData.foto === 'Carregando...' && (
+                              <p className="text-xs text-blue-600 mt-1">Reduzindo tamanho automaticamente...</p>
+                            )}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={formData.foto === 'Carregando...'}
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Selecionar Foto
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
           <div>
             <label className="block text-sm font-medium mb-1">Local *</label>
@@ -238,18 +297,27 @@ export function FotoRondaModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Nível de Pendência</label>
-            <Select
+            <label className="block text-sm font-medium mb-1">Pendência (descreva)</label>
+            <Input
               value={formData.pendencia}
-              onValueChange={(value) => handleInputChange('pendencia', value)}
+              onChange={(e) => handleInputChange('pendencia', e.target.value)}
+              placeholder="Ex.: Pintura de parede, troca de lâmpada..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Criticidade</label>
+            <Select
+              value={formData.criticidade}
+              onValueChange={(value) => handleInputChange('criticidade' as any, value)}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o nível de pendência" />
+                <SelectValue placeholder="Selecione a criticidade" />
               </SelectTrigger>
               <SelectContent>
-                {PENDENCIAS.map((pendencia) => (
-                  <SelectItem key={pendencia} value={pendencia}>
-                    {pendencia}
+                {CRITICIDADES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
                   </SelectItem>
                 ))}
               </SelectContent>

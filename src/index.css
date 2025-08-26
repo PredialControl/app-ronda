@@ -60,9 +60,39 @@
 
 /* Estilos específicos para impressão */
 @media print {
+  /* Grid 2x2 fixo: 4 cards por página */
+  .print-grid-2x2 {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10mm !important;
+  }
+  .print-grid-2x2 > * {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  .print-grid-2x2 > *:nth-child(4n) {
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  /* Grid 2 por página (2 colunas x 1 linha) */
+  .print-grid-2-per-page {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12mm !important;
+  }
+  .print-grid-2-per-page > * {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  .print-grid-2-per-page > *:nth-child(2n) {
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
   /* Configurações gerais de impressão */
   @page {
-    margin: 1cm;
+    margin: 1.5cm;
     size: A4;
   }
   
@@ -72,7 +102,7 @@
   
   .print-grid {
     display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 1rem !important;
   }
   
@@ -81,6 +111,8 @@
     padding: 0 !important;
     margin: 0 !important;
     page-break-inside: auto !important;
+    max-width: none !important;
+    width: 100% !important;
   }
   
   /* Evitar quebra de página em elementos importantes */
@@ -97,7 +129,7 @@
   .print-card-container {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    min-height: 280px !important;
+    min-height: 200px !important;
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
@@ -198,63 +230,243 @@
   /* Seções de impressão com controle de quebra */
   .print-container .print-section {
     page-break-inside: auto !important;
-    break-inside: auto !important;
+  }
+  
+  /* Resumo executivo - evitar quebra de página */
+  .print-container .resumo-executivo {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
     margin-bottom: 2rem !important;
   }
   
-  .print-container .print-section-title {
+  /* Cards de status - manter juntos */
+  .print-container .status-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Forçar quebra de página antes do resumo executivo */
+  .print-container .resumo-executivo {
+    page-break-before: auto !important;
+    break-before: auto !important;
+  }
+  
+  /* Controle de páginas específicas */
+  .print-container .pagina-1 {
+    page-break-after: always !important;
+    break-after: page !important;
+    min-height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+  }
+  
+  .print-container .pagina-2 {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+  
+  /* Forçar quebra de página */
+  .print-container .page-break-force {
+    page-break-before: always !important;
+    break-before: page !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* QUEBRA DE PÁGINA OBRIGATÓRIA */
+  .print-container .page-break-force::before {
+    content: "" !important;
+    display: block !important;
+    page-break-before: always !important;
+    break-before: page !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Forçar altura máxima para o resumo */
+  .print-container .resumo-executivo .space-y-2 {
+    max-height: calc(100vh - 8rem) !important;
+    overflow: hidden !important;
+  }
+  
+  /* Resumo executivo - FORÇAR ficar em uma página só - SUPER AGRESSIVO */
+  .print-container .resumo-executivo {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  /* FORÇAR quebra de página - mais agressivo */
+  .print-container .resumo-executivo::after {
+    content: "" !important;
+    display: block !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Contêiner do resumo - altura fixa */
+  .print-container .resumo-executivo > * {
+    max-height: calc(100vh - 8rem) !important;
+    overflow: hidden !important;
+    flex-shrink: 0 !important;
+  }
+  
+  /* FORÇAR quebra de página ANTES do resumo */
+  .print-container .resumo-executivo::before {
+    content: "" !important;
+    display: block !important;
+    page-break-before: always !important;
+    break-before: page !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* RESET COMPLETO para o resumo */
+  .print-container .resumo-executivo * {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  /* Cards de status - manter juntos na mesma página */
+  .print-container .status-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* NOVAS REGRAS PARA EVITAR QUEBRAS */
+  .print-container .card,
+  .print-container .section,
+  .print-container figure,
+  .print-container img,
+  .print-container .tabela,
+  .print-container .grid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  /* Classe para forçar quebra de página */
+  .print-container .force-page {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+  
+  /* Contêiner principal sem margens extras */
+  .print-container .report-root {
+    margin: 0 !important;
+    padding: 0 !important;
     page-break-after: avoid !important;
     break-after: avoid !important;
-    margin-bottom: 1.5rem !important;
   }
   
-  /* Grid responsivo para impressão com quebra controlada */
-  .print-container .print-grid {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 1.5rem !important;
-    page-break-inside: auto !important;
-    break-inside: auto !important;
+  /* Remover espaçadores no final */
+  .print-container .spacer,
+  .print-container .sentinel {
+    display: none !important;
   }
   
-  /* Primeira página: 2 cards grandes */
-  .print-container .print-grid:first-of-type {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 2rem !important;
-  }
-  
-  /* Primeira página: cards maiores mas flexíveis */
-  .print-container .print-grid:first-of-type .print-card-container {
-    min-height: 400px !important;
+  /* Classe específica para NÃO quebrar */
+  .print-container .no-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
     height: auto !important;
     max-height: none !important;
+    overflow: visible !important;
   }
   
-  /* Primeira página: imagens maiores */
-  .print-container .print-grid:first-of-type .print-card img {
-    height: 180px !important;
-    min-height: 180px !important;
-    max-height: 180px !important;
+  /* Forçar resumo executivo em uma página só */
+  .print-container .resumo-executivo.no-break {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    page-break-after: always !important;
+    break-after: page !important;
   }
   
-  /* Páginas seguintes: 4 cards menores */
-  .print-container .print-grid:not(:first-of-type) {
+  /* FORÇAR QUEBRA DE PÁGINA ENTRE SEÇÕES */
+  .print-container .print-section {
+    page-break-before: auto !important;
+    break-before: auto !important;
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+  
+  /* PRIMEIRA SEÇÃO (Áreas Técnicas): Máximo 2 cards */
+  .print-container .print-section:first-of-type .print-grid {
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 1rem !important;
+    max-height: calc(100vh - 16rem) !important;
+    overflow: hidden !important;
   }
   
-  /* Páginas seguintes: cards menores mas flexíveis */
-  .print-container .print-grid:not(:first-of-type) .print-card-container {
-    min-height: 200px !important;
-    height: auto !important;
-    max-height: none !important;
+  .print-container .print-section:first-of-type .print-card-container {
+    height: calc((100vh - 20rem) / 2) !important;
+    max-height: calc((100vh - 20rem) / 2) !important;
+    overflow: hidden !important;
   }
   
-  /* Páginas seguintes: imagens menores */
-  .print-container .print-grid:not(:first-of-type) .print-card img {
-    height: 80px !important;
-    min-height: 80px !important;
-    max-height: 80px !important;
+  /* SEGUNDA SEÇÃO (Fotos): Forçar nova página com 4 cards */
+  .print-container .print-section:nth-of-type(2) {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+  
+  .print-container .print-section:nth-of-type(2) .print-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-rows: repeat(2, 1fr) !important;
+    height: calc(100vh - 4rem) !important;
+    max-height: calc(100vh - 4rem) !important;
+    overflow: hidden !important;
+  }
+  
+  .print-container .print-section:nth-of-type(2) .print-card-container {
+    height: calc((100vh - 8rem) / 2) !important;
+    max-height: calc((100vh - 8rem) / 2) !important;
+    overflow: hidden !important;
+  }
+  
+  /* TERCEIRA SEÇÃO (Outros Itens): Forçar nova página com 4 cards */
+  .print-container .print-section:nth-of-type(3) {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+  
+  .print-container .print-section:nth-of-type(3) .print-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-rows: repeat(2, 1fr) !important;
+    height: calc(100vh - 4rem) !important;
+    max-height: calc(100vh - 4rem) !important;
+    overflow: hidden !important;
+  }
+  
+  .print-container .print-section:nth-of-type(3) .print-card-container {
+    height: calc((100vh - 8rem) / 2) !important;
+    max-height: calc((100vh - 8rem) / 2) !important;
+    overflow: hidden !important;
+  }
+  
+  /* Imagens menores nas páginas seguintes para caber 4 cards */
+  .print-container .print-section:not(:first-of-type) .print-card img {
+    max-height: 100px !important;
+    width: auto !important;
+    object-fit: contain !important;
   }
   
   /* Forçar quebra de página em seções específicas se necessário */
@@ -275,67 +487,56 @@
     padding: 1rem !important;
   }
   
-  /* Garantir que os cards sejam flexíveis para observações longas */
-  .print-container .print-card-container {
-    min-height: 280px !important;
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-    display: flex !important;
-    flex-direction: column !important;
-  }
-  
-  /* Ajustar o conteúdo dos cards para caber perfeitamente */
-  .print-container .print-card-container > * {
-    flex: 1 !important;
-    height: 100% !important;
-  }
-  
-  /* Garantir que os cards tenham altura consistente */
-  .print-container .print-card {
-    height: 100% !important;
-    min-height: 100% !important;
-    max-height: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-  }
-  
-  /* Distribuir o conteúdo dos cards uniformemente */
-  .print-container .print-card > *:last-child {
-    margin-top: auto !important;
-  }
-  
-  /* Ajustar espaçamento interno dos cards para impressão */
-  .print-container .print-card .space-y-3 > * + * {
-    margin-top: 0.75rem !important;
-  }
-  
-  /* Melhorar exibição das observações longas na impressão */
-  .print-container .print-card .whitespace-pre-wrap {
-    white-space: pre-wrap !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
+  /* CORREÇÃO PARA FOTOS NA IMPRESSÃO - EVITAR CORTE */
+  .print-container img {
     max-width: 100% !important;
+    height: auto !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    object-fit: contain !important;
   }
   
-  /* Garantir que as observações não sejam cortadas */
-  .print-container .print-card .break-words {
-    word-break: break-word !important;
-    hyphens: auto !important;
+  /* Cards com fotos - evitar quebra */
+  .print-container .foto-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 1rem !important;
   }
   
-  /* Ajustar espaçamento das observações para melhor legibilidade */
-  .print-container .print-card .leading-relaxed {
-    line-height: 1.6 !important;
+  /* Imagens em áreas técnicas - manter juntas */
+  .print-container .area-tecnica-card img {
+    max-height: 200px !important;
+    width: auto !important;
+    object-fit: contain !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   
-  /* Garantir que as bordas das observações sejam visíveis */
-  .print-container .print-card .border-t {
-    border-top-width: 1px !important;
-    border-top-style: solid !important;
-    border-top-color: #e5e7eb !important;
+  /* Imagens em fotos da ronda - manter juntas */
+  .print-container .foto-ronda-card img {
+    max-height: 250px !important;
+    width: auto !important;
+    object-fit: contain !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
+  
+  /* Imagens em outros itens - manter juntas */
+  .print-container .outro-item-card img {
+    max-height: 200px !important;
+    width: auto !important;
+    object-fit: contain !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+
+  
+
+  
+
+  
+  
   
 
 }

@@ -47,7 +47,7 @@ export function NovaRondaModal({
 
   const handleAddOutroItem = () => {
     const novoItem: OutroItemCorrigido = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       nome: '',
       descricao: '',
       local: '',
@@ -85,7 +85,7 @@ export function NovaRondaModal({
 
     // Criar áreas técnicas pré-definidas automaticamente
     const areasTecnicasPredefinidas: AreaTecnica[] = AREAS_TECNICAS_PREDEFINIDAS.map((nome, index) => ({
-      id: `area-${Date.now()}-${index}`,
+      id: crypto.randomUUID(),
       nome: nome,
       status: 'ATIVO',
       contrato: formData.contrato,
@@ -97,7 +97,7 @@ export function NovaRondaModal({
     }));
 
     const novaRonda: Ronda = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       nome: formData.nome,
       contrato: formData.contrato,
       data: formData.data,
@@ -130,17 +130,26 @@ export function NovaRondaModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Nova Ronda
-          </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <X className="w-5 h-5" />
-          </button>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-md max-h-[95vh] overflow-y-auto">
+        {/* Header fixo */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 rounded-t-lg">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Nova Ronda
+            </h2>
+            <button 
+              onClick={onClose} 
+              className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+        
+        {/* Conteúdo do formulário */}
+        <div className="p-4">
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -323,6 +332,7 @@ export function NovaRondaModal({
             </Button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

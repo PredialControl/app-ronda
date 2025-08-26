@@ -12,6 +12,7 @@ interface GerenciarContratosProps {
   onDeleteContrato: (id: string) => void;
   onSelectContrato: (contrato: Contrato) => void;
   onVoltar: () => void;
+  onVoltarContratos?: () => void;
 }
 
 export function GerenciarContratos({
@@ -19,7 +20,8 @@ export function GerenciarContratos({
   onSaveContrato,
   onDeleteContrato,
   onSelectContrato,
-  onVoltar
+  onVoltar,
+  onVoltarContratos
 }: GerenciarContratosProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingContrato, setEditingContrato] = useState<Contrato | null>(null);
@@ -100,21 +102,21 @@ export function GerenciarContratos({
             </div>
             <div className="text-center p-3 bg-green-50 rounded-lg">
               <div className="text-2xl font-bold text-green-600">
-                {contratos.filter(c => c.periodicidade === 'MENSAL').length}
+                {contratos.filter(c => c.periodicidade === 'SEMANAL').length}
               </div>
-              <div className="text-green-800">Mensais</div>
+              <div className="text-green-800">Semanais</div>
             </div>
             <div className="text-center p-3 bg-orange-50 rounded-lg">
               <div className="text-2xl font-bold text-orange-600">
-                {contratos.filter(c => c.periodicidade === 'SEMANAL').length}
+                {contratos.filter(c => c.periodicidade === 'QUINZENAL').length}
               </div>
-              <div className="text-orange-800">Semanais</div>
+              <div className="text-orange-800">Quinzenais</div>
             </div>
             <div className="text-center p-3 bg-purple-50 rounded-lg">
               <div className="text-2xl font-bold text-purple-600">
-                {contratos.filter(c => c.periodicidade === 'ANUAL').length}
+                {contratos.filter(c => c.periodicidade === 'MENSAL').length}
               </div>
-              <div className="text-purple-800">Anuais</div>
+              <div className="text-purple-800">Mensais</div>
             </div>
           </div>
         </div>
@@ -206,6 +208,7 @@ export function GerenciarContratos({
           setEditingContrato(null);
         }}
         onSave={handleSaveContrato}
+        onVoltarContratos={onVoltarContratos}
       />
     </div>
   );

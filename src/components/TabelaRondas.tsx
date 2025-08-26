@@ -14,27 +14,7 @@ interface TabelaRondasProps {
 }
 
 export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onDeletarRonda }: TabelaRondasProps) {
-  const [activeTab, setActiveTab] = useState<'rondas' | 'medicoes'>('rondas');
-  
-  // Dados de exemplo para medições (você pode integrar com o estado real depois)
-  const [medicoes, setMedicoes] = useState([
-    {
-      id: '1',
-      data: '2024-01-15',
-      agua: '150',
-      luz: '250',
-      gas: '45',
-      observacoes: 'Consumo normal para o período'
-    },
-    {
-      id: '2',
-      data: '2024-02-15',
-      agua: '165',
-      luz: '280',
-      gas: '52',
-      observacoes: 'Aumento no consumo de água'
-    }
-  ]);
+
 
   const getStatusColor = (status: string) => {
     return status === 'ATIVO' ? 'success' : 'warning';
@@ -57,7 +37,7 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
     return { total, ativos, manutencao, itensChamado };
   };
 
-  if (rondas.length === 0 && activeTab === 'rondas') {
+  if (rondas.length === 0) {
     return (
       <Card className="w-full">
         <CardHeader>
@@ -68,35 +48,7 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
             </CardTitle>
           </div>
           
-          {/* Abas */}
-          <div className="flex space-x-1 border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('rondas')}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                activeTab === 'rondas'
-                  ? 'bg-blue-600 text-white border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Rondas Realizadas
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('medicoes')}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                activeTab === 'rondas'
-                  ? 'bg-blue-600 text-white border-b-2 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Droplets className="w-4 h-4" />
-                Medições (Água, Luz, Gás)
-              </div>
-            </button>
-          </div>
+
         </CardHeader>
         <CardContent>
           <div className="text-center py-12">
@@ -125,54 +77,17 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
             <FileText className="w-5 h-5 text-blue-600" />
             Contrato: {contrato.nome}
           </CardTitle>
-          {activeTab === 'rondas' && (
-            <Button onClick={onNovaRonda} className="bg-green-600 hover:bg-green-700">
-              <FileText className="w-4 h-4 mr-2" />
-              Nova Ronda
-            </Button>
-          )}
-          {activeTab === 'medicoes' && (
-            <Button onClick={() => alert('Funcionalidade de nova medição será implementada em breve')} className="bg-blue-600 hover:bg-blue-700">
-              <Droplets className="w-4 h-4 mr-2" />
-              Nova Medição
-            </Button>
-          )}
+          <Button onClick={onNovaRonda} className="bg-green-600 hover:bg-green-700">
+            <FileText className="w-4 h-4 mr-2" />
+            Nova Ronda
+          </Button>
         </div>
         
-        {/* Abas */}
-        <div className="flex space-x-1 border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('rondas')}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-              activeTab === 'rondas'
-                ? 'bg-blue-600 text-white border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Rondas Realizadas
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('medicoes')}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-              activeTab === 'medicoes'
-                ? 'bg-blue-600 text-white border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Droplets className="w-4 h-4" />
-              Medições (Água, Luz, Gás)
-            </div>
-          </button>
-        </div>
+
       </CardHeader>
       
       <CardContent>
-        {/* Conteúdo baseado na aba ativa */}
-        {activeTab === 'rondas' && (
+        {/* Conteúdo das Rondas */}
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -353,147 +268,6 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
               </div>
             </div>
           </>
-        )}
-
-        {/* Aba de Medições */}
-        {activeTab === 'medicoes' && (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        Data
-                      </div>
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <Droplets className="w-4 h-4 text-blue-600" />
-                        Água (m³)
-                      </div>
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <Zap className="w-4 h-4 text-yellow-600" />
-                        Luz (kWh)
-                      </div>
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <Flame className="w-4 h-4 text-orange-600" />
-                        Gás (m³)
-                      </div>
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      Observações
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {medicoes.map((medicao) => (
-                    <tr key={medicao.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-gray-900">
-                          {new Date(medicao.data).toLocaleDateString('pt-BR')}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="font-mono">
-                            {medicao.agua}
-                          </Badge>
-                          <span className="text-sm text-gray-600">m³</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="font-mono">
-                            {medicao.luz}
-                          </Badge>
-                          <span className="text-sm text-gray-600">kWh</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="font-mono">
-                            {medicao.gas}
-                          </Badge>
-                          <span className="text-sm text-gray-600">m³</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="text-sm text-gray-600 max-w-xs truncate">
-                          {medicao.observacoes}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => alert('Funcionalidade de edição será implementada em breve')}
-                            className="h-8 px-3"
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            Ver
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              if (confirm(`Tem certeza que deseja excluir esta medição?`)) {
-                                setMedicoes(prev => prev.filter(m => m.id !== medicao.id));
-                              }
-                            }}
-                            className="h-8 px-3 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-                          >
-                            <Trash2 className="w-4 h-4 mr-1" />
-                            Excluir
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            {/* Resumo das Medições */}
-            <div className="mt-6 pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-4 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">
-                    {medicoes.length}
-                  </div>
-                  <div className="text-sm text-gray-600">Total de Medições</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">
-                    {medicoes.reduce((total, m) => total + parseInt(m.agua), 0)}
-                  </div>
-                  <div className="text-sm text-gray-600">Total Água (m³)</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {medicoes.reduce((total, m) => total + parseInt(m.luz), 0)}
-                  </div>
-                  <div className="text-sm text-gray-600">Total Luz (kWh)</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-orange-600">
-                    {medicoes.reduce((total, m) => total + parseInt(m.gas), 0)}
-                  </div>
-                  <div className="text-sm text-gray-600">Total Gás (m³)</div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
       </CardContent>
     </Card>
   );

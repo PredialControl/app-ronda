@@ -37,6 +37,16 @@ export interface OutroItemCorrigido {
   responsavel?: string;
 }
 
+export interface UsuarioAutorizado {
+  id: string;
+  email: string;
+  nome: string;
+  cargo: string;
+  permissoes: string[];
+  ativo: boolean;
+  ultimoAcesso?: string;
+}
+
 export interface Ronda {
   id: string;
   nome: string;
