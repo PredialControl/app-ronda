@@ -477,22 +477,38 @@ export const fotoRondaService = {
 
   // Criar foto
   async create(foto: Omit<FotoRonda, 'id'> & { ronda_id: string }): Promise<FotoRonda> {
-    const { data, error } = await supabase
+    // Monta payload com criticidade quando existir
+    const payload: any = {
+      ronda_id: foto.ronda_id,
+      foto: foto.foto,
+      local: foto.local,
+      pendencia: foto.pendencia,
+      especialidade: foto.especialidade,
+      responsavel: foto.responsavel,
+      observacoes: foto.observacoes,
+      data: foto.data,
+      hora: foto.hora,
+    };
+    if ((foto as any).criticidade) payload.criticidade = (foto as any).criticidade;
+
+    let { data, error }: any = await supabase
       .from('fotos_ronda')
-      .insert([{
-        ronda_id: foto.ronda_id,
-        foto: foto.foto,
-        local: foto.local,
-        pendencia: foto.pendencia,
-        especialidade: foto.especialidade,
-        responsavel: foto.responsavel,
-        observacoes: foto.observacoes,
-        data: foto.data,
-        hora: foto.hora,
-        criticidade: (foto as any).criticidade
-      }])
+      .insert([payload])
       .select()
-      .single()
+      .single();
+
+    // Fallback: se a coluna criticidade não existir no banco, tenta novamente sem ela
+    if (error && String(error?.message || '').toLowerCase().includes('criticidade')) {
+      try {
+        console.warn('Coluna criticidade ausente na tabela fotos_ronda. Tentando salvar sem o campo.');
+        delete payload.criticidade;
+        ({ data, error } = await supabase
+          .from('fotos_ronda')
+          .insert([payload])
+          .select()
+          .single());
+      } catch {}
+    }
 
     if (error) {
       console.error('Erro ao criar foto:', error)
@@ -506,23 +522,36 @@ export const fotoRondaService = {
   async update(id: string, updates: Partial<FotoRonda>): Promise<FotoRonda> {
     try {
       console.log('🔄 Tentando atualizar foto com ID:', id);
-      
-      const { data, error } = await supabase
+
+      const payload: any = {
+        foto: updates.foto,
+        local: updates.local,
+        pendencia: updates.pendencia,
+        especialidade: updates.especialidade,
+        responsavel: updates.responsavel,
+        observacoes: updates.observacoes,
+        data: updates.data,
+        hora: updates.hora,
+      };
+      if ((updates as any).criticidade) payload.criticidade = (updates as any).criticidade;
+
+      let { data, error }: any = await supabase
         .from('fotos_ronda')
-        .update({
-          foto: updates.foto,
-          local: updates.local,
-          pendencia: updates.pendencia,
-          especialidade: updates.especialidade,
-          responsavel: updates.responsavel,
-          observacoes: updates.observacoes,
-          data: updates.data,
-          hora: updates.hora,
-          criticidade: (updates as any).criticidade
-        })
+        .update(payload)
         .eq('id', id)
         .select()
         .single();
+
+      if (error && String(error?.message || '').toLowerCase().includes('criticidade')) {
+        console.warn('Coluna criticidade ausente na tabela fotos_ronda. Atualizando sem o campo.');
+        delete payload.criticidade;
+        ({ data, error } = await supabase
+          .from('fotos_ronda')
+          .update(payload)
+          .eq('id', id)
+          .select()
+          .single());
+      }
 
       if (error) {
         console.error('❌ Erro na query Supabase:', error);
