@@ -500,15 +500,15 @@ export function VisualizarRonda({
         <CardContent className="space-y-6">
           {/* Críticos */}
           {resumoExecutivo.criticos.length > 0 && (
-            <div className="bg-red-100 border-l-4 border-red-500 p-4 rounded-r-lg">
-              <h3 className="font-bold text-red-800 flex items-center gap-2 mb-3">
-                <XCircle className="w-5 h-5" />
-                🚨 Críticos
+            <div className="bg-orange-100 border-l-4 border-orange-500 p-4 rounded-r-lg">
+              <h3 className="font-bold text-orange-800 flex items-center gap-2 mb-3">
+                <AlertCircle className="w-5 h-5" />
+                ⚠️ Atenção
               </h3>
               <ul className="space-y-2">
                 {resumoExecutivo.criticos.map((item, index) => (
-                  <li key={index} className="text-red-700 flex items-start gap-2">
-                    <span className="text-red-500 mt-1">•</span>
+                  <li key={index} className="text-orange-700 flex items-start gap-2">
+                    <span className="text-orange-500 mt-1">•</span>
                     <span>{item}</span>
                   </li>
                 ))}
