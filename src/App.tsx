@@ -118,14 +118,8 @@ function App() {
       try {
         console.log('🔄 Carregando dados do banco Supabase/Neon...');
         
-        // DEBUG: Verificar estado do banco
+        // DEBUG: Verificar estado do banco (opcional)
         await debugDatabase();
-        
-        // LIMPAR localStorage automaticamente para evitar conflitos de ID
-        console.log('🧹 Limpando localStorage para evitar conflitos de ID...');
-        localStorage.removeItem('appRonda_contratos');
-        localStorage.removeItem('appRonda_rondas');
-        console.log('✅ localStorage limpo com sucesso!');
         
         // Carregar contratos do banco
         const contratosFromDB = await contratoService.getAll();
