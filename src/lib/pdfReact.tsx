@@ -4,13 +4,15 @@ import { CM_TO_PT } from './pdfConfig';
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 2 * CM_TO_PT,
-    paddingBottom: 2 * CM_TO_PT,
+    paddingTop: 2.0 * CM_TO_PT,
+    paddingBottom: 1.6 * CM_TO_PT,
     paddingLeft: 1 * CM_TO_PT,
     paddingRight: 1 * CM_TO_PT,
-    fontSize: 10,
+    fontSize: 11,
+    color: '#111827',
+    fontFamily: 'Helvetica',
   },
-  title: { fontSize: 16, fontWeight: 700, color: '#1e40af', marginBottom: 10 },
+  title: { fontSize: 18, fontWeight: 700, color: '#1e40af', marginBottom: 12 },
   header: {
     height: 3.2 * CM_TO_PT,
     backgroundColor: 'transparent',
@@ -20,6 +22,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 0.4 * CM_TO_PT as any,
+  },
+  headerFixedContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 1.8 * CM_TO_PT,
+    paddingHorizontal: 0.5 * CM_TO_PT,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: 'transparent',
   },
   headerText: {
     flexGrow: 1,
@@ -31,49 +47,53 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: 1.6 * CM_TO_PT,
   },
-  footerImage: {
+  footerPagination: {
     position: 'absolute',
+    left: 0.5 * CM_TO_PT,
     bottom: 0.5 * CM_TO_PT,
-    right: 0.5 * CM_TO_PT,
-    width: 3.5 * CM_TO_PT,
-    height: 1.0 * CM_TO_PT,
-    opacity: 0.95,
+    fontSize: 9,
+    color: '#6B7280',
+  },
+  footerImage: {
+    display: 'none',
   },
   logoCircle: { width: 2.2 * CM_TO_PT, height: 2.2 * CM_TO_PT, marginRight: 12 },
   logoTextBox: { color: 'white' },
   logoTextTop: { fontSize: 12, fontWeight: 700, color: 'white' },
   logoTextBottom: { fontSize: 14, fontWeight: 800, color: 'white' },
   faixa: {
-    height: 1.6 * CM_TO_PT,
+    height: 1.2 * CM_TO_PT,
     borderWidth: 1,
     borderColor: '#16a34a',
     justifyContent: 'center',
     paddingHorizontal: 0.5 * CM_TO_PT,
-    marginBottom: 0.5 * CM_TO_PT,
+    marginBottom: 0.3 * CM_TO_PT,
   },
   grid2: {
     flexDirection: 'row',
     gap: 1 * CM_TO_PT,
   },
   gridItem2: {
-    width: (29.7 * CM_TO_PT - 2 * CM_TO_PT - 2 * CM_TO_PT - 0.5 * CM_TO_PT) / 2,
-    height: 7.2 * CM_TO_PT,
-    borderWidth: 2,
-    borderColor: '#7e22ce',
+    width: 13.5 * CM_TO_PT,
+    height: 7.8 * CM_TO_PT,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     padding: 0.5 * CM_TO_PT,
+    backgroundColor: '#FFFFFF',
   },
   grid4Wrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 0.5 * CM_TO_PT,
-    paddingBottom: 1.8 * CM_TO_PT, // espaço reservado para rodapé
+    gap: 0.2 * CM_TO_PT,
+    paddingBottom: 0,
   },
   gridItem4: {
-    width: (29.7 * CM_TO_PT - 2 * CM_TO_PT - 2 * CM_TO_PT - 0.5 * CM_TO_PT) / 2,
-    height: 7.2 * CM_TO_PT,
-    borderWidth: 2,
-    borderColor: '#7e22ce',
+    width: 13.5 * CM_TO_PT,
+    height: 7.8 * CM_TO_PT,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     padding: 0.5 * CM_TO_PT,
+    backgroundColor: '#FFFFFF',
   },
   titulo: { fontSize: 16, fontWeight: 700 },
   texto: { fontSize: 11 },
@@ -88,9 +108,10 @@ const styles = StyleSheet.create({
   },
   resumoContainer: {
     borderWidth: 1,
-    borderColor: '#bfdbfe',
+    borderColor: '#E5E7EB',
     padding: 12,
     borderRadius: 4,
+    backgroundColor: '#F9FAFB',
   },
   resumoSectionYellow: {
     backgroundColor: '#fef9c3',
@@ -176,9 +197,9 @@ export type PdfImage = { data: Uint8Array; format: 'jpeg' | 'png' };
 export type PdfFotoItem = { id: string; src: PdfImage | string | null; local: string; especialidade: string; pendencia: string; observacoes?: string; responsavel?: string; criticidade?: string };
 
 export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: AreaTecnica[]; fotos?: PdfFotoItem[]; headerImage?: string | null }> = ({ ronda, contrato, areas, fotos = [], headerImage = null }) => {
-  // Página 1: cabeçalho, faixa, 2 cards largos (metade da altura útil cada um)
-  const firstTwo = areas.slice(0, 2);
-  const restantes = areas.slice(2);
+  // Página 1: cabeçalho, faixa, 4 cards (2x2); demais páginas também 2x2
+  const firstPageAreas = areas.slice(0, 4);
+  const restantes = areas.slice(4);
   const fotosToUse: PdfFotoItem[] = fotos.length
     ? fotos
     : (ronda.fotosRonda || []).map((f) => ({ id: f.id, src: f.foto, local: f.local, especialidade: f.especialidade, pendencia: f.pendencia, observacoes: f.observacoes, responsavel: (f as any).responsavel, criticidade: (f as any).criticidade }));
@@ -209,58 +230,59 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
   })();
 
   return (
-    <Document>
+    <Document title={`Relatório de Ronda · ${contrato.nome}`} author="App Ronda" subject="Relatório técnico de ronda">
       <Page size="A4" orientation="landscape" style={styles.page}>
-        <View style={styles.header}>
-          {headerImage ? (
-            <PDFImage src={headerImage} style={{ width: 7.0 * CM_TO_PT, height: 2.0 * CM_TO_PT }} />
-          ) : null}
-          <View style={styles.headerText}>
-            <Text style={styles.titulo}>Relatório de Ronda Técnica</Text>
-            <Text style={styles.texto}>Contrato: {contrato.nome}</Text>
-            <Text style={styles.texto}>Endereço: {contrato.endereco}</Text>
-            <Text style={styles.texto}>Data: {ronda.data}   Hora: {ronda.hora}   Responsável: {ronda.responsavel || '—'}</Text>
+        <View style={styles.headerFixedContainer} fixed>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {headerImage ? (
+              <PDFImage src={headerImage} style={{ width: 3.8 * CM_TO_PT, height: 1.1 * CM_TO_PT }} />
+            ) : null}
+          </View>
+          <View>
+            <Text style={{ fontSize: 12, fontWeight: 700 }}>Relatório de Ronda Técnica</Text>
+            <Text style={{ fontSize: 10, color: '#374151' }}>Contrato: {contrato.nome}</Text>
+            <Text style={{ fontSize: 10, color: '#6B7280' }}>Data: {ronda.data}  Hora: {ronda.hora}</Text>
           </View>
         </View>
         <View style={styles.faixa}>
           <Text style={{ color: '#16a34a', fontWeight: 700, fontSize: 14 }}>Áreas Técnicas Verificadas</Text>
         </View>
         <View style={styles.grid4Wrap}>
-          {firstTwo.map((a, i) => (
-            <View key={i} style={styles.gridItem2}>
-              <Text style={{ fontSize: 12, fontWeight: 700 }}>{a.nome}</Text>
-              {(() => {
-                let bg = '#dcfce7';
-                let border = '#22c55e';
-                let color = '#166534';
-                if (a.status === 'EM MANUTENÇÃO') { bg = '#fffbeb'; border = '#f59e0b'; color = '#92400e'; }
-                if (a.status === 'ATENÇÃO') { bg = '#fee2e2'; border = '#ef4444'; color = '#991b1b'; }
-                return (
-                  <View style={{ ...styles.statusPill, backgroundColor: bg, borderColor: border }}>
-                    <Text style={{ fontSize: 10, color }}>{a.status}</Text>
-                  </View>
-                );
-              })()}
-              {a.foto ? (<PDFImage src={a.foto} style={{ width: '100%', height: 4.9 * CM_TO_PT, marginTop: 6 }} />) : null}
-              {a.observacoes ? (<Text style={{ fontSize: 10, marginTop: 6 }}>Obs.: {a.observacoes}</Text>) : null}
-            </View>
+          {firstPageAreas.map((a) => (
+            <CardArea key={a.id} area={a} />
           ))}
         </View>
         <View style={styles.footerContainer} fixed>
-          {headerImage ? (<PDFImage src={headerImage} style={styles.footerImage} />) : null}
+          <Text style={styles.footerPagination} render={({ pageNumber, totalPages }) => (
+            `Página ${pageNumber} de ${totalPages}`
+          )} />
         </View>
       </Page>
 
       {/* Páginas seguintes: áreas técnicas 2x2 por página */}
       {Array.from({ length: Math.ceil(restantes.length / 4) }).map((_, pageIndex) => (
         <Page key={`areas-${pageIndex}`} size="A4" orientation="landscape" style={styles.page}>
+          <View style={styles.headerFixedContainer} fixed>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {headerImage ? (
+                <PDFImage src={headerImage} style={{ width: 3.8 * CM_TO_PT, height: 1.1 * CM_TO_PT }} />
+              ) : null}
+            </View>
+            <View>
+              <Text style={{ fontSize: 12, fontWeight: 700 }}>Relatório de Ronda Técnica</Text>
+              <Text style={{ fontSize: 10, color: '#374151' }}>Contrato: {contrato.nome}</Text>
+              <Text style={{ fontSize: 10, color: '#6B7280' }}>Data: {ronda.data}  Hora: {ronda.hora}</Text>
+            </View>
+          </View>
           <View style={styles.grid4Wrap}>
             {restantes.slice(pageIndex * 4, pageIndex * 4 + 4).map((a) => (
               <CardArea key={a.id} area={a} />
             ))}
           </View>
           <View style={styles.footerContainer} fixed>
-            {headerImage ? (<PDFImage src={headerImage} style={styles.footerImage} />) : null}
+            <Text style={styles.footerPagination} render={({ pageNumber, totalPages }) => (
+              `Página ${pageNumber} de ${totalPages}`
+            )} />
           </View>
         </Page>
       ))}
@@ -268,6 +290,18 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
       {/* Páginas de fotos 2x2 por página */}
       {Array.from({ length: Math.ceil(fotosToUse.length / 4) }).map((_, pageIndex) => (
         <Page key={`fotos-${pageIndex}`} size="A4" orientation="landscape" style={styles.page}>
+          <View style={styles.headerFixedContainer} fixed>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {headerImage ? (
+                <PDFImage src={headerImage} style={{ width: 3.8 * CM_TO_PT, height: 1.1 * CM_TO_PT }} />
+              ) : null}
+            </View>
+            <View>
+              <Text style={{ fontSize: 12, fontWeight: 700 }}>Relatório de Ronda Técnica</Text>
+              <Text style={{ fontSize: 10, color: '#374151' }}>Contrato: {contrato.nome}</Text>
+              <Text style={{ fontSize: 10, color: '#6B7280' }}>Data: {ronda.data}  Hora: {ronda.hora}</Text>
+            </View>
+          </View>
           {pageIndex === 0 && (
             <View style={styles.faixa}>
               <Text style={{ color: '#ea580c', fontWeight: 700, fontSize: 14 }}>Itens Abertura de Chamado</Text>
@@ -279,13 +313,27 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
             ))}
           </View>
           <View style={styles.footerContainer} fixed>
-            {headerImage ? (<PDFImage src={headerImage} style={styles.footerImage} />) : null}
+            <Text style={styles.footerPagination} render={({ pageNumber, totalPages }) => (
+              `Página ${pageNumber} de ${totalPages}`
+            )} />
           </View>
         </Page>
       ))}
 
       {/* Resumo Executivo – última página, uma página só */}
       <Page size="A4" orientation="landscape" style={styles.page} wrap>
+        <View style={styles.headerFixedContainer} fixed>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {headerImage ? (
+              <PDFImage src={headerImage} style={{ width: 3.8 * CM_TO_PT, height: 1.1 * CM_TO_PT }} />
+            ) : null}
+          </View>
+          <View>
+            <Text style={{ fontSize: 12, fontWeight: 700 }}>Relatório de Ronda Técnica</Text>
+            <Text style={{ fontSize: 10, color: '#374151' }}>Contrato: {contrato.nome}</Text>
+            <Text style={{ fontSize: 10, color: '#6B7280' }}>Data: {ronda.data}  Hora: {ronda.hora}</Text>
+          </View>
+        </View>
         <View style={styles.resumoContainer}>
           <Text style={styles.title}>Resumo Executivo – Pontos Críticos</Text>
 
@@ -330,7 +378,9 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
           )}
         </View>
         <View style={styles.footerContainer} fixed>
-          {headerImage ? (<PDFImage src={headerImage} style={styles.footerImage} />) : null}
+          <Text style={styles.footerPagination} render={({ pageNumber, totalPages }) => (
+            `Página ${pageNumber} de ${totalPages}`
+          )} />
         </View>
       </Page>
     </Document>
