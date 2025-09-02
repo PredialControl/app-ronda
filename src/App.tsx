@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { AreaTecnicaModal } from '@/components/AreaTecnicaModal';
 import { NovaRondaScreen } from '@/components/NovaRondaScreen';
@@ -12,9 +12,9 @@ import { Dashboard } from '@/components/Dashboard';
 import { LoginScreen } from '@/components/LoginScreen';
 import { AreaTecnica, Ronda, Contrato, FotoRonda, OutroItemCorrigido, UsuarioAutorizado } from '@/types';
 import { AREAS_TECNICAS_PREDEFINIDAS } from '@/data/areasTecnicas';
-import { FileText, Building2, ArrowLeft, AlertTriangle, BarChart3, LogOut, User } from 'lucide-react';
+import { FileText, Building2, BarChart3, LogOut, User } from 'lucide-react';
 
-import { contratoService, rondaService, areaTecnicaService, fotoRondaService, outroItemService, migrateFromLocalStorage, debugDatabase } from '@/lib/supabaseService';
+import { contratoService, rondaService, areaTecnicaService, fotoRondaService, outroItemService } from '@/lib/supabaseService';
 import { authService } from '@/lib/auth';
 
 
@@ -117,20 +117,17 @@ function App() {
     const loadDataFromDatabase = async () => {
       try {
         console.log('🔄 Carregando dados do banco Supabase/Neon...');
-        
-        // DEBUG: Verificar estado do banco (opcional)
-        await debugDatabase();
-        
-        // Carregar contratos do banco
-        const contratosFromDB = await contratoService.getAll();
+
+        // Buscar contratos e rondas em paralelo para reduzir latência total
+        const [contratosFromDB, rondasFromDB] = await Promise.all([
+          contratoService.getAll(),
+          rondaService.getAll(),
+        ]);
+
         setContratos(contratosFromDB);
-        console.log(`✅ ${contratosFromDB.length} contratos carregados do banco`);
-        
-        // Carregar rondas do banco
-        const rondasFromDB = await rondaService.getAll();
         setRondas(rondasFromDB);
-        console.log(`✅ ${rondasFromDB.length} rondas carregadas do banco`);
-        
+        console.log(`✅ ${contratosFromDB.length} contratos e ${rondasFromDB.length} rondas carregados`);
+
         // Se não há dados no banco, criar dados de exemplo
         if (contratosFromDB.length === 0 && rondasFromDB.length === 0) {
           console.log('🔄 Banco vazio, criando dados de exemplo...');

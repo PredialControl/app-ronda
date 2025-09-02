@@ -210,11 +210,11 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
     const situacaoNormal: string[] = [];
     const emAtencao: string[] = [];
     const emManutencao: string[] = [];
+    const itensCorrigidos: string[] = [];
 
     (ronda.fotosRonda || []).forEach(item => {
-      const base = `${item.especialidade} – ${item.local}`;
-      const obs = item.observacoes ? `: ${item.observacoes}` : '';
-      chamadosAbertos.push(`${base}${obs ? obs : ''}`);
+      const textoPendencia = item.pendencia ? `Pendência: ${item.pendencia}` : `${item.especialidade} – ${item.local}`;
+      chamadosAbertos.push(`${textoPendencia} - chamado aberto`);
     });
 
     areas.forEach(area => {
@@ -226,7 +226,15 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
         situacaoNormal.push(`${area.nome}: Operacional`);
       }
     });
-    return { chamadosAbertos, situacaoNormal, emAtencao, emManutencao };
+    (ronda.outrosItensCorrigidos || []).forEach(item => {
+      const statusNorm = (item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+      if (statusNorm === 'CONCLUIDO') {
+        const base = `${item.nome} (${item.local})`;
+        const detalhe = item.observacoes || item.descricao || 'Item corrigido';
+        itensCorrigidos.push(`${base}: ${detalhe}`);
+      }
+    });
+    return { chamadosAbertos, situacaoNormal, emAtencao, emManutencao, itensCorrigidos };
   })();
 
   return (
@@ -376,6 +384,16 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
               ))}
             </View>
           )}
+
+          {/* Itens Corrigidos */}
+          {resumo.itensCorrigidos.length > 0 && (
+            <View style={styles.resumoSectionGreen}>
+              <Text style={styles.resumoSectionTitle}>Itens Corrigidos</Text>
+              {resumo.itensCorrigidos.map((t, i) => (
+                <Text key={i} style={styles.bullet}>• {t}</Text>
+              ))}
+            </View>
+          )}
         </View>
         <View style={styles.footerContainer} fixed>
           <Text style={styles.footerPagination} render={({ pageNumber, totalPages }) => (
@@ -503,3 +521,4 @@ export async function downloadRelatorioPDF(ronda: Ronda, contrato: Contrato, are
   a.click();
   URL.revokeObjectURL(url);
 }
+

@@ -148,13 +148,14 @@ export const rondaService = {
   // Buscar todas as rondas
   async getAll(): Promise<Ronda[]> {
     try {
+      // Consulta leve com relações mínimas para manter contagens e status
       const { data, error } = await supabase
         .from('rondas')
         .select(`
-          *,
-          areas_tecnicas (*),
-          fotos_ronda (*),
-          outros_itens_corrigidos (*)
+          id, nome, contrato, data, hora, responsavel, observacoes_gerais,
+          areas_tecnicas (id, status),
+          fotos_ronda (id),
+          outros_itens_corrigidos (id)
         `)
         .order('data_criacao', { ascending: false });
 
@@ -168,9 +169,47 @@ export const rondaService = {
         hora: row.hora,
         responsavel: row.responsavel,
         observacoesGerais: row.observacoes_gerais,
-        areasTecnicas: row.areas_tecnicas || [],
-        fotosRonda: row.fotos_ronda || [],
-        outrosItensCorrigidos: row.outros_itens_corrigidos || []
+        // Mapear relações mínimas para objetos tipados completos (placeholders),
+        // garantindo contagens e compatibilidade com a UI sem carregar blobs
+        areasTecnicas: (row.areas_tecnicas || []).map((at: any) => ({
+          id: String(at.id),
+          nome: '',
+          status: at.status,
+          contrato: row.contrato,
+          endereco: '',
+          data: row.data,
+          hora: row.hora,
+          foto: null,
+          observacoes: ''
+        })),
+        fotosRonda: (row.fotos_ronda || []).map((fr: any) => ({
+          id: String(fr.id),
+          foto: '',
+          local: '',
+          pendencia: '',
+          especialidade: '',
+          responsavel: 'CONDOMÍNIO',
+          observacoes: undefined,
+          data: row.data,
+          hora: row.hora,
+          criticidade: undefined
+        })),
+        outrosItensCorrigidos: (row.outros_itens_corrigidos || []).map((oi: any) => ({
+          id: String(oi.id),
+          nome: '',
+          descricao: '',
+          local: '',
+          tipo: 'OUTRO',
+          prioridade: 'BAIXA',
+          status: 'PENDENTE',
+          contrato: row.contrato,
+          endereco: '',
+          responsavel: undefined,
+          foto: null,
+          observacoes: undefined,
+          data: row.data,
+          hora: row.hora
+        }))
       }));
     } catch (error) {
       console.error('Erro ao buscar rondas:', error);
@@ -772,7 +811,7 @@ export const debugDatabase = async (): Promise<void> => {
     }
     
     // Verificar estrutura da tabela
-    const { data: tableInfo, error: errorTable } = await supabase
+    const { error: errorTable } = await supabase
       .from('contratos')
       .select('id, nome, sindico, endereco, periodicidade, observacoes, data_criacao')
       .limit(1);

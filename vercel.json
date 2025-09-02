@@ -7,16 +7,4 @@
   ]
 }
 
-{
-  "projectSettings": {
-    "framework": null
-  },
-  "alias": [
-    "app-ronda-ricardo.vercel.app"
-  ],
-  "github": {
-    "silent": true
-  }
-}
-
 
