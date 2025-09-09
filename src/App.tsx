@@ -40,14 +40,34 @@ function App() {
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
 
   useEffect(() => {
+    // FORÇAR tema escuro com JavaScript
     const root = document.documentElement;
-    root.classList.add('dark'); // Sempre modo escuro
-    root.style.colorScheme = 'dark'; // Força o navegador a usar tema escuro
-    try { localStorage.setItem('theme', 'dark'); } catch {}
+    const body = document.body;
     
-    // Força o body a ter fundo escuro
-    document.body.classList.add('dark');
-    document.body.style.backgroundColor = 'rgb(15 23 42)'; // slate-900
+    // Aplicar classes e estilos
+    root.classList.add('dark');
+    root.style.colorScheme = 'dark';
+    root.style.backgroundColor = 'rgb(15 23 42)';
+    root.style.color = 'rgb(248 250 252)';
+    
+    body.classList.add('dark');
+    body.style.backgroundColor = 'rgb(15 23 42)';
+    body.style.color = 'rgb(248 250 252)';
+    
+    // Forçar no elemento root da React
+    const rootElement = document.getElementById('root');
+    if (rootElement) {
+      rootElement.style.backgroundColor = 'rgb(15 23 42)';
+      rootElement.style.color = 'rgb(248 250 252)';
+      rootElement.style.minHeight = '100vh';
+    }
+    
+    // Salvar no localStorage
+    try { 
+      localStorage.setItem('theme', 'dark'); 
+    } catch {}
+    
+    console.log('🌙 Tema escuro forçado via JavaScript');
   }, []);
 
   // Debug: Log do estado dos dados
