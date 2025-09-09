@@ -145,78 +145,47 @@ export const contratoService = {
 
 // Serviços para Rondas
 export const rondaService = {
-  // Buscar todas as rondas (versão otimizada)
+  // Buscar todas as rondas (versão ULTRA SIMPLES - sem JOINs)
   async getAll(): Promise<Ronda[]> {
     try {
-      console.log('🔄 Carregando rondas do banco...');
+      console.log('🔄 Carregando rondas do banco (versão simples)...');
       
-      // Consulta ULTRA SIMPLES - apenas dados básicos das rondas (sem JOINs)
+      // Consulta MÍNIMA - apenas campos básicos
       const { data, error } = await supabase
         .from('rondas')
         .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais')
         .order('data_criacao', { ascending: false })
-        .limit(50); // Limitar para evitar timeout
+        .limit(20); // Limite baixo para garantir velocidade
 
       if (error) {
         console.error('❌ Erro ao buscar rondas:', error);
-        throw error;
+        // Retornar array vazio em caso de erro para não quebrar a UI
+        return [];
       }
 
       console.log(`✅ ${data?.length || 0} rondas básicas carregadas`);
 
-      return data.map(row => ({
+      // Mapear para objetos simples
+      const rondasSimples = (data || []).map(row => ({
         id: row.id.toString(),
-        nome: row.nome,
-        contrato: row.contrato,
-        data: row.data,
-        hora: row.hora,
-        responsavel: row.responsavel,
-        observacoesGerais: row.observacoes_gerais,
-        // Mapear relações mínimas para objetos tipados completos (placeholders),
-        // garantindo contagens e compatibilidade com a UI sem carregar blobs
-        areasTecnicas: (row.areas_tecnicas || []).map((at: any) => ({
-          id: String(at.id),
-          nome: at.nome || '',
-          status: at.status,
-          contrato: row.contrato,
-          endereco: '',
-          data: row.data,
-          hora: row.hora,
-          foto: null,
-          observacoes: at.observacoes || ''
-        })),
-        fotosRonda: (row.fotos_ronda || []).map((fr: any) => ({
-          id: String(fr.id),
-          foto: '',
-          local: fr.local || '',
-          pendencia: fr.pendencia || '',
-          especialidade: fr.especialidade || '',
-          responsavel: fr.responsavel || 'CONDOMÍNIO',
-          observacoes: fr.observacoes,
-          data: fr.data || row.data,
-          hora: fr.hora || row.hora,
-          criticidade: undefined
-        })),
-        outrosItensCorrigidos: (row.outros_itens_corrigidos || []).map((oi: any) => ({
-          id: String(oi.id),
-          nome: '',
-          descricao: '',
-          local: '',
-          tipo: 'OUTRO',
-          prioridade: 'BAIXA',
-          status: 'PENDENTE',
-          contrato: row.contrato,
-          endereco: '',
-          responsavel: undefined,
-          foto: null,
-          observacoes: undefined,
-          data: row.data,
-          hora: row.hora
-        }))
+        nome: row.nome || 'Ronda sem nome',
+        contrato: row.contrato || 'Contrato não especificado',
+        data: row.data || new Date().toISOString().split('T')[0],
+        hora: row.hora || '00:00',
+        responsavel: row.responsavel || 'Responsável não informado',
+        observacoesGerais: row.observacoes_gerais || '',
+        // Arrays vazios - serão carregados sob demanda
+        areasTecnicas: [],
+        fotosRonda: [],
+        outrosItensCorrigidos: []
       }));
+
+      console.log('✅ Rondas mapeadas com sucesso:', rondasSimples.length);
+      return rondasSimples;
     } catch (error) {
-      console.error('Erro ao buscar rondas:', error);
-      throw error;
+      console.error('❌ Erro crítico ao buscar rondas:', error);
+      // Retornar array vazio para não quebrar a aplicação
+      return [];
     }
   },
 

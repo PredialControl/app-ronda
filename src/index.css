@@ -58,6 +58,15 @@
     background-color: rgb(15 23 42) !important; /* slate-900 - sempre escuro */
     color: rgb(248 250 252) !important; /* slate-50 - sempre claro */
   }
+  html {
+    background-color: rgb(15 23 42) !important;
+    color: rgb(248 250 252) !important;
+  }
+  #root {
+    background-color: rgb(15 23 42) !important;
+    color: rgb(248 250 252) !important;
+    min-height: 100vh;
+  }
   .dark body {
     background-image: radial-gradient(1200px 400px at 50% -10%, rgba(99,102,241,0.25), transparent 60%),
       radial-gradient(800px 300px at 80% 0%, rgba(147,51,234,0.18), transparent 60%),
