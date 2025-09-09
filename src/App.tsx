@@ -39,6 +39,43 @@ function App() {
   const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard'>('tabela');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add('dark'); // Sempre modo escuro
+    root.style.colorScheme = 'dark'; // Força o navegador a usar tema escuro
+    try { localStorage.setItem('theme', 'dark'); } catch {}
+    
+    // Força o body a ter fundo escuro
+    document.body.classList.add('dark');
+    document.body.style.backgroundColor = 'rgb(15 23 42)'; // slate-900
+  }, []);
+
+  // Debug: Log do estado dos dados
+  useEffect(() => {
+    console.log('📊 Estado atual dos dados:', {
+      contratos: contratos.length,
+      rondas: rondas.length,
+      contratoSelecionado: contratoSelecionado?.nome || 'nenhum',
+      currentView,
+      usuarioLogado: usuarioLogado?.nome || 'não logado',
+      contratosData: contratos,
+      rondasData: rondas
+    });
+    
+    // Debug específico para rondas
+    if (rondas.length > 0) {
+      console.log('🔄 Rondas carregadas:', rondas.map(r => ({
+        id: r.id,
+        nome: r.nome,
+        data: r.data,
+        areasTecnicas: r.areasTecnicas?.length || 0,
+        fotosRonda: r.fotosRonda?.length || 0
+      })));
+    } else {
+      console.log('⚠️ Nenhuma ronda carregada');
+    }
+  }, [contratos, rondas, contratoSelecionado, currentView, usuarioLogado]);
+
   // Log para debug da ronda selecionada
   useEffect(() => {
     console.log('Ronda selecionada mudou:', rondaSelecionada);
@@ -124,6 +161,13 @@ function App() {
           rondaService.getAll(),
         ]);
 
+        console.log('📥 Dados recebidos do banco:', {
+          contratos: contratosFromDB.length,
+          rondas: rondasFromDB.length,
+          contratosData: contratosFromDB,
+          rondasData: rondasFromDB
+        });
+
         setContratos(contratosFromDB);
         setRondas(rondasFromDB);
         console.log(`✅ ${contratosFromDB.length} contratos e ${rondasFromDB.length} rondas carregados`);
@@ -176,8 +220,79 @@ function App() {
         }
       } catch (error) {
         console.error('❌ Erro ao carregar dados do banco:', error);
-        // Não usar fallback localStorage para evitar conflitos
-        console.log('⚠️ Usando apenas dados do banco para evitar conflitos de ID');
+        console.log('🔄 Tentando carregar dados do localStorage como fallback...');
+        
+        // Fallback para localStorage quando não conseguir conectar ao banco
+        try {
+          const savedContratos = localStorage.getItem('appRonda_contratos');
+          const savedRondas = localStorage.getItem('appRonda_rondas');
+          
+          if (savedContratos) {
+            const contratosFromStorage = JSON.parse(savedContratos);
+            setContratos(contratosFromStorage);
+            console.log(`✅ ${contratosFromStorage.length} contratos carregados do localStorage`);
+          }
+          
+          if (savedRondas) {
+            const rondasFromStorage = JSON.parse(savedRondas);
+            setRondas(rondasFromStorage);
+            console.log(`✅ ${rondasFromStorage.length} rondas carregadas do localStorage`);
+          }
+          
+          // Se não há dados nem no banco nem no localStorage, criar dados de exemplo
+          if ((!savedContratos || JSON.parse(savedContratos).length === 0) && 
+              (!savedRondas || JSON.parse(savedRondas).length === 0)) {
+            console.log('🔄 Criando dados de exemplo no localStorage...');
+            
+            const contratoExemplo1: Contrato = {
+              id: crypto.randomUUID(),
+              nome: 'CT001/2024 - Manutenção Preventiva',
+              sindico: 'Maria Santos',
+              endereco: 'Rua das Flores, 123 - Centro',
+              periodicidade: 'MENSAL' as const,
+              observacoes: 'Contrato de manutenção preventiva mensal',
+              dataCriacao: '2024-01-01T00:00:00.000Z'
+            };
+            
+            const contratoExemplo2: Contrato = {
+              id: crypto.randomUUID(),
+              nome: 'CT002/2024 - Inspeção Semanal',
+              sindico: 'João Oliveira',
+              endereco: 'Av. Principal, 456 - Bairro Novo',
+              periodicidade: 'SEMANAL' as const,
+              observacoes: 'Inspeção semanal de segurança',
+              dataCriacao: '2024-01-01T00:00:00.000Z'
+            };
+            
+            const rondaExemplo = {
+              id: crypto.randomUUID(),
+              nome: 'Ronda Matutina - Centro',
+              contrato: 'CT001/2024 - Manutenção Preventiva',
+              data: '2024-01-15',
+              hora: '08:00',
+              responsavel: 'Ricardo Oliveira',
+              observacoesGerais: 'Verificação geral das áreas técnicas',
+              areasTecnicas: [],
+              fotosRonda: [],
+              outrosItensCorrigidos: []
+            };
+            
+            const contratosExemplo = [contratoExemplo1, contratoExemplo2];
+            const rondasExemplo = [rondaExemplo];
+            
+            // Salvar no localStorage
+            localStorage.setItem('appRonda_contratos', JSON.stringify(contratosExemplo));
+            localStorage.setItem('appRonda_rondas', JSON.stringify(rondasExemplo));
+            
+            // Atualizar estado
+            setContratos(contratosExemplo);
+            setRondas(rondasExemplo);
+            
+            console.log('✅ Dados de exemplo criados no localStorage');
+          }
+        } catch (storageError) {
+          console.error('❌ Erro ao acessar localStorage:', storageError);
+        }
       }
     };
 
@@ -473,7 +588,32 @@ function App() {
       console.log('✅ Contrato salvo com sucesso no banco');
     } catch (error) {
       console.error('❌ Erro ao salvar contrato no banco:', error);
+      console.log('🔄 Salvando contrato no localStorage como fallback...');
+      
+      // Fallback para localStorage
+      try {
+        const contratoComId = {
+          ...contrato,
+          id: contrato.id || crypto.randomUUID()
+        };
+        
+        const contratosAtualizados = contrato.id 
+          ? contratos.map(c => c.id === contrato.id ? contratoComId : c)
+          : [...contratos, contratoComId];
+        
+        localStorage.setItem('appRonda_contratos', JSON.stringify(contratosAtualizados));
+        setContratos(contratosAtualizados);
+        
+        if (contratoSelecionado && contratoSelecionado.id === contratoComId.id) {
+          setContratoSelecionado(contratoComId);
+        }
+        
+        console.log('✅ Contrato salvo no localStorage');
+        alert('Contrato salvo localmente (modo offline)');
+      } catch (storageError) {
+        console.error('❌ Erro ao salvar no localStorage:', storageError);
       alert('Erro ao salvar contrato. Verifique o console.');
+      }
     }
   };
 
@@ -731,22 +871,22 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Header com informações do usuário */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="backdrop-blur bg-white/10 border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              <Building2 className="w-8 h-8 text-blue-600" />
-              <h1 className="text-xl font-semibold text-gray-900">App Ronda</h1>
+              <Building2 className="w-8 h-8 text-blue-300" />
+              <h1 className="text-xl font-semibold text-white">Portal de Visitas Manutenção Predial</h1>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               {/* Informações do usuário */}
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-white/80">
                 <User className="w-4 h-4" />
                 <span>{usuarioLogado?.nome}</span>
-                <span className="text-gray-400">•</span>
+                <span className="text-white/40">•</span>
                 <span>{usuarioLogado?.cargo}</span>
               </div>
               
@@ -755,7 +895,7 @@ function App() {
                 onClick={handleLogout}
                 variant="outline"
                 size="sm"
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="text-red-300 border-red-400/30 hover:bg-red-500/10"
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Sair
@@ -767,20 +907,20 @@ function App() {
 
       {/* Contrato Info */}
       {contratoSelecionado && (
-        <div className="bg-blue-50 border-b border-blue-200">
+        <div className="bg-blue-500/10 border-b border-blue-400/20">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-blue-900">{contratoSelecionado.nome}</h2>
-                <p className="text-blue-700">
+                <h2 className="text-xl font-semibold text-blue-200">{contratoSelecionado.nome}</h2>
+                <p className="text-blue-200/80">
                   Síndico: {contratoSelecionado.sindico} | 
                   Endereço: {contratoSelecionado.endereco} | 
                   Periodicidade: {contratoSelecionado.periodicidade}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-blue-600">Total de Rondas: {rondasDoContrato.length}</p>
-                <p className="text-sm text-blue-600">Rondas Ativas: {rondasDoContrato.filter(r => r.data === new Date().toISOString().split('T')[0]).length}</p>
+                <p className="text-sm text-blue-200/80">Total de Rondas: {rondasDoContrato.length}</p>
+                <p className="text-sm text-blue-200/80">Rondas Ativas: {rondasDoContrato.filter(r => r.data === new Date().toISOString().split('T')[0]).length}</p>
               </div>
             </div>
           </div>
@@ -839,9 +979,6 @@ function App() {
                 }
               }
             }}
-            onVoltar={() => {
-              // Não precisamos fazer nada aqui pois estamos sempre na tela de contratos
-            }}
             onVoltarContratos={() => {
               // Fechar modal e voltar à lista de contratos
               setCurrentView('contratos');
@@ -861,14 +998,14 @@ function App() {
         ) : (
           <>
             {/* Tabs de Navegação */}
-            <div className="border-b border-gray-200 mb-6">
+            <div className="border-b border-gray-200/20 mb-6">
               <nav className="-mb-px flex space-x-8">
                 <button
                   onClick={() => setViewMode('tabela')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     viewMode === 'tabela'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-blue-400 text-blue-300'
+                      : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -881,8 +1018,8 @@ function App() {
                   onClick={() => setViewMode('dashboard')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     viewMode === 'dashboard'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-blue-400 text-blue-300'
+                      : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -895,8 +1032,8 @@ function App() {
                   onClick={() => setViewMode('nova')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${
                     viewMode === 'nova'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-blue-400 text-blue-300'
+                      : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -928,16 +1065,20 @@ function App() {
                         }
                       }
                     }}
+                    onVoltarContratos={() => {
+                      setCurrentView('contratos');
+                      setContratoSelecionado(null);
+                    }}
                   />
                 </div>
 
                 {/* Mensagem de seleção */}
                 <div className="text-center py-12">
-                  <h2 className="text-2xl font-semibold text-gray-900 mb-4">Selecione uma Ronda</h2>
-                  <p className="text-gray-600 text-lg mb-8">
+                  <h2 className="text-2xl font-semibold text-gray-100 mb-4">Selecione uma Ronda</h2>
+                  <p className="text-gray-300 text-lg mb-8">
                     Clique em uma ronda na tabela acima para visualizar seus detalhes ou crie uma nova ronda.
                   </p>
-                  <Button onClick={handleAddRonda} className="bg-green-600 hover:bg-green-700">
+                  <Button onClick={handleAddRonda} className="bg-green-600/80 hover:bg-green-600">
                     <FileText className="w-4 h-4 mr-2" />
                     Criar Nova Ronda
                   </Button>
