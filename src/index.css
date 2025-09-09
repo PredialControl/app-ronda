@@ -55,6 +55,14 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-color: rgb(15 23 42) !important; /* slate-900 - sempre escuro */
+    color: rgb(248 250 252) !important; /* slate-50 - sempre claro */
+  }
+  .dark body {
+    background-image: radial-gradient(1200px 400px at 50% -10%, rgba(99,102,241,0.25), transparent 60%),
+      radial-gradient(800px 300px at 80% 0%, rgba(147,51,234,0.18), transparent 60%),
+      radial-gradient(600px 240px at 20% 10%, rgba(59,130,246,0.15), transparent 60%);
+    background-color: rgb(15 23 42 / 1) !important;
   }
 }
 
@@ -84,10 +92,6 @@
   .print-grid-2-per-page > * {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-  }
-  .print-grid-2-per-page > *:nth-child(2n) {
-    break-after: page !important;
-    page-break-after: always !important;
   }
 
   /* Configurações gerais de impressão */
@@ -306,101 +310,6 @@
     flex-direction: column !important;
   }
   
-  /* FORÇAR quebra de página - mais agressivo */
-  .print-container .resumo-executivo::after {
-    content: "" !important;
-    display: block !important;
-    page-break-after: always !important;
-    break-after: page !important;
-    height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-  
-  /* Contêiner do resumo - altura fixa */
-  .print-container .resumo-executivo > * {
-    max-height: calc(100vh - 8rem) !important;
-    overflow: hidden !important;
-    flex-shrink: 0 !important;
-  }
-  
-  /* FORÇAR quebra de página ANTES do resumo */
-  .print-container .resumo-executivo::before {
-    content: "" !important;
-    display: block !important;
-    page-break-before: always !important;
-    break-before: page !important;
-    height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-  
-  /* RESET COMPLETO para o resumo */
-  .print-container .resumo-executivo * {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-  
-  /* Cards de status - manter juntos na mesma página */
-  .print-container .status-card {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    margin-bottom: 0.5rem !important;
-  }
-  
-  /* NOVAS REGRAS PARA EVITAR QUEBRAS */
-  .print-container .card,
-  .print-container .section,
-  .print-container figure,
-  .print-container img,
-  .print-container .tabela,
-  .print-container .grid {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-  
-  /* Classe para forçar quebra de página */
-  .print-container .force-page {
-    page-break-before: always !important;
-    break-before: page !important;
-  }
-  
-  /* Contêiner principal sem margens extras */
-  .print-container .report-root {
-    margin: 0 !important;
-    padding: 0 !important;
-    page-break-after: avoid !important;
-    break-after: avoid !important;
-  }
-  
-  /* Remover espaçadores no final */
-  .print-container .spacer,
-  .print-container .sentinel {
-    display: none !important;
-  }
-  
-  /* Classe específica para NÃO quebrar */
-  .print-container .no-break {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    page-break-before: avoid !important;
-    break-before: avoid !important;
-    page-break-after: avoid !important;
-    break-after: avoid !important;
-    height: auto !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
-  
-  /* Forçar resumo executivo em uma página só */
-  .print-container .resumo-executivo.no-break {
-    height: 100vh !important;
-    max-height: 100vh !important;
-    overflow: hidden !important;
-    page-break-after: always !important;
-    break-after: page !important;
-  }
-  
   /* FORÇAR QUEBRA DE PÁGINA ENTRE SEÇÕES */
   .print-container .print-section {
     page-break-before: auto !important;
@@ -539,4 +448,62 @@
   
   
 
+}
+
+/* Correções de contraste no modo escuro */
+.dark .text-gray-900 { color: #e5e7eb !important; }
+.dark .text-gray-800 { color: #e5e7eb !important; }
+.dark .text-gray-700 { color: #d1d5db !important; }
+.dark .text-gray-600 { color: #cbd5e1 !important; }
+.dark .border-gray-200 { border-color: rgba(255,255,255,0.15) !important; }
+.dark .bg-white { background-color: rgba(255,255,255,0.06) !important; }
+.dark .bg-gray-50 { background-color: rgba(255,255,255,0.04) !important; }
+
+/* Radix Select - contraste no modo escuro (reforçado) */
+.dark .radix-select-trigger { background-color: rgba(17,24,39,0.7) !important; color: #f8fafc !important; border-color: rgba(248,250,252,0.2) !important; }
+.dark .radix-select-content,[role='listbox'] { background-color: rgba(2,6,23,0.98) !important; color: #e5e7eb !important; border-color: rgba(255,255,255,0.12) !important; box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important; }
+.dark .radix-select-item,[role='option'] { color: #e5e7eb !important; opacity: 1 !important; }
+.dark .radix-select-item[data-highlighted],[role='option'][data-highlighted] { background-color: rgba(59,130,246,0.35) !important; color: #fff !important; }
+.dark [role='option'][data-disabled] { color: #94a3b8 !important; opacity: 1 !important; }
+
+/* Inputs com melhor contraste no modo escuro */
+.dark input[type="text"], 
+.dark input[type="email"], 
+.dark input[type="password"], 
+.dark input[type="search"],
+.dark textarea,
+.dark select {
+  background-color: rgba(31, 41, 55, 0.8) !important;
+  color: #f8fafc !important;
+  border-color: rgba(156, 163, 175, 0.3) !important;
+}
+
+.dark input[type="text"]:focus, 
+.dark input[type="email"]:focus, 
+.dark input[type="password"]:focus, 
+.dark input[type="search"]:focus,
+.dark textarea:focus,
+.dark select:focus {
+  background-color: rgba(31, 41, 55, 0.9) !important;
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgba(156, 163, 175, 0.7) !important;
+}
+
+/* Cards com melhor contraste */
+.dark .bg-white\/10 {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.dark .bg-white\/20 {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+.dark .bg-white\/30 {
+  background-color: rgba(0, 0, 0, 0.7) !important;
 }

@@ -145,21 +145,24 @@ export const contratoService = {
 
 // Serviços para Rondas
 export const rondaService = {
-  // Buscar todas as rondas
+  // Buscar todas as rondas (versão otimizada)
   async getAll(): Promise<Ronda[]> {
     try {
-      // Consulta leve com relações mínimas para manter contagens e status
+      console.log('🔄 Carregando rondas do banco...');
+      
+      // Consulta ULTRA SIMPLES - apenas dados básicos das rondas (sem JOINs)
       const { data, error } = await supabase
         .from('rondas')
-        .select(`
-          id, nome, contrato, data, hora, responsavel, observacoes_gerais,
-          areas_tecnicas (id, status),
-          fotos_ronda (id),
-          outros_itens_corrigidos (id)
-        `)
-        .order('data_criacao', { ascending: false });
+        .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais')
+        .order('data_criacao', { ascending: false })
+        .limit(50); // Limitar para evitar timeout
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao buscar rondas:', error);
+        throw error;
+      }
+
+      console.log(`✅ ${data?.length || 0} rondas básicas carregadas`);
 
       return data.map(row => ({
         id: row.id.toString(),
@@ -173,25 +176,25 @@ export const rondaService = {
         // garantindo contagens e compatibilidade com a UI sem carregar blobs
         areasTecnicas: (row.areas_tecnicas || []).map((at: any) => ({
           id: String(at.id),
-          nome: '',
+          nome: at.nome || '',
           status: at.status,
           contrato: row.contrato,
           endereco: '',
           data: row.data,
           hora: row.hora,
           foto: null,
-          observacoes: ''
+          observacoes: at.observacoes || ''
         })),
         fotosRonda: (row.fotos_ronda || []).map((fr: any) => ({
           id: String(fr.id),
           foto: '',
-          local: '',
-          pendencia: '',
-          especialidade: '',
-          responsavel: 'CONDOMÍNIO',
-          observacoes: undefined,
-          data: row.data,
-          hora: row.hora,
+          local: fr.local || '',
+          pendencia: fr.pendencia || '',
+          especialidade: fr.especialidade || '',
+          responsavel: fr.responsavel || 'CONDOMÍNIO',
+          observacoes: fr.observacoes,
+          data: fr.data || row.data,
+          hora: fr.hora || row.hora,
           criticidade: undefined
         })),
         outrosItensCorrigidos: (row.outros_itens_corrigidos || []).map((oi: any) => ({

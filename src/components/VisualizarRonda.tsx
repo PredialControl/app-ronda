@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { AreaTecnica, Ronda, Contrato } from '@/types';
 import { downloadRelatorioPDF, RelatorioPDF, preparePdfData } from '@/lib/pdfReact';
 import { PDFViewer } from '@react-pdf/renderer';
-import { ArrowLeft, FileText, AlertTriangle, Edit, Plus, Trash2, Wrench, BarChart3, AlertCircle, Info, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, FileText, AlertTriangle, Edit, Plus, Trash2, Wrench, BarChart3, AlertCircle, Info, CheckCircle, XCircle, Upload } from 'lucide-react';
 import { AreaTecnicaCard } from './AreaTecnicaCard';
+// Removed bulk import modals per user request
 
 interface VisualizarRondaProps {
   ronda: Ronda;
@@ -179,20 +180,9 @@ export function VisualizarRonda({
             <Edit className="w-4 h-4 mr-2" />
             Editar Ronda
           </Button>
-          <Button onClick={async () => {
-            // garantir que as imagens sejam normalizadas na prévia também
-            const { rondaNormalized, areasNormalized } = await preparePdfData(ronda, areasTecnicas);
-            // substitui dados apenas no viewer, sem alterar estado global
-            (window as any).__pdfPreviewData = { ronda: rondaNormalized, areas: areasNormalized };
-            ;(window as any).__pdfHeaderImage = headerImage;
-            setShowPdfPreview(true);
-          }} variant="outline">
+          <Button onClick={() => setShowPdfPreview(true)} variant="outline">
             <FileText className="w-4 h-4 mr-2" />
             Prévia PDF
-          </Button>
-          <Button onClick={() => downloadRelatorioPDF(ronda, contrato, areasTecnicas, headerImage)} className="bg-blue-600 hover:bg-blue-700">
-            <FileText className="w-4 h-4 mr-2" />
-            Exportar PDF
           </Button>
           <Button onClick={onExportarJSON} variant="outline">
             <FileText className="w-4 h-4 mr-2" />

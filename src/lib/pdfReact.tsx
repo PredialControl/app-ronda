@@ -46,11 +46,12 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: 1.6 * CM_TO_PT,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 0.5 * CM_TO_PT,
   },
   footerPagination: {
-    position: 'absolute',
-    left: 0.5 * CM_TO_PT,
-    bottom: 0.5 * CM_TO_PT,
     fontSize: 9,
     color: '#6B7280',
   },
@@ -94,6 +95,54 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     padding: 0.5 * CM_TO_PT,
     backgroundColor: '#FFFFFF',
+  },
+  gridItem4Ativo: {
+    width: 13.5 * CM_TO_PT,
+    height: 7.8 * CM_TO_PT,
+    borderWidth: 2,
+    borderColor: '#22c55e',
+    padding: 0.5 * CM_TO_PT,
+    backgroundColor: '#f0fdf4',
+  },
+  gridItem4Manutencao: {
+    width: 13.5 * CM_TO_PT,
+    height: 7.8 * CM_TO_PT,
+    borderWidth: 2,
+    borderColor: '#f59e0b',
+    padding: 0.5 * CM_TO_PT,
+    backgroundColor: '#fffbeb',
+  },
+  gridItem4Atencao: {
+    width: 13.5 * CM_TO_PT,
+    height: 7.8 * CM_TO_PT,
+    borderWidth: 2,
+    borderColor: '#ef4444',
+    padding: 0.5 * CM_TO_PT,
+    backgroundColor: '#fef2f2',
+  },
+  gridItem4FotoAlta: {
+    width: 13.5 * CM_TO_PT,
+    height: 7.8 * CM_TO_PT,
+    borderWidth: 2,
+    borderColor: '#ef4444',
+    padding: 0.5 * CM_TO_PT,
+    backgroundColor: '#fef2f2',
+  },
+  gridItem4FotoMedia: {
+    width: 13.5 * CM_TO_PT,
+    height: 7.8 * CM_TO_PT,
+    borderWidth: 2,
+    borderColor: '#f59e0b',
+    padding: 0.5 * CM_TO_PT,
+    backgroundColor: '#fffbeb',
+  },
+  gridItem4FotoBaixa: {
+    width: 13.5 * CM_TO_PT,
+    height: 7.8 * CM_TO_PT,
+    borderWidth: 2,
+    borderColor: '#22c55e',
+    padding: 0.5 * CM_TO_PT,
+    backgroundColor: '#f0fdf4',
   },
   titulo: { fontSize: 16, fontWeight: 700 },
   texto: { fontSize: 11 },
@@ -148,50 +197,75 @@ const styles = StyleSheet.create({
   bullet: { fontSize: 10, marginBottom: 4 },
 });
 
-const CardArea: React.FC<{ area: AreaTecnica }> = ({ area }) => (
-  <View style={styles.gridItem4}>
-    <Text style={{ fontSize: 12, fontWeight: 700 }}>{area.nome}</Text>
-    {/* Status pill com cor dinâmica */}
-    {(() => {
-      let bg = '#dcfce7';
-      let border = '#22c55e';
-      let color = '#166534';
-      if (area.status === 'EM MANUTENÇÃO') { bg = '#fffbeb'; border = '#f59e0b'; color = '#92400e'; }
-      if (area.status === 'ATENÇÃO') { bg = '#fee2e2'; border = '#ef4444'; color = '#991b1b'; }
-      return (
-        <View style={{ ...styles.statusPill, backgroundColor: bg, borderColor: border }}>
-          <Text style={{ fontSize: 10, color }}>{area.status}</Text>
-        </View>
-      );
-    })()}
-    {area.foto ? (
-      <PDFImage src={area.foto} style={{ width: '100%', height: 4.9 * CM_TO_PT, marginTop: 6 }} />
-    ) : null}
-    {area.observacoes ? (
-      <Text style={{ fontSize: 10, marginTop: 6 }}>Obs.: {area.observacoes}</Text>
-    ) : null}
-  </View>
-);
+const CardArea: React.FC<{ area: AreaTecnica }> = ({ area }) => {
+  // Escolher estilo baseado no status
+  let cardStyle = styles.gridItem4;
+  if (area.status === 'ATIVO') {
+    cardStyle = styles.gridItem4Ativo;
+  } else if (area.status === 'EM MANUTENÇÃO') {
+    cardStyle = styles.gridItem4Manutencao;
+  } else if (area.status === 'ATENÇÃO') {
+    cardStyle = styles.gridItem4Atencao;
+  }
 
-const CardFoto: React.FC<{ foto: FotoRonda | { id: string; foto: any; local: string; especialidade: string; pendencia: string; observacoes?: string; responsavel?: string; criticidade?: string } }> = ({ foto }) => (
-  <View style={styles.gridItem4}>
-    {foto.foto ? (
-      <PDFImage src={foto.foto as any} style={{ width: '100%', height: 5.5 * CM_TO_PT }} />
-    ) : (
-      <View style={{ width: '100%', height: 5.5 * CM_TO_PT, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: '#64748b' }}>Sem imagem</Text>
-      </View>
-    )}
-    <Text style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>{foto.local}</Text>
-    <Text style={{ fontSize: 10 }}>Pendência: {foto.pendencia}</Text>
-    <Text style={{ fontSize: 10 }}>Criticidade: {(foto as any).criticidade || '—'}</Text>
-    {('responsavel' in foto) && (
-      <Text style={{ fontSize: 10 }}>Responsável: {(foto as any).responsavel}</Text>
-    )}
-    <Text style={{ fontSize: 10 }}>Especialidade: {foto.especialidade}</Text>
-    {foto.observacoes ? (<Text style={{ fontSize: 10 }}>Obs.: {foto.observacoes}</Text>) : null}
-  </View>
-);
+  return (
+    <View style={cardStyle}>
+      <Text style={{ fontSize: 12, fontWeight: 700 }}>{area.nome}</Text>
+      {/* Status pill com cor dinâmica */}
+      {(() => {
+        let bg = '#dcfce7';
+        let border = '#22c55e';
+        let color = '#166534';
+        if (area.status === 'EM MANUTENÇÃO') { bg = '#fffbeb'; border = '#f59e0b'; color = '#92400e'; }
+        if (area.status === 'ATENÇÃO') { bg = '#fee2e2'; border = '#ef4444'; color = '#991b1b'; }
+        return (
+          <View style={{ ...styles.statusPill, backgroundColor: bg, borderColor: border }}>
+            <Text style={{ fontSize: 10, color }}>{area.status}</Text>
+          </View>
+        );
+      })()}
+      {area.foto ? (
+        <PDFImage src={area.foto} style={{ width: '100%', height: 4.9 * CM_TO_PT, marginTop: 6 }} />
+      ) : null}
+      {area.observacoes ? (
+        <Text style={{ fontSize: 10, marginTop: 6 }}>Obs.: {area.observacoes}</Text>
+      ) : null}
+    </View>
+  );
+};
+
+const CardFoto: React.FC<{ foto: FotoRonda | { id: string; foto: any; local: string; especialidade: string; pendencia: string; observacoes?: string; responsavel?: string; criticidade?: string } }> = ({ foto }) => {
+  // Escolher estilo baseado na criticidade
+  let cardStyle = styles.gridItem4;
+  const criticidade = (foto as any).criticidade?.toUpperCase();
+  if (criticidade === 'ALTA') {
+    cardStyle = styles.gridItem4FotoAlta;
+  } else if (criticidade === 'MÉDIA' || criticidade === 'MEDIA') {
+    cardStyle = styles.gridItem4FotoMedia;
+  } else if (criticidade === 'BAIXA') {
+    cardStyle = styles.gridItem4FotoBaixa;
+  }
+
+  return (
+    <View style={cardStyle}>
+      {foto.foto ? (
+        <PDFImage src={foto.foto as any} style={{ width: '100%', height: 5.5 * CM_TO_PT }} />
+      ) : (
+        <View style={{ width: '100%', height: 5.5 * CM_TO_PT, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: '#64748b' }}>Sem imagem</Text>
+        </View>
+      )}
+      <Text style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>{foto.local}</Text>
+      <Text style={{ fontSize: 10 }}>Pendência: {foto.pendencia}</Text>
+      <Text style={{ fontSize: 10 }}>Criticidade: {(foto as any).criticidade || '—'}</Text>
+      {('responsavel' in foto) && (
+        <Text style={{ fontSize: 10 }}>Responsável: {(foto as any).responsavel}</Text>
+      )}
+      <Text style={{ fontSize: 10 }}>Especialidade: {foto.especialidade}</Text>
+      {foto.observacoes ? (<Text style={{ fontSize: 10 }}>Obs.: {foto.observacoes}</Text>) : null}
+    </View>
+  );
+};
 
 export type PdfImage = { data: Uint8Array; format: 'jpeg' | 'png' };
 export type PdfFotoItem = { id: string; src: PdfImage | string | null; local: string; especialidade: string; pendencia: string; observacoes?: string; responsavel?: string; criticidade?: string };
@@ -238,16 +312,11 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
   })();
 
   return (
-    <Document title={`Relatório de Ronda · ${contrato.nome}`} author="App Ronda" subject="Relatório técnico de ronda">
+    <Document title={`Relatório de Visita Técnica · ${contrato.nome}`} author="Portal de Visitas Manutenção Predial" subject="Relatório técnico de visita">
       <Page size="A4" orientation="landscape" style={styles.page}>
         <View style={styles.headerFixedContainer} fixed>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            {headerImage ? (
-              <PDFImage src={headerImage} style={{ width: 3.8 * CM_TO_PT, height: 1.1 * CM_TO_PT }} />
-            ) : null}
-          </View>
           <View>
-            <Text style={{ fontSize: 12, fontWeight: 700 }}>Relatório de Ronda Técnica</Text>
+            <Text style={{ fontSize: 12, fontWeight: 700 }}>Relatório de Visita Técnica</Text>
             <Text style={{ fontSize: 10, color: '#374151' }}>Contrato: {contrato.nome}</Text>
             <Text style={{ fontSize: 10, color: '#6B7280' }}>Data: {ronda.data}  Hora: {ronda.hora}</Text>
           </View>
@@ -264,6 +333,9 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
           <Text style={styles.footerPagination} render={({ pageNumber, totalPages }) => (
             `Página ${pageNumber} de ${totalPages}`
           )} />
+          {headerImage ? (
+            <PDFImage src={headerImage} style={{ width: 3.8 * CM_TO_PT, height: 1.1 * CM_TO_PT }} />
+          ) : null}
         </View>
       </Page>
 
@@ -277,7 +349,7 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
               ) : null}
             </View>
             <View>
-              <Text style={{ fontSize: 12, fontWeight: 700 }}>Relatório de Ronda Técnica</Text>
+              <Text style={{ fontSize: 12, fontWeight: 700 }}>Relatório de Visita Técnica</Text>
               <Text style={{ fontSize: 10, color: '#374151' }}>Contrato: {contrato.nome}</Text>
               <Text style={{ fontSize: 10, color: '#6B7280' }}>Data: {ronda.data}  Hora: {ronda.hora}</Text>
             </View>
@@ -305,7 +377,7 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
               ) : null}
             </View>
             <View>
-              <Text style={{ fontSize: 12, fontWeight: 700 }}>Relatório de Ronda Técnica</Text>
+              <Text style={{ fontSize: 12, fontWeight: 700 }}>Relatório de Visita Técnica</Text>
               <Text style={{ fontSize: 10, color: '#374151' }}>Contrato: {contrato.nome}</Text>
               <Text style={{ fontSize: 10, color: '#6B7280' }}>Data: {ronda.data}  Hora: {ronda.hora}</Text>
             </View>
@@ -331,13 +403,8 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
       {/* Resumo Executivo – última página, uma página só */}
       <Page size="A4" orientation="landscape" style={styles.page} wrap>
         <View style={styles.headerFixedContainer} fixed>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            {headerImage ? (
-              <PDFImage src={headerImage} style={{ width: 3.8 * CM_TO_PT, height: 1.1 * CM_TO_PT }} />
-            ) : null}
-          </View>
           <View>
-            <Text style={{ fontSize: 12, fontWeight: 700 }}>Relatório de Ronda Técnica</Text>
+            <Text style={{ fontSize: 12, fontWeight: 700 }}>Relatório de Visita Técnica</Text>
             <Text style={{ fontSize: 10, color: '#374151' }}>Contrato: {contrato.nome}</Text>
             <Text style={{ fontSize: 10, color: '#6B7280' }}>Data: {ronda.data}  Hora: {ronda.hora}</Text>
           </View>
@@ -399,6 +466,9 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
           <Text style={styles.footerPagination} render={({ pageNumber, totalPages }) => (
             `Página ${pageNumber} de ${totalPages}`
           )} />
+          {headerImage ? (
+            <PDFImage src={headerImage} style={{ width: 3.8 * CM_TO_PT, height: 1.1 * CM_TO_PT }} />
+          ) : null}
         </View>
       </Page>
     </Document>
@@ -521,4 +591,7 @@ export async function downloadRelatorioPDF(ronda: Ronda, contrato: Contrato, are
   a.click();
   URL.revokeObjectURL(url);
 }
+
+
+
 

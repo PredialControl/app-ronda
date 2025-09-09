@@ -81,18 +81,18 @@ export function ContratoModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-md max-h-[95vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[95vh] overflow-y-auto shadow-2xl">
         {/* Header fixo */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 rounded-t-lg">
+        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 rounded-t-lg">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <FileText className="w-5 h-5" />
               {contrato ? 'Editar Contrato' : 'Novo Contrato'}
             </h2>
             <button 
               onClick={onClose} 
-              className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <X className="w-5 h-5" />
             </button>
@@ -104,7 +104,7 @@ export function ContratoModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Nome do Contrato *</label>
+            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">Nome do Contrato *</label>
             <Input
               value={formData.nome}
               onChange={(e) => handleInputChange('nome', e.target.value)}
@@ -114,7 +114,7 @@ export function ContratoModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1 flex items-center gap-1">
               <User className="w-4 h-4" />
               Síndico *
             </label>
@@ -127,7 +127,7 @@ export function ContratoModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1 flex items-center gap-1">
               <MapPin className="w-4 h-4" />
               Endereço *
             </label>
@@ -140,14 +140,14 @@ export function ContratoModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1 flex items-center gap-1">
               <Calendar className="w-4 h-4" />
               Periodicidade *
             </label>
             <select
               value={formData.periodicidade}
               onChange={(e) => handleInputChange('periodicidade', e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             >
               <option value="DIARIA">Diária</option>
@@ -162,7 +162,7 @@ export function ContratoModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Observações</label>
+            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">Observações</label>
             <Input
               value={formData.observacoes}
               onChange={(e) => handleInputChange('observacoes', e.target.value)}

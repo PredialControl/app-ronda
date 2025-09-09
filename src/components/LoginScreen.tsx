@@ -42,25 +42,25 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo e Título */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4 shadow-lg">
             <Building2 className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">App Ronda</h1>
-          <p className="text-gray-600">Sistema de Gestão de Rondas Técnicas</p>
+          <h1 className="text-3xl font-bold text-white mb-2">App Ronda</h1>
+          <p className="text-gray-300">Sistema de Gestão de Rondas Técnicas</p>
         </div>
 
         {/* Card de Login */}
-        <Card className="shadow-xl border-0">
+        <Card className="shadow-2xl border-0 bg-white/10 backdrop-blur-md">
           <CardHeader className="text-center pb-4">
-            <CardTitle className="flex items-center justify-center gap-2 text-xl">
-              <Lock className="w-5 h-5 text-blue-600" />
+            <CardTitle className="flex items-center justify-center gap-2 text-xl text-white">
+              <Lock className="w-5 h-5 text-blue-400" />
               Acesso ao Sistema
             </CardTitle>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-300">
               Digite suas credenciais para acessar
             </p>
           </CardHeader>
@@ -69,7 +69,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Campo Email */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="email" className="text-sm font-medium text-white">
                   Email
                 </Label>
                 <div className="relative">
@@ -80,7 +80,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="seu@email.com"
-                    className="pl-10"
+                    className="pl-10 bg-white/20 border-white/30 text-white placeholder-gray-300 focus:bg-white/30"
                     required
                     disabled={isLoading}
                   />
@@ -89,7 +89,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
               {/* Campo Senha */}
               <div className="space-y-2">
-                <Label htmlFor="senha" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="senha" className="text-sm font-medium text-white">
                   Senha
                 </Label>
                 <div className="relative">
@@ -100,7 +100,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
                     placeholder="••••••••"
-                    className="pl-10"
+                    className="pl-10 bg-white/20 border-white/30 text-white placeholder-gray-300 focus:bg-white/30"
                     required
                     disabled={isLoading}
                   />
@@ -109,23 +109,23 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
               {/* Mensagens de Erro/Sucesso */}
               {erro && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <AlertCircle className="w-4 h-4 text-red-600" />
-                  <span className="text-sm text-red-700">{erro}</span>
+                <div className="flex items-center gap-2 p-3 bg-red-500/20 border border-red-400/30 rounded-lg backdrop-blur-sm">
+                  <AlertCircle className="w-4 h-4 text-red-400" />
+                  <span className="text-sm text-red-200">{erro}</span>
                 </div>
               )}
 
               {sucesso && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-sm text-green-700">{sucesso}</span>
+                <div className="flex items-center gap-2 p-3 bg-green-500/20 border border-green-400/30 rounded-lg backdrop-blur-sm">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span className="text-sm text-green-200">{sucesso}</span>
                 </div>
               )}
 
               {/* Botão de Login */}
               <Button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -143,16 +143,16 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             </form>
 
             {/* Informações de Acesso */}
-            <div className="mt-6 pt-4 border-t border-gray-200">
+            <div className="mt-6 pt-4 border-t border-white/20">
               <div className="text-center">
-                <p className="text-xs text-gray-500 mb-2">Usuários Autorizados:</p>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div className="font-medium text-blue-600">• Ricardo (ricardo@manutencaopredial.net.br) - Admin</div>
+                <p className="text-xs text-gray-300 mb-2">Usuários Autorizados:</p>
+                <div className="space-y-1 text-xs text-gray-300">
+                  <div className="font-medium text-blue-400">• Ricardo (ricardo@manutencaopredial.net.br) - Admin</div>
                   <div>• Gessica (gessica@manutencaopredial.net.br)</div>
                   <div>• Felipe (felipe@manutencaopredial.net.br)</div>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Senha padrão: <span className="font-mono bg-gray-100 px-1 rounded">manutencao2024</span>
+                <p className="text-xs text-gray-300 mt-2">
+                  Senha padrão: <span className="font-mono bg-white/20 px-1 rounded text-white">manutencao2024</span>
                 </p>
               </div>
             </div>
@@ -161,7 +161,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
         {/* Footer */}
         <div className="text-center mt-6">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-400">
             © 2024 App Ronda - Sistema de Gestão de Rondas Técnicas
           </p>
         </div>

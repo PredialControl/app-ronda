@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Ronda, Contrato } from '@/types';
-import { Calendar, Users, CheckCircle, AlertTriangle, Eye, FileText, Trash2, Droplets, Zap, Flame } from 'lucide-react';
+import { Calendar, Users, CheckCircle, AlertTriangle, Eye, FileText, Trash2, Droplets, Zap, Flame, ArrowLeft } from 'lucide-react';
 
 interface TabelaRondasProps {
   rondas: Ronda[];
@@ -11,9 +11,10 @@ interface TabelaRondasProps {
   onSelectRonda: (ronda: Ronda) => void;
   onNovaRonda: () => void;
   onDeletarRonda: (id: string) => void;
+  onVoltarContratos: () => void;
 }
 
-export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onDeletarRonda }: TabelaRondasProps) {
+export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onDeletarRonda, onVoltarContratos }: TabelaRondasProps) {
 
 
   const getStatusColor = (status: string) => {
@@ -25,7 +26,16 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
   };
 
   const formatarData = (data: string) => {
-    return new Date(data).toLocaleDateString('pt-BR');
+    // Evita bug de fuso horário ao usar new Date('YYYY-MM-DD') (interpretação UTC)
+    const [ano, mes, dia] = data.split('-');
+    if (ano && mes && dia) {
+      return `${dia.padStart(2, '0')}/${mes.padStart(2, '0')}/${ano}`;
+    }
+    try {
+      return new Date(data).toLocaleDateString('pt-BR');
+    } catch {
+      return data;
+    }
   };
 
   const calcularEstatisticas = (ronda: Ronda) => {
@@ -33,8 +43,9 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
     const ativos = ronda.areasTecnicas.filter(at => at.status === 'ATIVO').length;
     const manutencao = ronda.areasTecnicas.filter(at => at.status === 'EM MANUTENÇÃO').length;
     const itensChamado = ronda.fotosRonda.length;
+    const itensAtencao = manutencao + itensChamado; // Soma manutenção + chamados
     
-    return { total, ativos, manutencao, itensChamado };
+    return { total, ativos, manutencao, itensChamado, itensAtencao };
   };
 
   if (rondas.length === 0) {
@@ -77,10 +88,16 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
             <FileText className="w-5 h-5 text-blue-600" />
             Contrato: {contrato.nome}
           </CardTitle>
-          <Button onClick={onNovaRonda} className="bg-green-600 hover:bg-green-700">
-            <FileText className="w-4 h-4 mr-2" />
-            Nova Ronda
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={onVoltarContratos} variant="outline" className="text-gray-600 border-gray-300 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-800">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar aos Contratos
+            </Button>
+            <Button onClick={onNovaRonda} className="bg-green-600 hover:bg-green-700">
+              <FileText className="w-4 h-4 mr-2" />
+              Nova Ronda
+            </Button>
+          </div>
         </div>
         
 
@@ -127,6 +144,12 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
                       <div className="flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4 text-orange-600" />
                         Itens Chamado
+                      </div>
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                        Itens em Atenção
                       </div>
                     </th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">
@@ -196,12 +219,22 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
                           </div>
                         </td>
                         <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="destructive" className="font-mono">
+                              {stats.itensAtencao}
+                            </Badge>
+                            <span className="text-sm text-gray-600">
+                              atenção
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
                           <div className="flex gap-2">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => onSelectRonda(ronda)}
-                              className="h-8 px-3"
+                              className="h-8 px-3 text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300 dark:text-blue-400 dark:border-blue-600 dark:hover:bg-blue-900/20"
                             >
                               <Eye className="w-4 h-4 mr-1" />
                               Ver
@@ -214,7 +247,7 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
                                   onDeletarRonda(ronda.id);
                                 }
                               }}
-                              className="h-8 px-3 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+                              className="h-8 px-3 text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 dark:text-red-400 dark:border-red-600 dark:hover:bg-red-900/20"
                             >
                               <Trash2 className="w-4 h-4 mr-1" />
                               Excluir
@@ -230,7 +263,7 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
             
             {/* Resumo das Rondas */}
             <div className="mt-6 pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-5 gap-4 text-center">
+              <div className="grid grid-cols-6 gap-4 text-center">
                 <div>
                   <div className="text-2xl font-bold text-blue-600">
                     {rondas.length}
@@ -264,6 +297,16 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
                     {rondas.reduce((total, ronda) => total + ronda.fotosRonda.length, 0)}
                   </div>
                   <div className="text-sm text-gray-600">Itens Chamado</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-red-600">
+                    {rondas.reduce((total, ronda) => {
+                      const manutencao = ronda.areasTecnicas.filter(at => at.status === 'EM MANUTENÇÃO').length;
+                      const chamados = ronda.fotosRonda.length;
+                      return total + manutencao + chamados;
+                    }, 0)}
+                  </div>
+                  <div className="text-sm text-gray-600">Itens em Atenção</div>
                 </div>
               </div>
             </div>

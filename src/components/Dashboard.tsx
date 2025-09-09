@@ -1,22 +1,8 @@
-import React, { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Ronda, Contrato, AreaTecnica, FotoRonda, OutroItemCorrigido } from '@/types';
-import { 
-  BarChart3, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
-  TrendingUp, 
-  TrendingDown,
-  Activity,
-  Calendar,
-  Eye,
-  Wrench,
-  AlertCircle,
-  XCircle
-} from 'lucide-react';
+import { Ronda, Contrato, AreaTecnica } from '@/types';
+import { BarChart3, AlertTriangle, Calendar, Wrench, XCircle, User } from 'lucide-react';
 
 interface DashboardProps {
   contrato: Contrato;
@@ -25,51 +11,123 @@ interface DashboardProps {
 }
 
 export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
-  
-  // Calcular métricas do dashboard
+  // Filtro por mês (AAAA-MM)
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  // Se o mês atual não tiver rondas, usar automaticamente o mês da última ronda
+  useEffect(() => {
+    const [anoStr, mesStr] = selectedMonth.split('-');
+    const anoSelecionado = parseInt(anoStr, 10);
+    const mesSelecionado = parseInt(mesStr, 10) - 1;
+    const temNoMesAtual = rondas.some(r => {
+      const d = new Date(r.data);
+      return d.getFullYear() === anoSelecionado && d.getMonth() === mesSelecionado;
+    });
+
+    if (!temNoMesAtual && rondas.length > 0) {
+      const maisRecente = [...rondas].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())[0];
+      const d = new Date(maisRecente.data);
+      const novo = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if (novo !== selectedMonth) setSelectedMonth(novo);
+    }
+  }, [rondas]);
+
+  // Calcular métricas do dashboard com base no mês selecionado
   const metricas = useMemo(() => {
-    const hoje = new Date();
-    const mesAtual = hoje.getMonth();
-    const anoAtual = hoje.getFullYear();
-    
-    // Filtrar rondas do mês atual
+    const [anoStr, mesStr] = selectedMonth.split('-');
+    const anoSelecionado = parseInt(anoStr, 10);
+    const mesSelecionado = parseInt(mesStr, 10) - 1; // 0-based
+
+    // Filtrar rondas do mês/ano selecionados
     const rondasMes = rondas.filter(ronda => {
       const dataRonda = new Date(ronda.data);
-      return dataRonda.getMonth() === mesAtual && dataRonda.getFullYear() === anoAtual;
+      return (
+        dataRonda.getMonth() === mesSelecionado &&
+        dataRonda.getFullYear() === anoSelecionado
+      );
     });
-    
-    // Calcular itens críticos e atenção do mês
-    const itensCriticos = rondasMes.flatMap(ronda => 
-      ronda.fotosRonda.filter(foto => foto.pendencia === 'Crítica')
+
+    // Itens por criticidade/atenção (ajuste simples baseado no campo pendencia)
+    const fotosMes = rondasMes.flatMap(ronda => ronda.fotosRonda || []);
+    const itensCriticos = fotosMes.filter(f =>
+      String(f.pendencia || '').toUpperCase().includes('URG') ||
+      String(f.pendencia || '').toUpperCase() === 'CRÍTICA' ||
+      String(f.pendencia || '').toUpperCase() === 'CRITICA'
     );
-    
-    const itensAtencao = rondasMes.flatMap(ronda => 
-      ronda.fotosRonda.filter(foto => foto.pendencia === 'Alta')
-    );
-    
-    // Calcular chamados abertos vs corrigidos
-    const chamadosAbertos = rondasMes.flatMap(ronda => 
-      ronda.fotosRonda.filter(foto => 
-        foto.pendencia !== 'Nenhuma' && foto.pendencia !== 'Pequena'
-      )
-    );
-    
-    const itensCorrigidos = rondasMes.flatMap(ronda => 
-      ronda.outrosItensCorrigidos
-    );
-    
-    // Status da última visita por equipamento
-    const statusEquipamentos = areasTecnicas.map(area => {
-      const ultimaRonda = rondas
-        .filter(r => r.areasTecnicas.some(a => a.id === area.id))
+    // Atenção: considerar Áreas Técnicas com status "ATENÇÃO" no mês selecionado (itens únicos por área)
+    const nomesAtencao = new Set<string>();
+    rondasMes.forEach(r => {
+      (r.areasTecnicas || [])
+        .filter(at => String(at.status || '').toUpperCase().includes('ATEN'))
+        .forEach(at => {
+          if (at.nome) nomesAtencao.add(at.nome);
+        });
+    });
+    const itensAtencao = Array.from(nomesAtencao);
+
+    // Chamados abertos (qualquer foto com pendencia definida)
+    const chamadosAbertos = fotosMes.filter(f => (f.pendencia || '').trim() !== '');
+
+    // Agrupar chamados por especialidade
+    const mapaEspecialidade: Record<string, number> = {};
+    chamadosAbertos.forEach(f => {
+      const esp = (f.especialidade || 'Sem especialidade').trim();
+      mapaEspecialidade[esp] = (mapaEspecialidade[esp] || 0) + 1;
+    });
+    const chamadosPorEspecialidade = Object.entries(mapaEspecialidade)
+      .sort((a, b) => b[1] - a[1])
+      .map(([especialidade, total]) => ({ especialidade, total }));
+
+    // Lista detalhada de chamados do mês
+    const chamadosLista = rondasMes
+      .sort((a,b) => new Date(a.data).getTime() - new Date(b.data).getTime())
+      .flatMap(r =>
+        (r.fotosRonda || [])
+          .filter(f => (String(f.pendencia || f.observacoes || '').trim() !== ''))
+          .map(f => ({
+            id: `${r.id}-${f.id}`,
+            descricao: (f.observacoes && f.observacoes.trim() !== '') ? f.observacoes : (f.pendencia || ''),
+            data: f.data || r.data,
+            especialidade: f.especialidade || '—',
+            responsavel: (f.responsavel || '—').toUpperCase()
+          }))
+      );
+
+    // Itens corrigidos (tabela de outros_itens_corrigidos)
+    const itensCorrigidos = rondasMes
+      .flatMap(ronda => ronda.outrosItensCorrigidos || [])
+      .filter(i => String(i.status || '').toUpperCase().includes('CONCLU'));
+
+    // Contagem por responsável (Condomínio vs Construtora vs Outros)
+    const contagemResponsavel = rondasMes
+      .flatMap(r => r.fotosRonda || [])
+      .reduce(
+        (acc, f) => {
+          const resp = (f.responsavel || '').toUpperCase();
+          if (resp.includes('CONDOM')) acc.condominio += 1;
+          else if (resp.includes('CONSTR')) acc.construtora += 1;
+          else acc.outros += 1;
+          return acc;
+        },
+        { condominio: 0, construtora: 0, outros: 0 }
+      );
+
+    // Status da última visita: usar APENAS a última ronda inteira
+    const statusEquipamentos = (() => {
+      const rondaMaisRecente = [...rondas]
         .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())[0];
-      
-      return {
-        ...area,
-        ultimaVisita: ultimaRonda ? ultimaRonda.data : 'Nunca visitado',
-        statusUltimaVisita: ultimaRonda ? ultimaRonda.areasTecnicas.find(a => a.id === area.id)?.status : 'NÃO VISITADO'
-      };
-    });
+      const areas = rondaMaisRecente?.areasTecnicas || [];
+      return areas.map((at) => ({
+        id: at.id,
+        nome: at.nome,
+        ultimaVisita: rondaMaisRecente?.data || null,
+        statusUltimaVisita: at.status || 'NÃO VISITADO',
+        observacoes: at.observacoes || null
+      }));
+    })();
     
     return {
       totalRondasMes: rondasMes.length,
@@ -78,62 +136,43 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
       chamadosAbertos: chamadosAbertos.length,
       itensCorrigidos: itensCorrigidos.length,
       statusEquipamentos,
-      tendenciaChamados: chamadosAbertos.length > itensCorrigidos.length ? 'aumentando' : 'diminuindo'
+      tendenciaChamados: chamadosAbertos.length > itensCorrigidos.length ? 'aumentando' : 'diminuindo',
+      chamadosPorEspecialidade,
+      contagemResponsavel,
+      chamadosLista
     };
-  }, [rondas, areasTecnicas]);
-  
-  // Dados para gráficos
-  const dadosGrafico = useMemo(() => {
-    const ultimos6Meses = Array.from({ length: 6 }, (_, i) => {
-      const data = new Date();
-      data.setMonth(data.getMonth() - i);
-      return {
-        mes: data.toLocaleDateString('pt-BR', { month: 'short' }),
-        ano: data.getFullYear(),
-        data: data
-      };
-    }).reverse();
-    
-    return ultimos6Meses.map(({ mes, ano, data }) => {
-      const rondasMes = rondas.filter(ronda => {
-        const dataRonda = new Date(ronda.data);
-        return dataRonda.getMonth() === data.getMonth() && dataRonda.getFullYear() === data.getFullYear();
-      });
-      
-      const criticos = rondasMes.flatMap(r => 
-        r.fotosRonda.filter(f => f.pendencia === 'Crítica')
-      ).length;
-      
-      const atencao = rondasMes.flatMap(r => 
-        r.fotosRonda.filter(f => f.pendencia === 'Alta')
-      ).length;
-      
-      return { mes, criticos, atencao };
-    });
-  }, [rondas]);
+  }, [rondas, areasTecnicas, selectedMonth]);
   
   return (
-    <div className="space-y-6">
-      {/* Header do Dashboard */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Visão geral do contrato {contrato.nome}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-blue-600" />
-          <span className="text-sm text-gray-600">
-            {new Date().toLocaleDateString('pt-BR', { 
-              month: 'long', 
-              year: 'numeric' 
-            })}
-          </span>
+    <div className="space-y-8">
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <img aria-hidden src="/logo-header.png" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+        <div className="relative p-6 sm:p-10 lg:p-12">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white drop-shadow">Dashboard</h1>
+              <p className="mt-2 text-slate-200/90">Visão geral do contrato <span className="font-semibold text-white">{contrato.nome}</span></p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-slate-200">
+                <Calendar className="w-5 h-5 text-blue-300" />
+                <span className="text-sm">Mês:</span>
+              </div>
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="rounded-md bg-white/10 text-white placeholder-white/60 backdrop-blur px-3 py-2 text-sm ring-1 ring-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
+          </div>
         </div>
       </div>
       
       {/* Cards de Métricas Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-l-4 border-blue-500">
+        <Card className="border-l-4 border-blue-500 bg-white/40 backdrop-blur shadow-xl ring-1 ring-black/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Rondas</CardTitle>
             <BarChart3 className="h-4 w-4 text-blue-600" />
@@ -144,7 +183,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
           </CardContent>
         </Card>
         
-        <Card className="border-l-4 border-red-500">
+        <Card className="border-l-4 border-red-500 bg-white/40 backdrop-blur shadow-xl ring-1 ring-black/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Itens Críticos</CardTitle>
             <XCircle className="h-4 w-4 text-red-600" />
@@ -155,7 +194,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
           </CardContent>
         </Card>
         
-        <Card className="border-l-4 border-orange-500">
+        <Card className="border-l-4 border-orange-500 bg-white/40 backdrop-blur shadow-xl ring-1 ring-black/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Itens Atenção</CardTitle>
             <AlertTriangle className="h-4 w-4 text-orange-600" />
@@ -166,103 +205,197 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
           </CardContent>
         </Card>
         
-        <Card className="border-l-4 border-green-500">
+        {/* Card: Responsável dos chamados (mês) */}
+        <Card className="border-l-4 border-purple-500 bg-white/40 backdrop-blur shadow-xl ring-1 ring-black/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Chamados vs Corrigidos</CardTitle>
-            <Activity className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Responsável (mês)</CardTitle>
+            <User className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {metricas.chamadosAbertos}/{metricas.itensCorrigidos}
+            <div className="text-sm text-gray-700 space-y-1">
+              <div className="flex items-center justify-between">
+                <span>Construtora</span>
+                <span className="font-semibold text-purple-700">{metricas.contagemResponsavel.construtora}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Condomínio</span>
+                <span className="font-semibold text-purple-700">{metricas.contagemResponsavel.condominio}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Outros</span>
+                <span className="font-semibold text-purple-700">{metricas.contagemResponsavel.outros}</span>
             </div>
-            <div className="flex items-center gap-1 text-xs">
-              {metricas.tendenciaChamados === 'aumentando' ? (
-                <TrendingUp className="h-3 w-3 text-red-500" />
-              ) : (
-                <TrendingDown className="h-3 w-3 text-green-500" />
-              )}
-              <span className={metricas.tendenciaChamados === 'aumentando' ? 'text-red-600' : 'text-green-600'}>
-                {metricas.tendenciaChamados}
-              </span>
             </div>
           </CardContent>
         </Card>
       </div>
       
-      {/* Gráfico de Tendências */}
+      {/* Chamados abertos por especialidade (mês filtrado) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-blue-600" />
-            Tendência de Itens Críticos e Atenção (Últimos 6 Meses)
+            <AlertTriangle className="w-5 h-5 text-orange-600" />
+            Chamados Abertos por Especialidade (mês selecionado)
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {dadosGrafico.map((dado, index) => (
-              <div key={index} className="flex items-center gap-4">
-                <div className="w-16 text-sm font-medium text-gray-600">{dado.mes}</div>
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                    <span className="text-sm text-gray-600">Críticos: {dado.criticos}</span>
+          {metricas.chamadosPorEspecialidade.length === 0 ? (
+            <div className="text-sm text-gray-500">Nenhum chamado aberto no período.</div>
+          ) : (
+            <div className="flex flex-col items-center gap-4">
+              {/* Pizza chart */}
+              {(() => {
+                const radius = 64;
+                const stroke = 22;
+                const cx = 90;
+                const cy = 90;
+                const circumference = 2 * Math.PI * radius;
+                const total = metricas.chamadosPorEspecialidade.reduce((sum, i) => sum + i.total, 0) || 1;
+                let offset = 0;
+                const palette: Record<string, string> = {
+                  CIVIL: '#3b82f6', // blue
+                  ELÉTRICA: '#22c55e', // green
+                  ELETRICA: '#22c55e',
+                  HIDRÁULICA: '#f59e0b', // amber
+                  HIDRAULICA: '#f59e0b',
+                  OUTROS: '#8b5cf6', // violet
+                };
+                const fallback = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6'];
+                const circles = metricas.chamadosPorEspecialidade.map((item, idx) => {
+                  const value = item.total / total;
+                  const length = value * circumference;
+                  const color = palette[(item.especialidade || '').toUpperCase()] || fallback[idx % fallback.length];
+                  const circle = (
+                    <circle
+                      key={item.especialidade}
+                      r={radius}
+                      cx={cx}
+                      cy={cy}
+                      fill="transparent"
+                      stroke={color}
+                      strokeWidth={stroke}
+                      strokeDasharray={`${length} ${circumference - length}`}
+                      strokeDashoffset={-offset}
+                      transform={`rotate(-90 ${cx} ${cy})`}
+                      strokeLinecap="butt"
+                    />
+                  );
+                  offset += length;
+                  return circle;
+                });
+                return (
+                  <div className="flex items-center justify-center">
+                    <svg width={180} height={180} viewBox={`0 0 ${cx * 2} ${cy * 2}`}>
+                      <circle r={radius} cx={cx} cy={cy} fill="#f3f4f6" stroke="#e5e7eb" strokeWidth={stroke} />
+                      {circles}
+                    </svg>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
-                    <span className="text-sm text-gray-600">Atenção: {dado.atencao}</span>
-                  </div>
-                </div>
-                <div className="w-32 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <span className="text-xs font-medium text-gray-700">
-                    Total: {dado.criticos + dado.atencao}
-                  </span>
+                );
+              })()}
+
+              {/* Legenda abaixo */}
+              <div className="w-full max-w-md">
+                <div className="grid grid-cols-1 gap-2 justify-items-center">
+                  {metricas.chamadosPorEspecialidade.map((item, idx) => {
+                    const palette: Record<string, string> = {
+                      CIVIL: '#3b82f6', ELÉTRICA: '#22c55e', ELETRICA: '#22c55e', HIDRÁULICA: '#f59e0b', HIDRAULICA: '#f59e0b', OUTROS: '#8b5cf6'
+                    };
+                    const fallback = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6'];
+                    const color = palette[(item.especialidade || '').toUpperCase()] || fallback[idx % fallback.length];
+                    const totalAll = metricas.chamadosPorEspecialidade.reduce((s, i) => s + i.total, 0) || 1;
+                    const percent = Math.round((item.total / totalAll) * 100);
+                    return (
+                      <div key={item.especialidade} className="flex items-center gap-3 text-sm text-gray-700">
+                        <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: color }} />
+                        <span className="font-medium text-gray-900">{item.especialidade}</span>
+                        <span className="text-gray-500">— {item.total} ({percent}%)</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
       
-      {/* Status dos Equipamentos */}
+      {/* Tabela de chamados do mês */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-orange-600" />
+            Chamados do Mês — Detalhamento
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {metricas.chamadosLista.length === 0 ? (
+            <div className="text-sm text-gray-500">Nenhum chamado registrado neste mês.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left border-b">
+                    <th className="py-2 px-3 text-gray-700">Descrição</th>
+                    <th className="py-2 px-3 text-gray-700">Data</th>
+                    <th className="py-2 px-3 text-gray-700">Especialidade</th>
+                    <th className="py-2 px-3 text-gray-700">Responsável</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {metricas.chamadosLista.map((c) => (
+                    <tr key={c.id} className="border-b hover:bg-gray-50">
+                      <td className="py-2 px-3 text-gray-900 max-w-[520px] truncate" title={c.descricao}>{c.descricao || '—'}</td>
+                      <td className="py-2 px-3 text-gray-700">{new Date(c.data).toLocaleDateString('pt-BR')}</td>
+                      <td className="py-2 px-3 text-gray-700">{c.especialidade}</td>
+                      <td className="py-2 px-3 text-gray-700">{c.responsavel}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Status dos Equipamentos - Tabela */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wrench className="w-5 h-5 text-gray-600" />
-            Status da Última Visita nos Equipamentos
+            Status da Última Visita nas Áreas Técnicas
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {metricas.statusEquipamentos.map((equipamento) => (
-              <div key={equipamento.id} className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-gray-900">{equipamento.nome}</h3>
-                  <Badge 
-                    variant={equipamento.statusUltimaVisita === 'ATIVO' ? 'default' : 
-                           equipamento.statusUltimaVisita === 'MANUTENÇÃO' ? 'secondary' : 'destructive'}
-                  >
-                    {equipamento.statusUltimaVisita}
-                  </Badge>
-                </div>
-                
-                <div className="space-y-2 text-sm text-gray-600">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>Última visita: {equipamento.ultimaVisita}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    <span>Status: {equipamento.statusUltimaVisita}</span>
-                  </div>
-                </div>
-                
-                {equipamento.observacoes && (
-                  <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                    {equipamento.observacoes}
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b">
+                  <th className="py-2 px-3 text-gray-700">Área</th>
+                  <th className="py-2 px-3 text-gray-700">Data</th>
+                  <th className="py-2 px-3 text-gray-700">Status</th>
+                  <th className="py-2 px-3 text-gray-700">Observações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metricas.statusEquipamentos.map((equipamento) => {
+                  const dataFormatada = equipamento.ultimaVisita
+                    ? new Date(equipamento.ultimaVisita as unknown as string).toLocaleDateString('pt-BR')
+                    : '—';
+                  const status = equipamento.statusUltimaVisita || 'NÃO VISITADO';
+                  const variant = status === 'ATIVO' ? 'success' : /MANUT|ATEN/.test(status) ? 'attention' : 'destructive';
+                  return (
+                    <tr key={equipamento.id} className="border-b hover:bg-gray-50">
+                      <td className="py-2 px-3 text-gray-900">{equipamento.nome}</td>
+                      <td className="py-2 px-3 text-gray-700">{dataFormatada}</td>
+                      <td className="py-2 px-3">
+                        <Badge variant={variant as any}>{status}</Badge>
+                      </td>
+                      <td className="py-2 px-3 text-gray-700">{equipamento.observacoes || '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
@@ -276,7 +409,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="text-center">
               <div className="text-3xl font-bold text-red-600">{metricas.itensCriticos}</div>
               <div className="text-sm text-red-700">Itens Críticos</div>
@@ -287,20 +420,6 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
               <div className="text-sm text-orange-700">Itens Atenção</div>
               <div className="text-xs text-orange-600">Monitorar de perto</div>
             </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600">{metricas.itensCorrigidos}</div>
-              <div className="text-sm text-green-700">Itens Corrigidos</div>
-              <div className="text-xs text-green-600">Problemas resolvidos</div>
-            </div>
-          </div>
-          
-          <div className="text-center pt-4 border-t border-blue-200">
-            <p className="text-sm text-blue-700">
-              {metricas.chamadosAbertos > metricas.itensCorrigidos 
-                ? `⚠️ ${metricas.chamadosAbertos - metricas.itensCorrigidos} chamados ainda em aberto`
-                : `✅ Todos os chamados foram corrigidos!`
-              }
-            </p>
           </div>
         </CardContent>
       </Card>
