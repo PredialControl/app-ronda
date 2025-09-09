@@ -7,7 +7,7 @@
     "withGlobalTauri": false
   },
   "package": {
-    "productName": "App Ronda",
+    "productName": "Portal de Visitas Manutenção Predial",
     "version": "0.0.0"
   },
   "tauri": {
@@ -44,7 +44,7 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "App Ronda",
+        "title": "Portal de Visitas Manutenção Predial",
         "width": 1200,
         "height": 800
       }

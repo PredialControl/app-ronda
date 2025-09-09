@@ -49,7 +49,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4 shadow-lg">
             <Building2 className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">App Ronda</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Portal de Visitas Manutenção Predial</h1>
           <p className="text-gray-300">Sistema de Gestão de Rondas Técnicas</p>
         </div>
 
@@ -162,7 +162,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-xs text-gray-400">
-            © 2024 App Ronda - Sistema de Gestão de Rondas Técnicas
+            © 2024 Portal de Visitas Manutenção Predial - Sistema de Gestão de Rondas Técnicas
           </p>
         </div>
       </div>
