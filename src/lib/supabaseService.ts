@@ -150,7 +150,7 @@ export const rondaService = {
     try {
       console.log('🔄 Tentando carregar rondas do banco...');
       
-      // Tentar consulta simples primeiro
+      // Tentar consulta simples primeiro (mais rápida)
       const { data, error } = await supabase
         .from('rondas')
         .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais')
@@ -163,7 +163,7 @@ export const rondaService = {
       }
 
       if (data && data.length > 0) {
-        console.log(`✅ ${data.length} rondas carregadas do banco`);
+        console.log(`✅ ${data.length} rondas carregadas do banco (básicas)`);
         return data.map(row => ({
           id: row.id.toString(),
           nome: row.nome || 'Ronda sem nome',
@@ -172,9 +172,9 @@ export const rondaService = {
           hora: row.hora || '00:00',
           responsavel: row.responsavel || 'Responsável não informado',
           observacoesGerais: row.observacoes_gerais || '',
-          areasTecnicas: [],
-          fotosRonda: [],
-          outrosItensCorrigidos: []
+          areasTecnicas: [], // Carregar sob demanda
+          fotosRonda: [], // Carregar sob demanda
+          outrosItensCorrigidos: [] // Carregar sob demanda
         }));
       }
 
@@ -279,7 +279,6 @@ export const rondaService = {
             endereco: 'Av. Principal, 456 - Bairro Novo',
             responsavel: 'João Silva',
             observacoes: 'Fechadura ajustada e lubrificada',
-            dataCorrecao: ontem,
             foto: null,
             data: ontem,
             hora: '14:30'
@@ -343,6 +342,47 @@ export const rondaService = {
     } catch (error) {
       console.error('Erro ao buscar rondas por contrato:', error);
       throw error;
+    }
+  },
+
+  // Carregar dados completos de uma ronda (áreas técnicas, fotos, etc.)
+  async loadCompleteRonda(ronda: Ronda): Promise<Ronda> {
+    try {
+      console.log('🔄 Carregando dados completos da ronda:', ronda.id);
+      
+      const { data, error } = await supabase
+        .from('rondas')
+        .select(`
+          *,
+          areas_tecnicas (*),
+          fotos_ronda (*),
+          outros_itens_corrigidos (*)
+        `)
+        .eq('id', ronda.id)
+        .single();
+
+      if (error) {
+        console.warn('⚠️ Erro ao carregar dados completos:', error.message);
+        return ronda; // Retornar ronda básica se der erro
+      }
+
+      const rondaCompleta = {
+        ...ronda,
+        areasTecnicas: data.areas_tecnicas || [],
+        fotosRonda: data.fotos_ronda || [],
+        outrosItensCorrigidos: data.outros_itens_corrigidos || []
+      };
+
+      console.log('✅ Dados completos carregados:', {
+        areasTecnicas: rondaCompleta.areasTecnicas.length,
+        fotosRonda: rondaCompleta.fotosRonda.length,
+        outrosItens: rondaCompleta.outrosItensCorrigidos.length
+      });
+
+      return rondaCompleta;
+    } catch (error) {
+      console.error('❌ Erro ao carregar dados completos:', error);
+      return ronda;
     }
   },
 

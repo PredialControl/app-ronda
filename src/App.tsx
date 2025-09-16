@@ -38,6 +38,8 @@ function App() {
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
   const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard'>('tabela');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
+  const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
+  
 
   useEffect(() => {
     // FORÇAR tema escuro com JavaScript
@@ -319,6 +321,16 @@ function App() {
     loadDataFromDatabase();
   }, []);
 
+  // Não selecionar automaticamente - deixar o usuário escolher
+  // useEffect(() => {
+  //   if (contratos.length > 0 && !contratoSelecionado) {
+  //     console.log('🔄 Selecionando automaticamente o primeiro contrato:', contratos[0].nome);
+  //     setContratoSelecionado(contratos[0]);
+  //     setCurrentView('rondas');
+  //     setViewMode('tabela'); // Ir para a tabela de rondas primeiro
+  //   }
+  // }, [contratos, contratoSelecionado]);
+
   // Salvar rondas automaticamente sempre que mudarem
   useEffect(() => {
     // As rondas agora são salvas diretamente no banco quando criadas/editadas
@@ -375,9 +387,30 @@ function App() {
     ? rondas.filter(r => r.contrato === contratoSelecionado.nome)
     : [];
 
+  // Carregar dados completos das rondas quando um contrato for selecionado
+  useEffect(() => {
+    if (contratoSelecionado && rondasDoContrato.length > 0) {
+      console.log('🔄 Carregando dados completos das rondas do contrato:', contratoSelecionado.nome);
+      
+      Promise.all(
+        rondasDoContrato.map(ronda => 
+          rondaService.loadCompleteRonda(ronda)
+        )
+      ).then(rondasCompletas => {
+        console.log('✅ Dados completos carregados:', rondasCompletas.length);
+        setRondasCompletas(rondasCompletas);
+      }).catch(error => {
+        console.error('❌ Erro ao carregar dados completos:', error);
+        setRondasCompletas(rondasDoContrato); // Usar dados básicos se der erro
+      });
+    } else {
+      setRondasCompletas([]);
+    }
+  }, [contratoSelecionado, rondasDoContrato]);
+
   // Filtrar áreas técnicas pelo contrato selecionado
   const areasTecnicasDoContrato = contratoSelecionado
-    ? rondasDoContrato.flatMap(ronda => ronda.areasTecnicas)
+    ? rondasCompletas.flatMap(ronda => ronda.areasTecnicas)
     : [];
 
   const handleAddRonda = () => {
@@ -1069,7 +1102,7 @@ function App() {
                 {/* Tabela de Rondas */}
                 <div className="mb-8">
                   <TabelaRondas
-                    rondas={rondasDoContrato}
+                    rondas={rondasCompletas}
                     contrato={contratoSelecionado}
                     onSelectRonda={(ronda) => {
                       setRondaSelecionada(ronda);
@@ -1085,10 +1118,7 @@ function App() {
                         }
                       }
                     }}
-                    onVoltarContratos={() => {
-                      setCurrentView('contratos');
-                      setContratoSelecionado(null);
-                    }}
+                    onVoltarContratos={handleVoltarContratos}
                   />
                 </div>
 
@@ -1117,7 +1147,7 @@ function App() {
             {viewMode === 'dashboard' && contratoSelecionado && (
               <Dashboard
                 contrato={contratoSelecionado}
-                rondas={rondasDoContrato}
+                rondas={rondasCompletas}
                 areasTecnicas={areasTecnicasDoContrato}
               />
             )}

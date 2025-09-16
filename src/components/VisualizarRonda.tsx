@@ -4,9 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AreaTecnica, Ronda, Contrato } from '@/types';
-import { downloadRelatorioPDF, RelatorioPDF, preparePdfData } from '@/lib/pdfReact';
-import { PDFViewer } from '@react-pdf/renderer';
-import { ArrowLeft, FileText, AlertTriangle, Edit, Plus, Trash2, Wrench, BarChart3, AlertCircle, Info, CheckCircle, XCircle, Upload } from 'lucide-react';
+import { downloadRelatorioPDF } from '@/lib/pdfReact';
+import { ArrowLeft, FileText, AlertTriangle, Edit, Plus, Trash2, Wrench, BarChart3, AlertCircle, Info, CheckCircle } from 'lucide-react';
 import { AreaTecnicaCard } from './AreaTecnicaCard';
 // Removed bulk import modals per user request
 
@@ -47,7 +46,7 @@ export function VisualizarRonda({
   onExportarJSON,
   isPrintMode
 }: VisualizarRondaProps) {
-  const [showPdfPreview, setShowPdfPreview] = useState(false);
+  
   const [headerImage, setHeaderImage] = useState<string | null>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
@@ -180,9 +179,19 @@ export function VisualizarRonda({
             <Edit className="w-4 h-4 mr-2" />
             Editar Ronda
           </Button>
-          <Button onClick={() => setShowPdfPreview(true)} variant="outline">
+          <Button 
+            onClick={async () => {
+              try {
+                await downloadRelatorioPDF(ronda, contrato, areasTecnicas, headerImage);
+              } catch (error) {
+                console.error('Erro ao exportar PDF:', error);
+                alert('Erro ao exportar PDF. Tente novamente.');
+              }
+            }} 
+            variant="outline"
+          >
             <FileText className="w-4 h-4 mr-2" />
-            Prévia PDF
+            Exportar PDF
           </Button>
           <Button onClick={onExportarJSON} variant="outline">
             <FileText className="w-4 h-4 mr-2" />
@@ -592,23 +601,6 @@ export function VisualizarRonda({
         </CardContent>
       </Card>
     </div>
-    {showPdfPreview && (
-      <div className="fixed inset-0 bg-black/50 z-50 flex flex-col">
-        <div className="bg-white p-2 flex justify-end">
-          <Button variant="outline" onClick={() => setShowPdfPreview(false)}>Fechar</Button>
-        </div>
-        <div className="flex-1">
-          <PDFViewer style={{ width: '100%', height: '100%' }}>
-            <RelatorioPDF
-              ronda={(window as any).__pdfPreviewData?.ronda || ronda}
-              contrato={contrato}
-              areas={(window as any).__pdfPreviewData?.areas || areasTecnicas}
-              headerImage={(window as any).__pdfHeaderImage || `${window.location.origin}/manu.png`}
-            />
-          </PDFViewer>
-        </div>
-      </div>
-    )}
     </>
   );
 }
