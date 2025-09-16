@@ -350,7 +350,12 @@ export const rondaService = {
     try {
       console.log('🔄 Carregando dados completos da ronda:', ronda.id);
       
-      const { data, error } = await supabase
+      // Usar timeout mais curto e consulta mais simples
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout na consulta')), 10000) // 10 segundos
+      );
+      
+      const queryPromise = supabase
         .from('rondas')
         .select(`
           *,
@@ -360,6 +365,8 @@ export const rondaService = {
         `)
         .eq('id', ronda.id)
         .single();
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       if (error) {
         console.warn('⚠️ Erro ao carregar dados completos:', error.message);
@@ -543,43 +550,62 @@ export const rondaService = {
 export const areaTecnicaService = {
   // Buscar áreas técnicas por ronda
   async getByRonda(rondaId: string): Promise<AreaTecnica[]> {
-    const { data, error } = await supabase
-      .from('areas_tecnicas')
-      .select('*')
-      .eq('ronda_id', rondaId)
+    try {
+      const { data, error } = await supabase
+        .from('areas_tecnicas')
+        .select('*')
+        .eq('ronda_id', rondaId);
 
-    if (error) {
-      console.error('Erro ao buscar áreas técnicas:', error)
-      throw error
+      if (error) {
+        console.error('Erro ao buscar áreas técnicas:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar áreas técnicas:', error);
+      throw error;
     }
-
-    return data || []
   },
 
   // Criar área técnica
   async create(area: Omit<AreaTecnica, 'id'> & { ronda_id: string }): Promise<AreaTecnica> {
-    const { data, error } = await supabase
-      .from('areas_tecnicas')
-      .insert([{
-        ronda_id: area.ronda_id,
-        nome: area.nome,
-        status: area.status,
-        contrato: area.contrato,
-        endereco: area.endereco,
-        data: area.data,
-        hora: area.hora,
-        foto: area.foto,
-        observacoes: area.observacoes
-      }])
-      .select()
-      .single()
+    try {
+      console.log('🆕 Criando área técnica:', area);
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout na criação')), 8000) // 8 segundos
+      );
+      
+      const queryPromise = supabase
+        .from('areas_tecnicas')
+        .insert([{
+          ronda_id: area.ronda_id,
+          nome: area.nome,
+          status: area.status,
+          contrato: area.contrato,
+          endereco: area.endereco,
+          data: area.data,
+          hora: area.hora,
+          foto: area.foto,
+          observacoes: area.observacoes
+        }])
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Erro ao criar área técnica:', error)
-      throw error
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+
+      if (error) {
+        console.error('❌ Erro ao criar área técnica:', error);
+        throw error;
+      }
+
+      console.log('✅ Área técnica criada:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Erro ao criar área técnica:', error);
+      throw error;
     }
-
-    return data
   },
 
   // Atualizar área técnica
@@ -587,7 +613,11 @@ export const areaTecnicaService = {
     try {
       console.log('🔄 Tentando atualizar área técnica com ID:', id);
       
-      const { data, error } = await supabase
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout na atualização')), 8000) // 8 segundos
+      );
+      
+      const queryPromise = supabase
         .from('areas_tecnicas')
         .update({
           nome: updates.nome,
@@ -602,6 +632,8 @@ export const areaTecnicaService = {
         .eq('id', id)
         .select()
         .single();
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       if (error) {
         console.error('❌ Erro na query Supabase:', error);
@@ -624,14 +656,27 @@ export const areaTecnicaService = {
   // Deletar área técnica
   async delete(id: string): Promise<void> {
     try {
-      const { error } = await supabase
+      console.log('🗑️ Tentando deletar área técnica com ID:', id);
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout na exclusão')), 8000) // 8 segundos
+      );
+      
+      const queryPromise = supabase
         .from('areas_tecnicas')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      const { error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+
+      if (error) {
+        console.error('❌ Erro ao deletar área técnica:', error);
+        throw error;
+      }
+      
+      console.log('✅ Área técnica deletada com sucesso');
     } catch (error) {
-      console.error('Erro ao deletar área técnica:', error);
+      console.error('❌ Erro ao deletar área técnica:', error);
       throw error;
     }
   }
@@ -641,66 +686,130 @@ export const areaTecnicaService = {
 export const fotoRondaService = {
   // Buscar fotos por ronda
   async getByRonda(rondaId: string): Promise<FotoRonda[]> {
-    const { data, error } = await supabase
-      .from('fotos_ronda')
-      .select('*')
-      .eq('ronda_id', rondaId)
+    try {
+      console.log('📸 Buscando fotos da ronda:', rondaId);
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout na busca de fotos')), 8000) // 8 segundos
+      );
+      
+      const queryPromise = supabase
+        .from('fotos_ronda')
+        .select('*')
+        .eq('ronda_id', rondaId)
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Erro ao buscar fotos:', error)
-      throw error
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+
+      if (error) {
+        console.error('❌ Erro ao buscar fotos:', error);
+        throw error;
+      }
+
+      console.log(`✅ ${data?.length || 0} fotos encontradas`);
+      return data || [];
+    } catch (error) {
+      console.error('❌ Erro ao buscar fotos:', error);
+      throw error;
     }
+  },
 
-    return data || []
+  // Função para comprimir imagem
+  async compressImage(file: File, maxWidth: number = 800, quality: number = 0.8): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calcular novas dimensões mantendo proporção
+        let { width, height } = img;
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Desenhar imagem comprimida
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Converter para base64 com qualidade reduzida
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
+      };
+      
+      img.onerror = () => reject(new Error('Erro ao carregar imagem'));
+      img.src = URL.createObjectURL(file);
+    });
   },
 
   // Criar foto
   async create(foto: Omit<FotoRonda, 'id'> & { ronda_id: string }): Promise<FotoRonda> {
-    // Monta payload com criticidade quando existir
-    const payload: any = {
-      ronda_id: foto.ronda_id,
-      foto: foto.foto,
-      local: foto.local,
-      pendencia: foto.pendencia,
-      especialidade: foto.especialidade,
-      responsavel: foto.responsavel,
-      observacoes: foto.observacoes,
-      data: foto.data,
-      hora: foto.hora,
-    };
-    if ((foto as any).criticidade) payload.criticidade = (foto as any).criticidade;
+    try {
+      console.log('📸 Criando nova foto:', foto.local);
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout na criação da foto')), 15000) // 15 segundos para upload
+      );
+      
+      // Monta payload com criticidade quando existir
+      const payload: any = {
+        ronda_id: foto.ronda_id,
+        foto: foto.foto,
+        local: foto.local,
+        pendencia: foto.pendencia,
+        especialidade: foto.especialidade,
+        responsavel: foto.responsavel,
+        observacoes: foto.observacoes,
+        data: foto.data,
+        hora: foto.hora,
+      };
+      if ((foto as any).criticidade) payload.criticidade = (foto as any).criticidade;
 
-    let { data, error }: any = await supabase
-      .from('fotos_ronda')
-      .insert([payload])
-      .select()
-      .single();
+      const queryPromise = supabase
+        .from('fotos_ronda')
+        .insert([payload])
+        .select()
+        .single();
 
-    // Fallback: se a coluna criticidade não existir no banco, tenta novamente sem ela
-    if (error && String(error?.message || '').toLowerCase().includes('criticidade')) {
-      try {
-        console.warn('Coluna criticidade ausente na tabela fotos_ronda. Tentando salvar sem o campo.');
-        delete payload.criticidade;
-        ({ data, error } = await supabase
-          .from('fotos_ronda')
-          .insert([payload])
-          .select()
-          .single());
-      } catch {}
+      let { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+
+      // Fallback: se a coluna criticidade não existir no banco, tenta novamente sem ela
+      if (error && String(error?.message || '').toLowerCase().includes('criticidade')) {
+        try {
+          console.warn('Coluna criticidade ausente na tabela fotos_ronda. Tentando salvar sem o campo.');
+          delete payload.criticidade;
+          ({ data, error } = await supabase
+            .from('fotos_ronda')
+            .insert([payload])
+            .select()
+            .single());
+        } catch {}
+      }
+
+      if (error) {
+        console.error('❌ Erro ao criar foto:', error);
+        throw error;
+      }
+
+      console.log('✅ Foto criada com sucesso:', data.id);
+      return data;
+    } catch (error) {
+      console.error('❌ Erro ao criar foto:', error);
+      throw error;
     }
-
-    if (error) {
-      console.error('Erro ao criar foto:', error)
-      throw error
-    }
-
-    return data
   },
 
   // Atualizar foto
   async update(id: string, updates: Partial<FotoRonda>): Promise<FotoRonda> {
     try {
       console.log('🔄 Tentando atualizar foto com ID:', id);
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout na atualização da foto')), 15000) // 15 segundos para upload
+      );
 
       const payload: any = {
         foto: updates.foto,
@@ -714,12 +823,14 @@ export const fotoRondaService = {
       };
       if ((updates as any).criticidade) payload.criticidade = (updates as any).criticidade;
 
-      let { data, error }: any = await supabase
+      const queryPromise = supabase
         .from('fotos_ronda')
         .update(payload)
         .eq('id', id)
         .select()
         .single();
+
+      let { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       if (error && String(error?.message || '').toLowerCase().includes('criticidade')) {
         console.warn('Coluna criticidade ausente na tabela fotos_ronda. Atualizando sem o campo.');
@@ -742,7 +853,7 @@ export const fotoRondaService = {
         throw new Error('Nenhum dado retornado do update');
       }
 
-      console.log('✅ Foto atualizada com sucesso:', data);
+      console.log('✅ Foto atualizada com sucesso:', data.id);
       return data;
     } catch (error) {
       console.error('❌ Erro ao atualizar foto:', error);
@@ -753,14 +864,27 @@ export const fotoRondaService = {
   // Deletar foto
   async delete(id: string): Promise<void> {
     try {
-      const { error } = await supabase
+      console.log('🗑️ Tentando deletar foto com ID:', id);
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout na exclusão da foto')), 8000) // 8 segundos
+      );
+      
+      const queryPromise = supabase
         .from('fotos_ronda')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      const { error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+
+      if (error) {
+        console.error('❌ Erro ao deletar foto:', error);
+        throw error;
+      }
+      
+      console.log('✅ Foto deletada com sucesso');
     } catch (error) {
-      console.error('Erro ao deletar foto:', error);
+      console.error('❌ Erro ao deletar foto:', error);
       throw error;
     }
   }

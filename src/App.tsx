@@ -15,6 +15,7 @@ import { AREAS_TECNICAS_PREDEFINIDAS } from '@/data/areasTecnicas';
 import { FileText, Building2, BarChart3, LogOut, User } from 'lucide-react';
 
 import { contratoService, rondaService, areaTecnicaService, fotoRondaService, outroItemService } from '@/lib/supabaseService';
+import { supabase } from '@/lib/supabase';
 import { authService } from '@/lib/auth';
 
 
@@ -171,7 +172,37 @@ function App() {
     }
   };
 
-    // Carregar dados do banco de dados ao iniciar a aplicação
+    // Função de debug para testar conexão com banco
+  const debugDatabaseConnection = async () => {
+    try {
+      console.log('🔍 DEBUG: Testando conexão com banco...');
+      
+      // Testar conexão básica
+      const { data, error } = await supabase
+        .from('rondas')
+        .select('count')
+        .limit(1);
+      
+      if (error) {
+        console.error('❌ Erro na conexão:', error);
+        alert(`Erro na conexão: ${error.message}`);
+      } else {
+        console.log('✅ Conexão OK:', data);
+        
+        // Testar busca de rondas
+        const rondas = await rondaService.getAll();
+        console.log('📊 Rondas encontradas:', rondas.length);
+        console.log('📋 Dados das rondas:', rondas);
+        
+        alert(`Conexão OK! Encontradas ${rondas.length} rondas no banco.`);
+      }
+    } catch (error) {
+      console.error('❌ Erro no debug:', error);
+      alert(`Erro no debug: ${error}`);
+    }
+  };
+
+  // Carregar dados do banco de dados ao iniciar a aplicação
   useEffect(() => {
     const loadDataFromDatabase = async () => {
       try {
@@ -506,40 +537,46 @@ function App() {
   const handleDeleteAreaTecnica = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir esta área técnica?')) {
       try {
-        if (!rondaSelecionada) return;
+        if (!rondaSelecionada) {
+          console.error('❌ Nenhuma ronda selecionada para excluir área técnica');
+          return;
+        }
         
-        const updatedRonda = {
-          ...rondaSelecionada,
-          areasTecnicas: rondaSelecionada.areasTecnicas.filter((at: AreaTecnica) => at.id !== id)
-        };
+        console.log('🗑️ Excluindo área técnica com ID:', id);
         
-        console.log('💾 Salvando ronda sem área técnica no banco:', updatedRonda);
-        
-        // Salvar no banco
-        const rondaSalva = await rondaService.update(rondaSelecionada.id, updatedRonda);
-        console.log('✅ Ronda sem área técnica salva no banco:', rondaSalva);
+        // Excluir do banco de dados
+        await areaTecnicaService.delete(id);
+        console.log('✅ Área técnica excluída do banco com sucesso');
         
         // Atualizar estado local
+        const updatedAreasTecnicas = rondaSelecionada.areasTecnicas.filter((at: AreaTecnica) => at.id !== id);
+        const updatedRonda = {
+          ...rondaSelecionada,
+          areasTecnicas: updatedAreasTecnicas
+        };
+        
+        // Atualizar estado global
         setRondas(prev => prev.map(ronda => 
-          ronda.id === rondaSelecionada.id ? rondaSalva : ronda
+          ronda.id === rondaSelecionada.id ? updatedRonda : ronda
         ));
         
-        setRondaSelecionada(rondaSalva);
+        // Atualizar ronda selecionada
+        setRondaSelecionada(updatedRonda);
         
-        console.log('✅ Área técnica excluída com sucesso do banco!');
+        console.log('✅ Área técnica excluída com sucesso!');
       } catch (error) {
-        console.error('❌ Erro ao excluir área técnica do banco:', error);
-        alert('Erro ao excluir área técnica. Verifique o console.');
+        console.error('❌ Erro ao excluir área técnica:', error);
+        alert('Erro ao excluir área técnica. Verifique o console para mais detalhes.');
       }
     }
   };
 
   const handleSaveAreaTecnica = async (areaTecnica: AreaTecnica) => {
     console.log('handleSaveAreaTecnica chamado:', { areaTecnica, rondaSelecionada, editingAreaTecnica });
-    console.log('Stack trace:', new Error().stack);
     
     if (!rondaSelecionada) {
-      console.error('Nenhuma ronda selecionada!');
+      console.error('❌ Nenhuma ronda selecionada!');
+      alert('Erro: Nenhuma ronda selecionada. Recarregue a página e tente novamente.');
       return;
     }
 
@@ -550,6 +587,7 @@ function App() {
         // Editando área existente - atualizar no banco
         console.log('🔄 Editando área técnica existente no banco:', areaTecnica);
         areaSalva = await areaTecnicaService.update(areaTecnica.id, areaTecnica);
+        console.log('✅ Área técnica atualizada no banco:', areaSalva);
       } else {
         // Adicionando nova área - criar no banco
         console.log('🆕 Criando nova área técnica no banco:', areaTecnica);
@@ -558,9 +596,8 @@ function App() {
           ...areaSemId,
           ronda_id: rondaSelecionada.id
         });
+        console.log('✅ Nova área técnica criada no banco:', areaSalva);
       }
-      
-      console.log('✅ Área técnica salva no banco:', areaSalva);
       
       // Atualizar estado local
       const updatedAreasTecnicas = editingAreaTecnica
@@ -569,7 +606,7 @@ function App() {
       
       const updatedRonda = { ...rondaSelecionada, areasTecnicas: updatedAreasTecnicas };
       
-      // Atualizar estado local
+      // Atualizar estado global
       setRondas(prev => prev.map(ronda => 
         ronda.id === rondaSelecionada.id ? updatedRonda : ronda
       ));
@@ -577,10 +614,21 @@ function App() {
       // Atualizar a ronda selecionada também
       setRondaSelecionada(updatedRonda);
       
-      console.log('✅ Área técnica salva com sucesso no banco!');
+      // Fechar modal
+      setIsModalOpen(false);
+      setEditingAreaTecnica(null);
+      
+      console.log('✅ Área técnica salva com sucesso!');
     } catch (error) {
-      console.error('❌ Erro ao salvar área técnica no banco:', error);
-      alert('Erro ao salvar área técnica. Verifique o console.');
+      console.error('❌ Erro ao salvar área técnica:', error);
+      
+      if (error.message.includes('Timeout')) {
+        alert('⏱️ Operação demorou muito para responder. Tente novamente ou verifique sua conexão.');
+      } else if (error.message.includes('canceling statement')) {
+        alert('🔄 Operação foi cancelada devido ao tempo limite. Tente novamente.');
+      } else {
+        alert(`❌ Erro ao salvar área técnica: ${error.message || 'Erro desconhecido'}`);
+      }
     }
   };
 
@@ -754,64 +802,89 @@ function App() {
   };
 
   const handleSaveFotoRonda = async (fotoRonda: FotoRonda) => {
-    if (rondaSelecionada) {
-      try {
-        let fotoSalva: FotoRonda;
-        
-        if (editingFotoRonda) {
-          // Editando foto existente - atualizar no banco
-          console.log('🔄 Editando foto existente no banco:', fotoRonda);
-          fotoSalva = await fotoRondaService.update(fotoRonda.id, fotoRonda);
-        } else {
-          // Adicionando nova foto - criar no banco
-          console.log('🆕 Criando nova foto no banco:', fotoRonda);
-          const { id, ...fotoSemId } = fotoRonda;
-          fotoSalva = await fotoRondaService.create({
-            ...fotoSemId,
-            ronda_id: rondaSelecionada.id
-          });
-        }
-        
-        console.log('✅ Foto salva no banco:', fotoSalva);
-        
-        // Atualizar estado local
-        const updatedFotosRonda = editingFotoRonda
-          ? rondaSelecionada.fotosRonda.map(fr => fr.id === fotoSalva.id ? fotoSalva : fr)
-          : [...rondaSelecionada.fotosRonda, fotoSalva];
-        
-        const updatedRonda = { ...rondaSelecionada, fotosRonda: updatedFotosRonda };
-        
-        // Atualizar estado local
-        setRondas(prev => prev.map(r => r.id === rondaSelecionada.id ? updatedRonda : r));
-        setRondaSelecionada(updatedRonda);
-        
-        console.log('✅ Foto da ronda salva com sucesso no banco!');
-      } catch (error) {
-        console.error('❌ Erro ao salvar foto da ronda no banco:', error);
-        alert('Erro ao salvar foto da ronda. Verifique o console.');
+    if (!rondaSelecionada) {
+      console.error('❌ Nenhuma ronda selecionada!');
+      alert('Erro: Nenhuma ronda selecionada. Recarregue a página e tente novamente.');
+      return;
+    }
+
+    try {
+      let fotoSalva: FotoRonda;
+      
+      if (editingFotoRonda) {
+        // Editando foto existente - atualizar no banco
+        console.log('🔄 Editando foto existente no banco:', fotoRonda);
+        fotoSalva = await fotoRondaService.update(fotoRonda.id, fotoRonda);
+        console.log('✅ Foto atualizada no banco:', fotoSalva);
+      } else {
+        // Adicionando nova foto - criar no banco
+        console.log('🆕 Criando nova foto no banco:', fotoRonda);
+        const { id, ...fotoSemId } = fotoRonda;
+        fotoSalva = await fotoRondaService.create({
+          ...fotoSemId,
+          ronda_id: rondaSelecionada.id
+        });
+        console.log('✅ Nova foto criada no banco:', fotoSalva);
+      }
+      
+      // Atualizar estado local
+      const updatedFotosRonda = editingFotoRonda
+        ? rondaSelecionada.fotosRonda.map(fr => fr.id === fotoSalva.id ? fotoSalva : fr)
+        : [...rondaSelecionada.fotosRonda, fotoSalva];
+      
+      const updatedRonda = { ...rondaSelecionada, fotosRonda: updatedFotosRonda };
+      
+      // Atualizar estado global
+      setRondas(prev => prev.map(r => r.id === rondaSelecionada.id ? updatedRonda : r));
+      setRondaSelecionada(updatedRonda);
+      
+      // Fechar modal
+      setIsFotoRondaModalOpen(false);
+      setEditingFotoRonda(null);
+      
+      console.log('✅ Foto da ronda salva com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro ao salvar foto da ronda:', error);
+      
+      if (error.message.includes('Timeout')) {
+        alert('⏱️ Upload da foto demorou muito para responder. Tente novamente ou verifique sua conexão.');
+      } else if (error.message.includes('canceling statement')) {
+        alert('🔄 Upload foi cancelado devido ao tempo limite. Tente novamente.');
+      } else {
+        alert(`❌ Erro ao salvar foto: ${error.message || 'Erro desconhecido'}`);
       }
     }
   };
 
   const handleDeleteFotoRonda = async (id: string) => {
-    if (rondaSelecionada) {
-      if (confirm('Tem certeza que deseja excluir este item da ronda? Esta ação não pode ser desfeita.')) {
-        try {
-          // Deletar foto do banco
-          console.log('🗑️ Deletando foto do banco com ID:', id);
-          await fotoRondaService.delete(id);
-          
-          // Atualizar estado local
-          const updatedFotosRonda = rondaSelecionada.fotosRonda.filter(fr => fr.id !== id);
-          const updatedRonda = { ...rondaSelecionada, fotosRonda: updatedFotosRonda };
-          
-          setRondas(prev => prev.map(r => r.id === rondaSelecionada.id ? updatedRonda : r));
-          setRondaSelecionada(updatedRonda);
-          
-          console.log('✅ Foto da ronda excluída com sucesso do banco!');
-        } catch (error) {
-          console.error('❌ Erro ao excluir foto da ronda do banco:', error);
-          alert('Erro ao excluir foto da ronda. Verifique o console.');
+    if (!rondaSelecionada) {
+      console.error('❌ Nenhuma ronda selecionada para excluir foto');
+      return;
+    }
+
+    if (confirm('Tem certeza que deseja excluir esta foto? Esta ação não pode ser desfeita.')) {
+      try {
+        // Deletar foto do banco
+        console.log('🗑️ Deletando foto do banco com ID:', id);
+        await fotoRondaService.delete(id);
+        
+        // Atualizar estado local
+        const updatedFotosRonda = rondaSelecionada.fotosRonda.filter(fr => fr.id !== id);
+        const updatedRonda = { ...rondaSelecionada, fotosRonda: updatedFotosRonda };
+        
+        setRondas(prev => prev.map(r => r.id === rondaSelecionada.id ? updatedRonda : r));
+        setRondaSelecionada(updatedRonda);
+        
+        console.log('✅ Foto da ronda excluída com sucesso do banco!');
+      } catch (error) {
+        console.error('❌ Erro ao excluir foto da ronda do banco:', error);
+        
+        if (error.message.includes('Timeout')) {
+          alert('⏱️ Exclusão demorou muito para responder. Tente novamente.');
+        } else if (error.message.includes('canceling statement')) {
+          alert('🔄 Exclusão foi cancelada devido ao tempo limite. Tente novamente.');
+        } else {
+          alert(`❌ Erro ao excluir foto: ${error.message || 'Erro desconhecido'}`);
         }
       }
     }
@@ -935,6 +1008,16 @@ function App() {
             </div>
             
             <div className="flex items-center gap-3">
+              {/* Botão de debug temporário */}
+              <Button
+                onClick={debugDatabaseConnection}
+                variant="outline"
+                size="sm"
+                className="text-yellow-300 border-yellow-400/30 hover:bg-yellow-500/10"
+              >
+                🔍 Debug DB
+              </Button>
+              
               {/* Informações do usuário */}
               <div className="flex items-center gap-2 text-sm text-white/80">
                 <User className="w-4 h-4" />

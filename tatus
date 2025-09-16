@@ -1,0 +1,5 @@
+[33m1b54edd[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Configurar domínio principal app-ronda-ricardo.vercel.app com otimizações de cache e headers
+[33mc327654[m Atualizar nome do app para Portal de Visitas Manutenção Predial
+[33m02bfd61[m fix: SOLUÇÃO RADICAL - rondas locais + tema escuro forçado via JS
+[33m26fda2b[m fix: correção definitiva - tema escuro forçado e rondas ultra simples
+[33m8c5c7ed[m fix: corrigir tema escuro e otimizar carregamento de rondas para evitar timeout
