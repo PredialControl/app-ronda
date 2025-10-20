@@ -1290,6 +1290,7 @@ export const outroItemService = {
       contrato: item.contrato,
       endereco: item.endereco,
       responsavel: item.responsavel,
+      categoria: item.categoria || 'CHAMADO', // Incluir categoria
     // Se há múltiplas fotos, salvar como JSON na coluna foto existente
     // Limitar tamanho para evitar timeout (máximo 5MB de dados)
     foto: item.fotos && item.fotos.length > 0 ? 
@@ -1458,6 +1459,7 @@ export const outroItemService = {
           status: updates.status,
           contrato: updates.contrato,
           responsavel: updates.responsavel,
+          categoria: updates.categoria || 'CHAMADO', // Incluir categoria
           foto: updates.fotos && updates.fotos.length > 0 ? JSON.stringify(updates.fotos) : updates.foto,
           observacoes: updates.observacoes,
           data: updates.data,
