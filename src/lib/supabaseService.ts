@@ -273,7 +273,13 @@ export const rondaService = {
             
             // Carregar dados completos desta ronda apenas se o ID for válido
             if (rondaBasica.id && rondaBasica.id.trim() !== '') {
-            return await this.loadCompleteRonda(rondaBasica);
+              console.log('🔄 Carregando dados completos para ronda:', rondaBasica.id);
+              const rondaCompleta = await this.loadCompleteRonda(rondaBasica);
+              console.log('✅ Ronda completa carregada:', rondaCompleta.id, {
+                outrosItensCorrigidos: rondaCompleta.outrosItensCorrigidos?.length || 0,
+                fotosRonda: rondaCompleta.fotosRonda?.length || 0
+              });
+              return rondaCompleta;
             } else {
               console.warn('⚠️ Ronda com ID inválido, retornando dados básicos:', rondaBasica);
               return rondaBasica;

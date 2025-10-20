@@ -43,12 +43,28 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
     const ativos = ronda.areasTecnicas.filter(at => at.status === 'ATIVO').length;
     const manutencao = ronda.areasTecnicas.filter(at => at.status === 'EM MANUTENÇÃO').length;
     
+    // Debug: Log dos dados da ronda
+    console.log('🔍 DEBUG TABELA - Ronda:', ronda.id, {
+      outrosItensCorrigidos: ronda.outrosItensCorrigidos?.length || 0,
+      fotosRonda: ronda.fotosRonda?.length || 0,
+      outrosItensDetalhes: ronda.outrosItensCorrigidos
+    });
+    
     // Contar itens de abertura de chamado (outrosItensCorrigidos com categoria CHAMADO)
-    const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => item.categoria === 'CHAMADO').length;
+    const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => {
+      console.log('🔍 DEBUG TABELA - Verificando item:', item.categoria, item);
+      return item.categoria === 'CHAMADO';
+    }).length;
     
     // Incluir também fotos de ronda como chamados (para compatibilidade)
     const fotosRondaChamados = ronda.fotosRonda.length;
     const totalItensChamado = itensChamado + fotosRondaChamados;
+    
+    console.log('🔍 DEBUG TABELA - Contagem final:', {
+      itensChamado,
+      fotosRondaChamados,
+      totalItensChamado
+    });
     
     const itensAtencao = manutencao + totalItensChamado; // Soma manutenção + chamados
     

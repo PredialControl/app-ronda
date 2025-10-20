@@ -322,6 +322,7 @@ function App() {
       try {
         setIsLoading(true);
         console.log('🔄 Carregando dados do banco Supabase/Neon...');
+        console.log('🔍 DEBUG - Verificando se há itens de chamado nas rondas...');
         
         // RECUPERAR RONDAS DO BROOK YOU PRIMEIRO
         console.log('🔥 RECUPERANDO RONDAS DO BROOK YOU...');
@@ -373,6 +374,16 @@ function App() {
           rondas: rondasFromDB.length,
           contratosData: contratosFromDB,
           rondasData: rondasFromDB
+        });
+
+        // Debug: Verificar se as rondas têm dados completos
+        rondasFromDB.forEach(ronda => {
+          console.log('🔍 DEBUG APP - Ronda carregada:', ronda.id, {
+            outrosItensCorrigidos: ronda.outrosItensCorrigidos?.length || 0,
+            fotosRonda: ronda.fotosRonda?.length || 0,
+            temOutrosItens: !!ronda.outrosItensCorrigidos,
+            outrosItensDetalhes: ronda.outrosItensCorrigidos
+          });
         });
 
         setContratos(contratosFromDB);
