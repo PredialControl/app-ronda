@@ -1,19 +1,44 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Configuração do Supabase conectando ao Neon PostgreSQL
+// Configuração do Supabase
 const supabaseUrl = 'https://tvuwrrovxzakxrhsplvd.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2dXdycm92eHpha3hyaHNwbHZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2NDUzOTYsImV4cCI6MjA3MTIyMTM5Nn0.SNrfj5xVp2olmyZT8IgFpHxciUTKmLYfykaLtbwT3Do';
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Verificar se as variáveis estão definidas
+console.log('🔧 Configuração Supabase:', {
+  url: supabaseUrl,
+  keyExists: !!supabaseKey,
+  keyLength: supabaseKey?.length || 0
+});
 
-// Testar conexão
-supabase.from('contratos').select('count').limit(1).then(({ data, error }) => {
-  if (error) {
-    console.error('❌ Erro na conexão com Supabase:', error);
-  } else {
-    console.log('✅ Conectado ao Supabase/Neon com sucesso!');
+// Configuração simples sem customizações que podem causar CORS
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false
   }
 });
+
+// Teste de conexão simples
+const testConnection = async () => {
+  try {
+    console.log('🔄 Testando conexão com Supabase...');
+    const { error } = await supabase.from('contratos').select('count').limit(1);
+    
+    if (error) {
+      console.error('❌ Erro na conexão:', error.message);
+      return false;
+    } else {
+      console.log('✅ Conectado ao Supabase!');
+      return true;
+    }
+  } catch (error) {
+    console.error('❌ Erro de rede:', error);
+    return false;
+  }
+};
+
+export { supabase };
 
 // Configurações para otimização de fotos
 export const PHOTO_CONFIG = {

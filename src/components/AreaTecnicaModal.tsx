@@ -11,6 +11,7 @@ interface AreaTecnicaModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (areaTecnica: AreaTecnica) => void;
+  onSaveMultiple?: (areas: AreaTecnica[]) => void; // Nova prop para salvar múltiplas áreas
   contratoRonda?: string;
   enderecoRonda?: string;
   dataRonda?: string;
@@ -22,13 +23,12 @@ export function AreaTecnicaModal({
   isOpen,
   onClose,
   onSave,
+  onSaveMultiple,
   contratoRonda = '',
   enderecoRonda = '',
   dataRonda = '',
   horaRonda = ''
 }: AreaTecnicaModalProps) {
-  console.log('AreaTecnicaModal renderizado:', { isOpen, areaTecnica });
-  console.log('Props recebidos:', { isOpen, areaTecnica, contratoRonda, enderecoRonda, dataRonda, horaRonda });
   
   const [formData, setFormData] = useState<Partial<AreaTecnica>>({
     nome: areaTecnica?.nome || '',
@@ -41,6 +41,7 @@ export function AreaTecnicaModal({
     observacoes: areaTecnica?.observacoes || ''
   });
 
+  const [multiplePhotos, setMultiplePhotos] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Atualizar formData quando os props mudarem
@@ -90,6 +91,11 @@ export function AreaTecnicaModal({
     }
   }, [areaTecnica]);
 
+  // Se o modal não está aberto, não renderiza nada
+  if (!isOpen) {
+    return null;
+  }
+
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     console.log('🔥 handleInputChange chamado:', { field, value, formDataAtual: formData });
     console.log('🔥 Stack trace:', new Error().stack);
@@ -107,9 +113,13 @@ export function AreaTecnicaModal({
     }, 0);
   };
 
-  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+  const handleFotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Se estiver editando uma área existente, aceitar apenas 1 foto
+    if (areaTecnica) {
+      const file = files[0];
       const reader = new FileReader();
       reader.onload = () => {
         setFormData(prev => ({
@@ -118,21 +128,67 @@ export function AreaTecnicaModal({
         }));
       };
       reader.readAsDataURL(file);
+      return;
     }
+
+    // Se estiver criando nova área, aceitar múltiplas fotos
+    const fotosPromises = Array.from(files).map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+    });
+
+    const fotos = await Promise.all(fotosPromises);
+    setMultiplePhotos(fotos);
+    console.log(`📸 ${fotos.length} fotos selecionadas`);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('handleSubmit chamado, formData:', formData);
+    console.log('🚀 handleSubmit chamado!');
+    console.log('🔍 formData:', formData);
+    console.log('🔍 multiplePhotos.length:', multiplePhotos.length);
+    console.log('🔍 areaTecnica:', areaTecnica);
+    console.log('🔍 onSaveMultiple existe?', !!onSaveMultiple);
 
-    if (!formData.nome) {
+    // Se tiver múltiplas fotos (criando novas áreas)
+    if (multiplePhotos.length > 0 && !areaTecnica && onSaveMultiple) {
+      console.log('✅ Entrando no modo de múltiplas fotos!');
+      // Validar se selecionou o nome da área
+      if (!formData.nome) {
+        alert('Por favor, selecione a área técnica antes de salvar as fotos');
+        return;
+      }
+
+      const areas: AreaTecnica[] = multiplePhotos.map((foto, index) => ({
+        id: crypto.randomUUID(),
+        nome: formData.nome || `Área ${index + 1}`, // Usa o nome selecionado para TODAS
+        status: formData.status as 'ATIVO' | 'EM MANUTENÇÃO' | 'ATENÇÃO',
+        contrato: contratoRonda,
+        endereco: enderecoRonda,
+        data: dataRonda,
+        hora: horaRonda,
+        foto: foto,
+        observacoes: formData.observacoes || ''
+      }));
+
+      console.log(`Salvando ${areas.length} áreas técnicas com fotos (todas com nome: ${formData.nome})`);
+      onSaveMultiple(areas);
+      onClose();
+      return;
+    }
+
+    // Modo normal: uma área por vez
+    if (!formData.nome && !areaTecnica) {
       alert('Por favor, selecione a área técnica');
       return;
     }
 
     const areaTecnicaData: AreaTecnica = {
-              id: areaTecnica?.id || crypto.randomUUID(),
-      nome: formData.nome,
+      id: areaTecnica?.id || crypto.randomUUID(),
+      nome: formData.nome || 'Área',
       status: formData.status as 'ATIVO' | 'EM MANUTENÇÃO' | 'ATENÇÃO',
       contrato: contratoRonda,
       endereco: enderecoRonda,
@@ -163,7 +219,7 @@ export function AreaTecnicaModal({
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Wrench className="w-5 h-5" />
-              Editar Área Técnica
+              {areaTecnica ? 'Editar Área Técnica' : 'Adicionar Áreas com Fotos'}
             </h2>
             <button 
               onClick={onClose} 
@@ -178,6 +234,15 @@ export function AreaTecnicaModal({
         <div className="p-4">
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {!areaTecnica && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-blue-800">
+                💡 <strong>Dica:</strong> Selecione a área técnica primeiro, depois escolha várias fotos. 
+                Todas as fotos terão o mesmo nome de área que você escolher aqui!
+              </p>
+            </div>
+          )}
+          
           <div>
             <label className="block text-sm font-medium mb-1">Área Técnica *</label>
             <select
@@ -352,7 +417,7 @@ export function AreaTecnicaModal({
                 className="w-full"
               >
                 <Upload className="w-4 h-4 mr-2" />
-                📁 Selecionar Arquivo
+                {areaTecnica ? '📁 Selecionar Arquivo' : '📁 Selecionar Várias Fotos'}
               </Button>
             </div>
             
@@ -361,12 +426,45 @@ export function AreaTecnicaModal({
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              multiple={!areaTecnica} // Permitir múltiplas fotos apenas ao criar nova área
               onChange={handleFotoChange}
               className="hidden"
             />
             
-            {/* Preview da foto */}
-            {formData.foto && (
+            {/* Preview das fotos múltiplas */}
+            {multiplePhotos.length > 0 && !areaTecnica && (
+              <div className="mt-3">
+                <p className="text-sm font-medium text-green-600 mb-2">
+                  ✓ {multiplePhotos.length} foto(s) selecionada(s)
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {multiplePhotos.map((foto, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={foto}
+                        alt={`Foto ${index + 1}`}
+                        className="w-full h-20 object-cover rounded-lg border border-gray-200"
+                      />
+                      <div className="absolute top-1 right-1 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMultiplePhotos([])}
+                  className="w-full mt-2 text-red-600 hover:text-red-700"
+                >
+                  🗑️ Remover Todas as Fotos
+                </Button>
+              </div>
+            )}
+
+            {/* Preview da foto única (modo edição) */}
+            {formData.foto && areaTecnica && (
               <div className="mt-3">
                 <p className="text-xs text-green-600 mb-2">
                   ✓ Foto capturada/selecionada

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Contrato, Ronda, AreaTecnica, FotoRonda, OutroItemCorrigido } from '@/types';
+import { Contrato, Ronda, AreaTecnica, FotoRonda, OutroItemCorrigido, AgendaItem } from '@/types';
 
 // Serviços para Contratos
 export const contratoService = {
@@ -47,29 +47,87 @@ export const contratoService = {
       const { data, error } = await supabase
         .from('contratos')
         .insert([dadosInserir])
-        .select('*')
-        .single();
+        .select('*');
 
       if (error) {
         console.error('❌ Erro na criação:', error);
+        
+        // Se for erro de rede, tentar novamente após delay
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          console.log('🔄 Erro de rede detectado, tentando novamente em 2s...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Segunda tentativa
+          const { data: data2, error: error2 } = await supabase
+            .from('contratos')
+            .insert([dadosInserir])
+            .select('*');
+          
+          if (error2) {
+            console.error('❌ Segunda tentativa também falhou:', error2);
+            throw new Error(`Erro de conexão: ${error2.message}`);
+          }
+          
+          if (data2 && data2.length > 0) {
+            const contratoRetornado = data2[0];
+            return {
+              id: contratoRetornado.id.toString(),
+              nome: contratoRetornado.nome || '',
+              sindico: contratoRetornado.sindico || '',
+              endereco: contratoRetornado.endereco || '',
+              periodicidade: contratoRetornado.periodicidade || '',
+              observacoes: contratoRetornado.observacoes || '',
+              dataCriacao: contratoRetornado.data_criacao
+            };
+          }
+        }
+        
         throw error;
       }
 
-      if (!data) {
+      if (!data || data.length === 0) {
         console.error('❌ Nenhum dado retornado da criação');
+        // Tentar buscar o contrato recém-criado pelo nome
+        const { data: contratoBusca, error: erroBusca } = await supabase
+          .from('contratos')
+          .select('*')
+          .eq('nome', dadosInserir.nome)
+          .order('id', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (erroBusca || !contratoBusca || !contratoBusca.id) {
+          console.error('❌ Fallback também falhou:', { erroBusca, contratoBusca });
         throw new Error('Nenhum dado retornado da criação');
       }
 
-      console.log('✅ Contrato criado com sucesso:', data);
+        return {
+          id: contratoBusca.id.toString(),
+          nome: contratoBusca.nome || '',
+          sindico: contratoBusca.sindico || '',
+          endereco: contratoBusca.endereco || '',
+          periodicidade: contratoBusca.periodicidade || '',
+          observacoes: contratoBusca.observacoes || '',
+          dataCriacao: contratoBusca.data_criacao
+        };
+      }
+
+      console.log('✅ Contrato criado com sucesso:', data[0]);
+
+      const contratoRetornado = data[0];
+      if (!contratoRetornado || !contratoRetornado.id) {
+        console.error('❌ Dados inválidos retornados:', contratoRetornado);
+        throw new Error('Dados inválidos retornados da criação');
+      }
 
       return {
-        id: data.id.toString(),
-        nome: data.nome,
-        sindico: data.sindico,
-        endereco: data.endereco,
-        periodicidade: data.periodicidade,
-        observacoes: data.observacoes,
-        dataCriacao: data.data_criacao
+        id: contratoRetornado.id.toString(),
+        nome: contratoRetornado.nome || '',
+        sindico: contratoRetornado.sindico || '',
+        endereco: contratoRetornado.endereco || '',
+        periodicidade: contratoRetornado.periodicidade || '',
+        observacoes: contratoRetornado.observacoes || '',
+        dataCriacao: contratoRetornado.data_criacao
       };
     } catch (error) {
       console.error('❌ Erro ao criar contrato:', error);
@@ -97,29 +155,54 @@ export const contratoService = {
         .from('contratos')
         .update(dadosUpdate)
         .eq('id', id)
-        .select('*')
-        .single();
+        .select('*');
 
       if (error) {
         console.error('❌ Erro na query Supabase:', error);
         throw error;
       }
 
-      if (!data) {
+      if (!data || data.length === 0) {
         console.error('❌ Nenhum dado retornado do update');
+        // Tentar buscar o contrato atualizado
+        const { data: contratoBusca, error: erroBusca } = await supabase
+          .from('contratos')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (erroBusca || !contratoBusca || !contratoBusca.id) {
+          console.error('❌ Fallback update também falhou:', { erroBusca, contratoBusca });
         throw new Error('Nenhum dado retornado do update');
       }
 
-      console.log('✅ Contrato atualizado com sucesso:', data);
+        return {
+          id: contratoBusca.id.toString(),
+          nome: contratoBusca.nome || '',
+          sindico: contratoBusca.sindico || '',
+          endereco: contratoBusca.endereco || '',
+          periodicidade: contratoBusca.periodicidade || '',
+          observacoes: contratoBusca.observacoes || '',
+          dataCriacao: contratoBusca.data_criacao
+        };
+      }
+
+      console.log('✅ Contrato atualizado com sucesso:', data[0]);
+
+      const contratoAtualizado = data[0];
+      if (!contratoAtualizado || !contratoAtualizado.id) {
+        console.error('❌ Dados inválidos retornados do update:', contratoAtualizado);
+        throw new Error('Dados inválidos retornados do update');
+      }
 
       return {
-        id: data.id.toString(),
-        nome: data.nome,
-        sindico: data.sindico,
-        endereco: data.endereco,
-        periodicidade: data.periodicidade,
-        observacoes: data.observacoes,
-        dataCriacao: data.data_criacao
+        id: contratoAtualizado.id.toString(),
+        nome: contratoAtualizado.nome || '',
+        sindico: contratoAtualizado.sindico || '',
+        endereco: contratoAtualizado.endereco || '',
+        periodicidade: contratoAtualizado.periodicidade || '',
+        observacoes: contratoAtualizado.observacoes || '',
+        dataCriacao: contratoAtualizado.data_criacao
       };
     } catch (error) {
       console.error('❌ Erro ao atualizar contrato:', error);
@@ -164,18 +247,42 @@ export const rondaService = {
 
       if (data && data.length > 0) {
         console.log(`✅ ${data.length} rondas carregadas do banco (básicas)`);
-        return data.map(row => ({
-          id: row.id.toString(),
+        
+        // Carregar dados completos para cada ronda
+        const rondasCompletas = await Promise.all(
+          data.filter(row => row && row.id && row.id.toString().trim() !== '').map(async (row) => {
+            // Validar se o ID existe e não está vazio
+            const rondaId = row.id ? row.id.toString() : '';
+            if (!rondaId || rondaId.trim() === '') {
+              console.warn('⚠️ Ronda com ID inválido encontrada:', row);
+              return null;
+            }
+            
+            const rondaBasica = {
+              id: rondaId,
           nome: row.nome || 'Ronda sem nome',
           contrato: row.contrato || 'Contrato não especificado',
           data: row.data || new Date().toISOString().split('T')[0],
           hora: row.hora || '00:00',
           responsavel: row.responsavel || 'Responsável não informado',
           observacoesGerais: row.observacoes_gerais || '',
-          areasTecnicas: [], // Carregar sob demanda
-          fotosRonda: [], // Carregar sob demanda
-          outrosItensCorrigidos: [] // Carregar sob demanda
-        }));
+              areasTecnicas: [],
+              fotosRonda: [],
+              outrosItensCorrigidos: []
+            };
+            
+            // Carregar dados completos desta ronda apenas se o ID for válido
+            if (rondaBasica.id && rondaBasica.id.trim() !== '') {
+            return await this.loadCompleteRonda(rondaBasica);
+            } else {
+              console.warn('⚠️ Ronda com ID inválido, retornando dados básicos:', rondaBasica);
+              return rondaBasica;
+            }
+          })
+        );
+        
+        // Filtrar rondas nulas
+        return rondasCompletas.filter(ronda => ronda !== null);
       }
 
       // Se não há dados no banco, usar rondas locais
@@ -280,6 +387,7 @@ export const rondaService = {
             responsavel: 'João Silva',
             observacoes: 'Fechadura ajustada e lubrificada',
             foto: null,
+            fotos: [],
             data: ontem,
             hora: '14:30'
           }
@@ -327,7 +435,7 @@ export const rondaService = {
 
       if (error) throw error;
 
-      return data.map(row => ({
+      return data.filter(row => row && row.id && row.id.toString().trim() !== '').map(row => ({
         id: row.id.toString(),
         nome: row.nome,
         contrato: row.contrato,
@@ -350,34 +458,152 @@ export const rondaService = {
     try {
       console.log('🔄 Carregando dados completos da ronda:', ronda.id);
       
-      // Usar timeout mais curto e consulta mais simples
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout na consulta')), 10000) // 10 segundos
-      );
+      // Validar se o ID da ronda não está vazio
+      if (!ronda.id || ronda.id.trim() === '') {
+        console.warn('⚠️ ID da ronda está vazio ou inválido, retornando ronda sem dados relacionados:', ronda.id);
+        return ronda;
+      }
       
-      const queryPromise = supabase
-        .from('rondas')
-        .select(`
-          *,
-          areas_tecnicas (*),
-          fotos_ronda (*),
-          outros_itens_corrigidos (*)
-        `)
-        .eq('id', ronda.id)
-        .single();
+      // Se é uma ronda local, não tentar carregar do banco
+      if (ronda.id.startsWith('local-')) {
+        console.log('🏠 Ronda local detectada, retornando dados locais:', ronda.id);
+        return ronda;
+      }
+      
+      // Carregar fotos primeiro (mais importante para o problema atual)
+      let fotosRonda: FotoRonda[] = [];
+      try {
+        console.log('📸 Buscando fotos da ronda:', ronda.id);
+        const { data: fotosData, error: fotosError } = await supabase
+          .from('fotos_ronda')
+          .select('*')
+          .eq('ronda_id', ronda.id)
+          .order('id', { ascending: false });
+        
+        if (fotosError) {
+          console.warn('⚠️ Erro ao carregar fotos (continuando sem fotos):', fotosError.message);
+          // Não interromper o carregamento por erro de fotos
+          fotosRonda = [];
+        } else if (fotosData && fotosData.length > 0) {
+          fotosRonda = fotosData.filter((foto: any) => foto && foto.id).map((foto: any) => ({
+            id: foto.id?.toString() || '',
+            foto: foto.foto || foto.url_foto || '',
+            local: foto.local || foto.descricao || '',
+            pendencia: foto.pendencia || '',
+            especialidade: foto.especialidade || '',
+            responsavel: foto.responsavel || 'CONDOMÍNIO',
+            observacoes: foto.observacoes || '',
+            data: foto.data || '',
+            hora: foto.hora || '',
+            criticidade: foto.criticidade || undefined
+          }));
+          console.log(`✅ ${fotosRonda.length} fotos carregadas para ronda ${ronda.id}`);
+        } else {
+          console.log(`📸 Nenhuma foto encontrada para ronda ${ronda.id}`);
+        }
+      } catch (fotoError) {
+        console.warn('⚠️ Erro ao carregar fotos (continuando):', fotoError);
+        // Continuar sem fotos em caso de erro
+        fotosRonda = [];
+      }
 
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+      // Carregar áreas técnicas separadamente
+      let areasTecnicas: AreaTecnica[] = [];
+      try {
+        const { data: areasData, error: areasError } = await supabase
+          .from('areas_tecnicas')
+          .select('*')
+          .eq('ronda_id', ronda.id);
+        
+        if (!areasError && areasData) {
+          areasTecnicas = areasData.filter((area: any) => area && area.id).map((area: any) => ({
+            id: area.id?.toString() || '',
+            nome: area.nome || '',
+            status: area.status || 'ATIVO',
+            contrato: area.contrato || '',
+            endereco: area.endereco || '',
+            data: area.data || '',
+            hora: area.hora || '',
+            foto: area.foto || null,
+            observacoes: area.observacoes || ''
+          }));
+          console.log(`✅ ${areasTecnicas.length} áreas técnicas carregadas para ronda ${ronda.id}`);
+        }
+      } catch (areaError) {
+        console.warn('⚠️ Erro ao carregar áreas técnicas (continuando):', areaError);
+        // Continuar sem áreas técnicas em caso de erro
+        areasTecnicas = [];
+      }
 
-      if (error) {
-        console.warn('⚠️ Erro ao carregar dados completos:', error.message);
-        return ronda; // Retornar ronda básica se der erro
+      // Carregar outros itens separadamente
+      let outrosItensCorrigidos: OutroItemCorrigido[] = [];
+      try {
+        const { data: outrosData, error: outrosError } = await supabase
+          .from('outros_itens_corrigidos')
+          .select('*')
+          .eq('ronda_id', ronda.id);
+        
+        if (!outrosError && outrosData) {
+          outrosItensCorrigidos = outrosData.filter((item: any) => item && item.id).map((item: any) => {
+            // Tentar parsear fotos como JSON se a coluna foto contém múltiplas fotos
+            let fotos: string[] = [];
+            let foto: string | null = null;
+            
+            if (item.fotos && Array.isArray(item.fotos)) {
+              // Se há coluna fotos separada
+              fotos = item.fotos;
+              foto = item.foto;
+            } else if (item.foto) {
+              // Tentar parsear como JSON (múltiplas fotos)
+              try {
+                const parsed = JSON.parse(item.foto);
+                if (Array.isArray(parsed)) {
+                  fotos = parsed;
+                  foto = parsed[0] || null; // Primeira foto como foto principal
+                } else {
+                  // Foto única
+                  foto = item.foto;
+                  fotos = [item.foto];
+                }
+              } catch {
+                // Se não conseguir parsear, é foto única
+                foto = item.foto;
+                fotos = [item.foto];
+              }
+            }
+            
+            return {
+            id: item.id?.toString() || '',
+            nome: item.nome || '',
+            descricao: item.descricao || '',
+            local: item.local || '',
+            tipo: item.tipo || '',
+            prioridade: item.prioridade || '',
+            status: item.status || '',
+            contrato: item.contrato || '',
+            endereco: item.endereco || '',
+            responsavel: item.responsavel || '',
+            observacoes: item.observacoes || '',
+              foto: foto,
+              fotos: fotos,
+              categoria: item.categoria || 'CHAMADO', // Default para chamado (será usado apenas no frontend)
+            data: item.data || '',
+            hora: item.hora || ''
+            };
+          });
+          console.log(`✅ ${outrosItensCorrigidos.length} outros itens carregados para ronda ${ronda.id}`);
+        }
+      } catch (outrosError) {
+        console.warn('⚠️ Erro ao carregar outros itens (continuando):', outrosError);
+        // Continuar sem outros itens em caso de erro
+        outrosItensCorrigidos = [];
       }
 
       const rondaCompleta = {
         ...ronda,
-        areasTecnicas: data.areas_tecnicas || [],
-        fotosRonda: data.fotos_ronda || [],
-        outrosItensCorrigidos: data.outros_itens_corrigidos || []
+        areasTecnicas,
+        fotosRonda,
+        outrosItensCorrigidos
       };
 
       console.log('✅ Dados completos carregados:', {
@@ -398,20 +624,27 @@ export const rondaService = {
     try {
       console.log('🔄 Buscando ronda por ID:', id);
       
+      // Validar se o ID não está vazio
+      if (!id || id.trim() === '') {
+        console.warn('⚠️ ID da ronda está vazio ou inválido, retornando null:', id);
+        return null;
+      }
+      
+      // Se é uma ronda local, não buscar no banco
+      if (id.startsWith('local-')) {
+        console.log('🏠 Ronda local detectada, não buscando no banco:', id);
+        return null;
+      }
+      
       const { data, error } = await supabase
         .from('rondas')
-        .select(`
-          *,
-          areas_tecnicas (*),
-          fotos_ronda (*),
-          outros_itens_corrigidos (*)
-        `)
+        .select('*')
         .eq('id', id)
         .single();
 
       if (error) {
-        console.error('❌ Erro ao buscar ronda por ID:', error);
-        throw error;
+        console.warn('⚠️ Erro ao buscar ronda por ID (retornando null):', error.message);
+        return null;
       }
 
       if (!data) {
@@ -419,37 +652,51 @@ export const rondaService = {
         return null;
       }
 
-      const rondaCompleta = {
-        id: data.id.toString(),
-        nome: data.nome,
-        contrato: data.contrato,
-        data: data.data,
-        hora: data.hora,
-        responsavel: data.responsavel,
-        observacoesGerais: data.observacoes_gerais,
-        areasTecnicas: data.areas_tecnicas || [],
-        fotosRonda: data.fotos_ronda || [],
-        outrosItensCorrigidos: data.outros_itens_corrigidos || []
+      console.log('✅ Ronda básica encontrada no banco:', data);
+
+      // Carregar dados relacionados separadamente
+      const rondaBasica = {
+        id: data.id ? data.id.toString() : '',
+        nome: data.nome || '',
+        contrato: data.contrato || '',
+        data: data.data || '',
+        hora: data.hora || '',
+        responsavel: data.responsavel || '',
+        observacoesGerais: data.observacoes_gerais || '',
+        areasTecnicas: [],
+        fotosRonda: [],
+        outrosItensCorrigidos: []
       };
 
-      console.log('✅ Ronda encontrada com dados completos:', rondaCompleta);
-      console.log('📸 Fotos:', rondaCompleta.fotosRonda.length);
-      console.log('🔧 Áreas técnicas:', rondaCompleta.areasTecnicas.length);
-      console.log('📝 Outros itens:', rondaCompleta.outrosItensCorrigidos.length);
-
+      // Usar loadCompleteRonda para carregar dados relacionados apenas se o ID for válido
+      const rondaCompleta = rondaBasica.id && rondaBasica.id.trim() !== '' 
+        ? await this.loadCompleteRonda(rondaBasica)
+        : rondaBasica;
+      console.log('✅ Ronda completa carregada:', {
+        id: rondaCompleta.id,
+        fotos: rondaCompleta.fotosRonda?.length || 0,
+        areas: rondaCompleta.areasTecnicas?.length || 0
+      });
       return rondaCompleta;
     } catch (error) {
-      console.error('❌ Erro ao buscar ronda por ID:', error);
-      throw error;
+      console.warn('⚠️ Erro ao buscar ronda por ID (retornando null):', error);
+      return null;
     }
   },
 
   // Criar nova ronda
   async create(ronda: Omit<Ronda, 'id'>): Promise<Ronda> {
     try {
+      console.log('🆕 Criando ronda no Supabase...', ronda);
+      
+      // GERAR UUID NO CLIENTE (solução definitiva!)
+      const novoId = crypto.randomUUID();
+      console.log('🔑 UUID gerado no cliente:', novoId);
+      
       const { data, error } = await supabase
         .from('rondas')
         .insert([{
+          id: novoId, // Enviar o ID gerado pelo cliente
           nome: ronda.nome,
           contrato: ronda.contrato,
           data: ronda.data,
@@ -457,25 +704,38 @@ export const rondaService = {
           responsavel: ronda.responsavel,
           observacoes_gerais: ronda.observacoesGerais
         }])
-        .select()
-        .single();
+        .select();
 
-      if (error) throw error;
+      console.log('🔍 Debug - Resposta do Supabase:', { data, error });
 
-      return {
-        id: data.id.toString(),
-        nome: data.nome,
-        contrato: data.contrato,
-        data: data.data,
-        hora: data.hora,
-        responsavel: data.responsavel,
-        observacoesGerais: data.observacoes_gerais,
+      if (error) {
+        console.error('❌ Erro ao criar ronda no Supabase:', error);
+        throw new Error(`Erro ao criar ronda no banco de dados: ${error.message}`);
+      }
+
+      // Pegar o primeiro item do array
+      const rondaData = data && data.length > 0 ? data[0] : null;
+      
+      console.log('🔍 Debug - rondaData extraído:', rondaData);
+      
+      // Usar o ID que geramos, não o retornado pelo Supabase
+      const rondaCriada = {
+        id: novoId, // Usar o ID que geramos
+        nome: rondaData?.nome || ronda.nome,
+        contrato: rondaData?.contrato || ronda.contrato,
+        data: rondaData?.data || ronda.data,
+        hora: rondaData?.hora || ronda.hora,
+        responsavel: rondaData?.responsavel || ronda.responsavel,
+        observacoesGerais: rondaData?.observacoes_gerais || ronda.observacoesGerais || '',
         areasTecnicas: [],
         fotosRonda: [],
         outrosItensCorrigidos: []
       };
+      
+      console.log('✅ Ronda criada com sucesso no Supabase:', rondaCriada);
+      return rondaCriada;
     } catch (error) {
-      console.error('Erro ao criar ronda:', error);
+      console.error('❌ Erro ao criar ronda:', error);
       throw error;
     }
   },
@@ -573,6 +833,29 @@ export const areaTecnicaService = {
     try {
       console.log('🆕 Criando área técnica:', area);
       
+      // Validar se o ronda_id não está vazio
+      if (!area.ronda_id || area.ronda_id.trim() === '') {
+        console.error('❌ ID da ronda está vazio ou inválido:', area.ronda_id);
+        throw new Error('ID da ronda está vazio ou inválido. Não é possível criar área técnica.');
+      }
+      
+      // Se é uma ronda local ou temporária, não tentar salvar no banco
+      if (area.ronda_id.startsWith('local-') || area.ronda_id.startsWith('temp-')) {
+        console.log('🏠 Ronda local/temporária detectada, criando área técnica local:', area.ronda_id);
+        // Retornar área técnica local sem salvar no banco
+        return {
+          id: crypto.randomUUID(),
+          nome: area.nome,
+          status: area.status,
+          contrato: area.contrato,
+          endereco: area.endereco,
+          data: area.data,
+          hora: area.hora,
+          foto: area.foto,
+          observacoes: area.observacoes || ''
+        };
+      }
+      
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Timeout na criação')), 8000) // 8 segundos
       );
@@ -612,6 +895,29 @@ export const areaTecnicaService = {
   async update(id: string, updates: Partial<AreaTecnica>): Promise<AreaTecnica> {
     try {
       console.log('🔄 Tentando atualizar área técnica com ID:', id);
+      
+      // Validar se o ID não está vazio
+      if (!id || id.trim() === '') {
+        console.error('❌ ID da área técnica está vazio ou inválido:', id);
+        throw new Error('ID da área técnica está vazio ou inválido.');
+      }
+      
+      // Se é uma área técnica local ou temporária, não tentar atualizar no banco
+      if (id.startsWith('local-') || id.startsWith('at-') || id.startsWith('temp-')) {
+        console.log('🏠 Área técnica local/temporária detectada, retornando dados locais:', id);
+        // Retornar área técnica atualizada localmente
+        return {
+          id: id,
+          nome: updates.nome || '',
+          status: updates.status || 'ATIVO',
+          contrato: updates.contrato || '',
+          endereco: updates.endereco || '',
+          data: updates.data || '',
+          hora: updates.hora || '',
+          foto: updates.foto || null,
+          observacoes: updates.observacoes || ''
+        };
+      }
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Timeout na atualização')), 8000) // 8 segundos
@@ -697,7 +1003,7 @@ export const fotoRondaService = {
         .from('fotos_ronda')
         .select('*')
         .eq('ronda_id', rondaId)
-        .order('created_at', { ascending: false });
+        .order('id', { ascending: false });
 
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
@@ -749,6 +1055,30 @@ export const fotoRondaService = {
   async create(foto: Omit<FotoRonda, 'id'> & { ronda_id: string }): Promise<FotoRonda> {
     try {
       console.log('📸 Criando nova foto:', foto.local);
+      
+      // Validar se o ronda_id não está vazio
+      if (!foto.ronda_id || foto.ronda_id.trim() === '') {
+        console.error('❌ ID da ronda está vazio ou inválido:', foto.ronda_id);
+        throw new Error('ID da ronda está vazio ou inválido. Não é possível criar foto.');
+      }
+      
+      // Se é uma ronda local ou temporária, não tentar salvar no banco
+      if (foto.ronda_id.startsWith('local-') || foto.ronda_id.startsWith('temp-')) {
+        console.log('🏠 Ronda local/temporária detectada, criando foto local:', foto.ronda_id);
+        // Retornar foto local sem salvar no banco
+        return {
+          id: crypto.randomUUID(),
+          foto: foto.foto,
+          local: foto.local,
+          pendencia: foto.pendencia,
+          especialidade: foto.especialidade,
+          responsavel: foto.responsavel,
+          observacoes: foto.observacoes,
+          data: foto.data,
+          hora: foto.hora,
+          criticidade: (foto as any).criticidade
+        };
+      }
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Timeout na criação da foto')), 15000) // 15 segundos para upload
@@ -911,6 +1241,29 @@ export const outroItemService = {
   async create(item: Omit<OutroItemCorrigido, 'id'> & { ronda_id: string }): Promise<OutroItemCorrigido> {
     console.log('🔄 Tentando criar item no banco:', item);
     
+    // Se é uma ronda local ou temporária, não tentar salvar no banco
+    if (item.ronda_id.startsWith('local-') || item.ronda_id.startsWith('temp-')) {
+      console.log('🏠 Ronda local/temporária detectada, criando item local:', item.ronda_id);
+      // Retornar item local sem salvar no banco
+      return {
+        id: crypto.randomUUID(),
+        nome: item.nome,
+        descricao: item.descricao,
+        local: item.local,
+        tipo: item.tipo,
+        prioridade: item.prioridade,
+        status: item.status,
+        contrato: item.contrato,
+        endereco: item.endereco,
+        responsavel: item.responsavel,
+        foto: item.foto,
+        fotos: item.fotos || [],
+        observacoes: item.observacoes,
+        data: item.data,
+        hora: item.hora
+      };
+    }
+    
     // Verificar se todos os campos obrigatórios estão presentes
     const camposObrigatorios = ['ronda_id', 'nome', 'descricao', 'local', 'tipo', 'prioridade', 'status', 'contrato', 'endereco', 'data', 'hora'];
     const camposFaltantes = camposObrigatorios.filter(campo => !item[campo as keyof typeof item]);
@@ -931,16 +1284,55 @@ export const outroItemService = {
       contrato: item.contrato,
       endereco: item.endereco,
       responsavel: item.responsavel,
-      foto: item.foto,
+    // Se há múltiplas fotos, salvar como JSON na coluna foto existente
+    // Limitar tamanho para evitar timeout (máximo 5MB de dados)
+    foto: item.fotos && item.fotos.length > 0 ? 
+      (() => {
+        const fotosJSON = JSON.stringify(item.fotos);
+        const tamanhoMB = new Blob([fotosJSON]).size / 1024 / 1024;
+        
+        if (tamanhoMB > 2) {
+          console.warn(`⚠️ JSON das fotos muito grande (${tamanhoMB.toFixed(2)}MB), limitando para 2MB`);
+          // Se muito grande, salvar apenas as primeiras fotos
+          const fotosLimitadas = item.fotos.slice(0, Math.floor(item.fotos.length * 0.5));
+          return JSON.stringify(fotosLimitadas);
+        }
+        return fotosJSON;
+      })() : item.foto,
       observacoes: item.observacoes,
       data: item.data,
       hora: item.hora
     };
     
-    console.log('📝 Dados para inserção:', insertData);
+    // Verificar tamanho dos dados antes de enviar
+    const dadosJSON = JSON.stringify(insertData);
+    const tamanhoMB = new Blob([dadosJSON]).size / 1024 / 1024;
+    
+    console.log(`📝 Dados para inserção (${tamanhoMB.toFixed(2)}MB):`, insertData);
+    
+    if (tamanhoMB > 2) {
+      console.warn(`⚠️ Dados muito grandes (${tamanhoMB.toFixed(2)}MB), otimizando...`);
+      
+      // Reduzir fotos se muito grandes
+      if (insertData.foto) {
+        try {
+          const fotos = JSON.parse(insertData.foto);
+          if (Array.isArray(fotos) && fotos.length > 1) {
+            // Usar apenas as primeiras 2 fotos se muito grande
+            const fotosReduzidas = fotos.slice(0, 2);
+            insertData.foto = JSON.stringify(fotosReduzidas);
+            console.log(`🔄 Reduzido de ${fotos.length} para ${fotosReduzidas.length} fotos`);
+          }
+        } catch (e) {
+          console.log('🔄 Foto não é JSON, mantendo como está');
+        }
+      }
+    }
     
     // Tentar inserir e ver exatamente qual erro ocorre
     try {
+      console.log('🔄 Tentando inserir item no banco...');
+      
       const { data, error } = await supabase
         .from('outros_itens_corrigidos')
         .insert([insertData])
@@ -948,17 +1340,92 @@ export const outroItemService = {
         .single()
 
       if (error) {
-        console.error('❌ Erro ao criar item:', error)
-        console.error('❌ Detalhes do erro:', error.details, error.hint, error.message)
-        console.error('❌ Código do erro:', error.code)
-        throw error
+        console.error('❌ Erro ao criar item:', error);
+        console.error('❌ Detalhes do erro:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        console.error('❌ Dados que causaram erro:', insertData);
+        
+        // Se for erro 500, tentar com dados menores
+        if (error.code === '500' || error.message.includes('500')) {
+          console.log('🔄 Erro 500 detectado, tentando com dados reduzidos...');
+          
+          // Reduzir drasticamente as fotos
+          if (item.fotos && item.fotos.length > 2) {
+            const fotosReduzidas = item.fotos.slice(0, 2); // Apenas 2 fotos
+            const insertDataReduzido = {
+              ...insertData,
+              foto: JSON.stringify(fotosReduzidas)
+            };
+            
+            console.log('🔄 Tentando inserir com apenas 2 fotos...');
+            const { data: dataRetry, error: errorRetry } = await supabase
+              .from('outros_itens_corrigidos')
+              .insert([insertDataReduzido])
+              .select()
+              .single();
+              
+            if (errorRetry) {
+              console.error('❌ Retry também falhou:', errorRetry);
+              throw new Error(`Erro 500: Dados muito grandes. Tente com menos fotos.`);
+            }
+            
+            console.log('✅ Sucesso com dados reduzidos');
+            const itemRetornado: OutroItemCorrigido = {
+              id: dataRetry.id?.toString() || '',
+              nome: dataRetry.nome || '',
+              descricao: dataRetry.descricao || '',
+              local: dataRetry.local || '',
+              tipo: dataRetry.tipo || 'CORREÇÃO',
+              prioridade: dataRetry.prioridade || 'MÉDIA',
+              status: dataRetry.status || 'PENDENTE',
+              contrato: dataRetry.contrato || '',
+              endereco: dataRetry.endereco || '',
+              responsavel: dataRetry.responsavel || '',
+              observacoes: dataRetry.observacoes || '',
+              foto: dataRetry.foto || null,
+              fotos: fotosReduzidas, // Usar fotos reduzidas
+              categoria: item.categoria || 'CHAMADO',
+              data: dataRetry.data || '',
+              hora: dataRetry.hora || ''
+            };
+            
+            return itemRetornado;
+          }
+        }
+        
+        throw error;
       }
 
-      console.log('✅ Item criado com sucesso:', data)
-      return data
+      console.log('✅ Item criado com sucesso:', data);
+      
+      // Mapear dados retornados para o formato correto
+      const itemRetornado: OutroItemCorrigido = {
+        id: data.id?.toString() || '',
+        nome: data.nome || '',
+        descricao: data.descricao || '',
+        local: data.local || '',
+        tipo: data.tipo || 'CORREÇÃO',
+        prioridade: data.prioridade || 'MÉDIA',
+        status: data.status || 'PENDENTE',
+        contrato: data.contrato || '',
+        endereco: data.endereco || '',
+        responsavel: data.responsavel || '',
+        observacoes: data.observacoes || '',
+        foto: data.foto || null,
+        fotos: item.fotos || [], // Usar as fotos originais
+        categoria: item.categoria || 'CHAMADO', // Usar categoria do item original (frontend)
+        data: data.data || '',
+        hora: data.hora || ''
+      };
+      
+      return itemRetornado;
     } catch (error) {
-      console.error('❌ Erro na inserção:', error)
-      throw error
+      console.error('❌ Erro na inserção:', error);
+      throw error;
     }
   },
 
@@ -966,6 +1433,13 @@ export const outroItemService = {
   async update(id: string, updates: Partial<OutroItemCorrigido>): Promise<OutroItemCorrigido> {
     try {
       console.log('🔄 Tentando atualizar item com ID:', id);
+      
+      // Validar se o ID é um UUID válido
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(id)) {
+        console.error('❌ ID inválido para UUID:', id);
+        throw new Error(`ID inválido: ${id}. Esperado formato UUID.`);
+      }
       
       const { data, error } = await supabase
         .from('outros_itens_corrigidos')
@@ -978,7 +1452,7 @@ export const outroItemService = {
           status: updates.status,
           contrato: updates.contrato,
           responsavel: updates.responsavel,
-          foto: updates.foto,
+          foto: updates.fotos && updates.fotos.length > 0 ? JSON.stringify(updates.fotos) : updates.foto,
           observacoes: updates.observacoes,
           data: updates.data,
           hora: updates.hora
@@ -998,7 +1472,45 @@ export const outroItemService = {
       }
 
       console.log('✅ Item atualizado com sucesso:', data);
-      return data;
+      
+      // Mapear dados retornados para incluir categoria e fotos
+      let fotos: string[] = [];
+      let foto: string | null = null;
+      
+      if (data.foto) {
+        try {
+          const parsed = JSON.parse(data.foto);
+          if (Array.isArray(parsed)) {
+            fotos = parsed;
+            foto = parsed[0] || null;
+          } else {
+            foto = data.foto;
+            fotos = [data.foto];
+          }
+        } catch {
+          foto = data.foto;
+          fotos = [data.foto];
+        }
+      }
+      
+      return {
+        id: data.id?.toString() || '',
+        nome: data.nome || '',
+        descricao: data.descricao || '',
+        local: data.local || '',
+        tipo: data.tipo || 'CORREÇÃO',
+        prioridade: data.prioridade || 'MÉDIA',
+        status: data.status || 'PENDENTE',
+        contrato: data.contrato || '',
+        endereco: data.endereco || '',
+        responsavel: data.responsavel || '',
+        observacoes: data.observacoes || '',
+        foto: foto,
+        fotos: fotos,
+        categoria: updates.categoria || 'CHAMADO', // Preservar categoria do update
+        data: data.data || '',
+        hora: data.hora || ''
+      };
     } catch (error) {
       console.error('❌ Erro ao atualizar item:', error);
       throw error;
@@ -1020,6 +1532,150 @@ export const outroItemService = {
     }
   }
 }
+
+// Serviços para Agenda
+export const agendaService = {
+  // Buscar todos os itens da agenda
+  async getAll(): Promise<AgendaItem[]> {
+    try {
+      const { data, error } = await supabase
+        .from('agenda')
+        .select('*')
+        .order('data_criacao', { ascending: false });
+
+      if (error) throw error;
+
+      return data.map(row => ({
+        id: row.id.toString(),
+        contratoId: row.contrato_id,
+        contratoNome: row.contrato_nome,
+        endereco: row.endereco,
+        diaSemana: row.dia_semana,
+        horario: row.horario,
+        observacoes: row.observacoes,
+        ativo: row.ativo,
+        dataCriacao: row.data_criacao,
+        dataAtualizacao: row.data_atualizacao,
+        recorrencia: row.recorrencia ? JSON.parse(row.recorrencia) : undefined
+      }));
+    } catch (error) {
+      console.error('Erro ao buscar agenda:', error);
+      // Retornar array vazio em caso de erro (tabela não existe ainda)
+      return [];
+    }
+  },
+
+  // Criar novo item na agenda
+  async create(item: Omit<AgendaItem, 'id' | 'dataCriacao' | 'dataAtualizacao'>): Promise<AgendaItem> {
+    try {
+      const { data, error } = await supabase
+        .from('agenda')
+        .insert([{
+          contrato_id: item.contratoId,
+          contrato_nome: item.contratoNome,
+          endereco: item.endereco,
+          dia_semana: item.diaSemana,
+          horario: item.horario,
+          observacoes: item.observacoes,
+          ativo: item.ativo,
+          recorrencia: item.recorrencia ? JSON.stringify(item.recorrencia) : null
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id: data.id.toString(),
+        contratoId: data.contrato_id,
+        contratoNome: data.contrato_nome,
+        endereco: data.endereco,
+        diaSemana: data.dia_semana,
+        horario: data.horario,
+        observacoes: data.observacoes,
+        ativo: data.ativo,
+        dataCriacao: data.data_criacao,
+        dataAtualizacao: data.data_atualizacao,
+        recorrencia: data.recorrencia ? JSON.parse(data.recorrencia) : undefined
+      };
+    } catch (error) {
+      console.error('Erro ao criar item da agenda:', error);
+      throw error;
+    }
+  },
+
+  // Atualizar item da agenda
+  async update(id: string, updates: Partial<AgendaItem>): Promise<AgendaItem> {
+    try {
+      const updateData: any = {};
+      if (updates.contratoId !== undefined) updateData.contrato_id = updates.contratoId;
+      if (updates.contratoNome !== undefined) updateData.contrato_nome = updates.contratoNome;
+      if (updates.endereco !== undefined) updateData.endereco = updates.endereco;
+      if (updates.diaSemana !== undefined) updateData.dia_semana = updates.diaSemana;
+      if (updates.horario !== undefined) updateData.horario = updates.horario;
+      if (updates.observacoes !== undefined) updateData.observacoes = updates.observacoes;
+      if (updates.ativo !== undefined) updateData.ativo = updates.ativo;
+      if (updates.recorrencia !== undefined) updateData.recorrencia = updates.recorrencia ? JSON.stringify(updates.recorrencia) : null;
+
+      const { data, error } = await supabase
+        .from('agenda')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id: data.id.toString(),
+        contratoId: data.contrato_id,
+        contratoNome: data.contrato_nome,
+        endereco: data.endereco,
+        diaSemana: data.dia_semana,
+        horario: data.horario,
+        observacoes: data.observacoes,
+        ativo: data.ativo,
+        dataCriacao: data.data_criacao,
+        dataAtualizacao: data.data_atualizacao,
+        recorrencia: data.recorrencia ? JSON.parse(data.recorrencia) : undefined
+      };
+    } catch (error) {
+      console.error('Erro ao atualizar item da agenda:', error);
+      throw error;
+    }
+  },
+
+  // Deletar item da agenda
+  async delete(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('agenda')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erro ao deletar item da agenda:', error);
+      throw error;
+    }
+  },
+
+  // Limpar itens cancelados
+  async clearCanceledItems(): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('agenda')
+        .delete()
+        .eq('ativo', false)
+        .like('observacoes', '%[CANCELADO%');
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erro ao limpar itens cancelados:', error);
+      throw error;
+    }
+  }
+};
 
 // Função para migrar dados do localStorage para o banco
 export const migrateFromLocalStorage = async (): Promise<void> => {

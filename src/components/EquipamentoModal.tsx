@@ -20,6 +20,11 @@ export function EquipamentoModal({
   onSave,
   contratoRonda = ''
 }: EquipamentoModalProps) {
+  // Se o modal não está aberto, não renderiza nada
+  if (!isOpen) {
+    return null;
+  }
+
   const [formData, setFormData] = useState<Partial<any>>({
     nome: equipamento?.nome || '',
     status: equipamento?.status || 'ATIVO',

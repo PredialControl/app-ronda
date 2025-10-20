@@ -249,20 +249,20 @@ const CardFoto: React.FC<{ foto: FotoRonda | { id: string; foto: any; local: str
   return (
     <View style={cardStyle}>
       {foto.foto ? (
-        <PDFImage src={foto.foto as any} style={{ width: '100%', height: 5.5 * CM_TO_PT }} />
+        <PDFImage src={foto.foto as any} style={{ width: '100%', height: 4.5 * CM_TO_PT }} />
       ) : (
-        <View style={{ width: '100%', height: 5.5 * CM_TO_PT, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ width: '100%', height: 4.5 * CM_TO_PT, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ color: '#64748b' }}>Sem imagem</Text>
         </View>
       )}
-      <Text style={{ fontSize: 11, fontWeight: 700, marginTop: 4 }}>{foto.local}</Text>
-      <Text style={{ fontSize: 10 }}>Pendência: {foto.pendencia}</Text>
-      <Text style={{ fontSize: 10 }}>Criticidade: {(foto as any).criticidade || '—'}</Text>
+      <Text style={{ fontSize: 11, fontWeight: 700, marginTop: 2 }}>{foto.local}</Text>
+      <Text style={{ fontSize: 9 }}>Pendência: {foto.pendencia}</Text>
+      <Text style={{ fontSize: 9 }}>Criticidade: {(foto as any).criticidade || '—'}</Text>
       {('responsavel' in foto) && (
-        <Text style={{ fontSize: 10 }}>Responsável: {(foto as any).responsavel}</Text>
+        <Text style={{ fontSize: 9 }}>Responsável: {(foto as any).responsavel}</Text>
       )}
-      <Text style={{ fontSize: 10 }}>Especialidade: {foto.especialidade}</Text>
-      {foto.observacoes ? (<Text style={{ fontSize: 10 }}>Obs.: {foto.observacoes}</Text>) : null}
+      <Text style={{ fontSize: 9 }}>Especialidade: {foto.especialidade}</Text>
+      {foto.observacoes ? (<Text style={{ fontSize: 9 }}>Obs.: {foto.observacoes}</Text>) : null}
     </View>
   );
 };
@@ -274,9 +274,52 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
   // Página 1: cabeçalho, faixa, 4 cards (2x2); demais páginas também 2x2
   const firstPageAreas = areas.slice(0, 4);
   const restantes = areas.slice(4);
+  
+  // Combinar fotos de ronda com itens de abertura de chamado
+  const fotosRonda: PdfFotoItem[] = (ronda.fotosRonda || []).map((f) => ({ 
+    id: f.id, 
+    src: f.foto, 
+    local: f.local, 
+    especialidade: f.especialidade, 
+    pendencia: f.pendencia, 
+    observacoes: f.observacoes, 
+    responsavel: (f as any).responsavel, 
+    criticidade: (f as any).criticidade 
+  }));
+  
+  // Adicionar itens de abertura de chamado (outrosItensCorrigidos com categoria CHAMADO)
+  const itensChamado: PdfFotoItem[] = (ronda.outrosItensCorrigidos || [])
+    .filter((item: any) => item.categoria === 'CHAMADO')
+    .flatMap((item: any) => {
+      // Se o item tem múltiplas fotos, criar um item para cada foto
+      if (item.fotos && item.fotos.length > 0) {
+        return item.fotos.map((foto: string, index: number) => ({
+          id: `${item.id}-foto-${index}`,
+          src: foto,
+          local: item.local || 'Local não informado',
+          especialidade: item.nome || 'Item de chamado',
+          pendencia: item.descricao || 'Sem descrição',
+          observacoes: item.observacoes || '',
+          responsavel: item.responsavel || '',
+          criticidade: item.prioridade || 'MÉDIA'
+        }));
+      }
+      // Se tem apenas uma foto ou nenhuma
+      return [{
+        id: item.id,
+        src: item.foto || null,
+        local: item.local || 'Local não informado',
+        especialidade: item.nome || 'Item de chamado',
+        pendencia: item.descricao || 'Sem descrição',
+        observacoes: item.observacoes || '',
+        responsavel: item.responsavel || '',
+        criticidade: item.prioridade || 'MÉDIA'
+      }];
+    });
+  
   const fotosToUse: PdfFotoItem[] = fotos.length
     ? fotos
-    : (ronda.fotosRonda || []).map((f) => ({ id: f.id, src: f.foto, local: f.local, especialidade: f.especialidade, pendencia: f.pendencia, observacoes: f.observacoes, responsavel: (f as any).responsavel, criticidade: (f as any).criticidade }));
+    : [...fotosRonda, ...itensChamado];
 
   // Resumo Executivo (mesma lógica da interface)
   const resumo = (() => {
@@ -287,8 +330,16 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
     const itensCorrigidos: string[] = [];
 
     (ronda.fotosRonda || []).forEach(item => {
+      const criticidade = (item as any).criticidade || 'Média';
       const textoPendencia = item.pendencia ? `Pendência: ${item.pendencia}` : `${item.especialidade} – ${item.local}`;
-      chamadosAbertos.push(`${textoPendencia} - chamado aberto`);
+      
+      if (criticidade === 'Alta') {
+        emAtencao.push(`${item.especialidade} (${item.local}): ${textoPendencia}`);
+      } else if (criticidade === 'Média') {
+        emManutencao.push(`${item.especialidade} (${item.local}): ${textoPendencia}`);
+      } else {
+        chamadosAbertos.push(`${item.especialidade} (${item.local}): ${textoPendencia}`);
+      }
     });
 
     areas.forEach(area => {
@@ -300,14 +351,34 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
         situacaoNormal.push(`${area.nome}: Operacional`);
       }
     });
+    
+    // Processar itens de abertura de chamado
     (ronda.outrosItensCorrigidos || []).forEach(item => {
       const statusNorm = (item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+      
+      // Se for item de chamado (não concluído)
+      if (item.categoria === 'CHAMADO' && statusNorm !== 'CONCLUIDO') {
+        const base = `${item.nome} (${item.local})`;
+        const detalhe = item.descricao || item.observacoes || 'Item registrado';
+        const prioridade = item.prioridade || 'MÉDIA';
+        
+        if (prioridade === 'URGENTE' || prioridade === 'ALTA') {
+          emAtencao.push(`${base}: ${detalhe}`);
+        } else if (prioridade === 'MÉDIA') {
+          emManutencao.push(`${base}: ${detalhe}`);
+        } else {
+          chamadosAbertos.push(`${base}: ${detalhe}`);
+        }
+      }
+      
+      // Se for item corrigido
       if (statusNorm === 'CONCLUIDO') {
         const base = `${item.nome} (${item.local})`;
         const detalhe = item.observacoes || item.descricao || 'Item corrigido';
         itensCorrigidos.push(`${base}: ${detalhe}`);
       }
     });
+    
     return { chamadosAbertos, situacaoNormal, emAtencao, emManutencao, itensCorrigidos };
   })();
 

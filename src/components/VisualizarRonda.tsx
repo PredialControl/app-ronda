@@ -47,6 +47,101 @@ export function VisualizarRonda({
   isPrintMode
 }: VisualizarRondaProps) {
   
+  // Função para lidar com edição de itens (incluindo fotos individuais)
+  const handleEditarItem = (item: any) => {
+    // Se é uma foto individual, criar um item separado apenas com essa foto
+    if ((item as any).originalId) {
+      const itemOriginal = ronda.outrosItensCorrigidos?.find(originalItem => originalItem.id === (item as any).originalId);
+      if (itemOriginal) {
+        // Criar um item separado apenas com a foto selecionada
+        const itemSeparado = {
+          ...itemOriginal,
+          id: item.id, // Usar o ID único da foto individual
+          nome: item.nome, // Usar o nome da foto individual
+          foto: item.foto, // Usar apenas a foto específica
+          fotos: [item.foto], // Array com apenas essa foto
+          categoria: itemOriginal.categoria || 'CHAMADO', // Preservar categoria
+          // Adicionar flag para indicar que é uma edição de foto individual
+          isIndividualPhotoEdit: true,
+          originalItemId: itemOriginal.id // Manter referência ao item original
+        };
+        
+        console.log('🔄 Editando foto individual:', {
+          originalItem: itemOriginal,
+          itemSeparado: itemSeparado,
+          fotoIndividual: item
+        });
+        
+        onEditarOutroItem(itemSeparado);
+        return;
+      }
+    }
+    // Caso contrário, usar o item normalmente
+    onEditarOutroItem(item);
+  };
+
+  // Função para lidar com exclusão de itens
+  const handleDeletarItem = (item: any) => {
+    // Se é uma foto individual, deletar o item original (todas as fotos)
+    if ((item as any).originalId) {
+      onDeletarOutroItem((item as any).originalId);
+      return;
+    }
+    // Caso contrário, deletar normalmente
+    onDeletarOutroItem(item.id);
+  };
+
+  // Função para determinar se um item é um chamado
+  const isItemChamado = (item: any) => {
+    console.log('🔍 Verificando se item é chamado:', {
+      id: item.id,
+      nome: item.nome,
+      categoria: item.categoria,
+      fotos: item.fotos?.length,
+      descricao: item.descricao,
+      local: item.local
+    });
+    
+    // SEMPRE usar categoria se definida (prioridade máxima)
+    if (item.categoria !== undefined && item.categoria !== null) {
+      const isChamado = item.categoria === 'CHAMADO';
+      console.log('🔍 Item tem categoria definida:', item.categoria, '→ É chamado:', isChamado);
+      return isChamado;
+    }
+    
+    // Lógica alternativa APENAS se categoria não estiver definida
+    const isChamadoAlternativo = (
+      (item.fotos && item.fotos.length > 1) ||
+      item.nome?.includes('Item com') ||
+      item.descricao?.includes('Item registrado com fotos') ||
+      item.local?.includes('Local a definir')
+    );
+    
+    console.log('🔍 Item sem categoria, usando lógica alternativa → É chamado:', isChamadoAlternativo);
+    return isChamadoAlternativo;
+  };
+
+  // Função para determinar se um item é corrigido
+  const isItemCorrigido = (item: any) => {
+    console.log('🔍 Verificando se item é corrigido:', {
+      id: item.id,
+      nome: item.nome,
+      categoria: item.categoria
+    });
+    
+    // SEMPRE usar categoria se definida (prioridade máxima)
+    if (item.categoria !== undefined && item.categoria !== null) {
+      const isCorrigido = item.categoria === 'CORRIGIDO';
+      console.log('🔍 Item tem categoria definida:', item.categoria, '→ É corrigido:', isCorrigido);
+      return isCorrigido;
+    }
+    
+    // Lógica alternativa: se não é chamado, é corrigido
+    const isCorrigidoAlternativo = !isItemChamado(item);
+    console.log('🔍 Item sem categoria, usando lógica alternativa → É corrigido:', isCorrigidoAlternativo);
+    return isCorrigidoAlternativo;
+  };
+  
   const [headerImage, setHeaderImage] = useState<string | null>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
@@ -76,17 +171,22 @@ export function VisualizarRonda({
   });
 
   // Debug: Log detalhado das fotos
-  if (ronda?.fotosRonda) {
+  if (ronda?.fotosRonda && Array.isArray(ronda.fotosRonda)) {
     console.log('📸 Fotos da ronda recebidas:', ronda.fotosRonda);
     ronda.fotosRonda.forEach((foto, index) => {
+      if (foto && foto.id) {
       console.log(`📸 Foto ${index + 1}:`, {
         id: foto.id,
         local: foto.local,
         especialidade: foto.especialidade,
         pendencia: foto.pendencia,
-        temFoto: !!foto.foto
+        temFoto: !!foto.foto,
+        fotoLength: foto.foto?.length || 0
       });
+      }
     });
+  } else {
+    console.log('📸 Nenhuma foto encontrada ou array inválido:', ronda?.fotosRonda);
   }
 
   if (isPrintMode) {
@@ -103,6 +203,8 @@ export function VisualizarRonda({
 
     // Analisar áreas técnicas
     areasTecnicas.forEach(area => {
+      if (!area || !area.status) return; // Pular áreas nulas ou sem status
+      
       if (area.status === 'ATENÇÃO') {
         criticos.push(`${area.nome}: ${area.observacoes || 'Status crítico'}`);
       } else if (area.status === 'EM MANUTENÇÃO') {
@@ -114,17 +216,22 @@ export function VisualizarRonda({
 
     // Analisar itens de chamado
     ronda.fotosRonda.forEach(item => {
-      if (item.pendencia === 'URGENTE') {
-        criticos.push(`${item.especialidade} (${item.local}): ${item.observacoes || 'Pendência urgente'}`);
-      } else if (item.pendencia === 'ALTA') {
-        altaRelevancia.push(`${item.especialidade} (${item.local}): ${item.observacoes || 'Pendência alta'}`);
+      const criticidade = (item as any).criticidade || 'Média';
+      const textoPendencia = item.pendencia ? `Pendência: ${item.pendencia}` : `${item.especialidade} – ${item.local}`;
+      
+      if (criticidade === 'Alta') {
+        criticos.push(`${item.especialidade} (${item.local}): ${textoPendencia}`);
+      } else if (criticidade === 'Média') {
+        altaRelevancia.push(`${item.especialidade} (${item.local}): ${textoPendencia}`);
       } else {
-        chamadosAbertos.push(`${item.especialidade} (${item.local}): ${item.observacoes || 'Pendência média/baixa'}`);
+        chamadosAbertos.push(`${item.especialidade} (${item.local}): ${textoPendencia}`);
       }
     });
 
     // Analisar itens corrigidos
     ronda.outrosItensCorrigidos.forEach(item => {
+      if (!item || !item.status) return; // Pular itens nulos ou sem status
+      
       if (item.status === 'CONCLUÍDO') {
         itensCorrigidos.push(`${item.nome} (${item.local}): ${item.observacoes || 'Item corrigido'}`);
       }
@@ -293,14 +400,22 @@ export function VisualizarRonda({
               <AlertTriangle className="w-5 h-5 text-orange-600" />
               Itens para Abertura de Chamado
             </CardTitle>
-            <Button onClick={onAdicionarItemChamado} className="bg-orange-600 hover:bg-orange-700">
+            <Button onClick={onAdicionarOutroItem} className="bg-orange-600 hover:bg-orange-700">
               <Plus className="w-4 h-4 mr-2" />
               Registrar Item
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {ronda.fotosRonda.length === 0 ? (
+          {(() => {
+            const itensChamados = ronda.outrosItensCorrigidos?.filter(item => isItemChamado(item)) || [];
+            console.log('🔍 DEBUG CHAMADOS - Total de itens:', ronda.outrosItensCorrigidos?.length || 0);
+            console.log('🔍 DEBUG CHAMADOS - Itens chamados:', itensChamados.length);
+            console.log('🔍 DEBUG CHAMADOS - Lista completa:', ronda.outrosItensCorrigidos);
+            console.log('🔍 DEBUG CHAMADOS - Itens filtrados:', itensChamados);
+            
+            return !ronda.outrosItensCorrigidos || itensChamados.length === 0;
+          })() ? (
             <div className="text-center py-12">
               <AlertTriangle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 text-lg mb-4">
@@ -309,25 +424,39 @@ export function VisualizarRonda({
               <p className="text-gray-600 mb-4">
                 Registre itens que precisam de atenção, manutenção ou correção durante a ronda.
               </p>
-              <Button onClick={onAdicionarItemChamado} className="bg-orange-600 hover:bg-orange-700">
+              <Button onClick={onAdicionarOutroItem} className="bg-orange-600 hover:bg-orange-700">
                 <AlertTriangle className="w-4 h-4 mr-2" />
                 Registrar Primeiro Item
               </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 print-grid-2x2">
-              {ronda.fotosRonda.map((item) => (
+              {ronda.outrosItensCorrigidos?.filter(item => item && item.id && isItemChamado(item)).flatMap((item) => {
+                // Se há múltiplas fotos, criar um card para cada foto
+                if (item.fotos && item.fotos.length > 1) {
+                  return item.fotos.map((foto, fotoIndex) => ({
+                    ...item,
+                    id: `${item.id}-foto-${fotoIndex}`, // ID único para renderização
+                    originalId: item.id, // Manter ID original para edição
+                    foto: foto,
+                    fotos: [foto], // Apenas uma foto por card
+                    nome: `${item.nome} - Foto ${fotoIndex + 1}`
+                  }));
+                }
+                // Se há apenas uma foto ou nenhuma, manter o item original
+                return [item];
+              }).map((item) => (
                 <div key={item.id} className="bg-white border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between">
                     <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 text-orange-600" />
-                      Item Abertura de Chamado
+                      {item.nome}
                     </h3>
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onEditarItemChamado(item)}
+                        onClick={() => handleEditarItem(item)}
                         className="h-8 w-8 p-0 hover:bg-blue-100"
                         title="Editar item"
                       >
@@ -336,7 +465,7 @@ export function VisualizarRonda({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onDeletarItemChamado(item.id)}
+                        onClick={() => handleDeletarItem(item)}
                         className="h-8 w-8 p-0 hover:bg-red-100"
                         title="Excluir item"
                       >
@@ -345,29 +474,45 @@ export function VisualizarRonda({
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                      {item.tipo}
+                    </Badge>
                     <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                      {item.pendencia}
+                      {item.prioridade}
+                    </Badge>
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      {item.status || 'N/A'}
                     </Badge>
                   </div>
                   
+                  {/* Mostrar foto única (cada card agora representa uma foto) */}
+                  {item.foto && (
                   <div className="relative">
-                    <img 
-                      src={item.foto} 
-                      alt={`Item da ronda - ${item.local}`}
-                      className="w-full h-32 object-cover rounded-lg border shadow-sm"
-                    />
-                    <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                      {item.especialidade}
+                      <img 
+                        src={item.foto} 
+                        alt={`Item corrigido - ${item.nome}`}
+                        className="w-full h-32 object-cover rounded-lg border shadow-sm"
+                      />
                     </div>
-                  </div>
+                  )}
+                  
+                  {/* Sem fotos */}
+                  {!item.foto && (
+                      <div className="w-full h-32 bg-gray-100 rounded-lg border shadow-sm flex items-center justify-center">
+                        <div className="text-center text-gray-500">
+                          <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
+                          <p className="text-sm">Sem foto</p>
+                        </div>
+                      </div>
+                    )}
                   
                   <div className="space-y-2 text-sm text-gray-600">
+                    <div><span className="font-medium">Descrição:</span> {item.descricao}</div>
                     <div><span className="font-medium">Local:</span> {item.local}</div>
-                    <div><span className="font-medium">Pendência:</span> {item.pendencia}</div>
-                    <div><span className="font-medium">Criticidade:</span> {item.criticidade || '—'}</div>
+                    {item.responsavel && (
                     <div><span className="font-medium">Responsável:</span> {item.responsavel}</div>
-                    <div><span className="font-medium">Especialidade:</span> {item.especialidade}</div>
+                    )}
                   </div>
                   
                   {item.observacoes && (
@@ -399,7 +544,15 @@ export function VisualizarRonda({
           </div>
         </CardHeader>
         <CardContent>
-          {ronda.outrosItensCorrigidos.length === 0 ? (
+          {(() => {
+            const itensCorrigidos = ronda.outrosItensCorrigidos.filter(item => isItemCorrigido(item));
+            console.log('🔍 DEBUG CORRIGIDOS - Total de itens:', ronda.outrosItensCorrigidos?.length || 0);
+            console.log('🔍 DEBUG CORRIGIDOS - Itens corrigidos:', itensCorrigidos.length);
+            console.log('🔍 DEBUG CORRIGIDOS - Lista completa:', ronda.outrosItensCorrigidos);
+            console.log('🔍 DEBUG CORRIGIDOS - Itens filtrados:', itensCorrigidos);
+            
+            return itensCorrigidos.length === 0;
+          })() ? (
             <div className="text-center py-12">
               <Wrench className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 text-lg mb-4">
@@ -415,7 +568,7 @@ export function VisualizarRonda({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 print-grid-2x2">
-              {ronda.outrosItensCorrigidos.map((item) => (
+              {ronda.outrosItensCorrigidos?.filter(item => item && item.id && isItemCorrigido(item)).map((item) => (
                 <div key={item.id} className="bg-white border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between">
                     <h3 className="font-semibold text-gray-900 flex items-center gap-2">
@@ -426,7 +579,7 @@ export function VisualizarRonda({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onEditarOutroItem(item)}
+                        onClick={() => handleEditarItem(item)}
                         className="h-8 w-8 p-0 hover:bg-blue-100"
                         title="Editar item"
                       >
@@ -435,7 +588,7 @@ export function VisualizarRonda({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onDeletarOutroItem(item.id)}
+                        onClick={() => handleDeletarItem(item)}
                         className="h-8 w-8 p-0 hover:bg-red-100"
                         title="Excluir item"
                       >
@@ -452,7 +605,7 @@ export function VisualizarRonda({
                       {item.prioridade}
                     </Badge>
                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      {item.status}
+                      {item.status || 'N/A'}
                     </Badge>
                   </div>
                   
@@ -464,7 +617,24 @@ export function VisualizarRonda({
                     )}
                   </div>
                   
-                  {item.foto && (
+                  {/* Mostrar múltiplas fotos */}
+                  {(item.fotos && item.fotos.length > 0) && (
+                    <div className="relative">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {item.fotos.map((foto, fotoIndex) => (
+                          <img 
+                            key={fotoIndex}
+                            src={foto} 
+                            alt={`${item.nome} - Foto ${fotoIndex + 1}`}
+                            className="w-full h-20 object-cover rounded-lg border shadow-sm"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Fallback para foto única (compatibilidade) */}
+                  {(!item.fotos || item.fotos.length === 0) && item.foto && (
                     <div className="relative">
                       <img 
                         src={item.foto} 

@@ -3,11 +3,15 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "build": "tsc --project tsconfig.prod.json && vite build",
-    "preview": "vite preview",
+    "build": "tsc --project tsconfig.prod.json && vite build --config vite.config.prod.ts",
+    "build:dev": "tsc --project tsconfig.prod.json && vite build",
+    "preview": "vite preview --config vite.config.prod.ts",
     "tauri": "tauri",
-    "dev": "vite",
+    "dev": "vite --port 1420",
     "ui:add": "npx shadcn@latest add"
   },
   "dependencies": {
@@ -37,6 +41,7 @@
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.3.6",
+    "terser": "^5.44.0",
     "typescript": "^5.2.2",
     "vite": "^5.0.8"
   }

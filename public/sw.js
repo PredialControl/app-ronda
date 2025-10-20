@@ -1,10 +1,8 @@
-const CACHE_NAME = 'app-ronda-v2';
+const CACHE_NAME = 'app-ronda-v5';
 const urlsToCache = [
   '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192x192.png',
-  '/icon-512x512.png'
+  // Não cachear index.html para evitar servir HTML antigo com assets antigos
+  '/manifest.json'
 ];
 
 // Instalar service worker
@@ -27,10 +25,20 @@ self.addEventListener('install', (event) => {
         console.error('❌ Erro ao instalar Service Worker:', error);
       })
   );
+  // Ativar nova SW imediatamente
+  self.skipWaiting();
 });
 
 // Interceptar requisições
 self.addEventListener('fetch', (event) => {
+  // Navegações: estratégia network-first para sempre obter index.html novo
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
   // Não interceptar requisições de dados (API, fotos, etc.)
   if (event.request.url.includes('/api/') || 
       event.request.url.includes('supabase') ||
@@ -77,4 +85,6 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+  // Assumir controle imediatamente
+  self.clients.claim();
 });

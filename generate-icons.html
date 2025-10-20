@@ -1,67 +1,59 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Gerador de Ícones PWA</title>
+    <title>Gerador de Ícones</title>
 </head>
 <body>
     <h1>Gerador de Ícones PWA</h1>
-    
-    <canvas id="canvas192" width="192" height="192"></canvas>
-    <canvas id="canvas512" width="512" height="512"></canvas>
-    
-    <br><br>
-    <button onclick="downloadIcons()">Baixar Ícones</button>
+    <canvas id="canvas192" width="192" height="192" style="border: 1px solid #ccc;"></canvas>
+    <canvas id="canvas512" width="512" height="512" style="border: 1px solid #ccc;"></canvas>
     
     <script>
-        function generateIcon(canvas, size) {
+        function createIcon(size) {
+            const canvas = document.getElementById(`canvas${size}`);
             const ctx = canvas.getContext('2d');
             
-            // Fundo azul
+            // Criar fundo azul
             ctx.fillStyle = '#3b82f6';
             ctx.fillRect(0, 0, size, size);
             
-            // Círculo branco
+            // Adicionar texto "MP"
             ctx.fillStyle = 'white';
-            ctx.beginPath();
-            ctx.arc(size/2, size/2, size/3, 0, 2 * Math.PI);
-            ctx.fill();
-            
-            // Texto "R"
-            ctx.fillStyle = '#3b82f6';
-            ctx.font = `bold ${size/3}px Arial`;
+            ctx.font = `bold ${size * 0.3}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('R', size/2, size/2);
+            ctx.fillText('MP', size / 2, size / 2);
+            
+            // Adicionar borda
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = size * 0.02;
+            ctx.strokeRect(0, 0, size, size);
+            
+            return canvas.toDataURL('image/png');
         }
         
-        function downloadIcons() {
-            // Gerar ícone 192x192
-            const canvas192 = document.getElementById('canvas192');
-            generateIcon(canvas192, 192);
-            
-            // Gerar ícone 512x512
-            const canvas512 = document.getElementById('canvas512');
-            generateIcon(canvas512, 512);
-            
-            // Download 192x192
-            const link192 = document.createElement('a');
-            link192.download = 'icon-192x192.png';
-            link192.href = canvas192.toDataURL();
-            link192.click();
-            
-            // Download 512x512
-            const link512 = document.createElement('a');
-            link512.download = 'icon-512x512.png';
-            link512.href = canvas512.toDataURL();
-            link512.click();
+        function downloadIcon(size) {
+            const dataUrl = createIcon(size);
+            const link = document.createElement('a');
+            link.download = `icon-${size}x${size}.png`;
+            link.href = dataUrl;
+            link.click();
         }
         
-        // Gerar preview
-        window.onload = function() {
-            generateIcon(document.getElementById('canvas192'), 192);
-            generateIcon(document.getElementById('canvas512'), 512);
-        };
+        // Criar ícones automaticamente
+        createIcon(192);
+        createIcon(512);
+        
+        // Adicionar botões de download
+        const button192 = document.createElement('button');
+        button192.textContent = 'Baixar 192x192';
+        button192.onclick = () => downloadIcon(192);
+        document.body.appendChild(button192);
+        
+        const button512 = document.createElement('button');
+        button512.textContent = 'Baixar 512x512';
+        button512.onclick = () => downloadIcon(512);
+        document.body.appendChild(button512);
     </script>
 </body>
 </html>
-

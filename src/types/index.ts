@@ -32,9 +32,14 @@ export interface OutroItemCorrigido {
   endereco: string;
   data: string;
   hora: string;
-  foto: string | null;
+  foto: string | null; // Manter para compatibilidade
+  fotos: string[]; // Nova propriedade para múltiplas fotos
+  categoria?: 'CHAMADO' | 'CORRIGIDO'; // Nova propriedade para distinguir categorias
   observacoes?: string;
   responsavel?: string;
+  // Propriedades para edição de fotos individuais
+  isIndividualPhotoEdit?: boolean;
+  originalItemId?: string;
 }
 
 export interface UsuarioAutorizado {
@@ -77,4 +82,30 @@ export interface FotoRonda {
   data: string;
   hora: string;
   criticidade?: 'Baixa' | 'Média' | 'Alta' | 'BAIXA' | 'MÉDIA' | 'ALTA';
+}
+
+export interface AgendaItem {
+  id: string;
+  contratoId: string;
+  contratoNome: string;
+  endereco: string;
+  diaSemana: 'SEGUNDA' | 'TERÇA' | 'QUARTA' | 'QUINTA' | 'SEXTA' | 'SÁBADO' | 'DOMINGO';
+  horario: string; // Formato HH:MM
+  observacoes?: string;
+  ativo: boolean;
+  dataCriacao: string;
+  dataAtualizacao: string;
+  // Campos para recorrência
+  recorrencia?: {
+    tipo: 'DIARIO' | 'SEMANAL' | 'QUINZENAL' | 'MENSAL';
+    intervalo: number; // A cada X dias/semanas/meses
+    dataInicio: string; // Data de início da recorrência
+    dataFim?: string; // Data de fim (opcional)
+    diasSemana?: string[]; // Para recorrência semanal específica
+    exclusoes?: string[]; // Datas (YYYY-MM-DD) a excluir da série
+  };
+}
+
+export interface AgendaSemanal {
+  [key: string]: AgendaItem[]; // key = dia da semana (SEGUNDA, TERÇA, etc.)
 }

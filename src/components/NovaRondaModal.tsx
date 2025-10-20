@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Ronda, Contrato, AreaTecnica, OutroItemCorrigido } from '@/types';
 import { AREAS_TECNICAS_PREDEFINIDAS } from '@/data/areasTecnicas';
+import { OutroItemModal } from '@/components/OutroItemModal';
 import { X, Calendar, Clock, User, FileText, Plus, Wrench } from 'lucide-react';
 
 interface NovaRondaModalProps {
@@ -31,6 +32,8 @@ export function NovaRondaModal({
   });
 
   const [outrosItensCorrigidos, setOutrosItensCorrigidos] = useState<OutroItemCorrigido[]>([]);
+  const [isOutroItemModalOpen, setIsOutroItemModalOpen] = useState(false);
+  const [itemEditando, setItemEditando] = useState<OutroItemCorrigido | null>(null);
 
   useEffect(() => {
     if (contratoSelecionado) {
@@ -46,33 +49,33 @@ export function NovaRondaModal({
   };
 
   const handleAddOutroItem = () => {
-    const novoItem: OutroItemCorrigido = {
-      id: crypto.randomUUID(),
-      nome: '',
-      descricao: '',
-      local: '',
-      tipo: 'CORREÇÃO',
-      prioridade: 'MÉDIA',
-      status: 'PENDENTE',
-      contrato: formData.contrato,
-      endereco: contratoSelecionado?.endereco || '',
-      data: formData.data,
-      hora: formData.hora,
-      foto: null,
-      observacoes: '',
-      responsavel: formData.responsavel
-    };
-    setOutrosItensCorrigidos(prev => [...prev, novoItem]);
+    setItemEditando(null);
+    setIsOutroItemModalOpen(true);
   };
 
-  const handleUpdateOutroItem = (id: string, updatedItem: OutroItemCorrigido) => {
-    setOutrosItensCorrigidos(prev => 
-      prev.map(item => item.id === id ? updatedItem : item)
-    );
+  const handleEditOutroItem = (item: OutroItemCorrigido) => {
+    setItemEditando(item);
+    setIsOutroItemModalOpen(true);
+  };
+
+  const handleSaveOutroItem = (item: OutroItemCorrigido) => {
+    if (itemEditando) {
+      // Editando item existente
+      setOutrosItensCorrigidos(prev => 
+        prev?.filter(item => item && item.id).map(existingItem => 
+          existingItem.id === itemEditando.id ? item : existingItem
+        ) || []
+      );
+    } else {
+      // Adicionando novo item
+      setOutrosItensCorrigidos(prev => [...prev, item]);
+    }
+    setIsOutroItemModalOpen(false);
+    setItemEditando(null);
   };
 
   const handleDeleteOutroItem = (id: string) => {
-    setOutrosItensCorrigidos(prev => prev.filter(item => item.id !== id));
+    setOutrosItensCorrigidos(prev => prev?.filter(item => item && item.id !== id) || []);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -83,19 +86,7 @@ export function NovaRondaModal({
       return;
     }
 
-    // Criar áreas técnicas pré-definidas automaticamente
-    const areasTecnicasPredefinidas: AreaTecnica[] = AREAS_TECNICAS_PREDEFINIDAS.map((nome, index) => ({
-      id: crypto.randomUUID(),
-      nome: nome,
-      status: 'ATIVO',
-      contrato: formData.contrato,
-      endereco: contratoSelecionado?.endereco || '',
-      data: formData.data,
-      hora: formData.hora,
-      foto: null,
-      observacoes: ''
-    }));
-
+    // NÃO criar áreas técnicas automaticamente - usuário adiciona manualmente
     const novaRonda: Ronda = {
       id: crypto.randomUUID(),
       nome: formData.nome,
@@ -104,7 +95,7 @@ export function NovaRondaModal({
       hora: formData.hora,
       responsavel: formData.responsavel,
       observacoesGerais: formData.observacoesGerais,
-      areasTecnicas: areasTecnicasPredefinidas,
+      areasTecnicas: [], // Começar vazio, usuário adiciona manualmente
       outrosItensCorrigidos: outrosItensCorrigidos,
       fotosRonda: []
     };
@@ -266,7 +257,7 @@ export function NovaRondaModal({
               </div>
             ) : (
               <div className="space-y-3">
-                {outrosItensCorrigidos.map((item, index) => (
+                {outrosItensCorrigidos?.filter(item => item && item.id).map((item, index) => (
                   <div key={item.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-700">
@@ -277,22 +268,7 @@ export function NovaRondaModal({
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            const updatedItem = { ...item };
-                            const nome = prompt('Nome do item:', item.nome);
-                            if (nome !== null) {
-                              updatedItem.nome = nome;
-                              const descricao = prompt('Descrição:', item.descricao);
-                              if (descricao !== null) {
-                                updatedItem.descricao = descricao;
-                                const local = prompt('Local:', item.local);
-                                if (local !== null) {
-                                  updatedItem.local = local;
-                                  handleUpdateOutroItem(item.id, updatedItem);
-                                }
-                              }
-                            }
-                          }}
+                          onClick={() => handleEditOutroItem(item)}
                           className="h-6 w-6 p-0 text-xs"
                         >
                           ✏️
@@ -334,6 +310,21 @@ export function NovaRondaModal({
         </form>
         </div>
       </div>
+
+      {/* Modal para editar itens */}
+      <OutroItemModal
+        isOpen={isOutroItemModalOpen}
+        onClose={() => {
+          setIsOutroItemModalOpen(false);
+          setItemEditando(null);
+        }}
+        onSave={handleSaveOutroItem}
+        item={itemEditando}
+        contratoRonda={formData.contrato}
+        enderecoRonda={contratoSelecionado?.endereco || ''}
+        dataRonda={formData.data}
+        horaRonda={formData.hora}
+      />
     </div>
   );
 }

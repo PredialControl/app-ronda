@@ -24,6 +24,10 @@ export function OutroItemCorrigidoModal({
   contratoRonda = '',
   enderecoRonda = ''
 }: OutroItemCorrigidoModalProps) {
+  // Se o modal não está aberto, não renderiza nada
+  if (!isOpen) {
+    return null;
+  }
   
   const [formData, setFormData] = useState<Omit<OutroItemCorrigido, 'id'>>({
     nome: item?.nome || '',
@@ -40,6 +44,7 @@ export function OutroItemCorrigidoModal({
       minute: '2-digit' 
     }),
     foto: item?.foto || null,
+    fotos: item?.fotos || [],
     observacoes: item?.observacoes || '',
     responsavel: item?.responsavel || ''
   });
@@ -133,6 +138,7 @@ export function OutroItemCorrigidoModal({
         minute: '2-digit' 
       }),
       foto: null,
+      fotos: [],
       observacoes: '',
       responsavel: ''
     });

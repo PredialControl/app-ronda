@@ -179,27 +179,9 @@ export class AuthService {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);
   }
 
-  // Registrar acesso no banco
+  // Registrar acesso no banco - DESABILITADO para evitar erros
   private async registrarAcesso(usuario: UsuarioAutorizado, tipo: 'LOGIN' | 'LOGOUT'): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('logs_acesso')
-        .insert([{
-          usuario_id: usuario.id,
-          email: usuario.email,
-          nome: usuario.nome,
-          tipo_acesso: tipo,
-          data_acesso: new Date().toISOString(),
-          ip_address: 'N/A', // Em produção, você pode capturar o IP real
-          user_agent: navigator.userAgent
-        }]);
-
-      if (error) {
-        console.error('Erro ao registrar acesso:', error);
-      }
-    } catch (error) {
-      console.error('Erro ao registrar acesso:', error);
-    }
+    console.log('📝 Registro de acesso desabilitado:', { usuario: usuario.nome, tipo });
   }
 }
 

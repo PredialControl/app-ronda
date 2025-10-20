@@ -99,6 +99,11 @@ export function FotoRondaModal({
     }
   }, [fotoRonda]);
 
+  // Se o modal não está aberto, não renderiza nada
+  if (!isOpen) {
+    return null;
+  }
+
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
