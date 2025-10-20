@@ -376,8 +376,12 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
       
       const statusNorm = (item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
       
-      // Se for item de chamado (não concluído)
-      if (item.categoria === 'CHAMADO' && statusNorm !== 'CONCLUIDO') {
+      // Se for item de chamado (não concluído) - considerar também itens sem categoria definida
+      const isItemChamado = item.categoria === 'CHAMADO' || 
+                           (item.categoria === undefined && statusNorm !== 'CONCLUIDO') ||
+                           (item.categoria === null && statusNorm !== 'CONCLUIDO');
+      
+      if (isItemChamado && statusNorm !== 'CONCLUIDO') {
         const base = `${item.nome} (${item.local})`;
         const detalhe = item.descricao || item.observacoes || 'Item registrado';
         const prioridade = item.prioridade || 'MÉDIA';
@@ -389,13 +393,15 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
           statusNorm
         });
         
+        // Classificar por prioridade e status
         if (prioridade === 'URGENTE' || prioridade === 'ALTA') {
           emAtencao.push(`${base}: ${detalhe}`);
           console.log('🔍 DEBUG PDF RESUMO - Adicionado a emAtencao');
-        } else if (prioridade === 'MÉDIA') {
+        } else if (prioridade === 'MÉDIA' || statusNorm === 'EM ANDAMENTO') {
           emManutencao.push(`${base}: ${detalhe}`);
           console.log('🔍 DEBUG PDF RESUMO - Adicionado a emManutencao');
         } else {
+          // BAIXA, PENDENTE ou outros status vão para chamados abertos
           chamadosAbertos.push(`${base}: ${detalhe}`);
           console.log('🔍 DEBUG PDF RESUMO - Adicionado a chamadosAbertos');
         }

@@ -50,10 +50,14 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
       outrosItensDetalhes: ronda.outrosItensCorrigidos
     });
     
-    // Contar itens de abertura de chamado (outrosItensCorrigidos com categoria CHAMADO)
+    // Contar itens de abertura de chamado (outrosItensCorrigidos com categoria CHAMADO ou sem categoria)
     const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => {
       console.log('🔍 DEBUG TABELA - Verificando item:', item.categoria, item);
-      return item.categoria === 'CHAMADO';
+      const statusNorm = (item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+      const isItemChamado = item.categoria === 'CHAMADO' || 
+                           (item.categoria === undefined && statusNorm !== 'CONCLUIDO') ||
+                           (item.categoria === null && statusNorm !== 'CONCLUIDO');
+      return isItemChamado && statusNorm !== 'CONCLUIDO';
     }).length;
     
     // Incluir também fotos de ronda como chamados (para compatibilidade)
@@ -318,7 +322,13 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
                 <div>
                   <div className="text-2xl font-bold text-orange-600">
                     {rondas.reduce((total, ronda) => {
-                      const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => item.categoria === 'CHAMADO').length;
+                      const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => {
+                        const statusNorm = (item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                        const isItemChamado = item.categoria === 'CHAMADO' || 
+                                             (item.categoria === undefined && statusNorm !== 'CONCLUIDO') ||
+                                             (item.categoria === null && statusNorm !== 'CONCLUIDO');
+                        return isItemChamado && statusNorm !== 'CONCLUIDO';
+                      }).length;
                       const fotosRondaChamados = ronda.fotosRonda.length;
                       return total + itensChamado + fotosRondaChamados;
                     }, 0)}
@@ -329,7 +339,13 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
                   <div className="text-2xl font-bold text-red-600">
                     {rondas.reduce((total, ronda) => {
                       const manutencao = ronda.areasTecnicas.filter(at => at.status === 'EM MANUTENÇÃO').length;
-                      const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => item.categoria === 'CHAMADO').length;
+                      const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => {
+                        const statusNorm = (item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                        const isItemChamado = item.categoria === 'CHAMADO' || 
+                                             (item.categoria === undefined && statusNorm !== 'CONCLUIDO') ||
+                                             (item.categoria === null && statusNorm !== 'CONCLUIDO');
+                        return isItemChamado && statusNorm !== 'CONCLUIDO';
+                      }).length;
                       const fotosRondaChamados = ronda.fotosRonda.length;
                       return total + manutencao + itensChamado + fotosRondaChamados;
                     }, 0)}
