@@ -364,7 +364,16 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
     });
     
     // Processar itens de abertura de chamado
+    console.log('🔍 DEBUG PDF RESUMO - Processando itens de chamado:', ronda.outrosItensCorrigidos);
     (ronda.outrosItensCorrigidos || []).forEach(item => {
+      console.log('🔍 DEBUG PDF RESUMO - Item:', {
+        id: item.id,
+        nome: item.nome,
+        categoria: item.categoria,
+        status: item.status,
+        prioridade: item.prioridade
+      });
+      
       const statusNorm = (item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
       
       // Se for item de chamado (não concluído)
@@ -373,13 +382,30 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
         const detalhe = item.descricao || item.observacoes || 'Item registrado';
         const prioridade = item.prioridade || 'MÉDIA';
         
+        console.log('🔍 DEBUG PDF RESUMO - Item de chamado encontrado:', {
+          base,
+          detalhe,
+          prioridade,
+          statusNorm
+        });
+        
         if (prioridade === 'URGENTE' || prioridade === 'ALTA') {
           emAtencao.push(`${base}: ${detalhe}`);
+          console.log('🔍 DEBUG PDF RESUMO - Adicionado a emAtencao');
         } else if (prioridade === 'MÉDIA') {
           emManutencao.push(`${base}: ${detalhe}`);
+          console.log('🔍 DEBUG PDF RESUMO - Adicionado a emManutencao');
         } else {
           chamadosAbertos.push(`${base}: ${detalhe}`);
+          console.log('🔍 DEBUG PDF RESUMO - Adicionado a chamadosAbertos');
         }
+      } else {
+        console.log('🔍 DEBUG PDF RESUMO - Item não é chamado ou está concluído:', {
+          categoria: item.categoria,
+          statusNorm,
+          isChamado: item.categoria === 'CHAMADO',
+          isConcluido: statusNorm === 'CONCLUIDO'
+        });
       }
       
       // Se for item corrigido
@@ -390,7 +416,18 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
       }
     });
     
-    return { chamadosAbertos, situacaoNormal, emAtencao, emManutencao, itensCorrigidos };
+    const resultado = { chamadosAbertos, situacaoNormal, emAtencao, emManutencao, itensCorrigidos };
+    
+    console.log('🔍 DEBUG PDF RESUMO - Resultado final:', {
+      chamadosAbertos: resultado.chamadosAbertos.length,
+      situacaoNormal: resultado.situacaoNormal.length,
+      emAtencao: resultado.emAtencao.length,
+      emManutencao: resultado.emManutencao.length,
+      itensCorrigidos: resultado.itensCorrigidos.length,
+      detalhes: resultado
+    });
+    
+    return resultado;
   })();
 
   return (
