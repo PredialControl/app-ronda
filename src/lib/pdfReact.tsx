@@ -288,8 +288,12 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
   }));
   
   // Adicionar itens de abertura de chamado (outrosItensCorrigidos com categoria CHAMADO)
+  console.log('🔍 DEBUG PDF - Processando itens de chamado:', ronda.outrosItensCorrigidos);
   const itensChamado: PdfFotoItem[] = (ronda.outrosItensCorrigidos || [])
-    .filter((item: any) => item.categoria === 'CHAMADO')
+    .filter((item: any) => {
+      console.log('🔍 DEBUG PDF - Verificando item:', item.categoria, item);
+      return item.categoria === 'CHAMADO';
+    })
     .flatMap((item: any) => {
       // Se o item tem múltiplas fotos, criar um item para cada foto
       if (item.fotos && item.fotos.length > 0) {
