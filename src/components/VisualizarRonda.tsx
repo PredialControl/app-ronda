@@ -289,6 +289,13 @@ export function VisualizarRonda({
           <Button 
             onClick={async () => {
               try {
+                console.log('🔍 DEBUG PDF BUTTON - Ronda antes do PDF:', {
+                  id: ronda.id,
+                  outrosItensCorrigidos: ronda.outrosItensCorrigidos?.length || 0,
+                  fotosRonda: ronda.fotosRonda?.length || 0,
+                  detalhes: ronda.outrosItensCorrigidos
+                });
+                
                 await downloadRelatorioPDF(ronda, contrato, areasTecnicas, headerImage);
               } catch (error) {
                 console.error('Erro ao exportar PDF:', error);

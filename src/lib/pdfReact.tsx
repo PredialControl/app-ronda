@@ -685,6 +685,13 @@ async function srcToDataURL(src?: string | null): Promise<string | null> {
 }
 
 export async function preparePdfData(ronda: Ronda, areas: AreaTecnica[]) {
+  console.log('🔍 DEBUG PREPARE PDF - Ronda original:', {
+    id: ronda.id,
+    outrosItensCorrigidos: ronda.outrosItensCorrigidos?.length || 0,
+    fotosRonda: ronda.fotosRonda?.length || 0,
+    detalhes: ronda.outrosItensCorrigidos
+  });
+  
   const areasNormalized: AreaTecnica[] = await Promise.all(
     areas.map(async (a) => ({
       ...a,
@@ -700,6 +707,14 @@ export async function preparePdfData(ronda: Ronda, areas: AreaTecnica[]) {
       }))
     ),
   };
+  
+  console.log('🔍 DEBUG PREPARE PDF - Ronda normalizada:', {
+    id: rondaNormalized.id,
+    outrosItensCorrigidos: rondaNormalized.outrosItensCorrigidos?.length || 0,
+    fotosRonda: rondaNormalized.fotosRonda?.length || 0,
+    detalhes: rondaNormalized.outrosItensCorrigidos
+  });
+  
   return { rondaNormalized, areasNormalized };
 }
 
