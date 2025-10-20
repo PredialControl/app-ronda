@@ -81,20 +81,34 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
       .sort((a, b) => b[1] - a[1])
       .map(([especialidade, total]) => ({ especialidade, total }));
 
-    // Lista detalhada de chamados do mês
+    // Lista detalhada de chamados do mês (incluindo itens de outrosItensCorrigidos)
     const chamadosLista = rondasMes
       .sort((a,b) => new Date(a.data).getTime() - new Date(b.data).getTime())
-      .flatMap(r =>
-        (r.fotosRonda || [])
+      .flatMap(r => {
+        // Fotos de ronda (chamados antigos)
+        const fotosChamados = (r.fotosRonda || [])
           .filter(f => (String(f.pendencia || f.observacoes || '').trim() !== ''))
           .map(f => ({
-            id: `${r.id}-${f.id}`,
+            id: `${r.id}-foto-${f.id}`,
             descricao: (f.observacoes && f.observacoes.trim() !== '') ? f.observacoes : (f.pendencia || ''),
             data: f.data || r.data,
             especialidade: f.especialidade || '—',
             responsavel: (f.responsavel || '—').toUpperCase()
-          }))
-      );
+          }));
+        
+        // Itens de abertura de chamado (outrosItensCorrigidos com categoria CHAMADO)
+        const itensChamados = (r.outrosItensCorrigidos || [])
+          .filter((item: any) => item.categoria === 'CHAMADO')
+          .map((item: any) => ({
+            id: `${r.id}-item-${item.id}`,
+            descricao: item.descricao || item.observacoes || 'Item de chamado',
+            data: item.data || r.data,
+            especialidade: item.nome || '—',
+            responsavel: (item.responsavel || '—').toUpperCase()
+          }));
+        
+        return [...fotosChamados, ...itensChamados];
+      });
 
     // Itens corrigidos (tabela de outros_itens_corrigidos)
     const itensCorrigidos = rondasMes

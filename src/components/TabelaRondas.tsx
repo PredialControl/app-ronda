@@ -42,10 +42,17 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
     const total = ronda.areasTecnicas.length;
     const ativos = ronda.areasTecnicas.filter(at => at.status === 'ATIVO').length;
     const manutencao = ronda.areasTecnicas.filter(at => at.status === 'EM MANUTENÇÃO').length;
-    const itensChamado = ronda.fotosRonda.length;
-    const itensAtencao = manutencao + itensChamado; // Soma manutenção + chamados
     
-    return { total, ativos, manutencao, itensChamado, itensAtencao };
+    // Contar itens de abertura de chamado (outrosItensCorrigidos com categoria CHAMADO)
+    const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => item.categoria === 'CHAMADO').length;
+    
+    // Incluir também fotos de ronda como chamados (para compatibilidade)
+    const fotosRondaChamados = ronda.fotosRonda.length;
+    const totalItensChamado = itensChamado + fotosRondaChamados;
+    
+    const itensAtencao = manutencao + totalItensChamado; // Soma manutenção + chamados
+    
+    return { total, ativos, manutencao, itensChamado: totalItensChamado, itensAtencao };
   };
 
   if (rondas.length === 0) {
@@ -294,7 +301,11 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-orange-600">
-                    {rondas.reduce((total, ronda) => total + ronda.fotosRonda.length, 0)}
+                    {rondas.reduce((total, ronda) => {
+                      const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => item.categoria === 'CHAMADO').length;
+                      const fotosRondaChamados = ronda.fotosRonda.length;
+                      return total + itensChamado + fotosRondaChamados;
+                    }, 0)}
                   </div>
                   <div className="text-sm text-gray-600">Itens Chamado</div>
                 </div>
@@ -302,8 +313,9 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
                   <div className="text-2xl font-bold text-red-600">
                     {rondas.reduce((total, ronda) => {
                       const manutencao = ronda.areasTecnicas.filter(at => at.status === 'EM MANUTENÇÃO').length;
-                      const chamados = ronda.fotosRonda.length;
-                      return total + manutencao + chamados;
+                      const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => item.categoria === 'CHAMADO').length;
+                      const fotosRondaChamados = ronda.fotosRonda.length;
+                      return total + manutencao + itensChamado + fotosRondaChamados;
                     }, 0)}
                   </div>
                   <div className="text-sm text-gray-600">Itens em Atenção</div>
