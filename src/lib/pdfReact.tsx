@@ -324,6 +324,13 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
   const fotosToUse: PdfFotoItem[] = fotos.length
     ? fotos
     : [...fotosRonda, ...itensChamado];
+  
+  console.log('🔍 DEBUG PDF - Total de itens para PDF:', {
+    fotosRonda: fotosRonda.length,
+    itensChamado: itensChamado.length,
+    total: fotosToUse.length,
+    itensChamadoDetalhes: itensChamado
+  });
 
   // Resumo Executivo (mesma lógica da interface)
   const resumo = (() => {
