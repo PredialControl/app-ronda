@@ -289,10 +289,21 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
   
   // Adicionar itens de abertura de chamado (outrosItensCorrigidos com categoria CHAMADO)
   console.log('🔍 DEBUG PDF - Processando itens de chamado:', ronda.outrosItensCorrigidos);
+  console.log('🔍 DEBUG PDF - Total de outrosItensCorrigidos:', ronda.outrosItensCorrigidos?.length || 0);
+  
   const itensChamado: PdfFotoItem[] = (ronda.outrosItensCorrigidos || [])
     .filter((item: any) => {
-      console.log('🔍 DEBUG PDF - Verificando item:', item.categoria, item);
-      return item.categoria === 'CHAMADO';
+      console.log('🔍 DEBUG PDF - Verificando item:', {
+        id: item.id,
+        nome: item.nome,
+        categoria: item.categoria,
+        status: item.status,
+        prioridade: item.prioridade,
+        local: item.local
+      });
+      const isChamado = item.categoria === 'CHAMADO';
+      console.log('🔍 DEBUG PDF - É chamado?', isChamado);
+      return isChamado;
     })
     .flatMap((item: any) => {
       // Se o item tem múltiplas fotos, criar um item para cada foto
@@ -365,13 +376,17 @@ export const RelatorioPDF: React.FC<{ ronda: Ronda; contrato: Contrato; areas: A
     
     // Processar itens de abertura de chamado
     console.log('🔍 DEBUG PDF RESUMO - Processando itens de chamado:', ronda.outrosItensCorrigidos);
-    (ronda.outrosItensCorrigidos || []).forEach(item => {
-      console.log('🔍 DEBUG PDF RESUMO - Item:', {
+    console.log('🔍 DEBUG PDF RESUMO - Total de itens para processar:', ronda.outrosItensCorrigidos?.length || 0);
+    
+    (ronda.outrosItensCorrigidos || []).forEach((item, index) => {
+      console.log(`🔍 DEBUG PDF RESUMO - Item ${index + 1}:`, {
         id: item.id,
         nome: item.nome,
         categoria: item.categoria,
         status: item.status,
-        prioridade: item.prioridade
+        prioridade: item.prioridade,
+        local: item.local,
+        descricao: item.descricao
       });
       
       const statusNorm = (item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
