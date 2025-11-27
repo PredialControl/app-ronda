@@ -445,9 +445,15 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
         {getColumns().map((column) => {
           const Icon = column.icon;
           return (
-            <div key={column.id} className="flex flex-col" style={{ height: 'calc(100vh - 350px)', minHeight: '700px' }}>
+            <div
+              key={column.id}
+              className="flex flex-col border-2 border-dashed border-gray-200 rounded-lg"
+              style={{ height: 'calc(100vh - 350px)', minHeight: '700px' }}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, column.id)}
+            >
               {/* Column Header */}
-              <div className={`flex items-center gap-2 p-3 rounded-lg ${column.color}`}>
+              <div className={`flex items-center gap-2 p-3 rounded-t-lg ${column.color}`}>
                 <Icon className="w-5 h-5" />
                 <h3 className="font-semibold">{column.title}</h3>
                 <Badge variant="outline" className="ml-auto text-black">
@@ -455,12 +461,8 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                 </Badge>
               </div>
 
-              {/* Column Items - Full Height Drop Zone */}
-              <div
-                className="flex-1 p-2 border-2 border-dashed border-gray-200 rounded-lg overflow-y-auto"
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, column.id)}
-              >
+              {/* Column Items - Scrollable Area */}
+              <div className="flex-1 p-2 overflow-y-auto">
                 <div className="space-y-3 min-h-full pb-32">
                   {column.items.map((item) => (
                     <Card
