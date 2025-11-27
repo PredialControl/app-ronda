@@ -445,7 +445,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
         {getColumns().map((column) => {
           const Icon = column.icon;
           return (
-            <div key={column.id} className="flex flex-col h-[calc(100vh-400px)] min-h-[600px]">
+            <div key={column.id} className="flex flex-col" style={{ height: 'calc(100vh - 350px)', minHeight: '700px' }}>
               {/* Column Header */}
               <div className={`flex items-center gap-2 p-3 rounded-lg ${column.color}`}>
                 <Icon className="w-5 h-5" />
@@ -457,68 +457,70 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
 
               {/* Column Items - Full Height Drop Zone */}
               <div
-                className="flex-1 space-y-3 p-2 border-2 border-dashed border-gray-200 rounded-lg overflow-y-auto"
+                className="flex-1 p-2 border-2 border-dashed border-gray-200 rounded-lg overflow-y-auto"
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, column.id)}
               >
-                {column.items.map((item) => (
-                  <Card
-                    key={item.id}
-                    className={`cursor-move hover:shadow-md transition-shadow bg-white border-l-4 ${getCategoryColor(item.category)}`}
-                    draggable
-                    onDragStart={() => handleDragStart(item)}
-                    onClick={() => handleShowCardDetails(item)}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1 pr-2">
-                          <div className="mb-1">
-                            {getCategoryBadge(item.category)}
+                <div className="space-y-3 min-h-full pb-32">
+                  {column.items.map((item) => (
+                    <Card
+                      key={item.id}
+                      className={`cursor-move hover:shadow-md transition-shadow bg-white border-l-4 ${getCategoryColor(item.category)}`}
+                      draggable
+                      onDragStart={() => handleDragStart(item)}
+                      onClick={() => handleShowCardDetails(item)}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 pr-2">
+                            <div className="mb-1">
+                              {getCategoryBadge(item.category)}
+                            </div>
+                            <h4 className="font-medium text-gray-900 text-sm leading-tight">
+                              {item.title}
+                            </h4>
                           </div>
-                          <h4 className="font-medium text-gray-900 text-sm leading-tight">
-                            {item.title}
-                          </h4>
+                          <div className="flex items-center gap-1">
+                            {item.correcao && (
+                              <div className="w-2 h-2 bg-orange-500 rounded-full" title="Em correção"></div>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveItem(item.id);
+                              }}
+                              className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1 h-6 w-6"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          {item.correcao && (
-                            <div className="w-2 h-2 bg-orange-500 rounded-full" title="Em correção"></div>
+
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          {item.dataVistoria && (
+                            <div className="text-[10px] text-white bg-orange-600 px-2 py-0.5 rounded">
+                              Vistoria: {new Date(item.dataVistoria + 'T00:00:00').toLocaleDateString('pt-BR')}
+                            </div>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveItem(item.id);
-                            }}
-                            className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1 h-6 w-6"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
+                          {item.dataRecebimento && (
+                            <div className="text-[10px] text-white bg-blue-600 px-2 py-0.5 rounded">
+                              Recebido: {new Date(item.dataRecebimento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                            </div>
+                          )}
                         </div>
-                      </div>
+                      </CardContent>
+                    </Card>
+                  ))}
 
-                      <div className="flex gap-2 mt-2 flex-wrap">
-                        {item.dataVistoria && (
-                          <div className="text-[10px] text-white bg-orange-600 px-2 py-0.5 rounded">
-                            Vistoria: {new Date(item.dataVistoria + 'T00:00:00').toLocaleDateString('pt-BR')}
-                          </div>
-                        )}
-                        {item.dataRecebimento && (
-                          <div className="text-[10px] text-white bg-blue-600 px-2 py-0.5 rounded">
-                            Recebido: {new Date(item.dataRecebimento + 'T00:00:00').toLocaleDateString('pt-BR')}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-
-                {/* Empty state */}
-                {column.items.length === 0 && (
-                  <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
-                    Nenhum item nesta coluna
-                  </div>
-                )}
+                  {/* Empty state */}
+                  {column.items.length === 0 && (
+                    <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
+                      Nenhum item nesta coluna
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -526,305 +528,313 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
       </div>
 
       {/* Modal para Data */}
-      {showDateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                {pendingMove?.newStatus === 'recebido' ? 'Data de Recebimento' : 'Data de Vistoria'}
-              </h3>
-            </div>
-
-            <p className="text-gray-600 mb-4">
-              Informe a data {pendingMove?.newStatus === 'recebido' ? 'de recebimento' : 'de vistoria'} para o item: <strong>{pendingMove?.item.title}</strong>
-            </p>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {pendingMove?.newStatus === 'recebido' ? 'Data de Recebimento' : 'Data de Vistoria'}
-              </label>
-              <input
-                type="date"
-                value={pendingMove?.newStatus === 'recebido' ? recebimentoDate : vistoriaDate}
-                onChange={(e) => {
-                  if (pendingMove?.newStatus === 'recebido') {
-                    setRecebimentoDate(e.target.value);
-                  } else {
-                    setVistoriaDate(e.target.value);
-                  }
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                max={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={handleCancelModal}
-                className="text-gray-600 border-gray-300 hover:bg-gray-50"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={pendingMove?.newStatus === 'recebido' ? handleConfirmRecebimento : handleConfirmVistoria}
-                disabled={pendingMove?.newStatus === 'recebido' ? !recebimentoDate : !vistoriaDate}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300"
-              >
-                {pendingMove?.newStatus === 'recebido' ? 'Confirmar Recebimento' : 'Confirmar Vistoria'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal para Novo Item */}
-      {showNewItemModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Plus className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Novo Item</h3>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCancelNewItem}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <p className="text-gray-600 mb-4">
-              Crie um novo item que será adicionado automaticamente na coluna "AG Vistoria".
-            </p>
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="newItemTitle" className="block text-sm font-medium text-gray-700 mb-2">
-                  Título do Item
-                </Label>
-                <Input
-                  id="newItemTitle"
-                  type="text"
-                  value={newItemTitle}
-                  onChange={(e) => setNewItemTitle(e.target.value)}
-                  placeholder="Digite o título do novo item..."
-                  className="w-full"
-                />
+      {
+        showDateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {pendingMove?.newStatus === 'recebido' ? 'Data de Recebimento' : 'Data de Vistoria'}
+                </h3>
               </div>
 
-              <div>
-                <Label htmlFor="newItemCategory" className="block text-sm font-medium text-gray-700 mb-2">
-                  Categoria
-                </Label>
-                <Select value={newItemCategory} onValueChange={setNewItemCategory}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione a categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(CATEGORIES).map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+              <p className="text-gray-600 mb-4">
+                Informe a data {pendingMove?.newStatus === 'recebido' ? 'de recebimento' : 'de vistoria'} para o item: <strong>{pendingMove?.item.title}</strong>
+              </p>
 
-            <div className="flex gap-3 justify-end mt-6">
-              <Button
-                variant="outline"
-                onClick={handleCancelNewItem}
-                className="text-gray-600 border-gray-300 hover:bg-gray-50"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleCreateNewItem}
-                disabled={!newItemTitle.trim()}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300"
-              >
-                Criar Item
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal para Correção */}
-      {showCorrecaoModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Wrench className="w-5 h-5 text-orange-600" />
-              <h3 className="text-lg font-semibold text-gray-900">O que precisa corrigir?</h3>
-            </div>
-
-            <p className="text-gray-600 mb-4">
-              Descreva o que precisa ser corrigido no item: <strong>{pendingMove?.item.title}</strong>
-            </p>
-
-            <div className="mb-4 space-y-4">
-              <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-2">
-                  Data da Vistoria
-                </Label>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {pendingMove?.newStatus === 'recebido' ? 'Data de Recebimento' : 'Data de Vistoria'}
+                </label>
                 <input
                   type="date"
-                  value={vistoriaDate}
-                  onChange={(e) => setVistoriaDate(e.target.value)}
+                  value={pendingMove?.newStatus === 'recebido' ? recebimentoDate : vistoriaDate}
+                  onChange={(e) => {
+                    if (pendingMove?.newStatus === 'recebido') {
+                      setRecebimentoDate(e.target.value);
+                    } else {
+                      setVistoriaDate(e.target.value);
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   max={new Date().toISOString().split('T')[0]}
                 />
               </div>
 
-              <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descrição do Problema
-                </Label>
-                <textarea
-                  value={correcaoText}
-                  onChange={(e) => setCorrecaoText(e.target.value)}
-                  placeholder="Descreva o problema encontrado..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent h-32 resize-none"
-                />
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelModal}
+                  className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={pendingMove?.newStatus === 'recebido' ? handleConfirmRecebimento : handleConfirmVistoria}
+                  disabled={pendingMove?.newStatus === 'recebido' ? !recebimentoDate : !vistoriaDate}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300"
+                >
+                  {pendingMove?.newStatus === 'recebido' ? 'Confirmar Recebimento' : 'Confirmar Vistoria'}
+                </Button>
               </div>
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={handleCancelCorrecao}
-                className="text-gray-600 border-gray-300 hover:bg-gray-50"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleConfirmCorrecao}
-                disabled={!correcaoText.trim() || !vistoriaDate}
-                className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300"
-              >
-                Confirmar Correção
-              </Button>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
+
+      {/* Modal para Novo Item */}
+      {
+        showNewItemModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-blue-600" />
+                  <h3 className="text-lg font-semibold text-gray-900">Novo Item</h3>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelNewItem}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <p className="text-gray-600 mb-4">
+                Crie um novo item que será adicionado automaticamente na coluna "AG Vistoria".
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="newItemTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                    Título do Item
+                  </Label>
+                  <Input
+                    id="newItemTitle"
+                    type="text"
+                    value={newItemTitle}
+                    onChange={(e) => setNewItemTitle(e.target.value)}
+                    placeholder="Digite o título do novo item..."
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="newItemCategory" className="block text-sm font-medium text-gray-700 mb-2">
+                    Categoria
+                  </Label>
+                  <Select value={newItemCategory} onValueChange={setNewItemCategory}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione a categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(CATEGORIES).map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end mt-6">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelNewItem}
+                  className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleCreateNewItem}
+                  disabled={!newItemTitle.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300"
+                >
+                  Criar Item
+                </Button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Modal para Correção */}
+      {
+        showCorrecaoModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Wrench className="w-5 h-5 text-orange-600" />
+                <h3 className="text-lg font-semibold text-gray-900">O que precisa corrigir?</h3>
+              </div>
+
+              <p className="text-gray-600 mb-4">
+                Descreva o que precisa ser corrigido no item: <strong>{pendingMove?.item.title}</strong>
+              </p>
+
+              <div className="mb-4 space-y-4">
+                <div>
+                  <Label className="block text-sm font-medium text-gray-700 mb-2">
+                    Data da Vistoria
+                  </Label>
+                  <input
+                    type="date"
+                    value={vistoriaDate}
+                    onChange={(e) => setVistoriaDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    max={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+
+                <div>
+                  <Label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descrição do Problema
+                  </Label>
+                  <textarea
+                    value={correcaoText}
+                    onChange={(e) => setCorrecaoText(e.target.value)}
+                    placeholder="Descreva o problema encontrado..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent h-32 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelCorrecao}
+                  className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleConfirmCorrecao}
+                  disabled={!correcaoText.trim() || !vistoriaDate}
+                  className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300"
+                >
+                  Confirmar Correção
+                </Button>
+              </div>
+            </div>
+          </div>
+        )
+      }
 
       {/* Modal de Detalhes do Card */}
-      {showCardDetails && selectedCard && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden">
-            <div className={`p-4 ${getCategoryColor(selectedCard.category).replace('border-l-4', 'border-l-8')} border-l-solid bg-gray-50 flex justify-between items-start`}>
-              <div>
-                <div className="mb-2">
-                  {getCategoryBadge(selectedCard.category)}
-                </div>
-                <h2 className="text-xl font-bold text-gray-900">{selectedCard.title}</h2>
-                <p className="text-sm text-gray-500">ID: {selectedCard.id}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowCardDetails(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {
+        showCardDetails && selectedCard && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden">
+              <div className={`p-4 ${getCategoryColor(selectedCard.category).replace('border-l-4', 'border-l-8')} border-l-solid bg-gray-50 flex justify-between items-start`}>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Status Atual</h3>
-                  <Badge className={`
+                  <div className="mb-2">
+                    {getCategoryBadge(selectedCard.category)}
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">{selectedCard.title}</h2>
+                  <p className="text-sm text-gray-500">ID: {selectedCard.id}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowCardDetails(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Status Atual</h3>
+                    <Badge className={`
                     ${selectedCard.status === 'vistoria' ? 'bg-red-100 text-red-800' : ''}
                     ${selectedCard.status === 'correcao' ? 'bg-yellow-100 text-yellow-800' : ''}
                     ${selectedCard.status === 'recebido' ? 'bg-green-100 text-green-800' : ''}
                     ${selectedCard.status === 'implantado' ? 'bg-emerald-100 text-emerald-800' : ''}
                   `}>
-                    {selectedCard.status === 'vistoria' && 'Aguardando'}
-                    {selectedCard.status === 'correcao' && 'Em Andamento'}
-                    {selectedCard.status === 'recebido' && 'Em Correção'}
-                    {selectedCard.status === 'implantado' && 'Finalizado'}
-                  </Badge>
-                </div>
+                      {selectedCard.status === 'vistoria' && 'Aguardando'}
+                      {selectedCard.status === 'correcao' && 'Em Andamento'}
+                      {selectedCard.status === 'recebido' && 'Em Correção'}
+                      {selectedCard.status === 'implantado' && 'Finalizado'}
+                    </Badge>
+                  </div>
 
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Categoria</h3>
-                  <span className="text-gray-900 font-medium">
-                    {Object.values(CATEGORIES).find(c => c.id === selectedCard.category)?.label}
-                  </span>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Data de Criação</h3>
-                  <p className="text-gray-900">
-                    {new Date(selectedCard.createdAt).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Última Atualização</h3>
-                  <p className="text-gray-900">
-                    {new Date(selectedCard.updatedAt).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-
-                {selectedCard.dataVistoria && (
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Data da Vistoria</h3>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Categoria</h3>
+                    <span className="text-gray-900 font-medium">
+                      {Object.values(CATEGORIES).find(c => c.id === selectedCard.category)?.label}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Data de Criação</h3>
                     <p className="text-gray-900">
-                      {new Date(selectedCard.dataVistoria + 'T00:00:00').toLocaleDateString('pt-BR')}
+                      {new Date(selectedCard.createdAt).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Última Atualização</h3>
+                    <p className="text-gray-900">
+                      {new Date(selectedCard.updatedAt).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+
+                  {selectedCard.dataVistoria && (
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-1">Data da Vistoria</h3>
+                      <p className="text-gray-900">
+                        {new Date(selectedCard.dataVistoria + 'T00:00:00').toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedCard.dataRecebimento && (
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-1">Data de Recebimento</h3>
+                      <p className="text-gray-900">
+                        {new Date(selectedCard.dataRecebimento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {selectedCard.correcao && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-orange-800 mb-2 flex items-center gap-2">
+                      <Wrench className="w-4 h-4" />
+                      Correção Necessária
+                    </h3>
+                    <p className="text-orange-900 text-sm whitespace-pre-wrap">
+                      {selectedCard.correcao}
                     </p>
                   </div>
                 )}
 
-                {selectedCard.dataRecebimento && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-1">Data de Recebimento</h3>
-                    <p className="text-gray-900">
-                      {new Date(selectedCard.dataRecebimento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                {selectedCard.historicoCorrecao && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-gray-700 mb-2">Histórico de Correções</h3>
+                    <p className="text-gray-600 text-sm whitespace-pre-wrap">
+                      {selectedCard.historicoCorrecao}
                     </p>
                   </div>
                 )}
               </div>
 
-              {selectedCard.correcao && (
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <h3 className="text-sm font-bold text-orange-800 mb-2 flex items-center gap-2">
-                    <Wrench className="w-4 h-4" />
-                    Correção Necessária
-                  </h3>
-                  <p className="text-orange-900 text-sm whitespace-pre-wrap">
-                    {selectedCard.correcao}
-                  </p>
-                </div>
-              )}
-
-              {selectedCard.historicoCorrecao && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <h3 className="text-sm font-bold text-gray-700 mb-2">Histórico de Correções</h3>
-                  <p className="text-gray-600 text-sm whitespace-pre-wrap">
-                    {selectedCard.historicoCorrecao}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 bg-gray-50 border-t flex justify-end">
-              <Button onClick={() => setShowCardDetails(false)}>
-                Fechar
-              </Button>
+              <div className="p-4 bg-gray-50 border-t flex justify-end">
+                <Button onClick={() => setShowCardDetails(false)}>
+                  Fechar
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
     </div>
   );
 }
