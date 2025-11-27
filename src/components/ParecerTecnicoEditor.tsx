@@ -16,15 +16,21 @@ interface ParecerTecnicoEditorProps {
     onCancel: () => void;
 }
 
-interface TopicoLocal extends Omit<ParecerTopico, 'id' | 'parecer_id' | 'created_at'> {
+interface TopicoLocal {
     id?: string;
     tempId: string;
+    ordem: number;
+    titulo: string;
+    descricao: string;
     imagens: ImagemLocal[];
 }
 
-interface ImagemLocal extends Omit<ParecerImagem, 'id' | 'topico_id' | 'created_at'> {
+interface ImagemLocal {
     id?: string;
     tempId: string;
+    ordem: number;
+    url: string;
+    descricao: string;
     file?: File;
     preview?: string;
 }
