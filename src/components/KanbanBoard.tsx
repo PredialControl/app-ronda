@@ -445,7 +445,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
         {getColumns().map((column) => {
           const Icon = column.icon;
           return (
-            <div key={column.id} className="space-y-4">
+            <div key={column.id} className="flex flex-col h-[calc(100vh-400px)] min-h-[600px]">
               {/* Column Header */}
               <div className={`flex items-center gap-2 p-3 rounded-lg ${column.color}`}>
                 <Icon className="w-5 h-5" />
@@ -455,9 +455,9 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                 </Badge>
               </div>
 
-              {/* Column Items */}
+              {/* Column Items - Full Height Drop Zone */}
               <div
-                className="space-y-3 min-h-[400px] p-2 border-2 border-dashed border-gray-200 rounded-lg"
+                className="flex-1 space-y-3 p-2 border-2 border-dashed border-gray-200 rounded-lg overflow-y-auto"
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, column.id)}
               >
