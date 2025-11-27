@@ -400,7 +400,7 @@ export function VisualizarRonda({
                             <span className="font-semibold text-gray-700">Local:</span> {item.local}
                           </div>
                           <div>
-                            <span className="font-semibold text-gray-700">Pendência:</span> {item.descricao || item.pendencia || 'Não informada'}
+                            <span className="font-semibold text-gray-700">Pendência:</span> {item.descricao || 'Não informada'}
                           </div>
                           {item.observacoes && (
                             <div>
