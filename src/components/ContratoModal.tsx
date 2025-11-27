@@ -25,6 +25,7 @@ export function ContratoModal({
     sindico: '',
     endereco: '',
     periodicidade: 'MENSAL' as Contrato['periodicidade'],
+    status: 'EM IMPLANTACAO' as 'IMPLANTADO' | 'EM IMPLANTACAO',
     observacoes: ''
   });
 
@@ -35,6 +36,7 @@ export function ContratoModal({
         sindico: contrato.sindico,
         endereco: contrato.endereco,
         periodicidade: contrato.periodicidade,
+        status: contrato.status || 'EM IMPLANTACAO',
         observacoes: contrato.observacoes || ''
       });
     } else {
@@ -43,6 +45,7 @@ export function ContratoModal({
         sindico: '',
         endereco: '',
         periodicidade: 'MENSAL',
+        status: 'EM IMPLANTACAO',
         observacoes: ''
       });
     }
@@ -71,6 +74,7 @@ export function ContratoModal({
       sindico: formData.sindico,
       endereco: formData.endereco,
       periodicidade: formData.periodicidade,
+      status: formData.status,
       observacoes: formData.observacoes,
       dataCriacao: contrato?.dataCriacao || new Date().toISOString()
     };
@@ -86,7 +90,7 @@ export function ContratoModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md max-h-[95vh] overflow-y-auto shadow-2xl">
         {/* Header fixo */}
         <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 rounded-t-lg">
@@ -95,101 +99,117 @@ export function ContratoModal({
               <FileText className="w-5 h-5" />
               {contrato ? 'Editar Contrato' : 'Novo Contrato'}
             </h2>
-            <button 
-              onClick={onClose} 
+            <button
+              onClick={onClose}
               className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
-        
+
         {/* Conteúdo do formulário */}
         <div className="p-4">
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">Nome do Contrato *</label>
-            <Input
-              value={formData.nome}
-              onChange={(e) => handleInputChange('nome', e.target.value)}
-              placeholder="Ex: CT001/2024 - Manutenção Preventiva"
-              required
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">Nome do Contrato *</label>
+              <Input
+                value={formData.nome}
+                onChange={(e) => handleInputChange('nome', e.target.value)}
+                placeholder="Ex: CT001/2024 - Manutenção Preventiva"
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1 flex items-center gap-1">
-              <User className="w-4 h-4" />
-              Síndico *
-            </label>
-            <Input
-              value={formData.sindico}
-              onChange={(e) => handleInputChange('sindico', e.target.value)}
-              placeholder="Nome do síndico responsável"
-              required
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1 flex items-center gap-1">
+                <User className="w-4 h-4" />
+                Síndico *
+              </label>
+              <Input
+                value={formData.sindico}
+                onChange={(e) => handleInputChange('sindico', e.target.value)}
+                placeholder="Nome do síndico responsável"
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1 flex items-center gap-1">
-              <MapPin className="w-4 h-4" />
-              Endereço *
-            </label>
-            <Input
-              value={formData.endereco}
-              onChange={(e) => handleInputChange('endereco', e.target.value)}
-              placeholder="Endereço completo do local"
-              required
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1 flex items-center gap-1">
+                <MapPin className="w-4 h-4" />
+                Endereço *
+              </label>
+              <Input
+                value={formData.endereco}
+                onChange={(e) => handleInputChange('endereco', e.target.value)}
+                placeholder="Endereço completo do local"
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1 flex items-center gap-1">
-              <Calendar className="w-4 h-4" />
-              Periodicidade *
-            </label>
-            <select
-              value={formData.periodicidade}
-              onChange={(e) => handleInputChange('periodicidade', e.target.value)}
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-            >
-              <option value="DIARIA">Diária</option>
-              <option value="SEMANAL">Semanal</option>
-              <option value="QUINZENAL">Quinzenal</option>
-              <option value="MENSAL">Mensal</option>
-              <option value="BIMESTRAL">Bimestral</option>
-              <option value="TRIMESTRAL">Trimestral</option>
-              <option value="SEMESTRAL">Semestral</option>
-              <option value="ANUAL">Anual</option>
-            </select>
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1 flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                Periodicidade *
+              </label>
+              <select
+                value={formData.periodicidade}
+                onChange={(e) => handleInputChange('periodicidade', e.target.value)}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              >
+                <option value="DIARIA">Diária</option>
+                <option value="SEMANAL">Semanal</option>
+                <option value="QUINZENAL">Quinzenal</option>
+                <option value="MENSAL">Mensal</option>
+                <option value="BIMESTRAL">Bimestral</option>
+                <option value="TRIMESTRAL">Trimestral</option>
+                <option value="SEMESTRAL">Semestral</option>
+                <option value="ANUAL">Anual</option>
+              </select>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">Observações</label>
-            <Input
-              value={formData.observacoes}
-              onChange={(e) => handleInputChange('observacoes', e.target.value)}
-              placeholder="Observações adicionais sobre o contrato"
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1 flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                Status *
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => handleInputChange('status', e.target.value)}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              >
+                <option value="EM IMPLANTACAO">Em Implantação</option>
+                <option value="IMPLANTADO">Implantado</option>
+              </select>
+            </div>
 
-          <div className="flex gap-2 pt-4">
-            {onVoltarContratos && (
-              <Button type="button" variant="outline" onClick={onVoltarContratos} className="flex-1">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar aos Contratos
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">Observações</label>
+              <Input
+                value={formData.observacoes}
+                onChange={(e) => handleInputChange('observacoes', e.target.value)}
+                placeholder="Observações adicionais sobre o contrato"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              {onVoltarContratos && (
+                <Button type="button" variant="outline" onClick={onVoltarContratos} className="flex-1">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Voltar aos Contratos
+                </Button>
+              )}
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+                Cancelar
               </Button>
-            )}
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-              Cancelar
-            </Button>
-            <Button type="submit" className="flex-1">
-              {contrato ? 'Salvar Alterações' : 'Criar Contrato'}
-            </Button>
-          </div>
-        </form>
+              <Button type="submit" className="flex-1">
+                {contrato ? 'Salvar Alterações' : 'Criar Contrato'}
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

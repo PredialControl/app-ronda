@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { GlowingCard } from '@/components/ui/glowing-card';
 import { Badge } from '@/components/ui/badge';
 import { Ronda, Contrato, AreaTecnica } from '@/types';
 import { BarChart3, AlertTriangle, Calendar, Wrench, XCircle, User } from 'lucide-react';
@@ -83,7 +84,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
 
     // Lista detalhada de chamados do mês (incluindo itens de outrosItensCorrigidos)
     const chamadosLista = rondasMes
-      .sort((a,b) => new Date(a.data).getTime() - new Date(b.data).getTime())
+      .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
       .flatMap(r => {
         // Fotos de ronda (chamados antigos)
         const fotosChamados = (r.fotosRonda || [])
@@ -95,7 +96,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
             especialidade: f.especialidade || '—',
             responsavel: (f.responsavel || '—').toUpperCase()
           }));
-        
+
         // Itens de abertura de chamado (outrosItensCorrigidos com categoria CHAMADO)
         const itensChamados = (r.outrosItensCorrigidos || [])
           .filter((item: any) => item.categoria === 'CHAMADO')
@@ -106,7 +107,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
             especialidade: item.nome || '—',
             responsavel: (item.responsavel || '—').toUpperCase()
           }));
-        
+
         return [...fotosChamados, ...itensChamados];
       });
 
@@ -142,7 +143,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
         observacoes: at.observacoes || null
       }));
     })();
-    
+
     return {
       totalRondasMes: rondasMes.length,
       itensCriticos: itensCriticos.length,
@@ -156,105 +157,104 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
       chamadosLista
     };
   }, [rondas, areasTecnicas, selectedMonth]);
-  
+
   return (
     <div className="space-y-8">
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <img aria-hidden src="/logo-header.png" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg">
         <div className="relative p-6 sm:p-10 lg:p-12">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white drop-shadow">Dashboard</h1>
-              <p className="mt-2 text-slate-200/90">Visão geral do contrato <span className="font-semibold text-white">{contrato.nome}</span></p>
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white drop-shadow-lg">Dashboard</h1>
+              <p className="mt-2 text-white/90">Visão geral do contrato <span className="font-semibold text-white">{contrato.nome}</span></p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-slate-200">
-                <Calendar className="w-5 h-5 text-blue-300" />
-                <span className="text-sm">Mês:</span>
+              <div className="flex items-center gap-2 text-white">
+                <Calendar className="w-5 h-5" />
+                <span className="text-sm font-medium">Mês:</span>
               </div>
               <input
                 type="month"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="rounded-md bg-white/10 text-white placeholder-white/60 backdrop-blur px-3 py-2 text-sm ring-1 ring-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="rounded-md bg-white/20 text-white placeholder-white/60 backdrop-blur px-3 py-2 text-sm ring-1 ring-white/30 focus:outline-none focus:ring-2 focus:ring-white transition-all"
               />
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Cards de Métricas Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-l-4 border-blue-500 bg-white/40 backdrop-blur shadow-xl ring-1 ring-black/5">
+        <GlowingCard className="border-l-4 border-l-blue-500" glowColor="from-blue-500/50 via-cyan-500/50 to-blue-500/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Rondas</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-700">Total de Rondas</CardTitle>
             <BarChart3 className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{metricas.totalRondasMes}</div>
             <p className="text-xs text-gray-600">Este mês</p>
           </CardContent>
-        </Card>
-        
-        <Card className="border-l-4 border-red-500 bg-white/40 backdrop-blur shadow-xl ring-1 ring-black/5">
+        </GlowingCard>
+
+        <GlowingCard className="border-l-4 border-l-red-500" glowColor="from-red-500/50 via-orange-500/50 to-red-500/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Itens Críticos</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-700">Itens Críticos</CardTitle>
             <XCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{metricas.itensCriticos}</div>
             <p className="text-xs text-gray-600">Este mês</p>
           </CardContent>
-        </Card>
-        
-        <Card className="border-l-4 border-orange-500 bg-white/40 backdrop-blur shadow-xl ring-1 ring-black/5">
+        </GlowingCard>
+
+        <GlowingCard className="border-l-4 border-l-orange-500" glowColor="from-orange-500/50 via-yellow-500/50 to-orange-500/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Itens Atenção</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-700">Itens Atenção</CardTitle>
             <AlertTriangle className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{metricas.itensAtencao}</div>
             <p className="text-xs text-gray-600">Este mês</p>
           </CardContent>
-        </Card>
-        
+        </GlowingCard>
+
         {/* Card: Responsável dos chamados (mês) */}
-        <Card className="border-l-4 border-purple-500 bg-white/40 backdrop-blur shadow-xl ring-1 ring-black/5">
+        <GlowingCard className="border-l-4 border-l-purple-500" glowColor="from-purple-500/50 via-pink-500/50 to-purple-500/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Responsável (mês)</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-700">Responsável (mês)</CardTitle>
             <User className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-sm text-gray-700 space-y-1">
               <div className="flex items-center justify-between">
                 <span>Construtora</span>
-                <span className="font-semibold text-purple-700">{metricas.contagemResponsavel.construtora}</span>
+                <span className="font-semibold text-purple-600">{metricas.contagemResponsavel.construtora}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>Condomínio</span>
-                <span className="font-semibold text-purple-700">{metricas.contagemResponsavel.condominio}</span>
+                <span className="font-semibold text-purple-600">{metricas.contagemResponsavel.condominio}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>Outros</span>
-                <span className="font-semibold text-purple-700">{metricas.contagemResponsavel.outros}</span>
-            </div>
+                <span className="font-semibold text-purple-600">{metricas.contagemResponsavel.outros}</span>
+              </div>
             </div>
           </CardContent>
-        </Card>
+        </GlowingCard>
       </div>
-      
+
       {/* Chamados abertos por especialidade (mês filtrado) */}
-      <Card>
+      <GlowingCard>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900">
             <AlertTriangle className="w-5 h-5 text-orange-600" />
             Chamados Abertos por Especialidade (mês selecionado)
           </CardTitle>
         </CardHeader>
         <CardContent>
           {metricas.chamadosPorEspecialidade.length === 0 ? (
-            <div className="text-sm text-gray-500">Nenhum chamado aberto no período.</div>
+            <div className="text-sm text-gray-600">Nenhum chamado aberto no período.</div>
           ) : (
             <div className="flex flex-col items-center gap-4">
               {/* Pizza chart */}
@@ -300,7 +300,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
                 return (
                   <div className="flex items-center justify-center">
                     <svg width={180} height={180} viewBox={`0 0 ${cx * 2} ${cy * 2}`}>
-                      <circle r={radius} cx={cx} cy={cy} fill="#f3f4f6" stroke="#e5e7eb" strokeWidth={stroke} />
+                      <circle r={radius} cx={cx} cy={cy} fill="#1e293b" stroke="#334155" strokeWidth={stroke} />
                       {circles}
                     </svg>
                   </div>
@@ -322,7 +322,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
                       <div key={item.especialidade} className="flex items-center gap-3 text-sm text-gray-700">
                         <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: color }} />
                         <span className="font-medium text-gray-900">{item.especialidade}</span>
-                        <span className="text-gray-500">— {item.total} ({percent}%)</span>
+                        <span className="text-gray-600">— {item.total} ({percent}%)</span>
                       </div>
                     );
                   })}
@@ -331,37 +331,37 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
             </div>
           )}
         </CardContent>
-      </Card>
-      
+      </GlowingCard>
+
       {/* Tabela de chamados do mês */}
-      <Card>
+      <GlowingCard>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900">
             <AlertTriangle className="w-5 h-5 text-orange-600" />
             Chamados do Mês — Detalhamento
           </CardTitle>
         </CardHeader>
         <CardContent>
           {metricas.chamadosLista.length === 0 ? (
-            <div className="text-sm text-gray-500">Nenhum chamado registrado neste mês.</div>
+            <div className="text-sm text-gray-600">Nenhum chamado registrado neste mês.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left border-b">
-                    <th className="py-2 px-3 text-gray-700">Descrição</th>
-                    <th className="py-2 px-3 text-gray-700">Data</th>
-                    <th className="py-2 px-3 text-gray-700">Especialidade</th>
-                    <th className="py-2 px-3 text-gray-700">Responsável</th>
+                  <tr className="text-left border-b border-gray-200">
+                    <th className="py-2 px-3 text-gray-700 font-medium">Descrição</th>
+                    <th className="py-2 px-3 text-gray-700 font-medium">Data</th>
+                    <th className="py-2 px-3 text-gray-700 font-medium">Especialidade</th>
+                    <th className="py-2 px-3 text-gray-700 font-medium">Responsável</th>
                   </tr>
                 </thead>
                 <tbody>
                   {metricas.chamadosLista.map((c) => (
-                    <tr key={c.id} className="border-b hover:bg-gray-50">
+                    <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                       <td className="py-2 px-3 text-gray-900 max-w-[520px] truncate" title={c.descricao}>{c.descricao || '—'}</td>
-                      <td className="py-2 px-3 text-gray-700">{new Date(c.data).toLocaleDateString('pt-BR')}</td>
-                      <td className="py-2 px-3 text-gray-700">{c.especialidade}</td>
-                      <td className="py-2 px-3 text-gray-700">{c.responsavel}</td>
+                      <td className="py-2 px-3 text-gray-600">{new Date(c.data).toLocaleDateString('pt-BR')}</td>
+                      <td className="py-2 px-3 text-gray-600">{c.especialidade}</td>
+                      <td className="py-2 px-3 text-gray-600">{c.responsavel}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -369,13 +369,13 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
             </div>
           )}
         </CardContent>
-      </Card>
+      </GlowingCard>
 
       {/* Status dos Equipamentos - Tabela */}
-      <Card>
+      <GlowingCard>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wrench className="w-5 h-5 text-gray-600" />
+          <CardTitle className="flex items-center gap-2 text-gray-900">
+            <Wrench className="w-5 h-5 text-gray-700" />
             Status da Última Visita nas Áreas Técnicas
           </CardTitle>
         </CardHeader>
@@ -383,11 +383,11 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left border-b">
-                  <th className="py-2 px-3 text-gray-700">Área</th>
-                  <th className="py-2 px-3 text-gray-700">Data</th>
-                  <th className="py-2 px-3 text-gray-700">Status</th>
-                  <th className="py-2 px-3 text-gray-700">Observações</th>
+                <tr className="text-left border-b border-gray-200">
+                  <th className="py-2 px-3 text-gray-700 font-medium">Área</th>
+                  <th className="py-2 px-3 text-gray-700 font-medium">Data</th>
+                  <th className="py-2 px-3 text-gray-700 font-medium">Status</th>
+                  <th className="py-2 px-3 text-gray-700 font-medium">Observações</th>
                 </tr>
               </thead>
               <tbody>
@@ -398,13 +398,13 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
                   const status = equipamento.statusUltimaVisita || 'NÃO VISITADO';
                   const variant = status === 'ATIVO' ? 'success' : /MANUT|ATEN/.test(status) ? 'attention' : 'destructive';
                   return (
-                    <tr key={equipamento.id} className="border-b hover:bg-gray-50">
+                    <tr key={equipamento.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                       <td className="py-2 px-3 text-gray-900">{equipamento.nome}</td>
-                      <td className="py-2 px-3 text-gray-700">{dataFormatada}</td>
+                      <td className="py-2 px-3 text-gray-600">{dataFormatada}</td>
                       <td className="py-2 px-3">
                         <Badge variant={variant as any}>{status}</Badge>
                       </td>
-                      <td className="py-2 px-3 text-gray-700">{equipamento.observacoes || '—'}</td>
+                      <td className="py-2 px-3 text-gray-600">{equipamento.observacoes || '—'}</td>
                     </tr>
                   );
                 })}
@@ -412,12 +412,12 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
             </table>
           </div>
         </CardContent>
-      </Card>
-      
+      </GlowingCard>
+
       {/* Resumo Executivo */}
-      <Card className="border-2 border-blue-200 bg-blue-50">
+      <GlowingCard className="border-l-4 border-l-blue-500" glowColor="from-blue-900/50 via-blue-800/50 to-blue-900/50">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-blue-800">
+          <CardTitle className="flex items-center gap-2 text-blue-400">
             <BarChart3 className="w-6 h-6" />
             📊 Resumo Executivo do Mês
           </CardTitle>
@@ -425,18 +425,18 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="text-center">
-              <div className="text-3xl font-bold text-red-600">{metricas.itensCriticos}</div>
-              <div className="text-sm text-red-700">Itens Críticos</div>
-              <div className="text-xs text-red-600">Requerem ação imediata</div>
+              <div className="text-3xl font-bold text-red-500">{metricas.itensCriticos}</div>
+              <div className="text-sm text-red-400">Itens Críticos</div>
+              <div className="text-xs text-red-500/70">Requerem ação imediata</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-orange-600">{metricas.itensAtencao}</div>
-              <div className="text-sm text-orange-700">Itens Atenção</div>
-              <div className="text-xs text-orange-600">Monitorar de perto</div>
+              <div className="text-3xl font-bold text-orange-500">{metricas.itensAtencao}</div>
+              <div className="text-sm text-orange-400">Itens Atenção</div>
+              <div className="text-xs text-orange-500/70">Monitorar de perto</div>
             </div>
           </div>
         </CardContent>
-      </Card>
+      </GlowingCard>
     </div>
   );
 }

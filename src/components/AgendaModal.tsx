@@ -55,13 +55,13 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({ item, onClose, selecte
 
   useEffect(() => {
     loadContratos();
-    
+
     // Definir data padrão se não houver item
     const defaultDate = selectedDate || new Date();
     const defaultDateString = getLocalDateString(defaultDate); // Usar função local
     // Corrigir mapeamento do dia da semana para corresponder ao calendário
     const defaultDayOfWeek = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'][defaultDate.getDay()];
-    
+
     console.log('🔍 Debug AgendaModal - Data selecionada:', {
       selectedDate,
       defaultDate,
@@ -69,11 +69,11 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({ item, onClose, selecte
       dayOfWeek: defaultDate.getDay(),
       defaultDayOfWeek
     });
-    
+
     // Definir data limite padrão (31 de dezembro do ano vigente)
     const currentYear = new Date().getFullYear();
     const defaultEndDate = getLocalDateString(new Date(currentYear, 11, 31)); // Usar função local
-    
+
     if (item) {
       setFormData({
         contratoId: item.contratoId,
@@ -140,7 +140,7 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({ item, onClose, selecte
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.contratoId) {
       alert('Por favor, selecione um contrato');
       return;
@@ -149,7 +149,7 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({ item, onClose, selecte
     // Validação de recorrência removida - agora é opcional
 
     setLoading(true);
-    
+
     try {
       const agendaData = {
         contratoId: formData.contratoId,
@@ -204,20 +204,20 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({ item, onClose, selecte
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
-      [field]: field === 'temRecorrencia' ? value === 'true' : 
-               field === 'ativo' ? value === 'true' : value
+      [field]: field === 'temRecorrencia' ? value === 'true' :
+        field === 'ativo' ? value === 'true' : value
     }));
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border-2 border-gray-200">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center space-x-3">
             <Calendar className="h-6 w-6 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">
-                     {item ? (item.isInstanceEdit ? 'Editar Visita Específica' : 'Editar Agenda') : 'Nova Agenda'}
+              {item ? (item.isInstanceEdit ? 'Editar Visita Específica' : 'Editar Agenda') : 'Nova Agenda'}
             </h2>
           </div>
           <Button
@@ -230,18 +230,18 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({ item, onClose, selecte
           </Button>
         </div>
 
-                 {/* Aviso para edição de instância */}
-                 {item?.isInstanceEdit && (
-                   <div className="mx-6 mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                     <div className="flex items-center space-x-2">
-                       <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                       <p className="text-sm text-yellow-800">
-                         <strong>Editando visita específica:</strong> Esta alteração afetará apenas esta data. 
-                         As outras ocorrências da série recorrente permanecerão inalteradas.
-                       </p>
-                     </div>
-                   </div>
-                 )}
+        {/* Aviso para edição de instância */}
+        {item?.isInstanceEdit && (
+          <div className="mx-6 mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+              <p className="text-sm text-yellow-800">
+                <strong>Editando visita específica:</strong> Esta alteração afetará apenas esta data.
+                As outras ocorrências da série recorrente permanecerão inalteradas.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -258,17 +258,17 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({ item, onClose, selecte
                 <SelectValue placeholder="Selecione um contrato" />
               </SelectTrigger>
               <SelectContent>
-              {contratos.length === 0 ? (
-                <SelectItem value="no-contracts" disabled>
-                  Nenhum contrato encontrado
-                </SelectItem>
-              ) : (
-                contratos.map(contrato => (
-                  <SelectItem key={contrato.id} value={contrato.id}>
-                  {contrato.nome}
+                {contratos.length === 0 ? (
+                  <SelectItem value="no-contracts" disabled>
+                    Nenhum contrato encontrado
                   </SelectItem>
-                ))
-              )}
+                ) : (
+                  contratos.map(contrato => (
+                    <SelectItem key={contrato.id} value={contrato.id}>
+                      {contrato.nome}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
             {contratoSelecionado && (
@@ -298,10 +298,10 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({ item, onClose, selecte
 
           {/* Horários */}
           <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="horarioInicio" className="text-sm font-medium text-gray-700">
                 Início
-            </Label>
+              </Label>
               <div className="relative">
                 <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -312,21 +312,21 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({ item, onClose, selecte
                   className="pl-10"
                 />
               </div>
-          </div>
+            </div>
 
-          <div className="space-y-2">
+            <div className="space-y-2">
               <Label htmlFor="horarioFim" className="text-sm font-medium text-gray-700">
                 Término
-            </Label>
-            <div className="relative">
-              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
+              </Label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
                   id="horarioFim"
-                type="time"
+                  type="time"
                   value={formData.horarioFim}
                   onChange={(e) => handleInputChange('horarioFim', e.target.value)}
-                className="pl-10"
-              />
+                  className="pl-10"
+                />
               </div>
             </div>
           </div>
@@ -353,7 +353,7 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({ item, onClose, selecte
                 Evento Recorrente
               </Label>
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
@@ -436,7 +436,7 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({ item, onClose, selecte
                       A cada 30 dias
                     </Button>
                   </div>
-                  
+
                   {/* Campo personalizado para dias */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700">
@@ -510,7 +510,7 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({ item, onClose, selecte
             </Label>
             <Select
               value={formData.ativo ? 'true' : 'false'}
-                onValueChange={(value) => handleInputChange('ativo', value)}
+              onValueChange={(value) => handleInputChange('ativo', value)}
             >
               <option value="true">Ativo</option>
               <option value="false">Inativo</option>
@@ -544,30 +544,30 @@ export const AgendaModal: React.FC<AgendaModalProps> = ({ item, onClose, selecte
                 Excluir
               </Button>
             )}
-            
+
             <div className="flex space-x-3 ml-auto">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={loading}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Salvando...
-                </>
-              ) : (
-                item ? 'Atualizar' : 'Criar'
-              )}
-            </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={loading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  item ? 'Atualizar' : 'Criar'
+                )}
+              </Button>
             </div>
           </div>
         </form>

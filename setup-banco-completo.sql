@@ -157,3 +157,4 @@ SELECT 'outros_itens_corrigidos' as tabela, COUNT(*) as registros FROM outros_it
 
 
 
+

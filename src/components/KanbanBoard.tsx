@@ -1,25 +1,70 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { 
-  ClipboardList, 
-  Search, 
-  Wrench, 
-  CheckCircle, 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ClipboardList,
+  Search,
+  Wrench,
+  CheckCircle,
   Plus,
   Calendar,
   X,
-  Trash2
+  Trash2,
+  Filter
 } from 'lucide-react';
+
+// Definição das categorias e suas cores
+const CATEGORIES = {
+  VISTORIA: {
+    id: 'VISTORIA',
+    label: '1. VISTORIA',
+    color: 'bg-blue-500',
+    border: 'border-l-blue-500',
+    text: 'text-blue-700',
+    bgLight: 'bg-blue-50'
+  },
+  CONFERENCIA: {
+    id: 'CONFERENCIA',
+    label: '2. CONFERÊNCIA',
+    color: 'bg-purple-500',
+    border: 'border-l-purple-500',
+    text: 'text-purple-700',
+    bgLight: 'bg-purple-50'
+  },
+  COMISSIONAMENTO: {
+    id: 'COMISSIONAMENTO',
+    label: '3. COMISSIONAMENTO',
+    color: 'bg-orange-500',
+    border: 'border-l-orange-500',
+    text: 'text-orange-700',
+    bgLight: 'bg-orange-50'
+  },
+  DOCUMENTACAO: {
+    id: 'DOCUMENTACAO',
+    label: '4. DOCUMENTAÇÃO',
+    color: 'bg-green-500',
+    border: 'border-l-green-500',
+    text: 'text-green-700',
+    bgLight: 'bg-green-50'
+  }
+};
 
 interface KanbanItem {
   id: string;
   title: string;
   description?: string;
   status: 'recebido' | 'vistoria' | 'correcao' | 'implantado';
+  category: string; // Nova propriedade para categoria
   createdAt: string;
   updatedAt: string;
   dataVistoria?: string;
@@ -30,313 +75,69 @@ interface KanbanItem {
 }
 
 const initialItems: KanbanItem[] = [
-  // Sistemas Elétricos
-  {
-    id: '1',
-    title: 'QGBT (Quadro Geral de Baixa Tensão)',
-    status: 'vistoria',
-    createdAt: '2024-01-15',
-    updatedAt: '2024-01-15'
-  },
-  {
-    id: '2',
-    title: "QD's (Quadros de Distribuição por andar)",
-    status: 'vistoria',
-    createdAt: '2024-01-15',
-    updatedAt: '2024-01-15'
-  },
-  {
-    id: '3',
-    title: 'QTA (Quadro de Transferência Automática)',
-    status: 'vistoria',
-    createdAt: '2024-01-15',
-    updatedAt: '2024-01-15'
-  },
-  {
-    id: '4',
-    title: 'Gerador de energia',
-    status: 'vistoria',
-    createdAt: '2024-01-10',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '5',
-    title: 'Centro de Medição / Transformador',
-    status: 'vistoria',
-    createdAt: '2024-01-12',
-    updatedAt: '2024-01-18'
-  },
-  {
-    id: '6',
-    title: 'SPDA (Sistema de Proteção contra Descargas Atmosféricas)',
-    status: 'vistoria',
-    createdAt: '2024-01-08',
-    updatedAt: '2024-01-22'
-  },
-  {
-    id: '7',
-    title: 'Iluminação de emergência',
-    status: 'vistoria',
-    createdAt: '2024-01-05',
-    updatedAt: '2024-01-25'
-  },
-  // Sistemas Hidráulicos
-  {
-    id: '8',
-    title: 'Bombas de recalque',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '9',
-    title: 'Bombas de pressurização',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '10',
-    title: 'Bombas de drenagem / águas pluviais',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '11',
-    title: 'Reservatório inferior',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '12',
-    title: 'Reservatório superior',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '13',
-    title: 'VRP – Válvulas Redutoras de Pressão',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '14',
-    title: 'Rede de água fria',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '15',
-    title: 'Rede de água quente',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '16',
-    title: 'Rede de esgoto sanitário',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '17',
-    title: 'Sistema de drenagem (ralos, grelhas, calhas)',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '18',
-    title: 'Barrilete hidráulico (válvulas, registros e etiquetas)',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '19',
-    title: 'Sistema de reúso / reaproveitamento de água (quando houver)',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '20',
-    title: 'Bombas elevatórias de esgoto',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '21',
-    title: 'Bombas de águas pluviais',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  {
-    id: '22',
-    title: 'Testes de estanqueidade e vazão',
-    status: 'vistoria',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-01-20'
-  },
-  // Sistemas de Combate a Incêndio
-  {
-    id: '23',
-    title: 'Bombas de incêndio',
-    status: 'vistoria',
-    createdAt: '2024-01-25',
-    updatedAt: '2024-01-25'
-  },
-  {
-    id: '24',
-    title: 'Rede de hidrantes e mangotinhos',
-    status: 'vistoria',
-    createdAt: '2024-01-25',
-    updatedAt: '2024-01-25'
-  },
-  {
-    id: '25',
-    title: 'Sistema de detecção e alarme de incêndio',
-    status: 'vistoria',
-    createdAt: '2024-01-25',
-    updatedAt: '2024-01-25'
-  },
-  {
-    id: '26',
-    title: 'Extintores e suportes',
-    status: 'vistoria',
-    createdAt: '2024-01-25',
-    updatedAt: '2024-01-25'
-  },
-  {
-    id: '27',
-    title: 'Sinalização de rota de fuga',
-    status: 'vistoria',
-    createdAt: '2024-01-25',
-    updatedAt: '2024-01-25'
-  },
-  {
-    id: '28',
-    title: 'Pressurização de escadas',
-    status: 'vistoria',
-    createdAt: '2024-01-25',
-    updatedAt: '2024-01-25'
-  },
-  {
-    id: '29',
-    title: 'Mangueiras e esguichos certificados',
-    status: 'vistoria',
-    createdAt: '2024-01-25',
-    updatedAt: '2024-01-25'
-  },
-  // Sistema de Ar Condicionado e Ventilação
-  {
-    id: '30',
-    title: 'Sistema de distribuição de ar (dutos)',
-    status: 'vistoria',
-    createdAt: '2024-01-30',
-    updatedAt: '2024-01-30'
-  },
-  {
-    id: '31',
-    title: 'Ventiladores centrífugos e axiais',
-    status: 'vistoria',
-    createdAt: '2024-01-30',
-    updatedAt: '2024-01-30'
-  },
-  {
-    id: '32',
-    title: 'Sistema de controle e automação',
-    status: 'vistoria',
-    createdAt: '2024-01-30',
-    updatedAt: '2024-01-30'
-  },
-  {
-    id: '33',
-    title: 'Sistema de recuperação de calor',
-    status: 'vistoria',
-    createdAt: '2024-01-30',
-    updatedAt: '2024-01-30'
-  },
-  // Sistema de Gás - Central de GLP / GN
-  {
-    id: '34',
-    title: 'Central de GN (gás natural)',
-    status: 'vistoria',
-    createdAt: '2024-02-01',
-    updatedAt: '2024-02-01'
-  },
-  {
-    id: '35',
-    title: 'Medidores de gás',
-    status: 'vistoria',
-    createdAt: '2024-02-01',
-    updatedAt: '2024-02-01'
-  },
-  {
-    id: '36',
-    title: 'Ventilação da central de gás',
-    status: 'vistoria',
-    createdAt: '2024-02-01',
-    updatedAt: '2024-02-01'
-  },
-  {
-    id: '37',
-    title: 'Testes de pressão e estanqueidade',
-    status: 'vistoria',
-    createdAt: '2024-02-01',
-    updatedAt: '2024-02-01'
-  },
-  // Portões Automáticos e Clausuras
-  {
-    id: '38',
-    title: 'Portões automáticos de entrada',
-    status: 'vistoria',
-    createdAt: '2024-02-05',
-    updatedAt: '2024-02-05'
-  },
-  {
-    id: '39',
-    title: 'Portões automáticos de garagem',
-    status: 'vistoria',
-    createdAt: '2024-02-05',
-    updatedAt: '2024-02-05'
-  },
-  {
-    id: '40',
-    title: 'Clausuras e cancelas',
-    status: 'vistoria',
-    createdAt: '2024-02-05',
-    updatedAt: '2024-02-05'
-  },
-  {
-    id: '41',
-    title: 'Sistema de acionamento remoto',
-    status: 'vistoria',
-    createdAt: '2024-02-05',
-    updatedAt: '2024-02-05'
-  },
-  {
-    id: '42',
-    title: 'Sistema de controle de acesso',
-    status: 'vistoria',
-    createdAt: '2024-02-05',
-    updatedAt: '2024-02-05'
-  },
-  {
-    id: '43',
-    title: 'Interfones e campainhas',
-    status: 'vistoria',
-    createdAt: '2024-02-05',
-    updatedAt: '2024-02-05'
-  }
+  // 1. VISTORIA
+  { id: '1', title: 'ÁREAS COMUNS', category: 'VISTORIA', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '2', title: 'HALLS', category: 'VISTORIA', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '3', title: 'ESCADARIAS', category: 'VISTORIA', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '4', title: 'ÁREAS TÉCNICAS', category: 'VISTORIA', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '5', title: 'ELEVADORES', category: 'VISTORIA', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+
+  // 2. CONFERÊNCIA
+  { id: '6', title: 'CONFERÊNCIA MEMORIAL', category: 'CONFERENCIA', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '7', title: 'CONFERÊNCIA MANGUEIRAS', category: 'CONFERENCIA', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '8', title: 'CONFERÊNCIA CHAVE STORZ', category: 'CONFERENCIA', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '9', title: 'CONFERÊNCIA CONEXÃO', category: 'CONFERENCIA', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '10', title: 'CONFERÊNCIA ESGUICHO', category: 'CONFERENCIA', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '11', title: 'CONFERÊNCIA EXTINTORES', category: 'CONFERENCIA', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+
+  // 3. COMISSIONAMENTO
+  { id: '12', title: 'GERADOR', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '13', title: 'SISTEMA ELÉTRICO — QGBT, QTA, QUADROS, BARRAMENTOS, TRAFO, BUSWAY', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '14', title: 'SPDA', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '15', title: 'BOMBA INCÊNDIO', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '16', title: 'BOMBAS DE RECALQUE', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '17', title: 'BOMBAS DE PRESSURIZAÇÃO', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '18', title: 'BOMBAS SUBMERSAS', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '19', title: 'POÇOS E PRUMADAS', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '20', title: 'SISTEMA HIDRÁULICO — RESERV., VRP, PRUMADAS, VENTOSAS', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '21', title: 'SIST. ÁGUA QUENTE', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '22', title: 'SDAI', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '23', title: 'PRESS. ESCADA', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '24', title: 'EXAUSTÃO GARAGEM', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '25', title: 'PORTÕES', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '26', title: 'INTERFONE', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '27', title: 'AR CONDICIONADO', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '28', title: 'IRRIGAÇÃO', category: 'COMISSIONAMENTO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+
+  // 4. DOCUMENTAÇÃO
+  { id: '29', title: 'Manual de Uso, Operação e Manutenção específico do empreendimento (NBR-14037)', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '30', title: 'Projetos legais', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '31', title: 'Projetos As Built', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '32', title: 'Auto de conclusão (habite-se)', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '33', title: 'Alvará de aprovação da edificação', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '34', title: 'Alvará de execução da edificação', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '35', title: 'AVCB (Auto de Vistoria do Corpo de Bombeiros)', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '36', title: 'ART de execução do Sistema de prevenção e Combate a Incêndio', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '37', title: 'ART de projeto do Sistema de prevenção e Combate a Incêndio', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '38', title: 'Alvará de Licença de Funcionamento de Elevadores', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '39', title: 'Termo de conclusão e Recebimento da empresa do Elevador', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '40', title: 'ART de execução dos Elevadores', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '41', title: 'Comprovante de Vistorias da Comgás e Laudo de estanqueidade do sistema de gás', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '42', title: 'Atestado de Start-up do gerador', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '43', title: 'Manual de instalação, operação e manutenção do Gerador', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '44', title: 'ART de projeto e execução do gerador', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '45', title: 'Certificado de limpeza dos ralos, poços e redes (esgoto, drenagem e pluvial) das áreas comuns', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '46', title: 'Certificado de limpeza dos ralos das unidades privativas', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '47', title: 'Ensaio de arrancamento dos dispositivos de ancoragem', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '48', title: 'Ordem de Serviço de Start-up e Relatório Técnico das VRPs', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '49', title: 'Manuais de operação e garantia do Sistema de Irrigação de Jardins', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '50', title: 'Certificado de conformidade das instalações elétricas', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '51', title: 'ART de projeto e instalação elétrica', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '52', title: 'Certificado de limpeza dos reservatórios de água potável', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '53', title: 'Análise de potabilidade da água fria', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '54', title: 'Laudo de SPDA com medição ôhmica e ART', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '55', title: 'Memorial descritivo', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '56', title: 'Notas fiscais dos equipamentos instalados no empreendimento', category: 'DOCUMENTACAO', status: 'vistoria', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
 ];
 
 
@@ -350,53 +151,61 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
   const [items, setItems] = useState<KanbanItem[]>(initialItems);
   const [draggedItem, setDraggedItem] = useState<KanbanItem | null>(null);
   const [showDateModal, setShowDateModal] = useState(false);
-  const [pendingMove, setPendingMove] = useState<{item: KanbanItem, newStatus: string} | null>(null);
+  const [pendingMove, setPendingMove] = useState<{ item: KanbanItem, newStatus: string } | null>(null);
   const [recebimentoDate, setRecebimentoDate] = useState('');
   const [vistoriaDate, setVistoriaDate] = useState('');
-  
+
+  // Estado para filtro de categoria
+  const [selectedCategory, setSelectedCategory] = useState<string>('TODOS');
+
   // Estados para modal de novo item
   const [showNewItemModal, setShowNewItemModal] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState('');
-  
+  const [newItemCategory, setNewItemCategory] = useState<string>('VISTORIA');
+
   // Estados para modal de correção
   const [showCorrecaoModal, setShowCorrecaoModal] = useState(false);
   const [correcaoText, setCorrecaoText] = useState('');
-  
+
   // Estados para modal de detalhes do card
   const [showCardDetails, setShowCardDetails] = useState(false);
   const [selectedCard, setSelectedCard] = useState<KanbanItem | null>(null);
 
-  // Kanban usa apenas a lista original de sistemas de manutenção
+  // Filtrar itens baseado na categoria selecionada
+  const filteredItems = useMemo(() => {
+    if (selectedCategory === 'TODOS') return items;
+    return items.filter(item => item.category === selectedCategory);
+  }, [items, selectedCategory]);
 
-  // Recalcular colunas baseado no estado atual dos items
+  // Recalcular colunas baseado no estado atual dos items filtrados
   const getColumns = () => [
     {
       id: 'vistoria',
-      title: 'AG Vistoria',
+      title: 'Aguardando',
       icon: Search,
-      color: 'bg-red-100 text-red-700',
-      items: items.filter(item => item.status === 'vistoria')
+      color: 'bg-red-600 text-white',
+      items: filteredItems.filter(item => item.status === 'vistoria')
     },
     {
       id: 'correcao',
-      title: 'Em Correção',
+      title: 'Em Andamento',
       icon: Wrench,
-      color: 'bg-orange-100 text-orange-700',
-      items: items.filter(item => item.status === 'correcao')
+      color: 'bg-yellow-500 text-black',
+      items: filteredItems.filter(item => item.status === 'correcao')
     },
     {
       id: 'recebido',
-      title: 'Recebido',
+      title: 'Em Correção',
       icon: ClipboardList,
-      color: 'bg-blue-100 text-blue-700',
-      items: items.filter(item => item.status === 'recebido')
+      color: 'bg-green-600 text-white',
+      items: filteredItems.filter(item => item.status === 'recebido')
     },
     {
       id: 'implantado',
-      title: 'Implantado',
+      title: 'Finalizado',
       icon: CheckCircle,
-      color: 'bg-green-100 text-green-700',
-      items: items.filter(item => item.status === 'implantado')
+      color: 'bg-emerald-600 text-white',
+      items: filteredItems.filter(item => item.status === 'implantado')
     }
   ];
 
@@ -413,7 +222,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
     e.preventDefault();
     if (draggedItem) {
       console.log('🔄 Movendo item:', draggedItem.title, 'para:', newStatus);
-      
+
       // Se está movendo para "Recebido", pedir data de recebimento
       if (newStatus === 'recebido') {
         setPendingMove({ item: draggedItem, newStatus });
@@ -421,7 +230,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
         setDraggedItem(null);
         return;
       }
-      
+
       // Se está movendo para "Em Correção", pedir o que precisa corrigir
       if (newStatus === 'correcao') {
         setPendingMove({ item: draggedItem, newStatus });
@@ -429,10 +238,10 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
         setDraggedItem(null);
         return;
       }
-      
+
       // Para outros status, mover diretamente
-      setItems(prev => prev.map(item => 
-        item.id === draggedItem.id 
+      setItems(prev => prev.map(item =>
+        item.id === draggedItem.id
           ? { ...item, status: newStatus as any, updatedAt: new Date().toISOString().split('T')[0] }
           : item
       ));
@@ -445,14 +254,14 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
       setItems(prev => prev.map(item => {
         if (item.id === pendingMove.item.id) {
           // Se o item tinha correção, criar histórico
-          const historicoCorrecao = item.correcao 
+          const historicoCorrecao = item.correcao
             ? `Item corrigido em ${new Date().toLocaleDateString('pt-BR')}. Problema inicial: ${item.correcao}`
             : undefined;
-          
-          return { 
-            ...item, 
-            status: 'recebido' as any, 
-            updatedAt: new Date().toISOString().split('T')[0], 
+
+          return {
+            ...item,
+            status: 'recebido' as any,
+            updatedAt: new Date().toISOString().split('T')[0],
             dataRecebimento: recebimentoDate,
             dataCorrecao: item.correcao ? new Date().toISOString().split('T')[0] : undefined,
             historicoCorrecao
@@ -468,8 +277,8 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
 
   const handleConfirmVistoria = () => {
     if (pendingMove && vistoriaDate) {
-      setItems(prev => prev.map(item => 
-        item.id === pendingMove.item.id 
+      setItems(prev => prev.map(item =>
+        item.id === pendingMove.item.id
           ? { ...item, status: 'correcao' as any, updatedAt: new Date().toISOString().split('T')[0], dataVistoria: vistoriaDate }
           : item
       ));
@@ -489,22 +298,25 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
   // Funções para criar novo item
   const handleCreateNewItem = () => {
     if (!newItemTitle.trim()) return;
-    
+
     const newItem: KanbanItem = {
       id: Date.now().toString(),
       title: newItemTitle.trim(),
       status: 'vistoria', // Novos itens sempre começam em AG Vistoria
+      category: newItemCategory,
       createdAt: new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString().split('T')[0]
     };
-    
+
     setItems(prev => [...prev, newItem]);
     setNewItemTitle('');
+    setNewItemCategory('VISTORIA');
     setShowNewItemModal(false);
   };
 
   const handleCancelNewItem = () => {
     setNewItemTitle('');
+    setNewItemCategory('VISTORIA');
     setShowNewItemModal(false);
   };
 
@@ -518,15 +330,15 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
   // Funções para modal de correção
   const handleConfirmCorrecao = () => {
     if (pendingMove && correcaoText.trim() && vistoriaDate) {
-      setItems(prev => prev.map(item => 
-        item.id === pendingMove.item.id 
-          ? { 
-              ...item, 
-              status: 'correcao' as any, 
-              correcao: correcaoText.trim(),
-              dataVistoria: vistoriaDate,
-              updatedAt: new Date().toISOString().split('T')[0] 
-            }
+      setItems(prev => prev.map(item =>
+        item.id === pendingMove.item.id
+          ? {
+            ...item,
+            status: 'correcao' as any,
+            correcao: correcaoText.trim(),
+            dataVistoria: vistoriaDate,
+            updatedAt: new Date().toISOString().split('T')[0]
+          }
           : item
       ));
     }
@@ -549,27 +361,68 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
     setShowCardDetails(true);
   };
 
+  // Helper para pegar a cor da categoria
+  const getCategoryColor = (categoryId: string) => {
+    const category = Object.values(CATEGORIES).find(c => c.id === categoryId);
+    return category ? category.border : 'border-l-gray-300';
+  };
+
+  const getCategoryBadge = (categoryId: string) => {
+    const category = Object.values(CATEGORIES).find(c => c.id === categoryId);
+    if (!category) return null;
+
+    return (
+      <span className={`text-[10px] font-bold px-2 py-1 rounded-md ${category.color} text-white shadow-sm`}>
+        {category.label.split('.')[1]}
+      </span>
+    );
+  };
+
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Kanban - Implantação de Manutenção Predial</h1>
           <p className="text-gray-600 mt-1">Acompanhe o progresso da implantação dos sistemas prediais</p>
         </div>
-        <Button 
-          className="bg-blue-600 hover:bg-blue-700"
-          onClick={() => setShowNewItemModal(true)}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Item
-        </Button>
+
+        <div className="flex items-center gap-3">
+          {/* Filtro de Categoria */}
+          <div className="flex items-center gap-2 bg-white p-1 rounded-md border border-gray-200 shadow-sm">
+            <Filter className="w-4 h-4 text-gray-500 ml-2" />
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-[200px] border-0 focus:ring-0 h-8">
+                <SelectValue placeholder="Filtrar por categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Todas as Categorias</SelectItem>
+                {Object.values(CATEGORIES).map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${cat.color}`}></div>
+                      {cat.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button
+            className="bg-blue-600 hover:bg-blue-700"
+            onClick={() => setShowNewItemModal(true)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Item
+          </Button>
+        </div>
       </div>
 
       {/* Summary */}
       <div className="bg-gray-50 rounded-lg p-4">
-        <h3 className="font-semibold text-gray-900 mb-3">Resumo do Progresso</h3>
+        <h3 className="font-semibold text-gray-900 mb-3">Resumo do Progresso {selectedCategory !== 'TODOS' && `(${Object.values(CATEGORIES).find(c => c.id === selectedCategory)?.label})`}</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {getColumns().map((column) => {
             const Icon = column.icon;
@@ -611,21 +464,24 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                 {column.items.map((item) => (
                   <Card
                     key={item.id}
-                    className={`cursor-move hover:shadow-md transition-shadow bg-white ${
-                      item.correcao ? 'border-l-4 border-l-orange-500' : ''
-                    }`}
+                    className={`cursor-move hover:shadow-md transition-shadow bg-white border-l-4 ${getCategoryColor(item.category)}`}
                     draggable
                     onDragStart={() => handleDragStart(item)}
                     onClick={() => handleShowCardDetails(item)}
                   >
-                    <CardContent className="p-4">
+                    <CardContent className="p-3">
                       <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-medium text-gray-900 text-sm leading-tight flex-1 pr-2">
-                          {item.title}
-                        </h4>
+                        <div className="flex-1 pr-2">
+                          <div className="mb-1">
+                            {getCategoryBadge(item.category)}
+                          </div>
+                          <h4 className="font-medium text-gray-900 text-sm leading-tight">
+                            {item.title}
+                          </h4>
+                        </div>
                         <div className="flex items-center gap-1">
                           {item.correcao && (
-                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                            <div className="w-2 h-2 bg-orange-500 rounded-full" title="Em correção"></div>
                           )}
                           <Button
                             variant="ghost"
@@ -640,15 +496,15 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                           </Button>
                         </div>
                       </div>
-                      
-                      <div className="flex gap-2 mt-3 flex-wrap">
+
+                      <div className="flex gap-2 mt-2 flex-wrap">
                         {item.dataVistoria && (
-                          <div className="text-[10px] text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                          <div className="text-[10px] text-white bg-orange-600 px-2 py-0.5 rounded">
                             Vistoria: {new Date(item.dataVistoria + 'T00:00:00').toLocaleDateString('pt-BR')}
                           </div>
                         )}
                         {item.dataRecebimento && (
-                          <div className="text-[10px] text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                          <div className="text-[10px] text-white bg-blue-600 px-2 py-0.5 rounded">
                             Recebido: {new Date(item.dataRecebimento + 'T00:00:00').toLocaleDateString('pt-BR')}
                           </div>
                         )}
@@ -656,7 +512,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                     </CardContent>
                   </Card>
                 ))}
-                
+
                 {/* Empty state */}
                 {column.items.length === 0 && (
                   <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
@@ -671,7 +527,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
 
       {/* Modal para Data */}
       {showDateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="w-5 h-5 text-blue-600" />
@@ -679,11 +535,11 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                 {pendingMove?.newStatus === 'recebido' ? 'Data de Recebimento' : 'Data de Vistoria'}
               </h3>
             </div>
-            
+
             <p className="text-gray-600 mb-4">
               Informe a data {pendingMove?.newStatus === 'recebido' ? 'de recebimento' : 'de vistoria'} para o item: <strong>{pendingMove?.item.title}</strong>
             </p>
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {pendingMove?.newStatus === 'recebido' ? 'Data de Recebimento' : 'Data de Vistoria'}
@@ -702,7 +558,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                 max={new Date().toISOString().split('T')[0]}
               />
             </div>
-            
+
             <div className="flex gap-3 justify-end">
               <Button
                 variant="outline"
@@ -725,7 +581,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
 
       {/* Modal para Novo Item */}
       {showNewItemModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -741,31 +597,46 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            
+
             <p className="text-gray-600 mb-4">
               Crie um novo item que será adicionado automaticamente na coluna "AG Vistoria".
             </p>
-            
-            <div className="mb-4">
-              <Label htmlFor="newItemTitle" className="block text-sm font-medium text-gray-700 mb-2">
-                Título do Item
-              </Label>
-              <Input
-                id="newItemTitle"
-                type="text"
-                value={newItemTitle}
-                onChange={(e) => setNewItemTitle(e.target.value)}
-                placeholder="Digite o título do novo item..."
-                className="w-full"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && newItemTitle.trim()) {
-                    handleCreateNewItem();
-                  }
-                }}
-              />
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="newItemTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                  Título do Item
+                </Label>
+                <Input
+                  id="newItemTitle"
+                  type="text"
+                  value={newItemTitle}
+                  onChange={(e) => setNewItemTitle(e.target.value)}
+                  placeholder="Digite o título do novo item..."
+                  className="w-full"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="newItemCategory" className="block text-sm font-medium text-gray-700 mb-2">
+                  Categoria
+                </Label>
+                <Select value={newItemCategory} onValueChange={setNewItemCategory}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione a categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(CATEGORIES).map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            
-            <div className="flex gap-3 justify-end">
+
+            <div className="flex gap-3 justify-end mt-6">
               <Button
                 variant="outline"
                 onClick={handleCancelNewItem}
@@ -787,45 +658,44 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
 
       {/* Modal para Correção */}
       {showCorrecaoModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
             <div className="flex items-center gap-2 mb-4">
               <Wrench className="w-5 h-5 text-orange-600" />
               <h3 className="text-lg font-semibold text-gray-900">O que precisa corrigir?</h3>
             </div>
-            
+
             <p className="text-gray-600 mb-4">
               Descreva o que precisa ser corrigido no item: <strong>{pendingMove?.item.title}</strong>
             </p>
-            
-            <div className="mb-4">
-              <Label htmlFor="vistoriaDate" className="block text-sm font-medium text-gray-700 mb-2">
-                Data de Vistoria
-              </Label>
-              <input
-                id="vistoriaDate"
-                type="date"
-                value={vistoriaDate}
-                onChange={(e) => setVistoriaDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                max={new Date().toISOString().split('T')[0]}
-              />
+
+            <div className="mb-4 space-y-4">
+              <div>
+                <Label className="block text-sm font-medium text-gray-700 mb-2">
+                  Data da Vistoria
+                </Label>
+                <input
+                  type="date"
+                  value={vistoriaDate}
+                  onChange={(e) => setVistoriaDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+
+              <div>
+                <Label className="block text-sm font-medium text-gray-700 mb-2">
+                  Descrição do Problema
+                </Label>
+                <textarea
+                  value={correcaoText}
+                  onChange={(e) => setCorrecaoText(e.target.value)}
+                  placeholder="Descreva o problema encontrado..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent h-32 resize-none"
+                />
+              </div>
             </div>
-            
-            <div className="mb-4">
-              <Label htmlFor="correcaoText" className="block text-sm font-medium text-gray-700 mb-2">
-                Descrição da Correção
-              </Label>
-              <textarea
-                id="correcaoText"
-                value={correcaoText}
-                onChange={(e) => setCorrecaoText(e.target.value)}
-                placeholder="Descreva o que precisa ser corrigido..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
-                rows={4}
-              />
-            </div>
-            
+
             <div className="flex gap-3 justify-end">
               <Button
                 variant="outline"
@@ -846,80 +716,109 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
         </div>
       )}
 
-      {/* Modal para Detalhes do Card */}
+      {/* Modal de Detalhes do Card */}
       {showCardDetails && selectedCard && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Detalhes do Item</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl overflow-hidden">
+            <div className={`p-4 ${getCategoryColor(selectedCard.category).replace('border-l-4', 'border-l-8')} border-l-solid bg-gray-50 flex justify-between items-start`}>
+              <div>
+                <div className="mb-2">
+                  {getCategoryBadge(selectedCard.category)}
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">{selectedCard.title}</h2>
+                <p className="text-sm text-gray-500">ID: {selectedCard.id}</p>
+              </div>
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={() => setShowCardDetails(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </Button>
             </div>
-            
-            <div className="space-y-4">
-              <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-1">Título</Label>
-                <p className="text-gray-900">{selectedCard.title}</p>
-              </div>
-              
-              <div>
-                <Label className="block text-sm font-medium text-gray-700 mb-1">Status</Label>
-                <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                  selectedCard.status === 'vistoria' ? 'bg-red-100 text-red-700' :
-                  selectedCard.status === 'correcao' ? 'bg-orange-100 text-orange-700' :
-                  selectedCard.status === 'recebido' ? 'bg-blue-100 text-blue-700' :
-                  'bg-green-100 text-green-700'
-                }`}>
-                  {selectedCard.status === 'vistoria' ? 'AG Vistoria' :
-                   selectedCard.status === 'correcao' ? 'Em Correção' :
-                   selectedCard.status === 'recebido' ? 'Recebido' : 'Implantado'}
-                </span>
-              </div>
-              
-              {selectedCard.dataVistoria && (
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-1">Data de Vistoria</Label>
-                  <p className="text-gray-900">{new Date(selectedCard.dataVistoria + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Status Atual</h3>
+                  <Badge className={`
+                    ${selectedCard.status === 'vistoria' ? 'bg-red-100 text-red-800' : ''}
+                    ${selectedCard.status === 'correcao' ? 'bg-yellow-100 text-yellow-800' : ''}
+                    ${selectedCard.status === 'recebido' ? 'bg-green-100 text-green-800' : ''}
+                    ${selectedCard.status === 'implantado' ? 'bg-emerald-100 text-emerald-800' : ''}
+                  `}>
+                    {selectedCard.status === 'vistoria' && 'Aguardando'}
+                    {selectedCard.status === 'correcao' && 'Em Andamento'}
+                    {selectedCard.status === 'recebido' && 'Em Correção'}
+                    {selectedCard.status === 'implantado' && 'Finalizado'}
+                  </Badge>
                 </div>
-              )}
-              
-              {selectedCard.dataRecebimento && (
+
                 <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-1">Data de Recebimento</Label>
-                  <p className="text-gray-900">{new Date(selectedCard.dataRecebimento + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Categoria</h3>
+                  <span className="text-gray-900 font-medium">
+                    {Object.values(CATEGORIES).find(c => c.id === selectedCard.category)?.label}
+                  </span>
                 </div>
-              )}
-              
-              {selectedCard.correcao && selectedCard.status !== 'recebido' && (
+
                 <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-1">O que precisa corrigir</Label>
-                  <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
-                    <p className="text-orange-800 text-sm">{selectedCard.correcao}</p>
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Data de Criação</h3>
+                  <p className="text-gray-900">
+                    {new Date(selectedCard.createdAt).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-1">Última Atualização</h3>
+                  <p className="text-gray-900">
+                    {new Date(selectedCard.updatedAt).toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+
+                {selectedCard.dataVistoria && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Data da Vistoria</h3>
+                    <p className="text-gray-900">
+                      {new Date(selectedCard.dataVistoria + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    </p>
                   </div>
+                )}
+
+                {selectedCard.dataRecebimento && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-1">Data de Recebimento</h3>
+                    <p className="text-gray-900">
+                      {new Date(selectedCard.dataRecebimento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {selectedCard.correcao && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <h3 className="text-sm font-bold text-orange-800 mb-2 flex items-center gap-2">
+                    <Wrench className="w-4 h-4" />
+                    Correção Necessária
+                  </h3>
+                  <p className="text-orange-900 text-sm whitespace-pre-wrap">
+                    {selectedCard.correcao}
+                  </p>
                 </div>
               )}
-              
+
               {selectedCard.historicoCorrecao && (
-                <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-1">Histórico de Correção</Label>
-                  <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                    <p className="text-green-800 text-sm">{selectedCard.historicoCorrecao}</p>
-                  </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h3 className="text-sm font-bold text-gray-700 mb-2">Histórico de Correções</h3>
+                  <p className="text-gray-600 text-sm whitespace-pre-wrap">
+                    {selectedCard.historicoCorrecao}
+                  </p>
                 </div>
               )}
             </div>
-            
-            <div className="flex justify-end mt-6">
-              <Button
-                onClick={() => setShowCardDetails(false)}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
+
+            <div className="p-4 bg-gray-50 border-t flex justify-end">
+              <Button onClick={() => setShowCardDetails(false)}>
                 Fechar
               </Button>
             </div>

@@ -61,8 +61,8 @@ export function NovaRondaModal({
   const handleSaveOutroItem = (item: OutroItemCorrigido) => {
     if (itemEditando) {
       // Editando item existente
-      setOutrosItensCorrigidos(prev => 
-        prev?.filter(item => item && item.id).map(existingItem => 
+      setOutrosItensCorrigidos(prev =>
+        prev?.filter(item => item && item.id).map(existingItem =>
           existingItem.id === itemEditando.id ? item : existingItem
         ) || []
       );
@@ -121,7 +121,7 @@ export function NovaRondaModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg w-full max-w-md max-h-[95vh] overflow-y-auto">
         {/* Header fixo */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 rounded-t-lg">
@@ -130,184 +130,184 @@ export function NovaRondaModal({
               <FileText className="w-5 h-5" />
               Nova Ronda
             </h2>
-            <button 
-              onClick={onClose} 
+            <button
+              onClick={onClose}
               className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
-        
+
         {/* Conteúdo do formulário */}
         <div className="p-4">
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Nome da Ronda *</label>
-            <Input
-              value={formData.nome}
-              onChange={(e) => handleInputChange('nome', e.target.value)}
-              placeholder="Ex: Ronda Matutina - Centro"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Contrato *</label>
-            <Input
-              value={formData.contrato}
-              onChange={(e) => handleInputChange('contrato', e.target.value)}
-              placeholder="Ex: CT001/2024 - Manutenção Preventiva"
-              required
-              readOnly={!!contratoSelecionado}
-              className={contratoSelecionado ? 'bg-gray-100' : ''}
-            />
-            {contratoSelecionado && (
-              <p className="text-xs text-gray-500 mt-1">
-                Contrato selecionado automaticamente
-              </p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                Data *
-              </label>
+              <label className="block text-sm font-medium mb-1">Nome da Ronda *</label>
               <Input
-                type="date"
-                value={formData.data}
-                onChange={(e) => handleInputChange('data', e.target.value)}
+                value={formData.nome}
+                onChange={(e) => handleInputChange('nome', e.target.value)}
+                placeholder="Ex: Ronda Matutina - Centro"
                 required
               />
             </div>
+
             <div>
-              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-                <Clock className="w-4 h-4" />
-                Hora *
-              </label>
+              <label className="block text-sm font-medium mb-1">Contrato *</label>
               <Input
-                type="time"
-                value={formData.hora}
-                onChange={(e) => handleInputChange('hora', e.target.value)}
+                value={formData.contrato}
+                onChange={(e) => handleInputChange('contrato', e.target.value)}
+                placeholder="Ex: CT001/2024 - Manutenção Preventiva"
                 required
+                readOnly={!!contratoSelecionado}
+                className={contratoSelecionado ? 'bg-gray-100' : ''}
               />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-              <User className="w-4 h-4" />
-              Responsável
-            </label>
-            <Input
-              value={formData.responsavel}
-              onChange={(e) => handleInputChange('responsavel', e.target.value)}
-              placeholder="Nome do responsável pela ronda"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Observações Gerais</label>
-            <Input
-              value={formData.observacoesGerais}
-              onChange={(e) => handleInputChange('observacoesGerais', e.target.value)}
-              placeholder="Observações sobre a ronda"
-            />
-          </div>
-
-          {/* Info sobre áreas técnicas pré-definidas */}
-          <div className="bg-blue-50 p-3 rounded-lg">
-            <p className="text-sm text-blue-800 font-medium mb-2">
-              ✅ Áreas Técnicas serão criadas automaticamente:
-            </p>
-            <div className="text-xs text-blue-700 space-y-1">
-              {AREAS_TECNICAS_PREDEFINIDAS.map((area, index) => (
-                <div key={index}>• {area}</div>
-              ))}
-            </div>
-          </div>
-
-          {/* Seção de Outros Itens Corrigidos */}
-          <div className="border-t pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Wrench className="w-5 h-5" />
-                Outros Itens Corrigidos
-              </h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddOutroItem}
-                className="flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Adicionar Item
-              </Button>
+              {contratoSelecionado && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Contrato selecionado automaticamente
+                </p>
+              )}
             </div>
 
-            {outrosItensCorrigidos.length === 0 ? (
-              <div className="text-center py-6 text-gray-500">
-                <Wrench className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                <p>Nenhum item adicionado</p>
-                <p className="text-sm">Clique em "Adicionar Item" para incluir correções, melhorias ou manutenções</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  Data *
+                </label>
+                <Input
+                  type="date"
+                  value={formData.data}
+                  onChange={(e) => handleInputChange('data', e.target.value)}
+                  required
+                />
               </div>
-            ) : (
-              <div className="space-y-3">
-                {outrosItensCorrigidos?.filter(item => item && item.id).map((item, index) => (
-                  <div key={item.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">
-                        Item {index + 1}: {item.nome || 'Sem nome'}
-                      </span>
-                      <div className="flex gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditOutroItem(item)}
-                          className="h-6 w-6 p-0 text-xs"
-                        >
-                          ✏️
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteOutroItem(item.id)}
-                          className="h-6 w-6 p-0 text-xs text-red-600 hover:text-red-700"
-                        >
-                          🗑️
-                        </Button>
-                      </div>
-                    </div>
-                    {item.nome && (
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <div><strong>Descrição:</strong> {item.descricao || 'Não informada'}</div>
-                        <div><strong>Local:</strong> {item.local || 'Não informado'}</div>
-                        <div><strong>Tipo:</strong> {item.tipo}</div>
-                        <div><strong>Prioridade:</strong> {item.prioridade}</div>
-                        <div><strong>Status:</strong> {item.status}</div>
-                      </div>
-                    )}
-                  </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  Hora *
+                </label>
+                <Input
+                  type="time"
+                  value={formData.hora}
+                  onChange={(e) => handleInputChange('hora', e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                <User className="w-4 h-4" />
+                Responsável
+              </label>
+              <Input
+                value={formData.responsavel}
+                onChange={(e) => handleInputChange('responsavel', e.target.value)}
+                placeholder="Nome do responsável pela ronda"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Observações Gerais</label>
+              <Input
+                value={formData.observacoesGerais}
+                onChange={(e) => handleInputChange('observacoesGerais', e.target.value)}
+                placeholder="Observações sobre a ronda"
+              />
+            </div>
+
+            {/* Info sobre áreas técnicas pré-definidas */}
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm text-blue-800 font-medium mb-2">
+                ✅ Áreas Técnicas serão criadas automaticamente:
+              </p>
+              <div className="text-xs text-blue-700 space-y-1">
+                {AREAS_TECNICAS_PREDEFINIDAS.map((area, index) => (
+                  <div key={index}>• {area}</div>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
 
-          <div className="flex gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-              Cancelar
-            </Button>
-            <Button type="submit" className="flex-1">
-              Criar Ronda
-            </Button>
-          </div>
-        </form>
+            {/* Seção de Outros Itens Corrigidos */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Wrench className="w-5 h-5" />
+                  Outros Itens Corrigidos
+                </h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddOutroItem}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar Item
+                </Button>
+              </div>
+
+              {outrosItensCorrigidos.length === 0 ? (
+                <div className="text-center py-6 text-gray-500">
+                  <Wrench className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p>Nenhum item adicionado</p>
+                  <p className="text-sm">Clique em "Adicionar Item" para incluir correções, melhorias ou manutenções</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {outrosItensCorrigidos?.filter(item => item && item.id).map((item, index) => (
+                    <div key={item.id} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          Item {index + 1}: {item.nome || 'Sem nome'}
+                        </span>
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditOutroItem(item)}
+                            className="h-6 w-6 p-0 text-xs"
+                          >
+                            ✏️
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteOutroItem(item.id)}
+                            className="h-6 w-6 p-0 text-xs text-red-600 hover:text-red-700"
+                          >
+                            🗑️
+                          </Button>
+                        </div>
+                      </div>
+                      {item.nome && (
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <div><strong>Descrição:</strong> {item.descricao || 'Não informada'}</div>
+                          <div><strong>Local:</strong> {item.local || 'Não informado'}</div>
+                          <div><strong>Tipo:</strong> {item.tipo}</div>
+                          <div><strong>Prioridade:</strong> {item.prioridade}</div>
+                          <div><strong>Status:</strong> {item.status}</div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+                Cancelar
+              </Button>
+              <Button type="submit" className="flex-1">
+                Criar Ronda
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
 

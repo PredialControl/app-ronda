@@ -6,6 +6,7 @@ import { GerenciarContratos } from '@/components/GerenciarContratos';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { LaudosKanban } from '@/components/LaudosKanban';
 import { CalendarView } from '@/components/CalendarView';
+import { ParecerTecnico } from '@/components/ParecerTecnico';
 
 import { FotoRondaModal } from '@/components/FotoRondaModal';
 import { TabelaRondas } from '@/components/TabelaRondas';
@@ -16,7 +17,7 @@ import { Dashboard } from '@/components/Dashboard';
 import { LoginScreen } from '@/components/LoginScreen';
 import { AreaTecnica, Ronda, Contrato, FotoRonda, OutroItemCorrigido, UsuarioAutorizado } from '@/types';
 import { AREAS_TECNICAS_PREDEFINIDAS } from '@/data/areasTecnicas';
-import { FileText, Building2, BarChart3, LogOut, User, Calendar, Kanban, FileCheck } from 'lucide-react';
+import { FileText, Building2, BarChart3, LogOut, User, Calendar, Kanban, FileCheck, ArrowLeft } from 'lucide-react';
 
 import { contratoService, rondaService, areaTecnicaService, fotoRondaService, outroItemService } from '@/lib/supabaseService';
 import { supabase } from '@/lib/supabase';
@@ -28,7 +29,7 @@ function App() {
   // Estados com dados iniciais vazios
   const [rondas, setRondas] = useState<Ronda[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
-  
+
   // Função para garantir que arrays nunca sejam null/undefined
   const ensureArray = (arr: any[] | null | undefined): any[] => {
     return Array.isArray(arr) ? arr.filter(item => item != null) : [];
@@ -48,10 +49,10 @@ function App() {
 
   const [currentView, setCurrentView] = useState<'contratos' | 'rondas'>('contratos');
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
-  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'calendario'>('tabela');
+  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'calendario' | 'parecer'>('tabela');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
   const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
-  
+
   // CORREÇÃO: Limpar localStorage inválido na inicialização
   useEffect(() => {
     try {
@@ -86,17 +87,17 @@ function App() {
     // FORÇAR tema escuro com JavaScript
     const root = document.documentElement;
     const body = document.body;
-    
+
     // Aplicar classes e estilos
     root.classList.add('dark');
     root.style.colorScheme = 'dark';
     root.style.backgroundColor = 'rgb(15 23 42)';
     root.style.color = 'rgb(248 250 252)';
-    
+
     body.classList.add('dark');
     body.style.backgroundColor = 'rgb(15 23 42)';
     body.style.color = 'rgb(248 250 252)';
-    
+
     // Forçar no elemento root da React
     const rootElement = document.getElementById('root');
     if (rootElement) {
@@ -104,12 +105,12 @@ function App() {
       rootElement.style.color = 'rgb(248 250 252)';
       rootElement.style.minHeight = '100vh';
     }
-    
+
     // Salvar no localStorage
-    try { 
-      localStorage.setItem('theme', 'dark'); 
-    } catch {}
-    
+    try {
+      localStorage.setItem('theme', 'dark');
+    } catch { }
+
     console.log('🌙 Tema escuro forçado via JavaScript');
   }, []);
 
@@ -124,7 +125,7 @@ function App() {
       contratosData: contratos,
       rondasData: rondas
     });
-    
+
     // Debug específico para rondas
     if (rondas.length > 0) {
       console.log('🔄 Rondas carregadas:', rondas.map(r => ({
@@ -148,7 +149,7 @@ function App() {
 
   // CORREÇÃO: Garantir que `rondaSelecionada` nunca fique inválida e seja persistida
   const lastRondaId = useRef<string | null>(null);
-  
+
   useEffect(() => {
     // Evitar execução desnecessária se o ID não mudou
     const currentId = rondaSelecionada?.id || null;
@@ -156,21 +157,21 @@ function App() {
       return;
     }
     lastRondaId.current = currentId;
-    
+
     // Validação mais suave: apenas verificar campos essenciais
-    const isInvalida = !rondaSelecionada || 
-                      !rondaSelecionada.id || 
-                      rondaSelecionada.id.trim() === '' ||
-                      rondaSelecionada.id.startsWith('temp-');
+    const isInvalida = !rondaSelecionada ||
+      !rondaSelecionada.id ||
+      rondaSelecionada.id.trim() === '' ||
+      rondaSelecionada.id.startsWith('temp-');
 
     if (isInvalida) {
       // Se é um objeto com ID inválido, limpar completamente
-      if (rondaSelecionada && typeof rondaSelecionada === 'object' && 
-          (!rondaSelecionada.id || rondaSelecionada.id.trim() === '' || rondaSelecionada.id.startsWith('temp-'))) {
+      if (rondaSelecionada && typeof rondaSelecionada === 'object' &&
+        (!rondaSelecionada.id || rondaSelecionada.id.trim() === '' || rondaSelecionada.id.startsWith('temp-'))) {
         setRondaSelecionada(null);
         return;
       }
-      
+
       // Se é null, tentar recuperar do localStorage APENAS UMA VEZ
       if (rondaSelecionada === null) {
         try {
@@ -178,14 +179,14 @@ function App() {
           if (salvo) {
             const recuperada: Ronda = JSON.parse(salvo);
             // Validar se a ronda recuperada é válida
-            if (recuperada && 
-                recuperada.id && 
-                recuperada.id.trim() !== '' && 
-                !recuperada.id.startsWith('temp-') &&
-                recuperada.nome &&
-                recuperada.nome.trim() !== '' &&
-                recuperada.contrato &&
-                recuperada.contrato.trim() !== '') {
+            if (recuperada &&
+              recuperada.id &&
+              recuperada.id.trim() !== '' &&
+              !recuperada.id.startsWith('temp-') &&
+              recuperada.nome &&
+              recuperada.nome.trim() !== '' &&
+              recuperada.contrato &&
+              recuperada.contrato.trim() !== '') {
               setRondaSelecionada(recuperada);
             } else {
               localStorage.removeItem('appRonda_rondaSelecionada');
@@ -210,7 +211,7 @@ function App() {
   useEffect(() => {
     console.log('Modal mudou:', { isModalOpen, editingAreaTecnica });
     console.log('Stack trace:', new Error().stack);
-    
+
     // Verificar se o modal está sendo fechado automaticamente
     if (isModalOpen === false && editingAreaTecnica) {
       console.warn('⚠️ ATENÇÃO: Modal foi fechado mas editingAreaTecnica ainda existe!');
@@ -286,28 +287,28 @@ function App() {
     console.log('✅ Estado limpo com sucesso');
   };
 
-    // Função de debug para testar conexão com banco
+  // Função de debug para testar conexão com banco
   const debugDatabaseConnection = async () => {
     try {
       console.log('🔍 DEBUG: Testando conexão com banco...');
-      
+
       // Testar conexão básica
       const { data, error } = await supabase
         .from('rondas')
         .select('count')
         .limit(1);
-      
+
       if (error) {
         console.error('❌ Erro na conexão:', error);
         alert(`Erro na conexão: ${error.message}`);
       } else {
-      console.log('✅ Conexão OK:', data);
-      
+        console.log('✅ Conexão OK:', data);
+
         // Testar busca de rondas
         const rondas = await rondaService.getAll();
         console.log('📊 Rondas encontradas:', rondas.length);
         console.log('📋 Dados das rondas:', rondas);
-        
+
         alert(`Conexão OK! Encontradas ${rondas.length} rondas no banco.`);
       }
     } catch (error) {
@@ -323,12 +324,12 @@ function App() {
         setIsLoading(true);
         console.log('🔄 Carregando dados do banco Supabase/Neon...');
         console.log('🔍 DEBUG - Verificando se há itens de chamado nas rondas...');
-        
+
         // RECUPERAR RONDAS DO BROOK YOU PRIMEIRO
         console.log('🔥 RECUPERANDO RONDAS DO BROOK YOU...');
         const todasChaves = Object.keys(localStorage);
         let rondasBrookRecuperadas: Ronda[] = [];
-        
+
         todasChaves.forEach(chave => {
           try {
             const dados = localStorage.getItem(chave);
@@ -339,10 +340,10 @@ function App() {
                   if (!item) return false;
                   const contrato = item.contrato ? item.contrato.toLowerCase() : '';
                   const nome = item.nome ? item.nome.toLowerCase() : '';
-                  return contrato.includes('brook') || 
-                         contrato.includes('you') || 
-                         nome.includes('brook') ||
-                         contrato.includes('brook you');
+                  return contrato.includes('brook') ||
+                    contrato.includes('you') ||
+                    nome.includes('brook') ||
+                    contrato.includes('brook you');
                 });
                 if (rondasBrook.length > 0) {
                   console.log(`🎯 Encontradas ${rondasBrook.length} rondas do Brook You na chave "${chave}"`);
@@ -354,7 +355,7 @@ function App() {
             // Ignorar erros
           }
         });
-        
+
         if (rondasBrookRecuperadas.length > 0) {
           console.log(`🎉 ${rondasBrookRecuperadas.length} RONDAS DO BROOK YOU RECUPERADAS!`, rondasBrookRecuperadas);
           // Salvar no localStorage atual
@@ -403,7 +404,7 @@ function App() {
         // Se não há dados no banco, criar dados de exemplo
         if (contratosFromDB.length === 0 && rondasFromDB.length === 0) {
           console.log('🔄 Banco vazio, criando dados de exemplo...');
-          
+
           try {
             // Criar contratos de exemplo no banco
             const contrato1 = await contratoService.create({
@@ -411,19 +412,21 @@ function App() {
               sindico: 'Maria Santos',
               endereco: 'Rua das Flores, 123 - Centro',
               periodicidade: 'MENSAL',
+              status: 'IMPLANTADO',
               observacoes: 'Contrato de manutenção preventiva mensal',
               dataCriacao: '2024-01-01T00:00:00.000Z'
             });
-            
+
             const contrato2 = await contratoService.create({
               nome: 'CT002/2024 - Inspeção Semanal',
               sindico: 'João Oliveira',
               endereco: 'Av. Principal, 456 - Bairro Novo',
               periodicidade: 'SEMANAL',
+              status: 'EM IMPLANTACAO',
               observacoes: 'Inspeção semanal de segurança',
               dataCriacao: '2024-01-01T00:00:00.000Z'
             });
-            
+
             // Criar ronda de exemplo no banco
             const ronda1 = await rondaService.create({
               nome: 'Ronda Matutina - Centro',
@@ -436,9 +439,9 @@ function App() {
               fotosRonda: [],
               outrosItensCorrigidos: []
             });
-            
+
             console.log('✅ Dados de exemplo criados no banco');
-            
+
             // Atualizar estado com os dados criados
             setContratos([contrato1, contrato2]);
             setRondas([ronda1]);
@@ -449,49 +452,51 @@ function App() {
       } catch (error) {
         console.error('❌ Erro ao carregar dados do banco:', error);
         console.log('🔄 Tentando carregar dados do localStorage como fallback...');
-        
+
         // Fallback para localStorage quando não conseguir conectar ao banco
         try {
           const savedContratos = localStorage.getItem('appRonda_contratos');
           const savedRondas = localStorage.getItem('appRonda_rondas');
-          
+
           if (savedContratos) {
             const contratosFromStorage = JSON.parse(savedContratos);
             setContratos(contratosFromStorage);
             console.log(`✅ ${contratosFromStorage.length} contratos carregados do localStorage`);
           }
-          
+
           if (savedRondas) {
             const rondasFromStorage = JSON.parse(savedRondas);
             setRondas(rondasFromStorage);
             console.log(`✅ ${rondasFromStorage.length} rondas carregadas do localStorage`);
           }
-          
+
           // Se não há dados nem no banco nem no localStorage, criar dados de exemplo
-          if ((!savedContratos || JSON.parse(savedContratos).length === 0) && 
-              (!savedRondas || JSON.parse(savedRondas).length === 0)) {
+          if ((!savedContratos || JSON.parse(savedContratos).length === 0) &&
+            (!savedRondas || JSON.parse(savedRondas).length === 0)) {
             console.log('🔄 Criando dados de exemplo no localStorage...');
-            
+
             const contratoExemplo1: Contrato = {
               id: crypto.randomUUID(),
               nome: 'CT001/2024 - Manutenção Preventiva',
               sindico: 'Maria Santos',
               endereco: 'Rua das Flores, 123 - Centro',
               periodicidade: 'MENSAL' as const,
+              status: 'IMPLANTADO' as const,
               observacoes: 'Contrato de manutenção preventiva mensal',
               dataCriacao: '2024-01-01T00:00:00.000Z'
             };
-            
+
             const contratoExemplo2: Contrato = {
               id: crypto.randomUUID(),
               nome: 'CT002/2024 - Inspeção Semanal',
               sindico: 'João Oliveira',
               endereco: 'Av. Principal, 456 - Bairro Novo',
               periodicidade: 'SEMANAL' as const,
+              status: 'EM IMPLANTACAO' as const,
               observacoes: 'Inspeção semanal de segurança',
               dataCriacao: '2024-01-01T00:00:00.000Z'
             };
-            
+
             const rondaExemplo = {
               id: crypto.randomUUID(),
               nome: 'Ronda Matutina - Centro',
@@ -504,18 +509,18 @@ function App() {
               fotosRonda: [],
               outrosItensCorrigidos: []
             };
-            
+
             const contratosExemplo = [contratoExemplo1, contratoExemplo2];
             const rondasExemplo = [rondaExemplo];
-            
+
             // Salvar no localStorage
             localStorage.setItem('appRonda_contratos', JSON.stringify(contratosExemplo));
             localStorage.setItem('appRonda_rondas', JSON.stringify(rondasExemplo));
-            
+
             // Atualizar estado
             setContratos(contratosExemplo);
             setRondas(rondasExemplo);
-            
+
             console.log('✅ Dados de exemplo criados no localStorage');
           }
         } catch (storageError) {
@@ -557,37 +562,37 @@ function App() {
             fotosRonda: rondaSelecionada.fotosRonda?.length || 0,
             areasTecnicas: rondaSelecionada.areasTecnicas?.length || 0
           });
-          
+
           // Verificar se é uma ronda local (não está no banco)
           if (rondaSelecionada.id.startsWith('local-')) {
             console.log('🏠 Ronda local detectada, não recarregando do banco');
             return;
           }
-          
+
           // Verificar se a ronda já tem fotos carregadas
           if (rondaSelecionada.fotosRonda && rondaSelecionada.fotosRonda.length > 0) {
             console.log('📸 Ronda já tem fotos carregadas, não recarregando:', rondaSelecionada.fotosRonda.length);
             return;
           }
-          
+
           // Verificar se o ID da ronda é válido antes de buscar
           if (!rondaSelecionada.id || rondaSelecionada.id.trim() === '') {
             // ID inválido, não recarregar
             return;
           }
-          
+
           // Buscar ronda atualizada do banco com todos os dados relacionados
           const rondaAtualizada = await rondaService.getById(rondaSelecionada.id);
-          
+
           if (rondaAtualizada) {
             console.log('✅ Ronda recarregada do banco:', rondaAtualizada);
             console.log('📸 Fotos encontradas:', rondaAtualizada.fotosRonda?.length || 0);
             console.log('🔧 Áreas técnicas encontradas:', rondaAtualizada.areasTecnicas?.length || 0);
-            
+
             // Atualizar estado local com dados frescos do banco
             setRondaSelecionada(rondaAtualizada);
             setRondas(prev => prev.map(r => r.id === rondaAtualizada.id ? rondaAtualizada : r));
-            
+
             console.log('✅ Estado atualizado após recarregar:', {
               id: rondaAtualizada.id,
               nome: rondaAtualizada.nome,
@@ -601,7 +606,7 @@ function App() {
           console.error('❌ Erro ao recarregar dados da ronda:', error);
         }
       };
-      
+
       recarregarDadosRonda();
     } else {
       console.log('🔄 useEffect não executado:', { viewMode, rondaSelecionada: !!rondaSelecionada });
@@ -609,7 +614,7 @@ function App() {
   }, [viewMode, rondaSelecionada?.id]);
 
   // Filtrar rondas pelo contrato selecionado
-  const rondasDoContrato = contratoSelecionado 
+  const rondasDoContrato = contratoSelecionado
     ? rondas.filter(r => r.contrato === contratoSelecionado.nome)
     : [];
 
@@ -617,13 +622,13 @@ function App() {
   useEffect(() => {
     if (contratoSelecionado && rondasDoContrato.length > 0) {
       console.log('🔄 Carregando dados completos das rondas do contrato:', contratoSelecionado.nome);
-      
+
       // Adicionar timeout para evitar carregamentos muito frequentes
       const timeoutId = setTimeout(() => {
         Promise.all(
           rondasDoContrato
             .filter(ronda => ronda && ronda.id && ronda.id.trim() !== '') // Filtrar rondas com IDs válidos
-            .map(ronda => 
+            .map(ronda =>
               rondaService.loadCompleteRonda(ronda)
             )
         ).then(rondasCompletas => {
@@ -664,7 +669,7 @@ function App() {
     try {
       console.log('🔄 Iniciando criação de nova ronda:', rondaData);
       console.log('🔄 Contrato selecionado:', contratoSelecionado);
-      
+
       // Criar ronda básica no banco (sem áreas técnicas primeiro)
       const rondaBasica = await rondaService.create({
         nome: rondaData.nome,
@@ -677,17 +682,17 @@ function App() {
         fotosRonda: [],
         outrosItensCorrigidos: []
       });
-      
+
       console.log('✅ Ronda básica criada no banco:', rondaBasica);
-      
+
       // Criar a ronda final SEM áreas técnicas (usuário adiciona manualmente)
       const rondaFinal = {
         ...rondaBasica,
         areasTecnicas: [] // Começar vazio, usuário adiciona manualmente
       };
-      
+
       console.log('✅ Ronda final criada:', rondaFinal);
-      
+
       // Atualizar estado local
       setRondas(prev => [...prev, rondaFinal]);
       setRondaSelecionada(rondaFinal);
@@ -709,21 +714,21 @@ function App() {
 
   const handleAddAreaTecnica = () => {
     console.log('🔧 handleAddAreaTecnica chamado');
-    
+
     // CORREÇÃO: Validação mais rigorosa da ronda selecionada
     if (!rondaSelecionada) {
       alert('Por favor, selecione ou crie uma ronda primeiro');
       return;
     }
-    
+
     // Validar todos os campos obrigatórios da ronda
-    if (!rondaSelecionada.id || 
-        rondaSelecionada.id.trim() === '' || 
-        rondaSelecionada.id.startsWith('temp-') ||
-        !rondaSelecionada.nome ||
-        rondaSelecionada.nome.trim() === '' ||
-        !rondaSelecionada.contrato ||
-        rondaSelecionada.contrato.trim() === '') {
+    if (!rondaSelecionada.id ||
+      rondaSelecionada.id.trim() === '' ||
+      rondaSelecionada.id.startsWith('temp-') ||
+      !rondaSelecionada.nome ||
+      rondaSelecionada.nome.trim() === '' ||
+      !rondaSelecionada.contrato ||
+      rondaSelecionada.contrato.trim() === '') {
       console.error('❌ Ronda inválida ao tentar adicionar área técnica:', {
         id: rondaSelecionada.id,
         nome: rondaSelecionada.nome,
@@ -734,7 +739,7 @@ function App() {
       setRondaSelecionada(null);
       return;
     }
-    
+
     setEditingAreaTecnica(null);
     setIsModalOpen(true);
     console.log('Modal aberto para adicionar nova área técnica');
@@ -747,28 +752,28 @@ function App() {
           console.error('❌ Nenhuma ronda selecionada para excluir área técnica');
           return;
         }
-        
+
         console.log('🗑️ Excluindo área técnica com ID:', id);
-        
+
         // Excluir do banco de dados
         await areaTecnicaService.delete(id);
         console.log('✅ Área técnica excluída do banco com sucesso');
-        
+
         // Atualizar estado local
         const updatedAreasTecnicas = rondaSelecionada.areasTecnicas.filter((at: AreaTecnica) => at.id !== id);
         const updatedRonda = {
           ...rondaSelecionada,
           areasTecnicas: updatedAreasTecnicas
         };
-        
+
         // Atualizar estado global
-        setRondas(prev => prev.map(ronda => 
+        setRondas(prev => prev.map(ronda =>
           ronda.id === rondaSelecionada.id ? updatedRonda : ronda
         ));
-        
+
         // Atualizar ronda selecionada
         setRondaSelecionada(updatedRonda);
-        
+
         console.log('✅ Área técnica excluída com sucesso!');
       } catch (error) {
         console.error('❌ Erro ao excluir área técnica:', error);
@@ -779,7 +784,7 @@ function App() {
 
   const handleSaveAreaTecnica = async (areaTecnica: AreaTecnica) => {
     console.log('💾 Salvando área técnica:', areaTecnica.nome);
-    
+
     if (!rondaSelecionada) {
       console.error('❌ Nenhuma ronda selecionada!');
       alert('Erro: Nenhuma ronda selecionada. Recarregue a página e tente novamente.');
@@ -789,7 +794,7 @@ function App() {
     // CORREÇÃO: Garantir que sempre temos um ID válido
     let rondaId = rondaSelecionada.id;
     let rondaAtualizada = rondaSelecionada;
-    
+
     // Se o ID está vazio, tentar recuperar do localStorage
     if (!rondaId || rondaId.trim() === '') {
       try {
@@ -812,7 +817,7 @@ function App() {
         return;
       }
     }
-    
+
     // VALIDAÇÃO FINAL: Garantir que temos um ID válido antes de prosseguir
     if (!rondaId || rondaId.trim() === '' || rondaId.startsWith('temp-')) {
       console.error('❌ ID da ronda ainda está vazio após tentativas de recuperação!', rondaId);
@@ -822,7 +827,7 @@ function App() {
 
     try {
       let areaSalva: AreaTecnica;
-      
+
       if (editingAreaTecnica) {
         // Editando área existente - atualizar no banco
         console.log('🔄 Editando área técnica existente no banco:', areaTecnica);
@@ -838,36 +843,36 @@ function App() {
         });
         console.log('✅ Nova área técnica criada no banco:', areaSalva);
       }
-      
+
       // Atualizar estado local
       const updatedAreasTecnicas = editingAreaTecnica
         ? rondaSelecionada.areasTecnicas.map(at => at.id === areaSalva.id ? areaSalva : at)
         : [...rondaSelecionada.areasTecnicas, areaSalva];
-      
+
       const updatedRonda = { ...rondaSelecionada, areasTecnicas: updatedAreasTecnicas };
-      
+
       // Atualizar estado global
-      setRondas(prev => prev.map(ronda => 
+      setRondas(prev => prev.map(ronda =>
         ronda.id === rondaSelecionada.id ? updatedRonda : ronda
       ));
 
       // Atualizar a ronda selecionada também
       setRondaSelecionada(updatedRonda);
-      
+
       // Fechar modal
       setIsModalOpen(false);
       setEditingAreaTecnica(null);
-      
+
       console.log('✅ Área técnica salva com sucesso!');
     } catch (error) {
       console.error('❌ Erro ao salvar área técnica:', error);
-      
+
       if (error instanceof Error) {
         if (error.message.includes('Timeout')) {
-        alert('⏱️ Operação demorou muito para responder. Tente novamente ou verifique sua conexão.');
+          alert('⏱️ Operação demorou muito para responder. Tente novamente ou verifique sua conexão.');
         } else if (error.message.includes('canceling statement')) {
-        alert('🔄 Operação foi cancelada devido ao tempo limite. Tente novamente.');
-      } else {
+          alert('🔄 Operação foi cancelada devido ao tempo limite. Tente novamente.');
+        } else {
           alert(`❌ Erro ao salvar área técnica: ${error.message || 'Erro desconhecido'}`);
         }
       } else {
@@ -875,6 +880,8 @@ function App() {
       }
     }
   };
+
+
 
 
 
@@ -896,12 +903,12 @@ function App() {
   const handleSaveContrato = async (contrato: Contrato) => {
     try {
       console.log('💾 Salvando contrato no banco:', contrato);
-      
+
       let contratoSalvo: Contrato;
-      
+
       // Verificar se o contrato já existe no banco
       const contratoExiste = contratos.find(c => c.id === contrato.id);
-      
+
       if (contratoExiste) {
         // Editando contrato existente que está no banco
         console.log('🔄 Editando contrato existente:', contrato.id);
@@ -914,7 +921,7 @@ function App() {
         contratoSalvo = await contratoService.create(contratoSemId);
         console.log('✅ Contrato criado no banco:', contratoSalvo);
       }
-      
+
       // Atualizar estado local
       setContratos(prev => {
         const existingIndex = prev.findIndex(c => c.id === contratoSalvo.id);
@@ -924,40 +931,40 @@ function App() {
           return [...prev, contratoSalvo];
         }
       });
-      
+
       // Atualizar contrato selecionado se necessário
       if (contratoSelecionado && contratoSelecionado.id === contratoSalvo.id) {
         setContratoSelecionado(contratoSalvo);
       }
-      
+
       console.log('✅ Contrato salvo com sucesso no banco');
     } catch (error) {
       console.error('❌ Erro ao salvar contrato no banco:', error);
       console.log('🔄 Salvando contrato no localStorage como fallback...');
-      
+
       // Fallback para localStorage
       try {
         const contratoComId = {
           ...contrato,
           id: contrato.id || crypto.randomUUID()
         };
-        
-        const contratosAtualizados = contrato.id 
+
+        const contratosAtualizados = contrato.id
           ? contratos.map(c => c.id === contrato.id ? contratoComId : c)
           : [...contratos, contratoComId];
-        
+
         localStorage.setItem('appRonda_contratos', JSON.stringify(contratosAtualizados));
         setContratos(contratosAtualizados);
-        
+
         if (contratoSelecionado && contratoSelecionado.id === contratoComId.id) {
           setContratoSelecionado(contratoComId);
         }
-        
+
         console.log('✅ Contrato salvo no localStorage');
         alert('Contrato salvo localmente (modo offline)');
       } catch (storageError) {
         console.error('❌ Erro ao salvar no localStorage:', storageError);
-      alert('Erro ao salvar contrato. Verifique o console.');
+        alert('Erro ao salvar contrato. Verifique o console.');
       }
     }
   };
@@ -968,10 +975,10 @@ function App() {
         // Deletar do banco
         await contratoService.delete(id);
         console.log('✅ Contrato deletado do banco');
-        
+
         // Atualizar estado local
         setContratos(prev => prev.filter(c => c.id !== id));
-        
+
         // Se o contrato deletado era o selecionado, limpar a seleção
         if (contratoSelecionado && contratoSelecionado.id === id) {
           setContratoSelecionado(null);
@@ -1021,10 +1028,10 @@ function App() {
   const handleEditAreaTecnica = (areaTecnica: AreaTecnica) => {
     console.log('handleEditAreaTecnica chamado:', areaTecnica);
     console.log('Estado atual - isModalOpen:', isModalOpen, 'editingAreaTecnica:', editingAreaTecnica);
-    
+
     setEditingAreaTecnica(areaTecnica);
     console.log('editingAreaTecnica definido como:', areaTecnica);
-    
+
     setIsModalOpen(true);
     console.log('isModalOpen definido como true');
   };
@@ -1053,7 +1060,7 @@ function App() {
 
     try {
       let fotoSalva: FotoRonda;
-      
+
       if (editingFotoRonda) {
         // Editando foto existente - atualizar no banco
         console.log('🔄 Editando foto existente no banco:', fotoRonda);
@@ -1069,32 +1076,32 @@ function App() {
         });
         console.log('✅ Nova foto criada no banco:', fotoSalva);
       }
-      
+
       // Atualizar estado local
       const updatedFotosRonda = editingFotoRonda
         ? rondaSelecionada.fotosRonda.map(fr => fr.id === fotoSalva.id ? fotoSalva : fr)
         : [...rondaSelecionada.fotosRonda, fotoSalva];
-      
+
       const updatedRonda = { ...rondaSelecionada, fotosRonda: updatedFotosRonda };
-      
+
       // Atualizar estado global
       setRondas(prev => prev.map(r => r.id === rondaSelecionada.id ? updatedRonda : r));
       setRondaSelecionada(updatedRonda);
-      
+
       // Fechar modal
       setIsFotoRondaModalOpen(false);
       setEditingFotoRonda(null);
-      
+
       console.log('✅ Foto da ronda salva com sucesso!');
     } catch (error) {
       console.error('❌ Erro ao salvar foto da ronda:', error);
-      
+
       if (error instanceof Error) {
         if (error.message.includes('Timeout')) {
-        alert('⏱️ Upload da foto demorou muito para responder. Tente novamente ou verifique sua conexão.');
+          alert('⏱️ Upload da foto demorou muito para responder. Tente novamente ou verifique sua conexão.');
         } else if (error.message.includes('canceling statement')) {
-        alert('🔄 Upload foi cancelado devido ao tempo limite. Tente novamente.');
-      } else {
+          alert('🔄 Upload foi cancelado devido ao tempo limite. Tente novamente.');
+        } else {
           alert(`❌ Erro ao salvar foto: ${error.message || 'Erro desconhecido'}`);
         }
       } else {
@@ -1114,24 +1121,24 @@ function App() {
         // Deletar foto do banco
         console.log('🗑️ Deletando foto do banco com ID:', id);
         await fotoRondaService.delete(id);
-        
+
         // Atualizar estado local
         const updatedFotosRonda = rondaSelecionada.fotosRonda.filter(fr => fr.id !== id);
         const updatedRonda = { ...rondaSelecionada, fotosRonda: updatedFotosRonda };
-        
+
         setRondas(prev => prev.map(r => r.id === rondaSelecionada.id ? updatedRonda : r));
         setRondaSelecionada(updatedRonda);
-        
+
         console.log('✅ Foto da ronda excluída com sucesso do banco!');
       } catch (error) {
         console.error('❌ Erro ao excluir foto da ronda do banco:', error);
-        
+
         if (error instanceof Error) {
           if (error.message.includes('Timeout')) {
-          alert('⏱️ Exclusão demorou muito para responder. Tente novamente.');
+            alert('⏱️ Exclusão demorou muito para responder. Tente novamente.');
           } else if (error.message.includes('canceling statement')) {
-          alert('🔄 Exclusão foi cancelada devido ao tempo limite. Tente novamente.');
-        } else {
+            alert('🔄 Exclusão foi cancelada devido ao tempo limite. Tente novamente.');
+          } else {
             alert(`❌ Erro ao excluir foto: ${error.message || 'Erro desconhecido'}`);
           }
         } else {
@@ -1160,17 +1167,17 @@ function App() {
 
     try {
       let itemSalvo: OutroItemCorrigido;
-      
+
       if (editingOutroItem) {
         // Editando item existente - atualizar no banco
         console.log('🔄 Editando item existente no banco:', outroItem);
         console.log('🔄 Categoria do item sendo editado:', outroItem.categoria);
         console.log('🔄 Fotos do item sendo editado:', outroItem.fotos?.length);
-        
+
         // Verificar se é uma edição de foto individual
         if (outroItem.isIndividualPhotoEdit && outroItem.originalItemId) {
           console.log('🔄 Detectada edição de foto individual, atualizando item original');
-          
+
           // Encontrar o item original
           const itemOriginal = rondaSelecionada.outrosItensCorrigidos?.find(item => item.id === outroItem.originalItemId);
           if (itemOriginal) {
@@ -1187,7 +1194,7 @@ function App() {
               observacoes: outroItem.observacoes || itemOriginal.observacoes,
               categoria: itemOriginal.categoria || 'CHAMADO' // Preservar categoria original
             };
-            
+
             itemSalvo = await outroItemService.update(itemOriginal.id, itemAtualizado);
             console.log('🔄 Item original atualizado:', itemSalvo);
           } else {
@@ -1203,35 +1210,35 @@ function App() {
             idParaUpdate = outroItem.id.split('-foto-')[0];
             console.log('🔄 ID modificado detectado, usando ID original:', idParaUpdate);
           }
-          
+
           // Criar objeto de atualização com categoria corrigida
           const itemParaUpdate = {
             ...outroItem,
             categoria: outroItem.categoria || 'CHAMADO' // Preservar categoria original
           };
-          
+
           itemSalvo = await outroItemService.update(idParaUpdate, itemParaUpdate);
           console.log('🔄 Item salvo após edição:', itemSalvo);
         }
-        
+
         console.log('🔄 Categoria do item salvo:', itemSalvo.categoria);
       } else {
         // Adicionando novo item - criar no banco
         console.log('🆕 Criando novo item no banco:', outroItem);
         const { id, ...itemSemId } = outroItem;
-        
+
         const itemParaCriar = {
           ...itemSemId,
           ronda_id: rondaSelecionada.id
         };
-        
+
         console.log('🔄 Item para criar no banco:', itemParaCriar);
-        
+
         itemSalvo = await outroItemService.create(itemParaCriar);
       }
-      
+
       console.log('✅ Item salvo no banco:', itemSalvo);
-      
+
       // Atualizar estado local
       console.log('🔄 Atualizando estado local...');
       console.log('🔄 editingOutroItem:', editingOutroItem);
@@ -1240,62 +1247,62 @@ function App() {
       console.log('🔄 outroItem sendo salvo:', outroItem);
       console.log('🔄 outroItem.id:', outroItem.id);
       console.log('🔄 outroItem.categoria:', outroItem.categoria);
-      
+
       const updatedOutrosItens = editingOutroItem
         ? (() => {
-            // Se é uma edição de foto individual, substituir o item original
-            if (outroItem.isIndividualPhotoEdit && outroItem.originalItemId) {
-              console.log('🔄 Atualizando item original após edição de foto individual');
-              return ensureArray(rondaSelecionada.outrosItensCorrigidos).filter(item => item && item.id).map(item => {
-                console.log('🔄 Verificando item:', item.id, '===', itemSalvo.id, '?', item.id === itemSalvo.id);
-                return item.id === itemSalvo.id ? itemSalvo : item;
-              });
-            } else {
-              // Edição normal - substituir item existente
-              console.log('🔄 Substituindo item existente');
-              
-              // Determinar qual ID usar para encontrar o item a ser substituído
-              let idParaBuscar = itemSalvo.id;
-              if (outroItem.id.includes('-foto-')) {
-                // Se o item editado tinha ID modificado, buscar pelo ID original
-                idParaBuscar = outroItem.id.split('-foto-')[0];
-                console.log('🔄 Buscando item original para substituir:', idParaBuscar);
-              }
-              
-              return ensureArray(rondaSelecionada.outrosItensCorrigidos).filter(item => item && item.id).map(item => {
-                console.log('🔄 Verificando item:', item.id, '===', idParaBuscar, '?', item.id === idParaBuscar);
-                return item.id === idParaBuscar ? itemSalvo : item;
-              });
+          // Se é uma edição de foto individual, substituir o item original
+          if (outroItem.isIndividualPhotoEdit && outroItem.originalItemId) {
+            console.log('🔄 Atualizando item original após edição de foto individual');
+            return ensureArray(rondaSelecionada.outrosItensCorrigidos).filter(item => item && item.id).map(item => {
+              console.log('🔄 Verificando item:', item.id, '===', itemSalvo.id, '?', item.id === itemSalvo.id);
+              return item.id === itemSalvo.id ? itemSalvo : item;
+            });
+          } else {
+            // Edição normal - substituir item existente
+            console.log('🔄 Substituindo item existente');
+
+            // Determinar qual ID usar para encontrar o item a ser substituído
+            let idParaBuscar = itemSalvo.id;
+            if (outroItem.id.includes('-foto-')) {
+              // Se o item editado tinha ID modificado, buscar pelo ID original
+              idParaBuscar = outroItem.id.split('-foto-')[0];
+              console.log('🔄 Buscando item original para substituir:', idParaBuscar);
             }
-          })()
+
+            return ensureArray(rondaSelecionada.outrosItensCorrigidos).filter(item => item && item.id).map(item => {
+              console.log('🔄 Verificando item:', item.id, '===', idParaBuscar, '?', item.id === idParaBuscar);
+              return item.id === idParaBuscar ? itemSalvo : item;
+            });
+          }
+        })()
         : [...ensureArray(rondaSelecionada.outrosItensCorrigidos).filter(item => item && item.id), itemSalvo];
-      
+
       console.log('🔄 outrosItensCorrigidos depois:', updatedOutrosItens);
       console.log('🔄 Quantidade antes:', rondaSelecionada.outrosItensCorrigidos?.length || 0);
       console.log('🔄 Quantidade depois:', updatedOutrosItens.length);
-      
+
       // Verificar se algum item foi perdido
       const idsAntes = (rondaSelecionada.outrosItensCorrigidos || []).map(item => item.id).sort();
       const idsDepois = updatedOutrosItens.map(item => item.id).sort();
       console.log('🔄 IDs antes:', idsAntes);
       console.log('🔄 IDs depois:', idsDepois);
-      
+
       const idsPerdidos = idsAntes.filter(id => !idsDepois.includes(id));
       if (idsPerdidos.length > 0) {
         console.error('❌ ITENS PERDIDOS:', idsPerdidos);
       }
-      
+
       const updatedRonda = { ...rondaSelecionada, outrosItensCorrigidos: updatedOutrosItens };
-      
+
       // Atualizar estado local
-      setRondas(prev => prev.map(ronda => 
+      setRondas(prev => prev.map(ronda =>
         ronda.id === rondaSelecionada.id ? updatedRonda : ronda
       ));
-      
+
       setRondaSelecionada(updatedRonda);
-      
+
       console.log('✅ Item da ronda salvo com sucesso no banco!');
-      
+
       setIsOutroItemModalOpen(false);
       setEditingOutroItem(null);
     } catch (error) {
@@ -1306,25 +1313,25 @@ function App() {
 
   const handleDeleteOutroItem = async (id: string) => {
     if (!rondaSelecionada) return;
-    
+
     if (confirm('Tem certeza que deseja excluir este item?')) {
       try {
         // Deletar item do banco
         console.log('🗑️ Deletando item do banco com ID:', id);
         await outroItemService.delete(id);
-        
+
         // Atualizar estado local
         const updatedRonda = {
           ...rondaSelecionada,
           outrosItensCorrigidos: rondaSelecionada.outrosItensCorrigidos.filter(item => item.id !== id)
         };
-        
-        setRondas(prev => prev.map(ronda => 
+
+        setRondas(prev => prev.map(ronda =>
           ronda.id === rondaSelecionada.id ? updatedRonda : ronda
         ));
-        
+
         setRondaSelecionada(updatedRonda);
-        
+
         console.log('✅ Item da ronda excluído com sucesso do banco!');
       } catch (error) {
         console.error('❌ Erro ao excluir item da ronda do banco:', error);
@@ -1360,71 +1367,41 @@ function App() {
   return (
     <div className="min-h-screen">
       {/* Header com informações do usuário */}
-      <header className="backdrop-blur bg-white/10 border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <header className="bg-[rgba(26,47,42,0.8)] backdrop-blur-lg border-b border-green-500/20 shadow-lg">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              <Building2 className="w-8 h-8 text-blue-300" />
+              {contratoSelecionado ? (
+                <Button
+                  onClick={handleVoltarContratos}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-300 hover:text-white hover:bg-white/10 mr-2"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  Voltar
+                </Button>
+              ) : (
+                <img src="/logo-mp.png" alt="MP Logo" className="w-8 h-8" />
+              )}
               <h1 className="text-xl font-semibold text-white">Portal de Visitas MP</h1>
             </div>
-            
+
             <div className="flex items-center gap-3">
-              {/* Botão de debug temporário */}
-              <Button
-                onClick={debugDatabaseConnection}
-                variant="outline"
-                size="sm"
-                className="text-yellow-300 border-yellow-400/30 hover:bg-yellow-500/10"
-              >
-                🔍 Debug DB
-              </Button>
-              
               {/* Informações do usuário */}
-              <div className="flex items-center gap-2 text-sm text-white/80">
+              <div className="flex items-center gap-2 text-sm text-gray-300">
                 <User className="w-4 h-4" />
                 <span>{usuarioLogado?.nome}</span>
-                <span className="text-white/40">•</span>
+                <span className="text-gray-500">•</span>
                 <span>{usuarioLogado?.cargo}</span>
               </div>
-              
+
               {/* Botão de logout */}
-              <Button 
-                onClick={async () => {
-                  console.log('🔍 Iniciando debug do Supabase...');
-                  await debugTableStructure();
-                  const result = await debugSupabaseConnection();
-                  if (result) {
-                    alert('✅ Debug completo - Banco funcionando corretamente!');
-                  } else {
-                    alert('❌ Debug falhou - Verifique o console para detalhes');
-                  }
-                }} 
-                variant="outline" 
-                size="sm"
-                className="text-blue-300 border-blue-400/30 hover:bg-blue-500/10 mr-2"
-              >
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Debug Banco
-              </Button>
-              <Button 
-                onClick={() => {
-                  if (confirm('Tem certeza que deseja limpar todo o estado da aplicação? Isso irá remover rondas e contratos selecionados.')) {
-                    limparEstadoCompleto();
-                    alert('✅ Estado limpo com sucesso!');
-                  }
-                }} 
-                variant="outline" 
-                size="sm"
-                className="text-yellow-300 border-yellow-400/30 hover:bg-yellow-500/10 mr-2"
-              >
-                <User className="w-4 h-4 mr-2" />
-                Limpar Estado
-              </Button>
               <Button
                 onClick={handleLogout}
                 variant="outline"
                 size="sm"
-                className="text-red-300 border-red-400/30 hover:bg-red-500/10"
+                className="text-red-400 border-red-500/30 hover:bg-red-500/10 hover:border-red-500/50"
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Sair
@@ -1436,14 +1413,14 @@ function App() {
 
       {/* Contrato Info */}
       {contratoSelecionado && (
-        <div className="bg-blue-500/10 border-b border-blue-400/20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="bg-[rgba(16,185,129,0.1)] backdrop-blur-sm border-b border-green-500/30">
+          <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-blue-200">{contratoSelecionado.nome}</h2>
-                <p className="text-blue-200/80">
-                  Síndico: {contratoSelecionado.sindico} | 
-                  Endereço: {contratoSelecionado.endereco} | 
+                <h2 className="text-xl font-semibold text-green-400">{contratoSelecionado.nome}</h2>
+                <p className="text-gray-300">
+                  Síndico: {contratoSelecionado.sindico} |
+                  Endereço: {contratoSelecionado.endereco} |
                   Periodicidade: {contratoSelecionado.periodicidade}
                 </p>
               </div>
@@ -1457,7 +1434,7 @@ function App() {
       )}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentView === 'contratos' ? (
           <GerenciarContratos
             contratos={contratos}
@@ -1469,7 +1446,7 @@ function App() {
             onSaveContrato={async (contrato: Contrato) => {
               try {
                 console.log('🔄 Salvando contrato:', { id: contrato.id, nome: contrato.nome, isEdit: !!contrato.id });
-                
+
                 if (contrato.id && contrato.id.trim() !== '') {
                   // Editando contrato existente
                   console.log('🔄 Editando contrato existente com ID:', contrato.id);
@@ -1484,11 +1461,11 @@ function App() {
                   console.log('🔄 Criando novo contrato');
                   const { id, ...dadosNovoContrato } = contrato;
                   const contratoSalvo = await contratoService.create(dadosNovoContrato);
-                  
+
                   if (!contratoSalvo || !contratoSalvo.id) {
                     throw new Error('Contrato não foi criado corretamente');
                   }
-                  
+
                   setContratos(prev => [...prev, contratoSalvo]);
                   console.log('✅ Contrato criado com sucesso:', contratoSalvo);
                 }
@@ -1536,76 +1513,84 @@ function App() {
               <nav className="-mb-px flex space-x-8">
                 <button
                   onClick={() => setViewMode('tabela')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    viewMode === 'tabela'
-                      ? 'border-blue-400 text-blue-300'
-                      : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                  }`}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'tabela'
+                    ? 'border-blue-400 text-blue-300'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4" />
                     Rondas Realizadas
                   </div>
                 </button>
-                
+
                 <button
                   onClick={() => setViewMode('dashboard')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    viewMode === 'dashboard'
-                      ? 'border-blue-400 text-blue-300'
-                      : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                  }`}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'dashboard'
+                    ? 'border-blue-400 text-blue-300'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <BarChart3 className="w-4 h-4" />
                     Dashboard
                   </div>
                 </button>
-                
+
                 <button
                   onClick={() => setViewMode('kanban')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    viewMode === 'kanban'
-                      ? 'border-blue-400 text-blue-300'
-                      : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                  }`}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'kanban'
+                    ? 'border-blue-400 text-blue-300'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <Kanban className="w-4 h-4" />
                     Kanban de Implantação
                   </div>
                 </button>
-                
+
                 <button
                   onClick={() => setViewMode('laudos')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    viewMode === 'laudos'
-                      ? 'border-blue-400 text-blue-300'
-                      : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                  }`}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'laudos'
+                    ? 'border-blue-400 text-blue-300'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <FileCheck className="w-4 h-4" />
                     Laudos
                   </div>
                 </button>
-                
+
                 <button
                   onClick={() => setViewMode('calendario')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    viewMode === 'calendario'
-                      ? 'border-blue-400 text-blue-300'
-                      : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                  }`}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'calendario'
+                    ? 'border-blue-400 text-blue-300'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     Calendário de Visitas
                   </div>
                 </button>
+
+                <button
+                  onClick={() => setViewMode('parecer')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'parecer'
+                    ? 'border-blue-400 text-blue-300'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                    }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Parecer Técnico
+                  </div>
+                </button>
               </nav>
             </div>
-            
+
             {/* Conteúdo baseado no modo de visualização */}
             {viewMode === 'tabela' && (
               <>
@@ -1623,18 +1608,18 @@ function App() {
                       if (confirm('Tem certeza que deseja excluir esta ronda? Esta ação não pode ser desfeita.\n\nIsso vai deletar:\n• A ronda\n• Todas as áreas técnicas\n• Todas as fotos\n• Todos os outros itens')) {
                         try {
                           console.log('🗑️ Deletando ronda do Supabase:', id);
-                          
+
                           // Deletar do Supabase (CASCADE vai deletar áreas, fotos e itens automaticamente)
                           await rondaService.delete(id);
-                          
+
                           // Atualizar estado local
                           setRondas(prev => prev.filter(r => r.id !== id));
-                          
+
                           if (rondaSelecionada?.id === id) {
                             setRondaSelecionada(null);
                             setViewMode('tabela');
                           }
-                          
+
                           console.log('✅ Ronda deletada com sucesso do Supabase!');
                           alert('✅ Ronda deletada com sucesso!');
                         } catch (error) {
@@ -1649,8 +1634,8 @@ function App() {
 
                 {/* Mensagem de seleção */}
                 <div className="text-center py-12">
-                  <h2 className="text-2xl font-semibold text-gray-100 mb-4">Selecione uma Ronda</h2>
-                  <p className="text-gray-300 text-lg mb-8">
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-4">Selecione uma Ronda</h2>
+                  <p className="text-gray-900 text-lg mb-8">
                     Clique em uma ronda na tabela acima para visualizar seus detalhes ou crie uma nova ronda.
                   </p>
                   <Button onClick={handleAddRonda} className="bg-green-600/80 hover:bg-green-600">
@@ -1666,7 +1651,7 @@ function App() {
             )}
 
             {viewMode === 'laudos' && contratoSelecionado && (
-              <LaudosKanban 
+              <LaudosKanban
                 contratoSelecionado={contratoSelecionado}
               />
             )}
@@ -1691,6 +1676,12 @@ function App() {
               <CalendarView
                 contrato={contratoSelecionado}
                 onSelectContrato={setContratoSelecionado}
+              />
+            )}
+
+            {viewMode === 'parecer' && contratoSelecionado && (
+              <ParecerTecnico
+                contratoSelecionado={contratoSelecionado}
               />
             )}
 
@@ -1730,13 +1721,14 @@ function App() {
               />
             )}
           </>
-        )}
-      </main>
+        )
+        }
+      </main >
 
 
 
       {/* Modals */}
-      <AreaTecnicaModal
+      < AreaTecnicaModal
         areaTecnica={editingAreaTecnica}
         isOpen={isModalOpen}
         onClose={() => {
@@ -1757,11 +1749,11 @@ function App() {
             alert('Erro: Nenhuma ronda selecionada.');
             return;
           }
-          
+
           // CORREÇÃO: Garantir que sempre temos um ID válido
           let rondaId = rondaSelecionada.id;
           let rondaAtualizada = rondaSelecionada;
-          
+
           // Se o ID está vazio, tentar recuperar do localStorage
           if (!rondaId || rondaId.trim() === '') {
             try {
@@ -1784,23 +1776,23 @@ function App() {
               return;
             }
           }
-          
+
           // VALIDAÇÃO FINAL: Garantir que temos um ID válido antes de prosseguir
           if (!rondaId || rondaId.trim() === '' || rondaId.startsWith('temp-')) {
             console.error('❌ ID da ronda ainda está vazio após tentativas de recuperação!', rondaId);
             alert('❌ Erro crítico: Não foi possível obter um ID válido para a ronda. Por favor, recarregue a página e selecione uma ronda válida.');
             return;
           }
-          
+
           console.log(`💾 Salvando ${areas.length} áreas com fotos...`);
           console.log('🔍 Ronda ID:', rondaId);
           console.log('🔍 Ronda completa:', rondaAtualizada);
           console.log('🔍 Áreas a salvar:', areas);
-          
+
           try {
             const areasSalvas = [];
             let erros = 0;
-            
+
             // Salvar uma por vez para identificar qual dá erro
             for (let i = 0; i < areas.length; i++) {
               try {
@@ -1816,17 +1808,17 @@ function App() {
                 erros++;
               }
             }
-            
+
             if (areasSalvas.length > 0) {
               // Atualizar estado local com as áreas que foram salvas
               const updatedAreasTecnicas = [...rondaAtualizada.areasTecnicas, ...areasSalvas];
               const updatedRonda = { ...rondaAtualizada, areasTecnicas: updatedAreasTecnicas };
-              
+
               setRondas(prev => prev.map(r => r.id === rondaId ? updatedRonda : r));
               setRondaSelecionada(updatedRonda);
-              
+
               console.log(`✅ ${areasSalvas.length} áreas salvas com sucesso!`);
-              
+
               if (erros > 0) {
                 alert(`⚠️ ${areasSalvas.length} áreas salvas com sucesso!\n${erros} áreas falharam.`);
               } else {
@@ -1843,7 +1835,7 @@ function App() {
         }}
       />
 
-      <FotoRondaModal
+      < FotoRondaModal
         fotoRonda={editingFotoRonda}
         isOpen={isFotoRondaModalOpen}
         onClose={() => {
@@ -1869,7 +1861,7 @@ function App() {
         horaRonda={rondaSelecionada?.hora || ''}
       />
 
-    </div>
+    </div >
   );
 }
 

@@ -44,13 +44,13 @@ export function AreaTecnicaCard({
             {getStatusLabel(areaTecnica.status)}
           </Badge>
         </div>
-        
+
         <div className="text-sm text-gray-600">
           <div>
             <span className="font-medium">Contrato:</span> {areaTecnica.contrato}
           </div>
         </div>
-        
+
         {areaTecnica.observacoes && (
           <div className="pt-2 border-t">
             <p className="text-sm text-gray-600">
@@ -58,7 +58,7 @@ export function AreaTecnicaCard({
             </p>
           </div>
         )}
-        
+
         {areaTecnica.foto && (
           <div className="pt-2 border-t">
             <div className="space-y-2">
@@ -67,8 +67,8 @@ export function AreaTecnicaCard({
                 <span className="font-medium">Foto:</span>
               </div>
               <div className="relative">
-                <img 
-                  src={areaTecnica.foto} 
+                <img
+                  src={areaTecnica.foto}
                   alt={`Foto da ${areaTecnica.nome}`}
                   className="w-full h-24 object-cover rounded border"
                 />
@@ -106,7 +106,11 @@ export function AreaTecnicaCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDelete(areaTecnica.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('🗑️ Botão deletar área clicado:', areaTecnica.id);
+                onDelete(areaTecnica.id);
+              }}
               className="h-8 w-8 p-0 hover:bg-red-100"
             >
               <Trash2 className="w-4 h-4 text-red-600" />
@@ -114,14 +118,14 @@ export function AreaTecnicaCard({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-3">
         <div className="flex items-center gap-2">
           <Badge variant={getStatusColor(areaTecnica.status)}>
             {getStatusLabel(areaTecnica.status)}
           </Badge>
         </div>
-        
+
         {areaTecnica.foto && (
           <div className="pt-2 border-t">
             <div className="space-y-2">
@@ -130,8 +134,8 @@ export function AreaTecnicaCard({
                 <span className="font-medium">Foto:</span>
               </div>
               <div className="relative">
-                <img 
-                  src={areaTecnica.foto} 
+                <img
+                  src={areaTecnica.foto}
                   alt={`Foto da ${areaTecnica.nome}`}
                   className="w-full h-32 object-cover rounded-lg border shadow-sm"
                 />
@@ -142,7 +146,7 @@ export function AreaTecnicaCard({
             </div>
           </div>
         )}
-        
+
         {areaTecnica.observacoes && (
           <div className="pt-2 border-t">
             <p className="text-sm text-gray-600">

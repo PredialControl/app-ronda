@@ -71,12 +71,13 @@ class DirectEmailService {
     try {
       // Usar mailto para abrir cliente de email padrão
       const mailtoLink = `mailto:${destinatario}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
-      
+
       console.log('📧 Preparando email para:', destinatario);
       console.log('📧 Assunto:', assunto);
       console.log('📧 Link mailto:', mailtoLink);
 
       // Retornar o link para ser usado diretamente pelo usuário
+      window.open(mailtoLink, '_blank');
       return true;
 
     } catch (error) {
@@ -142,7 +143,7 @@ class DirectEmailService {
     laudosProximos: LaudoEmail[]
   ) {
     const dataAtual = new Date().toLocaleDateString('pt-BR');
-    
+
     let corpo = `📋 RELATÓRIO DE LAUDOS - ${contratoNome}\n\n`;
     corpo += `Olá ${destinatarioNome},\n\n`;
     corpo += `Segue o relatório de laudos atualizado em ${dataAtual}:\n\n`;
@@ -203,10 +204,10 @@ class DirectEmailService {
     console.log('📧 [SIMULAÇÃO] Email seria enviado para:', destinatario);
     console.log('📧 [SIMULAÇÃO] Assunto:', assunto);
     console.log('📧 [SIMULAÇÃO] Corpo:', corpo.substring(0, 100) + '...');
-    
+
     // Simular delay de envio
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     console.log('✅ [SIMULAÇÃO] Email enviado com sucesso');
     return true;
   }

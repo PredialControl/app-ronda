@@ -1,13 +1,24 @@
-
+// src/components/VisualizarRonda.tsx
 import { useMemo, useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AreaTecnica, Ronda, Contrato } from '@/types';
 import { downloadRelatorioPDF } from '@/lib/pdfReact';
-import { ArrowLeft, FileText, AlertTriangle, Edit, Plus, Trash2, Wrench, BarChart3, AlertCircle, Info, CheckCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  FileText,
+  AlertTriangle,
+  Edit,
+  Plus,
+  Trash2,
+  Wrench,
+  BarChart3,
+  AlertCircle,
+  Info,
+  CheckCircle,
+} from 'lucide-react';
 import { AreaTecnicaCard } from './AreaTecnicaCard';
-// Removed bulk import modals per user request
 
 interface VisualizarRondaProps {
   ronda: Ronda;
@@ -44,108 +55,82 @@ export function VisualizarRonda({
   onDeletarOutroItem,
   onEditarRonda,
   onExportarJSON,
-  isPrintMode
+  isPrintMode,
 }: VisualizarRondaProps) {
-  
-  // Função para lidar com edição de itens (incluindo fotos individuais)
+  // ---------- Handlers ----------
   const handleEditarItem = (item: any) => {
-    // Se é uma foto individual, criar um item separado apenas com essa foto
     if ((item as any).originalId) {
-      const itemOriginal = ronda.outrosItensCorrigidos?.find(originalItem => originalItem.id === (item as any).originalId);
-      if (itemOriginal) {
-        // Criar um item separado apenas com a foto selecionada
-        const itemSeparado = {
-          ...itemOriginal,
-          id: item.id, // Usar o ID único da foto individual
-          nome: item.nome, // Usar o nome da foto individual
-          foto: item.foto, // Usar apenas a foto específica
-          fotos: [item.foto], // Array com apenas essa foto
-          categoria: itemOriginal.categoria || 'CHAMADO', // Preservar categoria
-          // Adicionar flag para indicar que é uma edição de foto individual
+      const original = ronda.outrosItensCorrigidos?.find(i => i.id === (item as any).originalId);
+      if (original) {
+        const novo = {
+          ...original,
+          id: item.id,
+          nome: item.nome,
+          foto: item.foto,
+          fotos: [item.foto],
+          categoria: original.categoria || 'CHAMADO',
           isIndividualPhotoEdit: true,
-          originalItemId: itemOriginal.id // Manter referência ao item original
+          originalItemId: original.id,
         };
-        
-        console.log('🔄 Editando foto individual:', {
-          originalItem: itemOriginal,
-          itemSeparado: itemSeparado,
-          fotoIndividual: item
-        });
-        
-        onEditarOutroItem(itemSeparado);
+        onEditarOutroItem(novo);
         return;
       }
     }
-    // Caso contrário, usar o item normalmente
     onEditarOutroItem(item);
   };
 
-  // Função para lidar com exclusão de itens
   const handleDeletarItem = (item: any) => {
-    // Se é uma foto individual, deletar o item original (todas as fotos)
+    console.log('🗑️ handleDeletarItem clicado:', item);
+    // Se é uma foto individual (item splitado)
     if ((item as any).originalId) {
+      const original = ronda.outrosItensCorrigidos?.find(i => i.id === (item as any).originalId);
+      if (original && original.fotos && original.fotos.length > 1) {
+        // Se tem mais de uma foto, remover apenas a foto específica
+        const fotoParaRemover = item.foto;
+        const novasFotos = original.fotos.filter((f: string) => f !== fotoParaRemover);
+
+        // Atualizar o item com as novas fotos
+        const itemAtualizado = {
+          ...original,
+          fotos: novasFotos,
+          foto: novasFotos[0] // Atualizar a foto principal para a primeira das restantes
+        };
+
+        onEditarOutroItem(itemAtualizado);
+        return;
+      }
+      // Se é a última foto ou não encontrou, deletar o item original
       onDeletarOutroItem((item as any).originalId);
-      return;
+    } else {
+      // Item normal
+      onDeletarOutroItem(item.id);
     }
-    // Caso contrário, deletar normalmente
-    onDeletarOutroItem(item.id);
   };
 
-  // Função para determinar se um item é um chamado
   const isItemChamado = (item: any) => {
-    console.log('🔍 Verificando se item é chamado:', {
-      id: item.id,
-      nome: item.nome,
-      categoria: item.categoria,
-      fotos: item.fotos?.length,
-      descricao: item.descricao,
-      local: item.local
-    });
-    
-    // SEMPRE usar categoria se definida (prioridade máxima)
     if (item.categoria !== undefined && item.categoria !== null) {
-      const isChamado = item.categoria === 'CHAMADO';
-      console.log('🔍 Item tem categoria definida:', item.categoria, '→ É chamado:', isChamado);
-      return isChamado;
+      return item.categoria === 'CHAMADO';
     }
-    
-    // Lógica alternativa APENAS se categoria não estiver definida
-    const isChamadoAlternativo = (
+    // fallback heuristic
+    return (
       (item.fotos && item.fotos.length > 1) ||
-      item.nome?.includes('Item com') ||
-      item.descricao?.includes('Item registrado com fotos') ||
-      item.local?.includes('Local a definir')
+      item.nome?.includes('Item') ||
+      item.descricao?.includes('Item') ||
+      item.local?.includes('Local')
     );
-    
-    console.log('🔍 Item sem categoria, usando lógica alternativa → É chamado:', isChamadoAlternativo);
-    return isChamadoAlternativo;
   };
 
-  // Função para determinar se um item é corrigido
   const isItemCorrigido = (item: any) => {
-    console.log('🔍 Verificando se item é corrigido:', {
-      id: item.id,
-      nome: item.nome,
-      categoria: item.categoria
-    });
-    
-    // SEMPRE usar categoria se definida (prioridade máxima)
     if (item.categoria !== undefined && item.categoria !== null) {
-      const isCorrigido = item.categoria === 'CORRIGIDO';
-      console.log('🔍 Item tem categoria definida:', item.categoria, '→ É corrigido:', isCorrigido);
-      return isCorrigido;
+      return item.categoria === 'CORRIGIDO';
     }
-    
-    // Lógica alternativa: se não é chamado, é corrigido
-    const isCorrigidoAlternativo = !isItemChamado(item);
-    console.log('🔍 Item sem categoria, usando lógica alternativa → É corrigido:', isCorrigidoAlternativo);
-    return isCorrigidoAlternativo;
+    return !isItemChamado(item);
   };
-  
+
+  // ---------- Header Image State ----------
   const [headerImage, setHeaderImage] = useState<string | null>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
-  // Carregar logo salvo uma única vez
   useEffect(() => {
     const saved = localStorage.getItem('pdf_header_image');
     if (saved && saved.trim() !== '') {
@@ -155,629 +140,398 @@ export function VisualizarRonda({
     }
   }, []);
 
-  // Persistir alterações
   useEffect(() => {
     if (headerImage) {
       localStorage.setItem('pdf_header_image', headerImage);
     }
   }, [headerImage]);
-  // Debug: Log das props recebidas
-  console.log('🔄 VisualizarRonda renderizado com:', {
-    rondaId: ronda?.id,
-    rondaNome: ronda?.nome,
-    fotosRonda: ronda?.fotosRonda?.length || 0,
-    areasTecnicas: areasTecnicas?.length || 0,
-    outrosItens: ronda?.outrosItensCorrigidos?.length || 0
-  });
 
-  // Debug: Log detalhado das fotos
-  if (ronda?.fotosRonda && Array.isArray(ronda.fotosRonda)) {
-    console.log('📸 Fotos da ronda recebidas:', ronda.fotosRonda);
-    ronda.fotosRonda.forEach((foto, index) => {
-      if (foto && foto.id) {
-      console.log(`📸 Foto ${index + 1}:`, {
-        id: foto.id,
-        local: foto.local,
-        especialidade: foto.especialidade,
-        pendencia: foto.pendencia,
-        temFoto: !!foto.foto,
-        fotoLength: foto.foto?.length || 0
-      });
-      }
-    });
-  } else {
-    console.log('📸 Nenhuma foto encontrada ou array inválido:', ronda?.fotosRonda);
-  }
-
-  if (isPrintMode) {
-    return null; // O PrintRonda será renderizado separadamente
-  }
-
-  // Lógica para gerar resumo executivo
+  // ---------- Executive Summary Logic ----------
   const resumoExecutivo = useMemo(() => {
-    const criticos: string[] = [];
-    const altaRelevancia: string[] = [];
+    const equipamentosAtencao: string[] = [];
+    const equipamentosNormais: string[] = [];
     const chamadosAbertos: string[] = [];
-    const situacaoNormal: string[] = [];
     const itensCorrigidos: string[] = [];
 
-    // Analisar áreas técnicas
+    // áreas técnicas
     areasTecnicas.forEach(area => {
-      if (!area || !area.status) return; // Pular áreas nulas ou sem status
-      
-      if (area.status === 'ATENÇÃO') {
-        criticos.push(`${area.nome}: ${area.observacoes || 'Status crítico'}`);
-      } else if (area.status === 'EM MANUTENÇÃO') {
-        altaRelevancia.push(`${area.nome}: ${area.observacoes || 'Em manutenção'}`);
+      if (!area || !area.status) return;
+      if (area.status === 'ATENÇÃO' || area.status === 'EM MANUTENÇÃO') {
+        equipamentosAtencao.push(`${area.nome}: ${area.observacoes || area.status}`);
       } else {
-        situacaoNormal.push(`${area.nome}: Operacional`);
+        equipamentosNormais.push(`${area.nome}: Operacional`);
       }
     });
 
-    // Analisar itens de chamado
+    // fotos da ronda (itens de chamado)
     ronda.fotosRonda.forEach(item => {
       const criticidade = (item as any).criticidade || 'Média';
-      const textoPendencia = item.pendencia ? `Pendência: ${item.pendencia}` : `${item.especialidade} – ${item.local}`;
-      
-      if (criticidade === 'Alta') {
-        criticos.push(`${item.especialidade} (${item.local}): ${textoPendencia}`);
-      } else if (criticidade === 'Média') {
-        altaRelevancia.push(`${item.especialidade} (${item.local}): ${textoPendencia}`);
+      const texto = item.pendencia ? `Pendência: ${item.pendencia}` : `${item.especialidade} – ${item.local}`;
+      if (criticidade === 'Alta' || criticidade === 'ALTA') {
+        equipamentosAtencao.push(`${item.especialidade} (${item.local}): ${texto}`);
       } else {
-        chamadosAbertos.push(`${item.especialidade} (${item.local}): ${textoPendencia}`);
+        chamadosAbertos.push(`${item.especialidade} (${item.local}): ${texto}`);
       }
     });
 
-    // Analisar itens corrigidos
-    ronda.outrosItensCorrigidos.forEach(item => {
-      if (!item || !item.status) return; // Pular itens nulos ou sem status
-      
-      if (item.status === 'CONCLUÍDO') {
-        itensCorrigidos.push(`${item.nome} (${item.local}): ${item.observacoes || 'Item corrigido'}`);
+    // outros itens (chamados ou corrigidos)
+    ronda.outrosItensCorrigidos?.forEach(item => {
+      if (!item) return;
+      const isChamado = item.categoria === 'CHAMADO' || (!item.categoria && item.status === 'PENDENTE');
+      if (isChamado && item.status === 'PENDENTE') {
+        const prioridade = item.prioridade || 'MÉDIA';
+        const especialidade = item.tipo || 'Geral';
+        chamadosAbertos.push(`${especialidade} (${item.local}): ${item.descricao || item.nome} - Prioridade: ${prioridade}`);
+      } else if (item.status === 'CONCLUÍDO') {
+        itensCorrigidos.push(`${item.nome} (${item.local}): ${item.observacoes || item.descricao || 'Item corrigido'}`);
       }
     });
 
-    return {
-      criticos,
-      altaRelevancia,
-      chamadosAbertos,
-      situacaoNormal,
-      itensCorrigidos
-    };
+    return { equipamentosAtencao, equipamentosNormais, chamadosAbertos, itensCorrigidos };
   }, [areasTecnicas, ronda.fotosRonda, ronda.outrosItensCorrigidos]);
+
+  if (isPrintMode) return null;
 
   return (
     <>
-    <div id="print-container" className="space-y-6 print-container">
-      {/* Header com botões de ação */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button onClick={onVoltar} variant="outline" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar às Rondas
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{ronda.nome}</h1>
-            <p className="text-gray-600">Contrato: {contrato.nome}</p>
-          </div>
-        </div>
-        
-        <div className="flex gap-2 items-center">
-          {/* Seletor de imagem do cabeçalho */}
-          <input ref={headerInputRef} type="file" accept="image/*" className="hidden" onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onloadend = () => setHeaderImage(reader.result as string);
-            reader.readAsDataURL(file);
-          }} />
-          <Button variant="outline" onClick={() => headerInputRef.current?.click()}>
-            Escolher Logo
-          </Button>
-          {headerImage && (
-            <span className="text-xs text-gray-500 truncate max-w-[200px]">
-              Logo carregado
-            </span>
-          )}
-          <Button variant="ghost" onClick={() => setHeaderImage(`${window.location.origin}/manu.png`)}>
-            Usar padrão
-          </Button>
-          <Button onClick={onEditarRonda} variant="outline">
-            <Edit className="w-4 h-4 mr-2" />
-            Editar Ronda
-          </Button>
-          <Button 
-            onClick={async () => {
-              try {
-                console.log('🔍 DEBUG PDF BUTTON - Ronda antes do PDF:', {
-                  id: ronda.id,
-                  outrosItensCorrigidos: ronda.outrosItensCorrigidos?.length || 0,
-                  fotosRonda: ronda.fotosRonda?.length || 0,
-                  detalhes: ronda.outrosItensCorrigidos
-                });
-                
-                await downloadRelatorioPDF(ronda, contrato, areasTecnicas, headerImage);
-              } catch (error) {
-                console.error('Erro ao exportar PDF:', error);
-                alert('Erro ao exportar PDF. Tente novamente.');
-              }
-            }} 
-            variant="outline"
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            Exportar PDF
-          </Button>
-          <Button onClick={onExportarJSON} variant="outline">
-            <FileText className="w-4 h-4 mr-2" />
-            Exportar JSON
-          </Button>
-        </div>
-      </div>
-
-      {/* Informações da Ronda */}
-      <Card className="print-section avoid-break">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-600" />
-            Informações da Ronda
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <div className="text-sm font-medium text-gray-500">Data</div>
-              <div className="text-lg font-semibold">{new Date().toLocaleDateString('pt-BR')}</div>
-            </div>
-            <div>
-              <div className="text-sm font-medium text-gray-500">Hora</div>
-              <div className="text-lg font-semibold">{new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
-            </div>
-            <div>
-              <div className="text-sm font-medium text-gray-500">Responsável</div>
-              <div className="text-lg font-semibold">{ronda.responsavel || 'Ricardo Oliveira'}</div>
-            </div>
-            <div>
-              <div className="text-sm font-medium text-gray-500">Áreas Verificadas</div>
-              <div className="text-lg font-semibold text-blue-600">{areasTecnicas.length}</div>
-            </div>
-          </div>
-          
-          {ronda.observacoesGerais && (
-            <div className="mt-4 pt-4 border-t">
-              <div className="text-sm font-medium text-gray-500 mb-2">Observações Gerais</div>
-              <p className="text-gray-700">{ronda.observacoesGerais}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Áreas Técnicas */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-green-600" />
-              Áreas Técnicas Verificadas
-            </CardTitle>
-            <Button onClick={onAdicionarArea} className="bg-green-600 hover:bg-green-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar Área
+      <div id="print-container" className="space-y-6 print-container">
+        {/* Header actions */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button onClick={onVoltar} variant="outline" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar às Rondas
             </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {areasTecnicas.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Nenhuma área técnica verificada ainda.</p>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{ronda.nome}</h1>
+              <p className="text-gray-600">Contrato: {contrato.nome}</p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 print-grid-2-per-page">
-              {areasTecnicas.map((area) => (
-                <AreaTecnicaCard
-                  key={area.id}
-                  areaTecnica={area}
-                  onEdit={() => onEditarArea(area)}
-                  onDelete={() => onDeletarArea(area.id)}
-                  isPrintMode={false}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Divisor e Seção de Itens Abertura de Chamado */}
-      <div className="my-12 border-t-2 border-gray-300">
-        <div className="flex items-center justify-center -mt-3">
-          <div className="bg-white px-6 py-2">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-              <AlertTriangle className="w-8 h-8 text-orange-600" />
-              Itens Abertura de Chamado
-            </h2>
           </div>
-        </div>
-      </div>
-
-      {/* Grid de Itens Abertura de Chamado */}
-      <Card className="print-section avoid-break">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-orange-600" />
-              Itens para Abertura de Chamado
-            </CardTitle>
-            <Button onClick={onAdicionarOutroItem} className="bg-orange-600 hover:bg-orange-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Registrar Item
+          <div className="flex items-center gap-2">
+            <input
+              type="file"
+              ref={headerInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onloadend = () => setHeaderImage(reader.result as string);
+                reader.readAsDataURL(file);
+              }}
+            />
+            <Button onClick={onEditarRonda} variant="outline">
+              <Edit className="w-4 h-4 mr-2" />
+              Editar Ronda
             </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {(() => {
-            const itensChamados = ronda.outrosItensCorrigidos?.filter(item => isItemChamado(item)) || [];
-            console.log('🔍 DEBUG CHAMADOS - Total de itens:', ronda.outrosItensCorrigidos?.length || 0);
-            console.log('🔍 DEBUG CHAMADOS - Itens chamados:', itensChamados.length);
-            console.log('🔍 DEBUG CHAMADOS - Lista completa:', ronda.outrosItensCorrigidos);
-            console.log('🔍 DEBUG CHAMADOS - Itens filtrados:', itensChamados);
-            
-            return !ronda.outrosItensCorrigidos || itensChamados.length === 0;
-          })() ? (
-            <div className="text-center py-12">
-              <AlertTriangle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg mb-4">
-                Nenhum item para abertura de chamado registrado ainda.
-              </p>
-              <p className="text-gray-600 mb-4">
-                Registre itens que precisam de atenção, manutenção ou correção durante a ronda.
-              </p>
-              <Button onClick={onAdicionarOutroItem} className="bg-orange-600 hover:bg-orange-700">
-                <AlertTriangle className="w-4 h-4 mr-2" />
-                Registrar Primeiro Item
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 print-grid-2x2">
-              {ronda.outrosItensCorrigidos?.filter(item => item && item.id && isItemChamado(item)).flatMap((item) => {
-                // Se há múltiplas fotos, criar um card para cada foto
-                if (item.fotos && item.fotos.length > 1) {
-                  return item.fotos.map((foto, fotoIndex) => ({
-                    ...item,
-                    id: `${item.id}-foto-${fotoIndex}`, // ID único para renderização
-                    originalId: item.id, // Manter ID original para edição
-                    foto: foto,
-                    fotos: [foto], // Apenas uma foto por card
-                    nome: `${item.nome} - Foto ${fotoIndex + 1}`
-                  }));
+            <Button
+              onClick={async () => {
+                try {
+                  await downloadRelatorioPDF(ronda, contrato, areasTecnicas, headerImage);
+                } catch (e) {
+                  console.error(e);
+                  alert('Erro ao exportar PDF');
                 }
-                // Se há apenas uma foto ou nenhuma, manter o item original
-                return [item];
-              }).map((item) => (
-                <div key={item.id} className="bg-white border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-orange-600" />
-                      {item.nome}
-                    </h3>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditarItem(item)}
-                        className="h-8 w-8 p-0 hover:bg-blue-100"
-                        title="Editar item"
-                      >
-                        <Edit className="w-4 h-4 text-blue-600" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeletarItem(item)}
-                        className="h-8 w-8 p-0 hover:bg-red-100"
-                        title="Excluir item"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                      {item.tipo}
-                    </Badge>
-                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                      {item.prioridade}
-                    </Badge>
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      {item.status || 'N/A'}
-                    </Badge>
-                  </div>
-                  
-                  {/* Mostrar foto única (cada card agora representa uma foto) */}
-                  {item.foto && (
-                  <div className="relative">
-                      <img 
-                        src={item.foto} 
-                        alt={`Item corrigido - ${item.nome}`}
-                        className="w-full h-32 object-cover rounded-lg border shadow-sm"
-                      />
-                    </div>
-                  )}
-                  
-                  {/* Sem fotos */}
-                  {!item.foto && (
-                      <div className="w-full h-32 bg-gray-100 rounded-lg border shadow-sm flex items-center justify-center">
-                        <div className="text-center text-gray-500">
-                          <AlertTriangle className="w-8 h-8 mx-auto mb-2" />
-                          <p className="text-sm">Sem foto</p>
-                        </div>
-                      </div>
-                    )}
-                  
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div><span className="font-medium">Descrição:</span> {item.descricao}</div>
-                    <div><span className="font-medium">Local:</span> {item.local}</div>
-                    {item.responsavel && (
-                    <div><span className="font-medium">Responsável:</span> {item.responsavel}</div>
-                    )}
-                  </div>
-                  
-                  {item.observacoes && (
-                    <div className="pt-2 border-t">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Observações:</span> {item.observacoes}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Grid de Outros Itens Corrigidos */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-green-600" />
-              Outros Itens Corrigidos
-            </CardTitle>
-            <Button onClick={onAdicionarOutroItem} className="bg-green-600 hover:bg-green-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar Item
+              }}
+              variant="outline"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Exportar PDF
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          {(() => {
-            const itensCorrigidos = ronda.outrosItensCorrigidos.filter(item => isItemCorrigido(item));
-            console.log('🔍 DEBUG CORRIGIDOS - Total de itens:', ronda.outrosItensCorrigidos?.length || 0);
-            console.log('🔍 DEBUG CORRIGIDOS - Itens corrigidos:', itensCorrigidos.length);
-            console.log('🔍 DEBUG CORRIGIDOS - Lista completa:', ronda.outrosItensCorrigidos);
-            console.log('🔍 DEBUG CORRIGIDOS - Itens filtrados:', itensCorrigidos);
-            
-            return itensCorrigidos.length === 0;
-          })() ? (
-            <div className="text-center py-12">
-              <Wrench className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg mb-4">
-                Nenhum item corrigido registrado ainda.
-              </p>
-              <p className="text-gray-600 mb-4">
-                Registre correções, melhorias e manutenções realizadas durante a ronda.
-              </p>
-              <Button onClick={onAdicionarOutroItem} className="bg-green-600 hover:bg-green-700">
-                <Wrench className="w-4 h-4 mr-2" />
-                Adicionar Primeiro Item
+        </div>
+
+        {/* Informações da Ronda */}
+        <Card className="print-section avoid-break">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-600" />
+              Informações da Ronda
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <div className="text-sm font-medium text-gray-500">Data</div>
+                <div className="text-lg font-semibold">{ronda.data ? new Date(ronda.data).toLocaleDateString('pt-BR') : 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-gray-500">Hora</div>
+                <div className="text-lg font-semibold">{ronda.hora || 'N/A'}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-gray-500">Responsável</div>
+                <div className="text-lg font-semibold">{ronda.responsavel || 'Ricardo Oliveira'}</div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-gray-500">Áreas Verificadas</div>
+                <div className="text-lg font-semibold text-blue-600">{areasTecnicas.length}</div>
+              </div>
+            </div>
+            {ronda.observacoesGerais && (
+              <div className="mt-4 pt-4 border-t">
+                <div className="text-sm font-medium text-gray-500 mb-2">Observações Gerais</div>
+                <p className="text-gray-700">{ronda.observacoesGerais}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Áreas Técnicas */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-green-600" />
+                Áreas Técnicas Verificadas
+              </CardTitle>
+              <Button onClick={onAdicionarArea} className="bg-green-600 hover:bg-green-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar Área
               </Button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 print-grid-2x2">
-              {ronda.outrosItensCorrigidos?.filter(item => item && item.id && isItemCorrigido(item)).map((item) => (
-                <div key={item.id} className="bg-white border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                      <Wrench className="w-4 h-4 text-green-600" />
-                      {item.nome}
-                    </h3>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditarItem(item)}
-                        className="h-8 w-8 p-0 hover:bg-blue-100"
-                        title="Editar item"
-                      >
-                        <Edit className="w-4 h-4 text-blue-600" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeletarItem(item)}
-                        className="h-8 w-8 p-0 hover:bg-red-100"
-                        title="Excluir item"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                      {item.tipo}
-                    </Badge>
-                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                      {item.prioridade}
-                    </Badge>
-                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                      {item.status || 'N/A'}
-                    </Badge>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div><span className="font-medium">Descrição:</span> {item.descricao}</div>
-                    <div><span className="font-medium">Local:</span> {item.local}</div>
-                    {item.responsavel && (
-                      <div><span className="font-medium">Responsável:</span> {item.responsavel}</div>
-                    )}
-                  </div>
-                  
-                  {/* Mostrar múltiplas fotos */}
-                  {(item.fotos && item.fotos.length > 0) && (
-                    <div className="relative">
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {item.fotos.map((foto, fotoIndex) => (
-                          <img 
-                            key={fotoIndex}
-                            src={foto} 
-                            alt={`${item.nome} - Foto ${fotoIndex + 1}`}
-                            className="w-full h-20 object-cover rounded-lg border shadow-sm"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Fallback para foto única (compatibilidade) */}
-                  {(!item.fotos || item.fotos.length === 0) && item.foto && (
-                    <div className="relative">
-                      <img 
-                        src={item.foto} 
-                        alt={`Item corrigido - ${item.nome}`}
-                        className="w-full h-32 object-cover rounded-lg border shadow-sm"
-                      />
-                    </div>
-                  )}
-                  
-                  {item.observacoes && (
-                    <div className="pt-2 border-t">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Observações:</span> {item.observacoes}
-                      </p>
-                    </div>
-                  )}
+          </CardHeader>
+          <CardContent>
+            {areasTecnicas.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Nenhuma área técnica verificada ainda.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 print-grid-2-per-page">
+                {areasTecnicas.map(area => (
+                  <AreaTecnicaCard
+                    key={area.id}
+                    areaTecnica={area}
+                    onEdit={() => onEditarArea(area)}
+                    onDelete={() => onDeletarArea(area.id)}
+                    isPrintMode={false}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Itens Abertura de Chamado */}
+        <div className="my-12 border-t-2 border-gray-300">
+          <div className="flex items-center justify-center -mt-3">
+            <div className="bg-white px-6 py-2">
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                <AlertTriangle className="w-8 h-8 text-orange-600" />
+                Itens Abertura de Chamado
+              </h2>
+            </div>
+          </div>
+        </div>
+        <Card className="print-section avoid-break">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-orange-600" />
+                Itens para Abertura de Chamado
+              </CardTitle>
+              <Button onClick={onAdicionarOutroItem} className="bg-orange-600 hover:bg-orange-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Registrar Item
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const itensChamados = ronda.outrosItensCorrigidos?.filter(isItemChamado) || [];
+              return itensChamados.length === 0 ? (
+                <div className="text-center py-12">
+                  <AlertTriangle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg mb-4">Nenhum item para abertura de chamado registrado ainda.</p>
+                  <p className="text-gray-600 mb-4">Registre itens que precisam de atenção, manutenção ou correção durante a ronda.</p>
+                  <Button onClick={onAdicionarOutroItem} className="bg-orange-600 hover:bg-orange-700">
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Registrar Primeiro Item
+                  </Button>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 print-grid-2x2">
+                  {ronda.outrosItensCorrigidos?.filter(isItemChamado).flatMap((item) => {
+                    // Se há múltiplas fotos, criar um card para cada foto
+                    if (item.fotos && item.fotos.length > 1) {
+                      return item.fotos.map((foto: string, fotoIndex: number) => ({
+                        ...item,
+                        id: `${item.id}-foto-${fotoIndex}`, // ID único para renderização
+                        originalId: item.id, // Manter ID original para edição
+                        foto: foto, // Foto específica deste card
+                        fotoIndex: fotoIndex, // Índice da foto para exclusão precisa
+                        nome: `${item.nome} (${fotoIndex + 1}/${item.fotos.length})` // Indicador visual
+                      }));
+                    }
+                    return [item];
+                  }).map(item => (
+                    <Card key={item.id} className="border">
+                      <CardHeader>
+                        <CardTitle className="text-sm font-medium">{item.nome}</CardTitle>
+                        {/* Badges de Especialidade e Prioridade */}
+                        <div className="flex gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs font-normal">
+                            {item.tipo || 'Geral'}
+                          </Badge>
+                          <Badge variant="outline" className={`text-xs font-normal ${item.prioridade === 'ALTA' ? 'border-red-500 text-red-600' :
+                            item.prioridade === 'MÉDIA' ? 'border-yellow-500 text-yellow-600' :
+                              'border-green-500 text-green-600'
+                            }`}>
+                            {item.prioridade || 'Média'}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-2">
+                        {/* Imagem do Item */}
+                        {item.foto && (
+                          <div className="mb-3 rounded-md overflow-hidden h-40 bg-gray-100 border border-gray-200">
+                            <img
+                              src={item.foto}
+                              alt={item.nome}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
 
-      {/* Resumo Executivo */}
-      <Card className="border-2 border-blue-200 bg-blue-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-blue-800">
-            <BarChart3 className="w-6 h-6" />
-            📊 Resumo Executivo – Pontos Críticos
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Críticos */}
-          {resumoExecutivo.criticos.length > 0 && (
-            <div className="bg-orange-100 border-l-4 border-orange-500 p-4 rounded-r-lg">
-              <h3 className="font-bold text-orange-800 flex items-center gap-2 mb-3">
-                <AlertCircle className="w-5 h-5" />
-                ⚠️ Atenção
-              </h3>
-              <ul className="space-y-2">
-                {resumoExecutivo.criticos.map((item, index) => (
-                  <li key={index} className="text-orange-700 flex items-start gap-2">
-                    <span className="text-orange-500 mt-1">•</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+                        <div className="space-y-2 text-sm">
+                          <div>
+                            <span className="font-semibold text-gray-700">Local:</span> {item.local}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-gray-700">Pendência:</span> {item.descricao || item.pendencia || 'Não informada'}
+                          </div>
+                          {item.observacoes && (
+                            <div>
+                              <span className="font-semibold text-gray-700">Obs:</span> {item.observacoes}
+                            </div>
+                          )}
+                          {item.responsavel && (
+                            <div>
+                              <span className="font-semibold text-gray-700">Resp:</span> {item.responsavel}
+                            </div>
+                          )}
+                        </div>
 
-          {/* Alta Relevância */}
-          {resumoExecutivo.altaRelevancia.length > 0 && (
-            <div className="bg-orange-100 border-l-4 border-orange-500 p-4 rounded-r-lg">
-              <h3 className="font-bold text-orange-800 flex items-center gap-2 mb-3">
-                <AlertCircle className="w-5 h-5" />
-                ⚠️ Alta Relevância
-              </h3>
-              <ul className="space-y-2">
-                {resumoExecutivo.altaRelevancia.map((item, index) => (
-                  <li key={index} className="text-orange-700 flex items-start gap-2">
-                    <span className="text-orange-500 mt-1">•</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+                        <div className="flex gap-2 mt-4 justify-end">
+                          <Button variant="ghost" size="sm" onClick={() => handleEditarItem(item)}>
+                            <Edit className="w-4 h-4 text-blue-600" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeletarItem(item);
+                          }}>
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card >
+                  ))
+                  }
+                </div >
+              );
+            })()}
+          </CardContent >
+        </Card >
 
-          {/* Chamados Abertos */}
-          {resumoExecutivo.chamadosAbertos.length > 0 && (
-            <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded-r-lg">
-              <h3 className="font-bold text-yellow-800 flex items-center gap-2 mb-3">
-                <AlertTriangle className="w-5 h-5" />
-                🔧 Chamados Abertos
-              </h3>
-              <ul className="space-y-2">
-                {resumoExecutivo.chamadosAbertos.map((item, index) => (
-                  <li key={index} className="text-yellow-700 flex items-start gap-2">
-                    <span className="text-yellow-500 mt-1">•</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+        {/* Itens Corrigidos */}
+        {
+          resumoExecutivo.itensCorrigidos.length > 0 && (
+            <Card className="print-section avoid-break mt-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="w-5 h-5" />
+                  Itens Corrigidos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {resumoExecutivo.itensCorrigidos.map((i, idx) => (
+                    <li key={idx} className="text-blue-700 flex items-start gap-2">
+                      <span className="text-blue-500 mt-1">•</span>
+                      <span>{i}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )
+        }
 
-          {/* Situação Normal */}
-          {resumoExecutivo.situacaoNormal.length > 0 && (
-            <div className="bg-green-100 border-l-4 border-green-500 p-4 rounded-r-lg">
-              <h3 className="font-bold text-green-800 flex items-center gap-2 mb-3">
-                <CheckCircle className="w-5 h-5" />
-                ✅ Situação Normal
-              </h3>
-              <ul className="space-y-2">
-                {resumoExecutivo.situacaoNormal.map((item, index) => (
-                  <li key={index} className="text-green-700 flex items-start gap-2">
-                    <span className="text-green-500 mt-1">•</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Itens Corrigidos */}
-          {resumoExecutivo.itensCorrigidos.length > 0 && (
-            <div className="bg-blue-100 border-l-4 border-blue-500 p-4 rounded-r-lg">
-              <h3 className="font-bold text-blue-800 flex items-center gap-2 mb-3">
-                <Wrench className="w-5 h-5" />
-                🛠 Itens Corrigidos
-              </h3>
-              <ul className="space-y-2">
-                {resumoExecutivo.itensCorrigidos.map((item, index) => (
-                  <li key={index} className="text-blue-700 flex items-start gap-2">
-                    <span className="text-blue-500 mt-1">•</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Resumo vazio */}
-          {resumoExecutivo.criticos.length === 0 && 
-           resumoExecutivo.altaRelevancia.length === 0 && 
-           resumoExecutivo.chamadosAbertos.length === 0 && (
-            <div className="text-center py-8">
-              <Info className="w-16 h-16 text-blue-300 mx-auto mb-4" />
-              <p className="text-blue-600 font-medium">
-                Todas as áreas estão operacionais. Nenhum ponto crítico identificado.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        {/* Resumo Executivo */}
+        <Card className="mt-8 print-section avoid-break">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+              Resumo Executivo – Pontos Críticos
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Equipamentos em Atenção / Manutenção */}
+            {resumoExecutivo.equipamentosAtencao.length > 0 && (
+              <div className="bg-orange-100 border-l-4 border-orange-500 p-4 rounded-r-lg">
+                <h3 className="font-bold text-orange-800 flex items-center gap-2 mb-3">
+                  <AlertCircle className="w-5 h-5" />
+                  ⚠️ Equipamentos em Atenção / Em Manutenção
+                </h3>
+                <ul className="space-y-2">
+                  {resumoExecutivo.equipamentosAtencao.map((i, idx) => (
+                    <li key={idx} className="text-orange-700 flex items-start gap-2">
+                      <span className="text-orange-500 mt-1">•</span>
+                      <span>{i}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {/* Equipamentos Status Normal */}
+            {resumoExecutivo.equipamentosNormais.length > 0 && (
+              <div className="bg-green-100 border-l-4 border-green-500 p-4 rounded-r-lg">
+                <h3 className="font-bold text-green-800 flex items-center gap-2 mb-3">
+                  <CheckCircle className="w-5 h-5" />
+                  ✅ Equipamentos Status Normal
+                </h3>
+                <ul className="space-y-2">
+                  {resumoExecutivo.equipamentosNormais.map((i, idx) => (
+                    <li key={idx} className="text-green-700 flex items-start gap-2">
+                      <span className="text-green-500 mt-1">•</span>
+                      <span>{i}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {/* Chamados Abertos */}
+            {resumoExecutivo.chamadosAbertos.length > 0 && (
+              <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded-r-lg">
+                <h3 className="font-bold text-yellow-800 flex items-center gap-2 mb-3">
+                  <AlertTriangle className="w-5 h-5" />
+                  🔧 Itens para Abertura de Chamado
+                </h3>
+                <ul className="space-y-2">
+                  {resumoExecutivo.chamadosAbertos.map((i, idx) => (
+                    <li key={idx} className="text-yellow-700 flex items-start gap-2">
+                      <span className="text-yellow-500 mt-1">•</span>
+                      <span>{i}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {/* Empty summary */}
+            {resumoExecutivo.equipamentosAtencao.length === 0 &&
+              resumoExecutivo.equipamentosNormais.length === 0 &&
+              resumoExecutivo.chamadosAbertos.length === 0 &&
+              resumoExecutivo.itensCorrigidos.length === 0 && (
+                <div className="text-center py-8">
+                  <Info className="w-16 h-16 text-blue-300 mx-auto mb-4" />
+                  <p className="text-blue-600 font-medium">Nenhuma informação registrada ainda.</p>
+                </div>
+              )}
+          </CardContent>
+        </Card>
+      </div >
     </>
   );
 }

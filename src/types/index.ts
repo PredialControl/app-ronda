@@ -16,6 +16,7 @@ export interface Contrato {
   sindico: string;
   endereco: string;
   periodicidade: 'DIARIA' | 'SEMANAL' | 'QUINZENAL' | 'MENSAL' | 'BIMESTRAL' | 'TRIMESTRAL' | 'SEMESTRAL' | 'ANUAL';
+  status?: 'IMPLANTADO' | 'EM IMPLANTACAO';
   observacoes?: string;
   dataCriacao: string;
 }
@@ -25,8 +26,8 @@ export interface OutroItemCorrigido {
   nome: string;
   descricao: string;
   local: string;
-  tipo: 'CORREÇÃO' | 'MELHORIA' | 'MANUTENÇÃO' | 'OUTRO';
-  prioridade: 'BAIXA' | 'MÉDIA' | 'ALTA' | 'URGENTE';
+  tipo: 'CIVIL' | 'ELÉTRICA' | 'HIDRÁULICA' | 'MECÂNICA' | 'CORREÇÃO' | 'MELHORIA' | 'MANUTENÇÃO' | 'OUTRO'; // Especialidades + valores antigos para compatibilidade
+  prioridade: 'BAIXA' | 'MÉDIA' | 'ALTA';
   status: 'PENDENTE' | 'EM ANDAMENTO' | 'CONCLUÍDO' | 'CANCELADO';
   contrato: string;
   endereco: string;
@@ -108,4 +109,36 @@ export interface AgendaItem {
 
 export interface AgendaSemanal {
   [key: string]: AgendaItem[]; // key = dia da semana (SEGUNDA, TERÇA, etc.)
+}
+
+// Parecer Técnico Interfaces
+export interface ParecerTecnico {
+  id: string;
+  contrato_id: string;
+  titulo: string;
+  finalidade: string;
+  narrativa_cenario: string;
+  capa_url?: string; // URL da imagem de capa personalizada
+  topicos?: ParecerTopico[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ParecerTopico {
+  id: string;
+  parecer_id: string;
+  ordem: number;
+  titulo: string;
+  descricao: string;
+  imagens?: ParecerImagem[];
+  created_at: string;
+}
+
+export interface ParecerImagem {
+  id: string;
+  topico_id: string;
+  ordem: number;
+  url: string;
+  descricao: string;
+  created_at: string;
 }

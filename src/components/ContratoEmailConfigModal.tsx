@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { X, Mail, Plus, Edit, Trash2, Save } from 'lucide-react';
+import { X, Mail, Plus, Edit, Trash2, Save, Info } from 'lucide-react';
 import { emailService, EmailDestinatario } from '@/lib/emailService';
 
 interface ContratoEmailConfigModalProps {
@@ -91,6 +91,8 @@ export function ContratoEmailConfigModal({ isOpen, onClose, contrato }: Contrato
             <X className="w-5 h-5" />
           </Button>
         </div>
+
+
 
         {/* Adicionar novo destinatário */}
         <Card className="mb-6">
@@ -191,9 +193,9 @@ export function ContratoEmailConfigModal({ isOpen, onClose, contrato }: Contrato
         </div>
 
         {/* Informações */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h4 className="font-medium text-blue-900 mb-2">📧 Informações:</h4>
-          <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-medium text-gray-900 mb-2">📧 Informações:</h4>
+          <ul className="text-sm text-gray-800 space-y-1 list-disc list-inside">
             <li>Configure pelo menos 2 destinatários por contrato</li>
             <li>Os emails serão enviados para todos os destinatários ativos</li>
             <li>Você pode editar ou remover destinatários a qualquer momento</li>

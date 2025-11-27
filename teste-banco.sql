@@ -59,3 +59,4 @@ SELECT 'Fotos Ronda' as tipo, COUNT(*) as total FROM fotos_ronda;
 
 
 
+

@@ -27,12 +27,12 @@ export function OutroItemModal({
   dataRonda = '',
   horaRonda = ''
 }: OutroItemModalProps) {
-  
+
   const [formData, setFormData] = useState<Partial<OutroItemCorrigido>>({
     nome: item?.nome || '',
     descricao: item?.descricao || '',
     local: item?.local || '',
-    tipo: item?.tipo || 'CORREÇÃO',
+    tipo: item?.tipo || 'CIVIL',
     prioridade: item?.prioridade || 'MÉDIA',
     status: item?.status || 'PENDENTE',
     contrato: contratoRonda,
@@ -84,7 +84,7 @@ export function OutroItemModal({
         nome: '',
         descricao: '',
         local: '',
-        tipo: 'CORREÇÃO',
+        tipo: 'CIVIL',
         prioridade: 'MÉDIA',
         status: 'PENDENTE',
         contrato: contratoRonda,
@@ -117,30 +117,30 @@ export function OutroItemModal({
     const MAX_PHOTOS = 5;
     const currentCount = multiplePhotos.length;
     const availableSlots = MAX_PHOTOS - currentCount;
-    
+
     if (availableSlots <= 0) {
       alert(`Limite máximo de ${MAX_PHOTOS} fotos por item. Remova algumas fotos antes de adicionar novas.`);
       return;
     }
 
     const filesToProcess = Array.from(files).slice(0, availableSlots);
-    
+
     if (filesToProcess.length < files.length) {
       alert(`Apenas ${filesToProcess.length} fotos serão adicionadas (limite: ${MAX_PHOTOS}).`);
     }
 
     const newPhotos: string[] = [];
-    
+
     for (let i = 0; i < filesToProcess.length; i++) {
       const file = filesToProcess[i];
       if (file && file.type.startsWith('image/')) {
         try {
           console.log(`📸 Processando foto ${i + 1}/${filesToProcess.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-          
+
           // Usar compressão mais agressiva para múltiplas fotos
           const fotoComprimida = await otimizarFoto(file, 800, 800, 0.5); // Qualidade muito menor para evitar erro 500
           newPhotos.push(fotoComprimida);
-          
+
           console.log(`✅ Foto ${i + 1} comprimida com sucesso`);
         } catch (error) {
           console.error(`❌ Erro ao processar foto ${i + 1}:`, error);
@@ -157,50 +157,61 @@ export function OutroItemModal({
     }
 
     if (newPhotos.length > 0) {
-      setMultiplePhotos(prev => [...prev, ...newPhotos]);
-      setFormData(prev => ({ ...prev, fotos: [...(prev.fotos || []), ...newPhotos] }));
-      console.log(`📸 ${newPhotos.length} fotos adicionadas. Total: ${multiplePhotos.length + newPhotos.length}`);
+      const updatedPhotos = [...multiplePhotos, ...newPhotos];
+      setMultiplePhotos(updatedPhotos);
+      setFormData(prev => ({
+        ...prev,
+        foto: updatedPhotos[0], // Primeira foto como foto principal
+        fotos: updatedPhotos
+      }));
+      console.log(`📸 ${newPhotos.length} fotos adicionadas. Total: ${updatedPhotos.length}`);
+    }
+
+    // Resetar o input para permitir selecionar a mesma foto novamente ou disparar o evento corretamente
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
   const removePhoto = (index: number) => {
-    setMultiplePhotos(prev => prev.filter((_, i) => i !== index));
-    setFormData(prev => ({ 
-      ...prev, 
-      fotos: (prev.fotos || []).filter((_, i) => i !== index)
+    const updatedPhotos = multiplePhotos.filter((_, i) => i !== index);
+    setMultiplePhotos(updatedPhotos);
+    setFormData(prev => ({
+      ...prev,
+      foto: updatedPhotos[0] || null, // Primeira foto restante ou null se não houver mais fotos
+      fotos: updatedPhotos
     }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Se há fotos selecionadas, apenas as fotos são obrigatórias
-    if (multiplePhotos.length > 0) {
-      // Campos são opcionais quando há fotos
-      console.log('📸 Salvando item apenas com fotos, campos são opcionais');
-    } else {
-      // Se não há fotos, campos básicos são obrigatórios
-      if (!formData.nome || !formData.descricao || !formData.local) {
-        alert('Por favor, preencha pelo menos nome, descrição e local, ou selecione fotos');
-        return;
-      }
+    // Validar campos obrigatórios: Local, Pendência (Descrição) e Fotos
+    if (!formData.local || !formData.descricao) {
+      alert('Por favor, preencha Local e Pendência');
+      return;
+    }
+
+    if (multiplePhotos.length === 0) {
+      alert('Por favor, adicione pelo menos uma foto');
+      return;
     }
 
     const itemData: OutroItemCorrigido = {
       id: item?.id || crypto.randomUUID(),
-      nome: formData.nome || (multiplePhotos.length > 0 ? `Item com ${multiplePhotos.length} foto(s)` : ''),
-      descricao: formData.descricao || (multiplePhotos.length > 0 ? 'Item registrado com fotos' : ''),
-      local: formData.local || (multiplePhotos.length > 0 ? 'Local a definir' : ''),
-      tipo: formData.tipo as 'CORREÇÃO' | 'MELHORIA' | 'MANUTENÇÃO' | 'OUTRO',
-      prioridade: formData.prioridade as 'BAIXA' | 'MÉDIA' | 'ALTA' | 'URGENTE',
-      status: formData.status as 'PENDENTE' | 'EM ANDAMENTO' | 'CONCLUÍDO' | 'CANCELADO',
+      nome: formData.nome || `Item - ${formData.local}`, // Valor padrão baseado no local
+      descricao: formData.descricao || '',
+      local: formData.local || '',
+      tipo: formData.tipo || 'CORREÇÃO', // Valor padrão
+      prioridade: formData.prioridade || 'MÉDIA', // Valor padrão
+      status: formData.status || 'PENDENTE', // Valor padrão
       contrato: formData.contrato || '',
       endereco: formData.endereco || '',
       data: formData.data || '',
       hora: formData.hora || '',
-      foto: multiplePhotos[0] || null, // Primeira foto como foto principal
+      foto: multiplePhotos[0] || null,
       fotos: multiplePhotos,
-      categoria: item?.categoria || 'CHAMADO', // Preservar categoria existente, ou definir como chamado se novo item
+      categoria: item?.categoria || 'CHAMADO',
       observacoes: formData.observacoes || '',
       responsavel: formData.responsavel || ''
     };
@@ -210,142 +221,129 @@ export function OutroItemModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-semibold text-gray-900">
+    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+      <div className="bg-black border-2 border-gray-700 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+          <h2 className="text-xl font-semibold text-white">
             {item ? 'Editar Item' : 'Novo Item'}
           </h2>
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 p-0 text-gray-400 hover:text-white"
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nome {multiplePhotos.length === 0 ? '*' : '(opcional)'}
-              </label>
-              <Input
-                value={formData.nome || ''}
-                onChange={(e) => handleInputChange('nome', e.target.value)}
-                placeholder="Nome do item"
-                required={multiplePhotos.length === 0}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Local {multiplePhotos.length === 0 ? '*' : '(opcional)'}
-              </label>
-              <Input
-                value={formData.local || ''}
-                onChange={(e) => handleInputChange('local', e.target.value)}
-                placeholder="Local do item"
-                required={multiplePhotos.length === 0}
-              />
-            </div>
+          {/* Local */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Local *
+            </label>
+            <Input
+              value={formData.local || ''}
+              onChange={(e) => handleInputChange('local', e.target.value)}
+              placeholder="Local do item"
+              required
+              className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
+            />
           </div>
 
+          {/* Pendência (Descrição) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Descrição {multiplePhotos.length === 0 ? '*' : '(opcional)'}
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Pendência *
             </label>
             <textarea
               value={formData.descricao || ''}
               onChange={(e) => handleInputChange('descricao', e.target.value)}
-              placeholder="Descrição detalhada do item"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Descreva a pendência ou problema identificado"
+              className="w-full px-3 py-2 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 text-white placeholder:text-gray-500"
               rows={3}
-              required={multiplePhotos.length === 0}
+              required
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Grid com Especialidade e Prioridade */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Especialidade */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Especialidade *
               </label>
-              <Select value={formData.tipo} onValueChange={(value) => handleInputChange('tipo', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
+              <Select
+                value={formData.tipo}
+                onValueChange={(value) => handleInputChange('tipo', value)}
+              >
+                <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
+                  <SelectValue placeholder="Selecione a especialidade" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CORREÇÃO">Correção</SelectItem>
-                  <SelectItem value="MELHORIA">Melhoria</SelectItem>
-                  <SelectItem value="MANUTENÇÃO">Manutenção</SelectItem>
-                  <SelectItem value="OUTRO">Outro</SelectItem>
+                <SelectContent className="bg-gray-900 border-gray-700">
+                  <SelectItem value="CIVIL" className="text-white hover:bg-gray-800">Civil</SelectItem>
+                  <SelectItem value="ELÉTRICA" className="text-white hover:bg-gray-800">Elétrica</SelectItem>
+                  <SelectItem value="HIDRÁULICA" className="text-white hover:bg-gray-800">Hidráulica</SelectItem>
+                  <SelectItem value="MECÂNICA" className="text-white hover:bg-gray-800">Mecânica</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Prioridade */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prioridade
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Prioridade *
               </label>
-              <Select value={formData.prioridade} onValueChange={(value) => handleInputChange('prioridade', value)}>
-                <SelectTrigger>
+              <Select
+                value={formData.prioridade}
+                onValueChange={(value) => handleInputChange('prioridade', value)}
+              >
+                <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
                   <SelectValue placeholder="Selecione a prioridade" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BAIXA">Baixa</SelectItem>
-                  <SelectItem value="MÉDIA">Média</SelectItem>
-                  <SelectItem value="ALTA">Alta</SelectItem>
-                  <SelectItem value="URGENTE">Urgente</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PENDENTE">Pendente</SelectItem>
-                  <SelectItem value="EM ANDAMENTO">Em Andamento</SelectItem>
-                  <SelectItem value="CONCLUÍDO">Concluído</SelectItem>
-                  <SelectItem value="CANCELADO">Cancelado</SelectItem>
+                <SelectContent className="bg-gray-900 border-gray-700">
+                  <SelectItem value="ALTA" className="text-white hover:bg-gray-800">Alta</SelectItem>
+                  <SelectItem value="MÉDIA" className="text-white hover:bg-gray-800">Média</SelectItem>
+                  <SelectItem value="BAIXA" className="text-white hover:bg-gray-800">Baixa</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
+          {/* Observações */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Observações
+            </label>
+            <textarea
+              value={formData.observacoes || ''}
+              onChange={(e) => handleInputChange('observacoes', e.target.value)}
+              placeholder="Observações adicionais (opcional)"
+              className="w-full px-3 py-2 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 text-white placeholder:text-gray-500"
+              rows={2}
+            />
+          </div>
+
+          {/* Responsável */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
               Responsável
             </label>
             <Input
               value={formData.responsavel || ''}
               onChange={(e) => handleInputChange('responsavel', e.target.value)}
-              placeholder="Nome do responsável"
+              placeholder="Nome do responsável (opcional)"
+              className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
             />
           </div>
 
           {/* Seção de Fotos */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               Fotos ({multiplePhotos.length}) *
             </label>
-            
-            {multiplePhotos.length > 0 && (
-              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-700">
-                  📸 <strong>Fotos selecionadas!</strong> Os campos acima agora são opcionais. 
-                  Você pode preenchê-los agora ou editar depois.
-                </p>
-              </div>
-            )}
-            
+
             <div className="space-y-4">
               {/* Botão para adicionar fotos */}
               <div className="flex items-center gap-4">
@@ -353,7 +351,7 @@ export function OutroItemModal({
                   type="button"
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
                 >
                   <Camera className="w-4 h-4" />
                   Adicionar Fotos
@@ -366,7 +364,7 @@ export function OutroItemModal({
                   onChange={handlePhotoChange}
                   className="hidden"
                 />
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-400">
                   {multiplePhotos.length}/5 foto(s) selecionada(s)
                 </span>
               </div>
@@ -379,7 +377,7 @@ export function OutroItemModal({
                       <img
                         src={photo}
                         alt={`Foto ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg border"
+                        className="w-full h-24 object-cover rounded-lg border border-gray-700"
                       />
                       <Button
                         type="button"
@@ -397,25 +395,20 @@ export function OutroItemModal({
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Observações
-            </label>
-            <textarea
-              value={formData.observacoes || ''}
-              onChange={(e) => handleInputChange('observacoes', e.target.value)}
-              placeholder="Observações adicionais"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={3}
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
+            >
               Cancelar
             </Button>
-            <Button type="submit">
-              {item ? 'Atualizar' : 'Salvar'}
+            <Button
+              type="submit"
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              {item ? 'Atualizar' : 'Registrar Item'}
             </Button>
           </div>
         </form>

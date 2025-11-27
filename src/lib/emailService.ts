@@ -1,5 +1,6 @@
 // Serviço de envio de emails para laudos
-import { emailJSService } from './emailJSService';
+import { googleScriptService } from './googleScriptService';
+
 export interface EmailDestinatario {
   id: string;
   email: string;
@@ -109,7 +110,7 @@ Equipe de Manutenção Predial
   // Configurar emails para um contrato
   configurarEmails(contratoId: string, contratoNome: string, destinatarios: EmailDestinatario[]): void {
     const existingIndex = this.emailConfigs.findIndex(config => config.contratoId === contratoId);
-    
+
     const emailConfig: EmailConfig = {
       id: existingIndex >= 0 ? this.emailConfigs[existingIndex].id : Date.now().toString(),
       contratoId,
@@ -138,7 +139,7 @@ Equipe de Manutenção Predial
         nome: nome.trim(),
         ativo: true
       };
-      
+
       config.destinatarios.push(novoDestinatario);
       this.saveEmailConfigs();
       console.log('✅ Destinatário adicionado:', novoDestinatario);
@@ -179,7 +180,7 @@ Equipe de Manutenção Predial
   async enviarEmailLaudos(contratoId: string, laudosVencidos: LaudoEmail[], laudosProximos: LaudoEmail[]): Promise<boolean> {
     try {
       const config = this.obterConfiguracaoEmail(contratoId);
-      
+
       if (!config) {
         console.warn('⚠️ Nenhuma configuração de email encontrada para o contrato:', contratoId);
         return false;
@@ -192,20 +193,16 @@ Equipe de Manutenção Predial
 
       // Determinar qual template usar
       let template: EmailTemplate;
-      let laudosParaEnvio: LaudoEmail[];
 
       if (laudosVencidos.length > 0 && laudosProximos.length > 0) {
         // Ambos os tipos
         template = this.emailTemplates.get('laudos-vencidos')!;
-        laudosParaEnvio = [...laudosVencidos, ...laudosProximos];
       } else if (laudosVencidos.length > 0) {
         // Apenas vencidos
         template = this.emailTemplates.get('laudos-vencidos')!;
-        laudosParaEnvio = laudosVencidos;
       } else {
         // Apenas próximos ao vencimento
         template = this.emailTemplates.get('laudos-proximos')!;
-        laudosParaEnvio = laudosProximos;
       }
 
       // Enviar para todos os destinatários
@@ -214,30 +211,20 @@ Equipe de Manutenção Predial
         if (destinatario.ativo) {
           try {
             console.log('📧 Enviando email para:', destinatario.email);
-            
-            // Tentar usar sistema EmailJS primeiro
-            if (emailJSService.estaConfigurado()) {
-              const resultado = await emailJSService.enviarEmailsLaudos(
-                [{ email: destinatario.email, nome: destinatario.nome }],
-                config.contratoNome,
-                laudosVencidos,
-                laudosProximos
-              );
-              
-              if (resultado.sucessos > 0) {
-                sucessos++;
-                console.log('✅ Email enviado com sucesso para:', destinatario.email);
-              } else {
-                console.warn('⚠️ Falha no envio do email, usando simulação para:', destinatario.email);
-                // Fallback para simulação
-                const assunto = this.substituirVariaveis(template.assunto, config, laudosVencidos, laudosProximos, destinatario);
-                const corpo = this.substituirVariaveis(template.corpo, config, laudosVencidos, laudosProximos, destinatario);
-                await this.simularEnvioEmail(destinatario.email, assunto, corpo);
-                sucessos++;
-              }
+
+            // Tentar usar Google Script (Web App)
+            const resultado = await googleScriptService.enviarEmail(
+              destinatario.email,
+              template.assunto.replace('{contratoNome}', config.contratoNome).replace('{nomeDestinatario}', destinatario.nome),
+              this.substituirVariaveis(template.corpo, config, laudosVencidos, laudosProximos, destinatario)
+            );
+
+            if (resultado) {
+              sucessos++;
+              console.log('✅ Email enviado com sucesso para:', destinatario.email);
             } else {
-              // Usar simulação se não estiver configurado
-              console.log('📧 Sistema de email não configurado, usando simulação para:', destinatario.email);
+              console.warn('⚠️ Falha no envio do email, usando simulação para:', destinatario.email);
+              // Fallback para simulação
               const assunto = this.substituirVariaveis(template.assunto, config, laudosVencidos, laudosProximos, destinatario);
               const corpo = this.substituirVariaveis(template.corpo, config, laudosVencidos, laudosProximos, destinatario);
               await this.simularEnvioEmail(destinatario.email, assunto, corpo);
@@ -260,24 +247,24 @@ Equipe de Manutenção Predial
   // Substituir variáveis no template
   private substituirVariaveis(template: string, config: EmailConfig, laudosVencidos: LaudoEmail[], laudosProximos: LaudoEmail[], destinatario: EmailDestinatario): string {
     let resultado = template;
-    
+
     // Substituir variáveis básicas
     resultado = resultado.replace(/{contratoNome}/g, config.contratoNome);
     resultado = resultado.replace(/{nomeDestinatario}/g, destinatario.nome);
-    
+
     // Substituir lista de laudos
     const todosLaudos = [...laudosVencidos, ...laudosProximos];
     const listaLaudos = todosLaudos.map(laudo => {
       const dataVencimento = new Date(laudo.dataVencimento).toLocaleDateString('pt-BR');
-      const diasTexto = laudo.diasVencimento < 0 
+      const diasTexto = laudo.diasVencimento < 0
         ? `Vencido há ${Math.abs(laudo.diasVencimento)} dias`
         : `${laudo.diasVencimento} dias restantes`;
-      
+
       return `• ${laudo.title} - Vencimento: ${dataVencimento} (${diasTexto})`;
     }).join('\n');
-    
+
     resultado = resultado.replace(/{laudosLista}/g, listaLaudos);
-    
+
     return resultado;
   }
 
@@ -287,10 +274,10 @@ Equipe de Manutenção Predial
     console.log('📧 Para:', destinatario);
     console.log('📧 Assunto:', assunto);
     console.log('📧 Corpo:', corpo.substring(0, 200) + '...');
-    
+
     // Simular delay de envio
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     console.log('✅ [SIMULAÇÃO] Email enviado com sucesso');
   }
 

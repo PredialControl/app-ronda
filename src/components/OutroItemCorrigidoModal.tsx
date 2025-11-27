@@ -16,10 +16,10 @@ interface OutroItemCorrigidoModalProps {
   enderecoRonda?: string;
 }
 
-export function OutroItemCorrigidoModal({ 
-  item, 
-  isOpen, 
-  onClose, 
+export function OutroItemCorrigidoModal({
+  item,
+  isOpen,
+  onClose,
   onSave,
   contratoRonda = '',
   enderecoRonda = ''
@@ -28,7 +28,7 @@ export function OutroItemCorrigidoModal({
   if (!isOpen) {
     return null;
   }
-  
+
   const [formData, setFormData] = useState<Omit<OutroItemCorrigido, 'id'>>({
     nome: item?.nome || '',
     descricao: item?.descricao || '',
@@ -39,9 +39,9 @@ export function OutroItemCorrigidoModal({
     contrato: item?.contrato || contratoRonda,
     endereco: item?.endereco || enderecoRonda,
     data: item?.data || new Date().toISOString().split('T')[0],
-    hora: item?.hora || new Date().toLocaleTimeString('pt-BR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    hora: item?.hora || new Date().toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
     }),
     foto: item?.foto || null,
     fotos: item?.fotos || [],
@@ -62,31 +62,31 @@ export function OutroItemCorrigidoModal({
       try {
         // Mostrar loading
         setFotoPreview('Carregando...');
-        
+
         console.log(`📸 Foto selecionada: ${file.name} (${formatarTamanho(file.size)})`);
-        
+
         // Otimizar foto
         const fotoOtimizada = await otimizarFoto(file, 1200, 1200, 0.8);
-        
+
         // Calcular tamanho otimizado
         const tamanhoOriginal = file.size;
         const tamanhoOtimizado = calcularTamanhoBase64(fotoOtimizada);
         const economia = ((tamanhoOriginal - tamanhoOtimizado) / tamanhoOriginal * 100).toFixed(1);
-        
+
         console.log(`✅ Otimização concluída: ${formatarTamanho(tamanhoOriginal)} → ${formatarTamanho(tamanhoOtimizado)} (${economia}% de economia)`);
-        
+
         setFotoPreview(fotoOtimizada);
         setFormData(prev => ({ ...prev, foto: fotoOtimizada }));
-        
+
         // Mostrar alerta de economia
         if (parseFloat(economia) > 20) {
           alert(`🎉 Foto otimizada com sucesso!\n\nTamanho original: ${formatarTamanho(tamanhoOriginal)}\nTamanho otimizado: ${formatarTamanho(tamanhoOtimizado)}\nEconomia: ${economia}%`);
         }
-        
+
       } catch (error) {
         console.error('❌ Erro ao otimizar foto:', error);
         alert('Erro ao otimizar foto. Usando foto original.');
-        
+
         // Fallback para método original
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -133,9 +133,9 @@ export function OutroItemCorrigidoModal({
       contrato: contratoRonda,
       endereco: enderecoRonda,
       data: new Date().toISOString().split('T')[0],
-      hora: new Date().toLocaleTimeString('pt-BR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      hora: new Date().toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
       }),
       foto: null,
       fotos: [],
@@ -148,7 +148,7 @@ export function OutroItemCorrigidoModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -247,101 +247,101 @@ export function OutroItemCorrigidoModal({
             </div>
           </div>
 
-                     <div className="grid grid-cols-2 gap-4">
-             <div>
-               <label className="block text-sm font-medium mb-1">Contrato</label>
-               <Input
-                 value={formData.contrato}
-                 onChange={(e) => handleInputChange('contrato', e.target.value)}
-                 placeholder="Número do contrato"
-               />
-               {contratoRonda && (
-                 <p className="text-xs text-gray-500 mt-1">
-                   Contrato da ronda: {contratoRonda}
-                 </p>
-               )}
-             </div>
-             <div>
-               <label className="block text-sm font-medium mb-1">Responsável</label>
-               <Input
-                 value={formData.responsavel}
-                 onChange={(e) => handleInputChange('responsavel', e.target.value)}
-                 placeholder="Nome do responsável"
-               />
-             </div>
-           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Contrato</label>
+              <Input
+                value={formData.contrato}
+                onChange={(e) => handleInputChange('contrato', e.target.value)}
+                placeholder="Número do contrato"
+              />
+              {contratoRonda && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Contrato da ronda: {contratoRonda}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Responsável</label>
+              <Input
+                value={formData.responsavel}
+                onChange={(e) => handleInputChange('responsavel', e.target.value)}
+                placeholder="Nome do responsável"
+              />
+            </div>
+          </div>
 
-           <div>
-             <label className="block text-sm font-medium mb-1">Local *</label>
-             <div className="space-y-2">
-               <Input
-                 value={formData.local}
-                 onChange={(e) => handleInputChange('local', e.target.value)}
-                 placeholder="Ex: Área de lazer"
-                 required
-               />
-               <div className="flex gap-2">
-                 <Button
-                   type="button"
-                   variant="outline"
-                   size="sm"
-                   onClick={async () => {
-                     try {
-                       if (navigator.geolocation) {
-                         navigator.geolocation.getCurrentPosition(
-                           async (position) => {
-                             const { latitude, longitude } = position.coords;
-                             console.log('📍 Coordenadas capturadas:', { latitude, longitude });
-                             
-                             // Tentar obter endereço via coordenadas
-                             try {
-                               const response = await fetch(
-                                 `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
-                               );
-                               const data = await response.json();
-                               const endereco = data.display_name || `${latitude}, ${longitude}`;
-                               
-                               setFormData(prev => ({ ...prev, local: endereco }));
-                               console.log('📍 Endereço obtido:', endereco);
-                             } catch (error) {
-                               console.error('❌ Erro ao obter endereço:', error);
-                               const coordenadas = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-                               setFormData(prev => ({ ...prev, local: coordenadas }));
-                             }
-                           },
-                           (error) => {
-                             console.error('❌ Erro de geolocalização:', error);
-                             alert('Não foi possível obter sua localização. Verifique as permissões do navegador.');
-                           },
-                           { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-                         );
-                       } else {
-                         alert('Geolocalização não é suportada neste navegador.');
-                       }
-                     } catch (error) {
-                       console.error('❌ Erro ao capturar localização:', error);
-                       alert('Erro ao capturar localização.');
-                     }
-                   }}
-                   className="flex-1 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                 >
-                   📍 Capturar Localização
-                 </Button>
-                 <Button
-                   type="button"
-                   variant="outline"
-                   size="sm"
-                   onClick={() => setFormData(prev => ({ ...prev, local: enderecoRonda }))}
-                   className="flex-1"
-                 >
-                   🔄 Usar da Ronda
-                 </Button>
-               </div>
-             </div>
-             <p className="text-xs text-gray-500 mt-1">
-               Use "Capturar Localização" para obter endereço automático via GPS
-             </p>
-           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Local *</label>
+            <div className="space-y-2">
+              <Input
+                value={formData.local}
+                onChange={(e) => handleInputChange('local', e.target.value)}
+                placeholder="Ex: Área de lazer"
+                required
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                          async (position) => {
+                            const { latitude, longitude } = position.coords;
+                            console.log('📍 Coordenadas capturadas:', { latitude, longitude });
+
+                            // Tentar obter endereço via coordenadas
+                            try {
+                              const response = await fetch(
+                                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+                              );
+                              const data = await response.json();
+                              const endereco = data.display_name || `${latitude}, ${longitude}`;
+
+                              setFormData(prev => ({ ...prev, local: endereco }));
+                              console.log('📍 Endereço obtido:', endereco);
+                            } catch (error) {
+                              console.error('❌ Erro ao obter endereço:', error);
+                              const coordenadas = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                              setFormData(prev => ({ ...prev, local: coordenadas }));
+                            }
+                          },
+                          (error) => {
+                            console.error('❌ Erro de geolocalização:', error);
+                            alert('Não foi possível obter sua localização. Verifique as permissões do navegador.');
+                          },
+                          { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+                        );
+                      } else {
+                        alert('Geolocalização não é suportada neste navegador.');
+                      }
+                    } catch (error) {
+                      console.error('❌ Erro ao capturar localização:', error);
+                      alert('Erro ao capturar localização.');
+                    }
+                  }}
+                  className="flex-1 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                >
+                  📍 Capturar Localização
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFormData(prev => ({ ...prev, local: enderecoRonda }))}
+                  className="flex-1"
+                >
+                  🔄 Usar da Ronda
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Use "Capturar Localização" para obter endereço automático via GPS
+            </p>
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -385,7 +385,7 @@ export function OutroItemCorrigidoModal({
                 <Camera className="w-4 h-4 mr-2" />
                 📸 Tirar Foto Agora
               </Button>
-              
+
               {/* Botão para selecionar arquivo */}
               <Button
                 type="button"
@@ -397,7 +397,7 @@ export function OutroItemCorrigidoModal({
                 📁 Selecionar Arquivo
               </Button>
             </div>
-            
+
             {/* Input para arquivo (oculto) */}
             <input
               ref={fileInputRef}
@@ -406,7 +406,7 @@ export function OutroItemCorrigidoModal({
               onChange={handleFotoChange}
               className="hidden"
             />
-            
+
             {/* Preview da foto */}
             {fotoPreview && (
               <div className="mt-3">

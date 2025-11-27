@@ -47,47 +47,103 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
+
+  /* DARK MODE - Inspirado em Crypto App */
   body {
     @apply bg-background text-foreground;
-    background-color: rgb(15 23 42) !important; /* slate-900 - sempre escuro */
-    color: rgb(248 250 252) !important; /* slate-50 - sempre claro */
-  }
-  html {
-    background-color: rgb(15 23 42) !important;
-    color: rgb(248 250 252) !important;
-  }
-  #root {
-    background-color: rgb(15 23 42) !important;
-    color: rgb(248 250 252) !important;
+    background: linear-gradient(135deg, #0a1f1a 0%, #0d1b2a 50%, #1a1f2e 100%) !important;
+    color: #e5e7eb !important;
     min-height: 100vh;
   }
-  .dark body {
-    background-image: radial-gradient(1200px 400px at 50% -10%, rgba(99,102,241,0.25), transparent 60%),
-      radial-gradient(800px 300px at 80% 0%, rgba(147,51,234,0.18), transparent 60%),
-      radial-gradient(600px 240px at 20% 10%, rgba(59,130,246,0.15), transparent 60%);
-    background-color: rgb(15 23 42 / 1) !important;
+
+  html {
+    background: #0a1f1a !important;
+    color: #e5e7eb !important;
   }
+
+  #root {
+    background: transparent !important;
+    color: #e5e7eb !important;
+    min-height: 100vh;
+  }
+}
+
+/* Tema Dark Mode - Paleta de Cores */
+:root {
+  /* Backgrounds */
+  --bg-primary: #0a1f1a;
+  --bg-secondary: #1a2f2a;
+  --bg-card: rgba(26, 47, 42, 0.6);
+  --bg-card-hover: rgba(26, 47, 42, 0.8);
+
+  /* Acentos */
+  --accent-green: #10b981;
+  --accent-yellow: #fbbf24;
+  --accent-cyan: #06b6d4;
+  --accent-blue: #3b82f6;
+
+  /* Textos */
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+}
+
+/* Cards com efeito glassmorphism */
+.card-dark {
+  background: rgba(26, 47, 42, 0.6) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(16, 185, 129, 0.2) !important;
+  transition: all 0.3s ease !important;
+}
+
+.card-dark:hover {
+  background: rgba(26, 47, 42, 0.8) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.1) !important;
+}
+
+/* Força textos claros para dark mode */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #f9fafb !important;
+}
+
+p,
+span,
+div,
+label {
+  color: #d1d5db !important;
+}
+
+.text-muted {
+  color: #9ca3af !important;
 }
 
 /* Estilos específicos para impressão */
 @media print {
+
   /* Grid 2x2 fixo: 4 cards por página */
   .print-grid-2x2 {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 10mm !important;
   }
-  .print-grid-2x2 > * {
+
+  .print-grid-2x2>* {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
-  .print-grid-2x2 > *:nth-child(4n) {
+
+  .print-grid-2x2>*:nth-child(4n) {
     break-after: page !important;
     page-break-after: always !important;
   }
@@ -98,7 +154,8 @@
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 12mm !important;
   }
-  .print-grid-2-per-page > * {
+
+  .print-grid-2-per-page>* {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
@@ -108,17 +165,17 @@
     margin: 1.5cm;
     size: A4;
   }
-  
+
   .no-print {
     display: none !important;
   }
-  
+
   .print-grid {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 1rem !important;
   }
-  
+
   /* Controle perfeito de quebra de página */
   .print-container {
     padding: 0 !important;
@@ -127,9 +184,9 @@
     max-width: none !important;
     width: 100% !important;
   }
-  
+
   /* Evitar quebra de página em elementos importantes */
-  .print-container > div:first-child,
+  .print-container>div:first-child,
   .print-container h2,
   .print-container h3 {
     page-break-after: avoid !important;
@@ -137,7 +194,7 @@
     break-after: avoid !important;
     break-inside: avoid !important;
   }
-  
+
   /* Cards com tamanho flexível para observações longas */
   .print-card-container {
     break-inside: avoid !important;
@@ -149,7 +206,7 @@
     display: flex !important;
     flex-direction: column !important;
   }
-  
+
   /* Tamanho padrão das imagens */
   .print-card img {
     height: 120px !important;
@@ -158,7 +215,7 @@
     object-fit: cover !important;
     width: 100% !important;
   }
-  
+
   /* Grid responsivo para impressão */
   .print-container .grid {
     display: grid !important;
@@ -166,13 +223,13 @@
     gap: 1rem !important;
     page-break-inside: auto !important;
   }
-  
+
   /* Forçar quebra de página antes de seções importantes */
   .print-container h2 {
     page-break-before: auto !important;
     break-before: auto !important;
   }
-  
+
   /* Evitar quebra de página dentro de cards individuais */
   .print-container .print-card {
     break-inside: avoid !important;
@@ -181,90 +238,90 @@
     display: flex !important;
     flex-direction: column !important;
   }
-  
+
   /* Esconder elementos desnecessários na impressão */
   .print-container button,
   .print-container .no-print {
     display: none !important;
   }
-  
+
   /* Garantir que as fotos sejam visíveis na impressão */
   .print-container img {
     max-width: 100% !important;
     height: auto !important;
     object-fit: cover !important;
   }
-  
+
   /* Estilos para a logo na impressão */
   .print-container .bg-blue-800 {
     background-color: #1e40af !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  
+
   .print-container .text-white {
     color: white !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  
+
   .print-container .text-blue-800 {
     color: #1e40af !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  
+
   /* Garantir que o SVG da logo seja visível na impressão */
   .print-container svg {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  
+
   /* Estilos para bordas pontilhadas na impressão */
   .print-container .border-dashed {
     border-style: dashed !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  
+
   /* Garantir que as bordas cinzas sejam visíveis na impressão */
   .print-container .border-gray-300 {
     border-color: #d1d5db !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  
+
   /* Otimizações para quebra de página perfeita */
   .print-container * {
     orphans: 3 !important;
     widows: 3 !important;
   }
-  
+
   /* Seções de impressão com controle de quebra */
   .print-container .print-section {
     page-break-inside: auto !important;
   }
-  
+
   /* Resumo executivo - evitar quebra de página */
   .print-container .resumo-executivo {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     margin-bottom: 2rem !important;
   }
-  
+
   /* Cards de status - manter juntos */
   .print-container .status-card {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     margin-bottom: 1rem !important;
   }
-  
+
   /* Forçar quebra de página antes do resumo executivo */
   .print-container .resumo-executivo {
     page-break-before: auto !important;
     break-before: auto !important;
   }
-  
+
   /* Controle de páginas específicas */
   .print-container .pagina-1 {
     page-break-after: always !important;
@@ -273,12 +330,12 @@
     max-height: 100vh !important;
     overflow: hidden !important;
   }
-  
+
   .print-container .pagina-2 {
     page-break-before: always !important;
     break-before: page !important;
   }
-  
+
   /* Forçar quebra de página */
   .print-container .page-break-force {
     page-break-before: always !important;
@@ -287,7 +344,7 @@
     margin: 0 !important;
     padding: 0 !important;
   }
-  
+
   /* QUEBRA DE PÁGINA OBRIGATÓRIA */
   .print-container .page-break-force::before {
     content: "" !important;
@@ -298,13 +355,13 @@
     margin: 0 !important;
     padding: 0 !important;
   }
-  
+
   /* Forçar altura máxima para o resumo */
   .print-container .resumo-executivo .space-y-2 {
     max-height: calc(100vh - 8rem) !important;
     overflow: hidden !important;
   }
-  
+
   /* Resumo executivo - FORÇAR ficar em uma página só - SUPER AGRESSIVO */
   .print-container .resumo-executivo {
     page-break-inside: avoid !important;
@@ -318,7 +375,7 @@
     display: flex !important;
     flex-direction: column !important;
   }
-  
+
   /* FORÇAR QUEBRA DE PÁGINA ENTRE SEÇÕES */
   .print-container .print-section {
     page-break-before: auto !important;
@@ -326,26 +383,26 @@
     page-break-after: auto !important;
     break-after: auto !important;
   }
-  
+
   /* PRIMEIRA SEÇÃO (Áreas Técnicas): Máximo 2 cards */
   .print-container .print-section:first-of-type .print-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     max-height: calc(100vh - 16rem) !important;
     overflow: hidden !important;
   }
-  
+
   .print-container .print-section:first-of-type .print-card-container {
     height: calc((100vh - 20rem) / 2) !important;
     max-height: calc((100vh - 20rem) / 2) !important;
     overflow: hidden !important;
   }
-  
+
   /* SEGUNDA SEÇÃO (Fotos): Forçar nova página com 4 cards */
   .print-container .print-section:nth-of-type(2) {
     page-break-before: always !important;
     break-before: page !important;
   }
-  
+
   .print-container .print-section:nth-of-type(2) .print-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     grid-template-rows: repeat(2, 1fr) !important;
@@ -353,19 +410,19 @@
     max-height: calc(100vh - 4rem) !important;
     overflow: hidden !important;
   }
-  
+
   .print-container .print-section:nth-of-type(2) .print-card-container {
     height: calc((100vh - 8rem) / 2) !important;
     max-height: calc((100vh - 8rem) / 2) !important;
     overflow: hidden !important;
   }
-  
+
   /* TERCEIRA SEÇÃO (Outros Itens): Forçar nova página com 4 cards */
   .print-container .print-section:nth-of-type(3) {
     page-break-before: always !important;
     break-before: page !important;
   }
-  
+
   .print-container .print-section:nth-of-type(3) .print-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     grid-template-rows: repeat(2, 1fr) !important;
@@ -373,38 +430,38 @@
     max-height: calc(100vh - 4rem) !important;
     overflow: hidden !important;
   }
-  
+
   .print-container .print-section:nth-of-type(3) .print-card-container {
     height: calc((100vh - 8rem) / 2) !important;
     max-height: calc((100vh - 8rem) / 2) !important;
     overflow: hidden !important;
   }
-  
+
   /* Imagens menores nas páginas seguintes para caber 4 cards */
   .print-container .print-section:not(:first-of-type) .print-card img {
     max-height: 100px !important;
     width: auto !important;
     object-fit: contain !important;
   }
-  
+
   /* Forçar quebra de página em seções específicas se necessário */
   .print-container .force-page-break {
     page-break-before: always !important;
     break-before: page !important;
   }
-  
+
   /* Ajustar espaçamento para impressão */
   .print-container .mb-6,
   .print-container .mb-8 {
     margin-bottom: 1.5rem !important;
   }
-  
+
   .print-container .p-4,
   .print-container .p-6,
   .print-container .p-8 {
     padding: 1rem !important;
   }
-  
+
   /* CORREÇÃO PARA FOTOS NA IMPRESSÃO - EVITAR CORTE */
   .print-container img {
     max-width: 100% !important;
@@ -413,14 +470,14 @@
     break-inside: avoid !important;
     object-fit: contain !important;
   }
-  
+
   /* Cards com fotos - evitar quebra */
   .print-container .foto-card {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     margin-bottom: 1rem !important;
   }
-  
+
   /* Imagens em áreas técnicas - manter juntas */
   .print-container .area-tecnica-card img {
     max-height: 200px !important;
@@ -429,7 +486,7 @@
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
-  
+
   /* Imagens em fotos da ronda - manter juntas */
   .print-container .foto-ronda-card img {
     max-height: 250px !important;
@@ -438,7 +495,7 @@
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
-  
+
   /* Imagens em outros itens - manter juntas */
   .print-container .outro-item-card img {
     max-height: 200px !important;
@@ -447,38 +504,83 @@
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
-  
 
-  
 
-  
 
-  
-  
-  
+
+
+
+
+
+
 
 }
 
 /* Correções de contraste no modo escuro */
-.dark .text-gray-900 { color: #e5e7eb !important; }
-.dark .text-gray-800 { color: #e5e7eb !important; }
-.dark .text-gray-700 { color: #d1d5db !important; }
-.dark .text-gray-600 { color: #cbd5e1 !important; }
-.dark .border-gray-200 { border-color: rgba(255,255,255,0.15) !important; }
-.dark .bg-white { background-color: rgba(255,255,255,0.06) !important; }
-.dark .bg-gray-50 { background-color: rgba(255,255,255,0.04) !important; }
+.dark .text-gray-900 {
+  color: #e5e7eb !important;
+}
+
+.dark .text-gray-800 {
+  color: #e5e7eb !important;
+}
+
+.dark .text-gray-700 {
+  color: #d1d5db !important;
+}
+
+.dark .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+.dark .border-gray-200 {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.dark .bg-white {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dark .bg-gray-50 {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
 
 /* Radix Select - contraste no modo escuro (reforçado) */
-.dark .radix-select-trigger { background-color: rgba(17,24,39,0.7) !important; color: #f8fafc !important; border-color: rgba(248,250,252,0.2) !important; }
-.dark .radix-select-content,[role='listbox'] { background-color: rgba(2,6,23,0.98) !important; color: #e5e7eb !important; border-color: rgba(255,255,255,0.12) !important; box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important; }
-.dark .radix-select-item,[role='option'] { color: #e5e7eb !important; opacity: 1 !important; }
-.dark .radix-select-item[data-highlighted],[role='option'][data-highlighted] { background-color: rgba(59,130,246,0.35) !important; color: #fff !important; }
-.dark [role='option'][data-disabled] { color: #94a3b8 !important; opacity: 1 !important; }
+.dark .radix-select-trigger {
+  background-color: rgba(17, 24, 39, 0.7) !important;
+  color: #f8fafc !important;
+  border-color: rgba(248, 250, 252, 0.2) !important;
+}
+
+.dark .radix-select-content,
+[role='listbox'] {
+  background-color: rgba(2, 6, 23, 0.98) !important;
+  color: #e5e7eb !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .radix-select-item,
+[role='option'] {
+  color: #e5e7eb !important;
+  opacity: 1 !important;
+}
+
+.dark .radix-select-item[data-highlighted],
+[role='option'][data-highlighted] {
+  background-color: rgba(59, 130, 246, 0.35) !important;
+  color: #fff !important;
+}
+
+.dark [role='option'][data-disabled] {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
 
 /* Inputs com melhor contraste no modo escuro */
-.dark input[type="text"], 
-.dark input[type="email"], 
-.dark input[type="password"], 
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
 .dark input[type="search"],
 .dark textarea,
 .dark select {
@@ -487,9 +589,9 @@
   border-color: rgba(156, 163, 175, 0.3) !important;
 }
 
-.dark input[type="text"]:focus, 
-.dark input[type="email"]:focus, 
-.dark input[type="password"]:focus, 
+.dark input[type="text"]:focus,
+.dark input[type="email"]:focus,
+.dark input[type="password"]:focus,
 .dark input[type="search"]:focus,
 .dark textarea:focus,
 .dark select:focus {
