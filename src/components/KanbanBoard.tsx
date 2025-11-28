@@ -20,7 +20,8 @@ import {
   Calendar,
   X,
   Trash2,
-  Filter
+  Filter,
+  Edit
 } from 'lucide-react';
 
 // Definição das categorias e suas cores
@@ -554,32 +555,6 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                           </div>
                         </div>
 
-                        {/* Status Edit Modal */}
-                        {showEditStatusModal && editingItem && (
-                          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-                            <div className="bg-white rounded-lg p-6 w-80">
-                              <h3 className="text-lg font-semibold mb-4">Alterar Status</h3>
-                              <Select onValueChange={setNewStatusValue} defaultValue={editingItem.status}>
-                                <SelectTrigger className="w-full mb-4">
-                                  <SelectValue placeholder="Selecione o status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="recebido">Recebido</SelectItem>
-                                  <SelectItem value="correcao">Em Correção</SelectItem>
-                                  <SelectItem value="vistoria">Vistoria</SelectItem>
-                                  <SelectItem value="implantado">Implantado</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <div className="flex justify-end space-x-2">
-                                <Button variant="outline" onClick={() => setShowEditStatusModal(false)}>
-                                  Cancelar
-                                </Button>
-                                <Button onClick={handleConfirmStatusChange}>Confirmar</Button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
                         <div className="flex gap-2 mt-2 flex-wrap">
                           {item.dataVistoria && (
                             <div className="text-[10px] text-white bg-orange-600 px-2 py-0.5 rounded">
@@ -917,6 +892,31 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
           </div>
         )
       }
+      {/* Status Edit Modal */}
+      {showEditStatusModal && editingItem && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white rounded-lg p-6 w-80">
+            <h3 className="text-lg font-semibold mb-4">Alterar Status</h3>
+            <Select onValueChange={setNewStatusValue} defaultValue={editingItem.status}>
+              <SelectTrigger className="w-full mb-4">
+                <SelectValue placeholder="Selecione o status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vistoria">Aguardando</SelectItem>
+                <SelectItem value="correcao">Em Andamento</SelectItem>
+                <SelectItem value="recebido">Em Correção</SelectItem>
+                <SelectItem value="implantado">Finalizado</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowEditStatusModal(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleConfirmStatusChange}>Confirmar</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
