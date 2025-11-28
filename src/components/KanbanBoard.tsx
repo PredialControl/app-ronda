@@ -171,6 +171,11 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
   const [showCardDetails, setShowCardDetails] = useState(false);
   const [selectedCard, setSelectedCard] = useState<KanbanItem | null>(null);
 
+  // Estados para modal de edição de status
+  const [showEditStatusModal, setShowEditStatusModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<KanbanItem | null>(null);
+  const [newStatusValue, setNewStatusValue] = useState<string>('');
+
   // Filtrar itens baseado na categoria selecionada
   const filteredItems = useMemo(() => {
     if (selectedCategory === 'TODOS') return items;
@@ -355,6 +360,43 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
     setPendingMove(null);
   };
 
+  // Função para abrir modal de edição de status
+  const handleEditStatus = (item: KanbanItem) => {
+    setEditingItem(item);
+    setNewStatusValue(item.status);
+    setShowEditStatusModal(true);
+  };
+
+  // Função para confirmar mudança de status
+  const handleConfirmStatusChange = () => {
+    if (!editingItem || !newStatusValue) return;
+
+    // Se está mudando para "Recebido", pedir data de recebimento
+    if (newStatusValue === 'recebido') {
+      setPendingMove({ item: editingItem, newStatus: newStatusValue });
+      setShowEditStatusModal(false);
+      setShowDateModal(true);
+      return;
+    }
+
+    // Se está mudando para "Em Correção", pedir o que precisa corrigir
+    if (newStatusValue === 'correcao') {
+      setPendingMove({ item: editingItem, newStatus: newStatusValue });
+      setShowEditStatusModal(false);
+      setShowCorrecaoModal(true);
+      return;
+    }
+
+    // Para outros status, mudar diretamente
+    setItems(prev => prev.map(item =>
+      item.id === editingItem.id
+        ? { ...item, status: newStatusValue as any, updatedAt: new Date().toISOString().split('T')[0] }
+        : item
+    ));
+    setShowEditStatusModal(false);
+    setEditingItem(null);
+  };
+
   // Função para mostrar detalhes do card
   const handleShowCardDetails = (item: KanbanItem) => {
     setSelectedCard(item);
@@ -497,8 +539,46 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
+                            {/* Edit Status Button */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditStatus(item);
+                              }}
+                              className="text-gray-400 hover:text-blue-500 hover:bg-blue-50 p-1 h-6 w-6"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
                           </div>
                         </div>
+
+                        {/* Status Edit Modal */}
+                        {showEditStatusModal && editingItem && (
+                          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                            <div className="bg-white rounded-lg p-6 w-80">
+                              <h3 className="text-lg font-semibold mb-4">Alterar Status</h3>
+                              <Select onValueChange={setNewStatusValue} defaultValue={editingItem.status}>
+                                <SelectTrigger className="w-full mb-4">
+                                  <SelectValue placeholder="Selecione o status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="recebido">Recebido</SelectItem>
+                                  <SelectItem value="correcao">Em Correção</SelectItem>
+                                  <SelectItem value="vistoria">Vistoria</SelectItem>
+                                  <SelectItem value="implantado">Implantado</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <div className="flex justify-end space-x-2">
+                                <Button variant="outline" onClick={() => setShowEditStatusModal(false)}>
+                                  Cancelar
+                                </Button>
+                                <Button onClick={handleConfirmStatusChange}>Confirmar</Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="flex gap-2 mt-2 flex-wrap">
                           {item.dataVistoria && (
