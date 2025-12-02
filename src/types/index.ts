@@ -59,6 +59,7 @@ export interface Ronda {
   contrato: string;
   data: string;
   hora: string;
+  tipoVisita?: 'RONDA' | 'REUNIAO' | 'OUTROS'; // Tipo de visita
   areasTecnicas: AreaTecnica[];
   fotosRonda: FotoRonda[];
   outrosItensCorrigidos: OutroItemCorrigido[];

@@ -15,6 +15,7 @@ interface NovaRondaScreenProps {
     data: string;
     hora: string;
     observacoesGerais?: string;
+    tipoVisita?: 'RONDA' | 'REUNIAO' | 'OUTROS';
   }) => void;
 }
 
@@ -30,12 +31,13 @@ export function NovaRondaScreen({
       hour: '2-digit',
       minute: '2-digit'
     }),
-    observacoesGerais: ''
+    observacoesGerais: '',
+    tipoVisita: 'RONDA' as 'RONDA' | 'REUNIAO' | 'OUTROS'
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.nome.trim()) {
       alert('Por favor, informe o nome da ronda');
       return;
@@ -46,6 +48,17 @@ export function NovaRondaScreen({
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+
+    // Atualizar nome automaticamente quando o tipo de visita mudar
+    if (field === 'tipoVisita') {
+      let novoNome = '';
+      if (value === 'RONDA') {
+        novoNome = 'VISITA TÉCNICA';
+      } else if (value === 'REUNIAO') {
+        novoNome = 'REUNIÃO DE ALINHAMENTO';
+      }
+      setFormData(prev => ({ ...prev, nome: novoNome, [field]: value as 'RONDA' | 'REUNIAO' | 'OUTROS' }));
+    }
   };
 
   return (
@@ -98,6 +111,43 @@ export function NovaRondaScreen({
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Tipo de Visita */}
+            <div className="space-y-2">
+              <Label>Tipo de Visita *</Label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('tipoVisita', 'RONDA')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${formData.tipoVisita === 'RONDA'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 text-black hover:bg-gray-200'
+                    }`}
+                >
+                  🔍 Ronda
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('tipoVisita', 'REUNIAO')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${formData.tipoVisita === 'REUNIAO'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 text-black hover:bg-gray-200'
+                    }`}
+                >
+                  👥 Reunião
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('tipoVisita', 'OUTROS')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${formData.tipoVisita === 'OUTROS'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 text-black hover:bg-gray-200'
+                    }`}
+                >
+                  📋 Outros
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="nome">Nome da Ronda *</Label>

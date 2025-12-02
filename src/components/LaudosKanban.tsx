@@ -23,6 +23,7 @@ import {
 import { emailService, EmailDestinatario } from '@/lib/emailService';
 import { laudoService, Laudo } from '@/lib/laudoService';
 import { googleScriptService } from '@/lib/googleScriptService';
+import { downloadLaudosPDF } from '@/lib/pdfLaudos';
 import {
   Select,
   SelectContent,
@@ -425,6 +426,26 @@ export function LaudosKanban({ contratoSelecionado }: LaudosKanbanProps) {
           >
             <Plus className="w-4 h-4 mr-2" />
             Novo Laudo
+          </Button>
+          <Button
+            variant="outline"
+            className="text-gray-600 border-gray-300 hover:bg-gray-50"
+            onClick={async () => {
+              if (!contratoSelecionado) {
+                alert('Nenhum contrato selecionado');
+                return;
+              }
+              try {
+                await downloadLaudosPDF(items, contratoSelecionado.nome);
+              } catch (error) {
+                console.error('Erro ao gerar PDF:', error);
+                alert('Erro ao gerar PDF. Verifique o console.');
+              }
+            }}
+            disabled={isLoading || !contratoSelecionado || items.length === 0}
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Exportar PDF
           </Button>
         </div>
       </div>

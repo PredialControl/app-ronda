@@ -203,7 +203,18 @@ export function VisualizarRonda({
               Voltar às Rondas
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{ronda.nome}</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold text-gray-900">{ronda.nome}</h1>
+                <Badge variant="outline" className={`
+                  ${(ronda.tipoVisita === 'REUNIAO') ? 'bg-green-100 text-green-800 border-green-200' :
+                    (ronda.tipoVisita === 'OUTROS') ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                      'bg-blue-100 text-blue-800 border-blue-200'}
+                `}>
+                  {ronda.tipoVisita === 'REUNIAO' ? '👥 Reunião' :
+                    ronda.tipoVisita === 'OUTROS' ? '📋 Outros' :
+                      '🔍 Ronda'}
+                </Badge>
+              </div>
               <p className="text-gray-600">Contrato: {contrato.nome}</p>
             </div>
           </div>
@@ -254,7 +265,12 @@ export function VisualizarRonda({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <div className="text-sm font-medium text-gray-500">Data</div>
-                <div className="text-lg font-semibold">{ronda.data ? new Date(ronda.data).toLocaleDateString('pt-BR') : 'N/A'}</div>
+                <div className="text-lg font-semibold">
+                  {ronda.data ? (() => {
+                    const [ano, mes, dia] = ronda.data.split('-');
+                    return `${dia}/${mes}/${ano}`;
+                  })() : 'N/A'}
+                </div>
               </div>
               <div>
                 <div className="text-sm font-medium text-gray-500">Hora</div>

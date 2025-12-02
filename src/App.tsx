@@ -13,6 +13,7 @@ import { TabelaRondas } from '@/components/TabelaRondas';
 import { VisualizarRonda } from '@/components/VisualizarRonda';
 import { OutroItemCorrigidoModal } from '@/components/OutroItemCorrigidoModal';
 import { OutroItemModal } from '@/components/OutroItemModal';
+import { EditarRondaModal } from '@/components/EditarRondaModal';
 import { Dashboard } from '@/components/Dashboard';
 import { LoginScreen } from '@/components/LoginScreen';
 import { AreaTecnica, Ronda, Contrato, FotoRonda, OutroItemCorrigido, UsuarioAutorizado } from '@/types';
@@ -46,6 +47,7 @@ function App() {
   const [isFotoRondaModalOpen, setIsFotoRondaModalOpen] = useState(false);
   const [editingOutroItem, setEditingOutroItem] = useState<OutroItemCorrigido | null>(null);
   const [isOutroItemModalOpen, setIsOutroItemModalOpen] = useState(false);
+  const [isEditarRondaModalOpen, setIsEditarRondaModalOpen] = useState(false);
 
   const [currentView, setCurrentView] = useState<'contratos' | 'rondas'>('contratos');
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
@@ -665,6 +667,7 @@ function App() {
     data: string;
     hora: string;
     observacoesGerais?: string;
+    tipoVisita?: 'RONDA' | 'REUNIAO' | 'OUTROS';
   }) => {
     try {
       console.log('🔄 Iniciando criação de nova ronda:', rondaData);
@@ -676,6 +679,7 @@ function App() {
         contrato: contratoSelecionado!.nome,
         data: rondaData.data,
         hora: rondaData.hora,
+        tipoVisita: rondaData.tipoVisita || 'RONDA',
         responsavel: 'Ricardo Oliveira',
         observacoesGerais: rondaData.observacoesGerais,
         areasTecnicas: [], // Criar sem áreas primeiro
@@ -1713,8 +1717,7 @@ function App() {
                 }}
                 onDeletarOutroItem={handleDeleteOutroItem}
                 onEditarRonda={() => {
-                  // Implementar edição da ronda se necessário
-                  alert('Funcionalidade de edição da ronda será implementada em breve');
+                  setIsEditarRondaModalOpen(true);
                 }}
                 onExportarJSON={exportToJSON}
                 isPrintMode={false}
@@ -1859,6 +1862,29 @@ function App() {
         enderecoRonda={contratoSelecionado?.endereco || ''}
         dataRonda={rondaSelecionada?.data || ''}
         horaRonda={rondaSelecionada?.hora || ''}
+      />
+
+      <EditarRondaModal
+        isOpen={isEditarRondaModalOpen}
+        onClose={() => setIsEditarRondaModalOpen(false)}
+        ronda={rondaSelecionada}
+        onSave={async (rondaAtualizada) => {
+          try {
+            console.log('🔄 Atualizando ronda:', rondaAtualizada);
+
+            // Atualizar no banco
+            await rondaService.update(rondaAtualizada.id, rondaAtualizada);
+
+            // Atualizar estado local
+            setRondas(prev => prev.map(r => r.id === rondaAtualizada.id ? rondaAtualizada : r));
+            setRondaSelecionada(rondaAtualizada);
+
+            console.log('✅ Ronda atualizada com sucesso!');
+          } catch (error) {
+            console.error('❌ Erro ao atualizar ronda:', error);
+            alert('Erro ao atualizar ronda. Verifique o console.');
+          }
+        }}
       />
 
     </div >

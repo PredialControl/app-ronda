@@ -28,7 +28,8 @@ export function NovaRondaModal({
       minute: '2-digit'
     }),
     responsavel: '',
-    observacoesGerais: ''
+    observacoesGerais: '',
+    tipoVisita: 'RONDA' as 'RONDA' | 'REUNIAO' | 'OUTROS'
   });
 
   const [outrosItensCorrigidos, setOutrosItensCorrigidos] = useState<OutroItemCorrigido[]>([]);
@@ -46,6 +47,19 @@ export function NovaRondaModal({
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+
+    // Atualizar nome automaticamente quando o tipo de visita mudar
+    if (field === 'tipoVisita') {
+      let novoNome = '';
+      if (value === 'RONDA') {
+        novoNome = 'VISITA TÉCNICA';
+      } else if (value === 'REUNIAO') {
+        novoNome = 'REUNIÃO DE ALINHAMENTO';
+      } else {
+        novoNome = ''; // Para 'OUTROS', deixar em branco para o usuário preencher
+      }
+      setFormData(prev => ({ ...prev, nome: novoNome, [field]: value as 'RONDA' | 'REUNIAO' | 'OUTROS' }));
+    }
   };
 
   const handleAddOutroItem = () => {
@@ -93,6 +107,7 @@ export function NovaRondaModal({
       contrato: formData.contrato,
       data: formData.data,
       hora: formData.hora,
+      tipoVisita: formData.tipoVisita,
       responsavel: formData.responsavel,
       observacoesGerais: formData.observacoesGerais,
       areasTecnicas: [], // Começar vazio, usuário adiciona manualmente
@@ -113,7 +128,8 @@ export function NovaRondaModal({
         minute: '2-digit'
       }),
       responsavel: '',
-      observacoesGerais: ''
+      observacoesGerais: '',
+      tipoVisita: 'RONDA'
     });
     setOutrosItensCorrigidos([]);
   };
@@ -128,7 +144,7 @@ export function NovaRondaModal({
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              Nova Ronda
+              {formData.tipoVisita === 'REUNIAO' ? 'Nova Reunião' : formData.tipoVisita === 'OUTROS' ? 'Novo Registro' : 'Nova Ronda'}
             </h2>
             <button
               onClick={onClose}
@@ -143,12 +159,49 @@ export function NovaRondaModal({
         <div className="p-4">
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Tipo de Visita */}
             <div>
-              <label className="block text-sm font-medium mb-1">Nome da Ronda *</label>
+              <label className="block text-sm font-medium mb-2">Tipo de Visita *</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('tipoVisita', 'RONDA')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${formData.tipoVisita === 'RONDA'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  🔍 Ronda
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('tipoVisita', 'REUNIAO')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${formData.tipoVisita === 'REUNIAO'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  👥 Reunião
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInputChange('tipoVisita', 'OUTROS')}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-all ${formData.tipoVisita === 'OUTROS'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  📋 Outros
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Nome da {formData.tipoVisita === 'REUNIAO' ? 'Reunião' : formData.tipoVisita === 'OUTROS' ? 'Atividade' : 'Ronda'} *</label>
               <Input
                 value={formData.nome}
                 onChange={(e) => handleInputChange('nome', e.target.value)}
-                placeholder="Ex: Ronda Matutina - Centro"
+                placeholder={formData.tipoVisita === 'REUNIAO' ? 'Ex: Reunião com Síndico' : formData.tipoVisita === 'OUTROS' ? 'Ex: Vistoria Pontual' : 'Ex: Ronda Matutina - Centro'}
                 required
               />
             </div>
@@ -210,25 +263,40 @@ export function NovaRondaModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Observações Gerais</label>
-              <Input
-                value={formData.observacoesGerais}
-                onChange={(e) => handleInputChange('observacoesGerais', e.target.value)}
-                placeholder="Observações sobre a ronda"
-              />
+              <label className="block text-sm font-medium mb-1">
+                {formData.tipoVisita === 'REUNIAO' ? 'Resumo da Reunião *' : formData.tipoVisita === 'OUTROS' ? 'Descrição da Atividade *' : 'Observações Gerais'}
+              </label>
+              {formData.tipoVisita !== 'RONDA' ? (
+                <textarea
+                  value={formData.observacoesGerais}
+                  onChange={(e) => handleInputChange('observacoesGerais', e.target.value)}
+                  placeholder={formData.tipoVisita === 'REUNIAO' ? 'Descreva o que foi discutido na reunião, decisões tomadas, próximos passos...' : 'Descreva a atividade realizada...'}
+                  className="w-full min-h-[120px] p-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y text-sm"
+                  required={formData.tipoVisita !== 'RONDA'}
+                />
+              ) : (
+                <Input
+                  value={formData.observacoesGerais}
+                  onChange={(e) => handleInputChange('observacoesGerais', e.target.value)}
+                  placeholder="Observações sobre a ronda"
+                />
+              )}
             </div>
 
-            {/* Info sobre áreas técnicas pré-definidas */}
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="text-sm text-blue-800 font-medium mb-2">
-                ✅ Áreas Técnicas serão criadas automaticamente:
-              </p>
-              <div className="text-xs text-blue-700 space-y-1">
-                {AREAS_TECNICAS_PREDEFINIDAS.map((area, index) => (
-                  <div key={index}>• {area}</div>
-                ))}
+
+            {/* Info sobre áreas técnicas pré-definidas - apenas para Ronda */}
+            {formData.tipoVisita === 'RONDA' && (
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm text-blue-800 font-medium mb-2">
+                  ✅ Áreas Técnicas serão criadas automaticamente:
+                </p>
+                <div className="text-xs text-blue-700 space-y-1">
+                  {AREAS_TECNICAS_PREDEFINIDAS.map((area, index) => (
+                    <div key={index}>• {area}</div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Seção de Outros Itens Corrigidos */}
             <div className="border-t pt-4">

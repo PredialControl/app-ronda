@@ -432,7 +432,7 @@ const CustomHeader = ({ contrato, ronda }: { contrato: Contrato, ronda: Ronda })
       {/* Linha 3: Data | Rev */}
       <View style={[styles.headerInfoRow, { borderBottomWidth: 0 }]}>
         <View style={{ flex: 2, paddingLeft: 4, borderRightWidth: 1, borderRightColor: '#000000', height: '100%', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 7 }}>Data: {ronda.data}</Text>
+          <Text style={{ fontSize: 7 }}>Data: {ronda.data ? ronda.data.split('-').reverse().join('/') : ''}</Text>
         </View>
         <View style={{ flex: 1, paddingLeft: 4, height: '100%', justifyContent: 'center' }}>
           <Text style={{ fontSize: 7 }}>Rev: 00</Text>

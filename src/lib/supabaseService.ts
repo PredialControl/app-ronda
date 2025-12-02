@@ -272,6 +272,7 @@ export const rondaService = {
               contrato: row.contrato || 'Contrato não especificado',
               data: row.data || new Date().toISOString().split('T')[0],
               hora: row.hora || '00:00',
+              tipoVisita: (row.tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || 'RONDA',
               responsavel: row.responsavel || 'Responsável não informado',
               observacoesGerais: row.observacoes_gerais || '',
               areasTecnicas: [],
@@ -675,6 +676,7 @@ export const rondaService = {
         contrato: data.contrato || '',
         data: data.data || '',
         hora: data.hora || '',
+        tipoVisita: (data.tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || 'RONDA',
         responsavel: data.responsavel || '',
         observacoesGerais: data.observacoes_gerais || '',
         areasTecnicas: [],
@@ -715,6 +717,7 @@ export const rondaService = {
           contrato: ronda.contrato,
           data: ronda.data,
           hora: ronda.hora,
+          tipo_visita: ronda.tipoVisita || 'RONDA',
           responsavel: ronda.responsavel,
           observacoes_gerais: ronda.observacoesGerais
         }])
@@ -739,6 +742,7 @@ export const rondaService = {
         contrato: rondaData?.contrato || ronda.contrato,
         data: rondaData?.data || ronda.data,
         hora: rondaData?.hora || ronda.hora,
+        tipoVisita: (rondaData?.tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || ronda.tipoVisita || 'RONDA',
         responsavel: rondaData?.responsavel || ronda.responsavel,
         observacoesGerais: rondaData?.observacoes_gerais || ronda.observacoesGerais || '',
         areasTecnicas: [],
@@ -768,7 +772,8 @@ export const rondaService = {
           data: updates.data,
           hora: updates.hora,
           responsavel: updates.responsavel,
-          observacoes_gerais: updates.observacoesGerais
+          observacoes_gerais: updates.observacoesGerais,
+          tipo_visita: updates.tipoVisita
         })
         .eq('id', id)
         .select()
@@ -794,6 +799,7 @@ export const rondaService = {
         hora: data.hora,
         responsavel: data.responsavel,
         observacoesGerais: data.observacoes_gerais,
+        tipoVisita: data.tipo_visita,
         areasTecnicas: updates.areasTecnicas || [],
         fotosRonda: updates.fotosRonda || [],
         outrosItensCorrigidos: updates.outrosItensCorrigidos || []

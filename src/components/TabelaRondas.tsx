@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Ronda, Contrato } from '@/types';
-import { Calendar, Users, CheckCircle, AlertTriangle, Eye, FileText, Trash2, Droplets, Zap, Flame, ArrowLeft } from 'lucide-react';
+import { Calendar, Users, CheckCircle, AlertTriangle, Eye, FileText, Trash2, Droplets, Zap, Flame, ArrowLeft, Filter } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface TabelaRondasProps {
   rondas: Ronda[];
@@ -15,6 +16,17 @@ interface TabelaRondasProps {
 }
 
 export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onDeletarRonda, onVoltarContratos }: TabelaRondasProps) {
+  // Estado para filtro de mês/ano
+  const mesAtual = new Date().getMonth(); // 0-11
+  const anoAtual = new Date().getFullYear();
+  const [mesSelecionado, setMesSelecionado] = useState<number>(mesAtual);
+  const [anoSelecionado, setAnoSelecionado] = useState<number>(anoAtual);
+
+  // Filtrar rondas pelo mês/ano selecionado
+  const rondasFiltradas = rondas.filter(ronda => {
+    const dataRonda = new Date(ronda.data + 'T00:00:00');
+    return dataRonda.getMonth() === mesSelecionado && dataRonda.getFullYear() === anoSelecionado;
+  });
 
 
   const getStatusColor = (status: string) => {
@@ -42,36 +54,36 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
     const total = ronda.areasTecnicas.length;
     const ativos = ronda.areasTecnicas.filter(at => at.status === 'ATIVO').length;
     const manutencao = ronda.areasTecnicas.filter(at => at.status === 'EM MANUTENÇÃO').length;
-    
+
     // Debug: Log dos dados da ronda
     console.log('🔍 DEBUG TABELA - Ronda:', ronda.id, {
       outrosItensCorrigidos: ronda.outrosItensCorrigidos?.length || 0,
       fotosRonda: ronda.fotosRonda?.length || 0,
       outrosItensDetalhes: ronda.outrosItensCorrigidos
     });
-    
+
     // Contar itens de abertura de chamado (outrosItensCorrigidos com categoria CHAMADO ou sem categoria)
     const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => {
       console.log('🔍 DEBUG TABELA - Verificando item:', item.categoria, item);
       const statusNorm = (item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-      const isItemChamado = item.categoria === 'CHAMADO' || 
-                           (item.categoria === undefined && statusNorm !== 'CONCLUIDO') ||
-                           (item.categoria === null && statusNorm !== 'CONCLUIDO');
+      const isItemChamado = item.categoria === 'CHAMADO' ||
+        (item.categoria === undefined && statusNorm !== 'CONCLUIDO') ||
+        (item.categoria === null && statusNorm !== 'CONCLUIDO');
       return isItemChamado && statusNorm !== 'CONCLUIDO';
     }).length;
-    
+
     // Incluir também fotos de ronda como chamados (para compatibilidade)
     const fotosRondaChamados = ronda.fotosRonda.length;
     const totalItensChamado = itensChamado + fotosRondaChamados;
-    
+
     console.log('🔍 DEBUG TABELA - Contagem final:', {
       itensChamado,
       fotosRondaChamados,
       totalItensChamado
     });
-    
+
     const itensAtencao = manutencao + totalItensChamado; // Soma manutenção + chamados
-    
+
     return { total, ativos, manutencao, itensChamado: totalItensChamado, itensAtencao };
   };
 
@@ -85,7 +97,7 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
               Contrato: {contrato.nome}
             </CardTitle>
           </div>
-          
+
 
         </CardHeader>
         <CardContent>
@@ -111,10 +123,43 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
     <Card className="w-full">
       <CardHeader>
         <div className="flex items-center justify-between mb-4">
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-600" />
-            Contrato: {contrato.nome}
-          </CardTitle>
+          <div className="flex items-center gap-4">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-600" />
+              Contrato: {contrato.nome}
+            </CardTitle>
+
+            {/* Filtros de Mês/Ano */}
+            <div className="flex items-center gap-2 ml-4">
+              <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-200">
+                <Filter className="w-4 h-4 text-gray-500 ml-2" />
+                <Select value={mesSelecionado.toString()} onValueChange={(v) => setMesSelecionado(parseInt(v))}>
+                  <SelectTrigger className="w-[140px] h-8 border-0 bg-transparent focus:ring-0">
+                    <SelectValue placeholder="Mês" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].map((mes, index) => (
+                      <SelectItem key={index} value={index.toString()}>{mes}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <div className="w-px h-4 bg-gray-300 mx-1"></div>
+
+                <Select value={anoSelecionado.toString()} onValueChange={(v) => setAnoSelecionado(parseInt(v))}>
+                  <SelectTrigger className="w-[100px] h-8 border-0 bg-transparent focus:ring-0">
+                    <SelectValue placeholder="Ano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[anoAtual - 1, anoAtual, anoAtual + 1].map((ano) => (
+                      <SelectItem key={ano} value={ano.toString()}>{ano}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <Button onClick={onVoltarContratos} variant="outline" className="text-gray-600 border-gray-300 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-800">
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -126,69 +171,92 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
             </Button>
           </div>
         </div>
-        
+
 
       </CardHeader>
-      
+
       <CardContent>
         {/* Conteúdo das Rondas */}
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        Data
-                      </div>
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4" />
-                        Responsável
-                      </div>
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4" />
-                        Áreas Vistoriadas
-                      </div>
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        Itens Ativos
-                      </div>
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                        Itens Manutenção
-                      </div>
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-orange-600" />
-                        Itens Chamado
-                      </div>
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-red-600" />
-                        Itens em Atenção
-                      </div>
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      Ações
-                    </th>
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    Tipo
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Data
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Responsável
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Áreas Vistoriadas
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      Itens Ativos
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                      Itens Manutenção
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-orange-600" />
+                      Itens Chamado
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-600" />
+                      Itens em Atenção
+                    </div>
+                  </th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rondasFiltradas.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="text-center py-8 text-gray-500">
+                      Nenhuma ronda encontrada para {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][mesSelecionado]} de {anoSelecionado}.
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {rondas.map((ronda) => {
+                ) : (
+                  rondasFiltradas.map((ronda) => {
                     const stats = calcularEstatisticas(ronda);
+                    const tipoVisita = ronda.tipoVisita || 'RONDA';
+                    const tipoConfig = {
+                      RONDA: { label: '🔍 Ronda', color: 'text-blue-700' },
+                      REUNIAO: { label: '👥 Reunião', color: 'text-green-700' },
+                      OUTROS: { label: '📋 Outros', color: 'text-purple-700' }
+                    };
+                    const config = tipoConfig[tipoVisita as keyof typeof tipoConfig] || tipoConfig.RONDA;
+
                     return (
                       <tr key={ronda.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-4">
+                          <span className={`text-sm font-bold ${config.color}`}>
+                            {config.label}
+                          </span>
+                        </td>
                         <td className="py-3 px-4">
                           <div className="font-medium text-gray-900">
                             {formatarData(ronda.data)}
@@ -283,78 +351,78 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
                         </td>
                       </tr>
                     );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            
-            {/* Resumo das Rondas */}
-            <div className="mt-6 pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-6 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">
-                    {rondas.length}
-                  </div>
-                  <div className="text-sm text-gray-600">Total de Rondas</div>
+                  }))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Resumo das Rondas */}
+          <div className="mt-6 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-6 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {rondas.length}
                 </div>
-                <div>
-                  <div className="text-2xl font-bold text-green-600">
-                    {rondas.reduce((total, ronda) => total + ronda.areasTecnicas.length, 0)}
-                  </div>
-                  <div className="text-sm text-gray-600">Áreas Vistoriadas</div>
+                <div className="text-sm text-gray-600">Total de Rondas</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600">
+                  {rondas.reduce((total, ronda) => total + ronda.areasTecnicas.length, 0)}
                 </div>
-                <div>
-                  <div className="text-2xl font-bold text-green-600">
-                    {rondas.reduce((total, ronda) => 
-                      total + ronda.areasTecnicas.filter(at => at.status === 'ATIVO').length, 0
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-600">Itens Ativos</div>
+                <div className="text-sm text-gray-600">Áreas Vistoriadas</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600">
+                  {rondas.reduce((total, ronda) =>
+                    total + ronda.areasTecnicas.filter(at => at.status === 'ATIVO').length, 0
+                  )}
                 </div>
-                <div>
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {rondas.reduce((total, ronda) => 
-                      total + ronda.areasTecnicas.filter(at => at.status === 'EM MANUTENÇÃO').length, 0
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-600">Em Manutenção</div>
+                <div className="text-sm text-gray-600">Itens Ativos</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-yellow-600">
+                  {rondas.reduce((total, ronda) =>
+                    total + ronda.areasTecnicas.filter(at => at.status === 'EM MANUTENÇÃO').length, 0
+                  )}
                 </div>
-                <div>
-                  <div className="text-2xl font-bold text-orange-600">
-                    {rondas.reduce((total, ronda) => {
-                      const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => {
-                        const statusNorm = (item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-                        const isItemChamado = item.categoria === 'CHAMADO' || 
-                                             (item.categoria === undefined && statusNorm !== 'CONCLUIDO') ||
-                                             (item.categoria === null && statusNorm !== 'CONCLUIDO');
-                        return isItemChamado && statusNorm !== 'CONCLUIDO';
-                      }).length;
-                      const fotosRondaChamados = ronda.fotosRonda.length;
-                      return total + itensChamado + fotosRondaChamados;
-                    }, 0)}
-                  </div>
-                  <div className="text-sm text-gray-600">Itens Chamado</div>
+                <div className="text-sm text-gray-600">Em Manutenção</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {rondas.reduce((total, ronda) => {
+                    const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => {
+                      const statusNorm = (item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                      const isItemChamado = item.categoria === 'CHAMADO' ||
+                        (item.categoria === undefined && statusNorm !== 'CONCLUIDO') ||
+                        (item.categoria === null && statusNorm !== 'CONCLUIDO');
+                      return isItemChamado && statusNorm !== 'CONCLUIDO';
+                    }).length;
+                    const fotosRondaChamados = ronda.fotosRonda.length;
+                    return total + itensChamado + fotosRondaChamados;
+                  }, 0)}
                 </div>
-                <div>
-                  <div className="text-2xl font-bold text-red-600">
-                    {rondas.reduce((total, ronda) => {
-                      const manutencao = ronda.areasTecnicas.filter(at => at.status === 'EM MANUTENÇÃO').length;
-                      const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => {
-                        const statusNorm = (item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-                        const isItemChamado = item.categoria === 'CHAMADO' || 
-                                             (item.categoria === undefined && statusNorm !== 'CONCLUIDO') ||
-                                             (item.categoria === null && statusNorm !== 'CONCLUIDO');
-                        return isItemChamado && statusNorm !== 'CONCLUIDO';
-                      }).length;
-                      const fotosRondaChamados = ronda.fotosRonda.length;
-                      return total + manutencao + itensChamado + fotosRondaChamados;
-                    }, 0)}
-                  </div>
-                  <div className="text-sm text-gray-600">Itens em Atenção</div>
+                <div className="text-sm text-gray-600">Itens Chamado</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-red-600">
+                  {rondas.reduce((total, ronda) => {
+                    const manutencao = ronda.areasTecnicas.filter(at => at.status === 'EM MANUTENÇÃO').length;
+                    const itensChamado = (ronda.outrosItensCorrigidos || []).filter((item: any) => {
+                      const statusNorm = (item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+                      const isItemChamado = item.categoria === 'CHAMADO' ||
+                        (item.categoria === undefined && statusNorm !== 'CONCLUIDO') ||
+                        (item.categoria === null && statusNorm !== 'CONCLUIDO');
+                      return isItemChamado && statusNorm !== 'CONCLUIDO';
+                    }).length;
+                    const fotosRondaChamados = ronda.fotosRonda.length;
+                    return total + manutencao + itensChamado + fotosRondaChamados;
+                  }, 0)}
                 </div>
+                <div className="text-sm text-gray-600">Itens em Atenção</div>
               </div>
             </div>
-          </>
+          </div>
+        </>
       </CardContent>
     </Card>
   );

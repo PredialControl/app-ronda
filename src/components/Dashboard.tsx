@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GlowingCard } from '@/components/ui/glowing-card';
 import { Badge } from '@/components/ui/badge';
 import { Ronda, Contrato, AreaTecnica } from '@/types';
-import { BarChart3, AlertTriangle, Calendar, Wrench, XCircle, User } from 'lucide-react';
+import { BarChart3, AlertTriangle, Calendar, Wrench, XCircle, User, FileText, Trash2, Plus, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface DashboardProps {
   contrato: Contrato;
@@ -19,37 +21,27 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
   });
 
   // Se o mês atual não tiver rondas, usar automaticamente o mês da última ronda
-  useEffect(() => {
-    const [anoStr, mesStr] = selectedMonth.split('-');
-    const anoSelecionado = parseInt(anoStr, 10);
-    const mesSelecionado = parseInt(mesStr, 10) - 1;
-    const temNoMesAtual = rondas.some(r => {
-      const d = new Date(r.data);
-      return d.getFullYear() === anoSelecionado && d.getMonth() === mesSelecionado;
-    });
+  // Removido useEffect que alterava o mês automaticamente se não houvesse rondas
+  // para garantir que o mês atual seja sempre o padrão inicial.
 
-    if (!temNoMesAtual && rondas.length > 0) {
-      const maisRecente = [...rondas].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())[0];
-      const d = new Date(maisRecente.data);
-      const novo = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      if (novo !== selectedMonth) setSelectedMonth(novo);
-    }
-  }, [rondas]);
-
-  // Calcular métricas do dashboard com base no mês selecionado
-  const metricas = useMemo(() => {
+  // Filtrar rondas do mês/ano selecionados
+  const rondasMes = useMemo(() => {
     const [anoStr, mesStr] = selectedMonth.split('-');
     const anoSelecionado = parseInt(anoStr, 10);
     const mesSelecionado = parseInt(mesStr, 10) - 1; // 0-based
 
-    // Filtrar rondas do mês/ano selecionados
-    const rondasMes = rondas.filter(ronda => {
-      const dataRonda = new Date(ronda.data);
+    return rondas.filter(ronda => {
+      const [anoRonda, mesRonda] = ronda.data.split('-').map(Number);
+      // Ajuste: mesRonda vem 1-12, mesSelecionado é 0-11
       return (
-        dataRonda.getMonth() === mesSelecionado &&
-        dataRonda.getFullYear() === anoSelecionado
+        (mesRonda - 1) === mesSelecionado &&
+        anoRonda === anoSelecionado
       );
     });
+  }, [rondas, selectedMonth]);
+
+  // Calcular métricas do dashboard com base no mês selecionado
+  const metricas = useMemo(() => {
 
     // Itens por criticidade/atenção (ajuste simples baseado no campo pendencia)
     const fotosMes = rondasMes.flatMap(ronda => ronda.fotosRonda || []);
@@ -84,7 +76,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
 
     // Lista detalhada de chamados do mês (incluindo itens de outrosItensCorrigidos)
     const chamadosLista = rondasMes
-      .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
+      .sort((a, b) => a.data.localeCompare(b.data))
       .flatMap(r => {
         // Fotos de ronda (chamados antigos)
         const fotosChamados = (r.fotosRonda || [])
@@ -133,7 +125,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
     // Status da última visita: usar APENAS a última ronda inteira
     const statusEquipamentos = (() => {
       const rondaMaisRecente = [...rondas]
-        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())[0];
+        .sort((a, b) => b.data.localeCompare(a.data))[0];
       const areas = rondaMaisRecente?.areasTecnicas || [];
       return areas.map((at) => ({
         id: at.id,
@@ -156,7 +148,66 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
       contagemResponsavel,
       chamadosLista
     };
-  }, [rondas, areasTecnicas, selectedMonth]);
+  }, [rondasMes, areasTecnicas]);
+
+  // Estado para itens relevantes do relatório (persistido no localStorage)
+  const [reportItems, setReportItems] = useState('');
+
+  // Estado para lista de itens relevantes (formato tabela)
+  const [reportItemsList, setReportItemsList] = useState<Array<{ id: string; descricao: string; data: string }>>([]);
+  const [novoItem, setNovoItem] = useState('');
+
+  // Carregar itens relevantes ao mudar mês ou contrato
+  useEffect(() => {
+    const key = `dashboard_report_items_${contrato.id}_${selectedMonth}`;
+    const saved = localStorage.getItem(key);
+    setReportItems(saved || '');
+
+    // Carregar lista de itens
+    const keyList = `dashboard_report_items_list_${contrato.id}_${selectedMonth}`;
+    const savedList = localStorage.getItem(keyList);
+    if (savedList) {
+      try {
+        setReportItemsList(JSON.parse(savedList));
+      } catch {
+        setReportItemsList([]);
+      }
+    } else {
+      setReportItemsList([]);
+    }
+  }, [contrato.id, selectedMonth]);
+
+  // Salvar itens relevantes ao digitar (com debounce simples via useEffect)
+  useEffect(() => {
+    const key = `dashboard_report_items_${contrato.id}_${selectedMonth}`;
+    localStorage.setItem(key, reportItems);
+  }, [reportItems, contrato.id, selectedMonth]);
+
+  // Salvar lista de itens
+  useEffect(() => {
+    const keyList = `dashboard_report_items_list_${contrato.id}_${selectedMonth}`;
+    localStorage.setItem(keyList, JSON.stringify(reportItemsList));
+  }, [reportItemsList, contrato.id, selectedMonth]);
+
+  // Função para adicionar novo item
+  const handleAddItem = () => {
+    if (novoItem.trim()) {
+      const newItem = {
+        id: crypto.randomUUID(),
+        descricao: novoItem.trim(),
+        data: new Date().toISOString().split('T')[0]
+      };
+      setReportItemsList(prev => [...prev, newItem]);
+      setNovoItem('');
+    }
+  };
+
+  // Função para remover item
+  const handleRemoveItem = (id: string) => {
+    if (confirm('Tem certeza que deseja remover este item?')) {
+      setReportItemsList(prev => prev.filter(item => item.id !== id));
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -188,7 +239,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <GlowingCard className="border-l-4 border-l-blue-500" glowColor="from-blue-500/50 via-cyan-500/50 to-blue-500/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Total de Rondas</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-700">Total de Visitas</CardTitle>
             <BarChart3 className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -244,94 +295,62 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
         </GlowingCard>
       </div>
 
-      {/* Chamados abertos por especialidade (mês filtrado) */}
+      {/* Tabela de visitas do mês */}
       <GlowingCard>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-gray-900">
-            <AlertTriangle className="w-5 h-5 text-orange-600" />
-            Chamados Abertos por Especialidade (mês selecionado)
+            <Calendar className="w-5 h-5 text-blue-600" />
+            Visitas do Mês
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {metricas.chamadosPorEspecialidade.length === 0 ? (
-            <div className="text-sm text-gray-600">Nenhum chamado aberto no período.</div>
+          {rondasMes.length === 0 ? (
+            <div className="text-sm text-gray-600">Nenhuma visita registrada neste mês.</div>
           ) : (
-            <div className="flex flex-col items-center gap-4">
-              {/* Pizza chart */}
-              {(() => {
-                const radius = 64;
-                const stroke = 22;
-                const cx = 90;
-                const cy = 90;
-                const circumference = 2 * Math.PI * radius;
-                const total = metricas.chamadosPorEspecialidade.reduce((sum, i) => sum + i.total, 0) || 1;
-                let offset = 0;
-                const palette: Record<string, string> = {
-                  CIVIL: '#3b82f6', // blue
-                  ELÉTRICA: '#22c55e', // green
-                  ELETRICA: '#22c55e',
-                  HIDRÁULICA: '#f59e0b', // amber
-                  HIDRAULICA: '#f59e0b',
-                  OUTROS: '#8b5cf6', // violet
-                };
-                const fallback = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6'];
-                const circles = metricas.chamadosPorEspecialidade.map((item, idx) => {
-                  const value = item.total / total;
-                  const length = value * circumference;
-                  const color = palette[(item.especialidade || '').toUpperCase()] || fallback[idx % fallback.length];
-                  const circle = (
-                    <circle
-                      key={item.especialidade}
-                      r={radius}
-                      cx={cx}
-                      cy={cy}
-                      fill="transparent"
-                      stroke={color}
-                      strokeWidth={stroke}
-                      strokeDasharray={`${length} ${circumference - length}`}
-                      strokeDashoffset={-offset}
-                      transform={`rotate(-90 ${cx} ${cy})`}
-                      strokeLinecap="butt"
-                    />
-                  );
-                  offset += length;
-                  return circle;
-                });
-                return (
-                  <div className="flex items-center justify-center">
-                    <svg width={180} height={180} viewBox={`0 0 ${cx * 2} ${cy * 2}`}>
-                      <circle r={radius} cx={cx} cy={cy} fill="#1e293b" stroke="#334155" strokeWidth={stroke} />
-                      {circles}
-                    </svg>
-                  </div>
-                );
-              })()}
-
-              {/* Legenda abaixo */}
-              <div className="w-full max-w-md">
-                <div className="grid grid-cols-1 gap-2 justify-items-center">
-                  {metricas.chamadosPorEspecialidade.map((item, idx) => {
-                    const palette: Record<string, string> = {
-                      CIVIL: '#3b82f6', ELÉTRICA: '#22c55e', ELETRICA: '#22c55e', HIDRÁULICA: '#f59e0b', HIDRAULICA: '#f59e0b', OUTROS: '#8b5cf6'
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left border-b border-gray-200">
+                    <th className="py-2 px-3 text-gray-700 font-medium">Tipo</th>
+                    <th className="py-2 px-3 text-gray-700 font-medium">Nome</th>
+                    <th className="py-2 px-3 text-gray-700 font-medium">Data</th>
+                    <th className="py-2 px-3 text-gray-700 font-medium">Responsável</th>
+                    <th className="py-2 px-3 text-gray-700 font-medium">Observações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rondasMes.map((ronda) => {
+                    const tipoVisita = ronda.tipoVisita || 'RONDA';
+                    const tipoConfig = {
+                      RONDA: { label: '🔍 Ronda', color: 'text-blue-700' },
+                      REUNIAO: { label: '👥 Reunião', color: 'text-green-700' },
+                      OUTROS: { label: '📋 Outros', color: 'text-purple-700' }
                     };
-                    const fallback = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6'];
-                    const color = palette[(item.especialidade || '').toUpperCase()] || fallback[idx % fallback.length];
-                    const totalAll = metricas.chamadosPorEspecialidade.reduce((s, i) => s + i.total, 0) || 1;
-                    const percent = Math.round((item.total / totalAll) * 100);
+                    const config = tipoConfig[tipoVisita as keyof typeof tipoConfig] || tipoConfig.RONDA;
+
                     return (
-                      <div key={item.especialidade} className="flex items-center gap-3 text-sm text-gray-700">
-                        <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: color }} />
-                        <span className="font-medium text-gray-900">{item.especialidade}</span>
-                        <span className="text-gray-600">— {item.total} ({percent}%)</span>
-                      </div>
+                      <tr key={ronda.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <td className="py-2 px-3">
+                          <span className={`text-sm font-bold ${config.color}`}>
+                            {config.label}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-gray-900 font-medium">{ronda.nome}</td>
+                        <td className="py-2 px-3 text-gray-600">{ronda.data ? ronda.data.split('-').reverse().join('/') : '—'}</td>
+                        <td className="py-2 px-3 text-gray-600">{ronda.responsavel || '—'}</td>
+                        <td className="py-2 px-3 text-gray-600 max-w-[300px] truncate" title={ronda.observacoesGerais}>
+                          {ronda.observacoesGerais || '—'}
+                        </td>
+                      </tr>
                     );
                   })}
-                </div>
-              </div>
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
       </GlowingCard>
+
 
       {/* Tabela de chamados do mês */}
       <GlowingCard>
@@ -359,7 +378,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
                   {metricas.chamadosLista.map((c) => (
                     <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                       <td className="py-2 px-3 text-gray-900 max-w-[520px] truncate" title={c.descricao}>{c.descricao || '—'}</td>
-                      <td className="py-2 px-3 text-gray-600">{new Date(c.data).toLocaleDateString('pt-BR')}</td>
+                      <td className="py-2 px-3 text-gray-600">{c.data ? (typeof c.data === 'string' ? c.data.split('-').reverse().join('/') : new Date(c.data).toLocaleDateString('pt-BR')) : '—'}</td>
                       <td className="py-2 px-3 text-gray-600">{c.especialidade}</td>
                       <td className="py-2 px-3 text-gray-600">{c.responsavel}</td>
                     </tr>
@@ -393,7 +412,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
               <tbody>
                 {metricas.statusEquipamentos.map((equipamento) => {
                   const dataFormatada = equipamento.ultimaVisita
-                    ? new Date(equipamento.ultimaVisita as unknown as string).toLocaleDateString('pt-BR')
+                    ? (equipamento.ultimaVisita as unknown as string).split('-').reverse().join('/')
                     : '—';
                   const status = equipamento.statusUltimaVisita || 'NÃO VISITADO';
                   const variant = status === 'ATIVO' ? 'success' : /MANUT|ATEN/.test(status) ? 'attention' : 'destructive';
@@ -435,6 +454,101 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
               <div className="text-xs text-orange-500/70">Monitorar de perto</div>
             </div>
           </div>
+        </CardContent>
+      </GlowingCard>
+      <GlowingCard className="border-l-4 border-l-indigo-500" glowColor="from-indigo-500/50 via-purple-500/50 to-indigo-500/50">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-gray-900">
+              <FileText className="w-5 h-5 text-indigo-600" />
+              Itens Relevantes para Relatório Mensal
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (confirm('⚠️ Tem certeza que deseja limpar todos os itens relevantes?\n\nEsta ação não pode ser desfeita!')) {
+                  setReportItemsList([]);
+                }
+              }}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Limpar Tudo
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Input para adicionar novo item */}
+          <div className="flex gap-2">
+            <Input
+              value={novoItem}
+              onChange={(e) => setNovoItem(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddItem();
+                }
+              }}
+              placeholder="Digite um item relevante e pressione Enter ou clique em Adicionar..."
+              className="flex-1"
+            />
+            <Button
+              onClick={handleAddItem}
+              disabled={!novoItem.trim()}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Adicionar
+            </Button>
+          </div>
+
+          {/* Tabela de itens */}
+          {reportItemsList.length > 0 ? (
+            <div className="border rounded-md overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="text-left py-2 px-3 text-gray-700 font-medium w-20">Data</th>
+                    <th className="text-left py-2 px-3 text-gray-700 font-medium">Descrição</th>
+                    <th className="text-right py-2 px-3 text-gray-700 font-medium w-20">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportItemsList.map((item, index) => (
+                    <tr key={item.id} className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                      <td className="py-2 px-3 text-gray-600">
+                        {item.data.split('-').reverse().join('/')}
+                      </td>
+                      <td className="py-2 px-3 text-gray-900">
+                        {item.descricao}
+                      </td>
+                      <td className="py-2 px-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md border border-dashed border-gray-300">
+              <FileText className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+              <p className="text-sm">Nenhum item adicionado ainda</p>
+              <p className="text-xs text-gray-400 mt-1">Use o campo acima para adicionar itens relevantes</p>
+            </div>
+          )}
+
+          <p className="text-xs text-gray-500 flex items-center justify-between">
+            <span>💡 Pressione Enter para adicionar rapidamente</span>
+            <span>Total: {reportItemsList.length} {reportItemsList.length === 1 ? 'item' : 'itens'}</span>
+          </p>
         </CardContent>
       </GlowingCard>
     </div>
