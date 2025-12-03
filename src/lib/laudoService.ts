@@ -16,6 +16,8 @@ export interface Laudo {
 const DEFAULT_LAUDOS = [
     { titulo: 'Auto de Vistoria do Corpo de Bombeiros (AVCB)', periodicidade: 'Periódico (Variável)' },
     { titulo: 'Certificado de Pressurização dos Extintores', periodicidade: 'Anual' },
+    { titulo: 'Recarga de Extintores', periodicidade: 'Anual' },
+    { titulo: 'Teste Hidrostático de Extintores', periodicidade: 'A cada 5 anos' },
     { titulo: 'Certificado Teste Hidrostático das Mangueiras', periodicidade: 'A cada 5 anos' },
     { titulo: 'Laudo de Estanqueidade da Rede de Gás', periodicidade: 'Anual' },
     { titulo: 'Relatório de Inspeção Anual dos Elevadores (RIA)', periodicidade: 'Anual' },
