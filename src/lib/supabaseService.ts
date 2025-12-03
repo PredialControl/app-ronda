@@ -272,7 +272,7 @@ export const rondaService = {
               contrato: row.contrato || 'Contrato não especificado',
               data: row.data || new Date().toISOString().split('T')[0],
               hora: row.hora || '00:00',
-              tipoVisita: (row.tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || 'RONDA',
+              tipoVisita: ((row as any).tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || 'RONDA',
               responsavel: row.responsavel || 'Responsável não informado',
               observacoesGerais: row.observacoes_gerais || '',
               areasTecnicas: [],

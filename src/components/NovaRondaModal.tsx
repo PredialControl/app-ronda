@@ -272,7 +272,7 @@ export function NovaRondaModal({
                   onChange={(e) => handleInputChange('observacoesGerais', e.target.value)}
                   placeholder={formData.tipoVisita === 'REUNIAO' ? 'Descreva o que foi discutido na reunião, decisões tomadas, próximos passos...' : 'Descreva a atividade realizada...'}
                   className="w-full min-h-[120px] p-3 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y text-sm"
-                  required={formData.tipoVisita !== 'RONDA'}
+                  required={['REUNIAO', 'OUTROS'].includes(formData.tipoVisita)}
                 />
               ) : (
                 <Input
