@@ -61,8 +61,8 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
     });
     const itensAtencao = Array.from(nomesAtencao);
 
-    // Chamados abertos (qualquer foto com pendencia definida)
-    const chamadosAbertos = fotosMes.filter(f => (f.pendencia || '').trim() !== '');
+    // Chamados abertos (todas as fotos de ronda são consideradas chamados)
+    const chamadosAbertos = fotosMes;
 
     // Agrupar chamados por especialidade
     const mapaEspecialidade: Record<string, number> = {};
@@ -78,12 +78,11 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
     const chamadosLista = rondasMes
       .sort((a, b) => a.data.localeCompare(b.data))
       .flatMap(r => {
-        // Fotos de ronda (chamados antigos)
+        // Fotos de ronda (TODAS as fotos são chamados)
         const fotosChamados = (r.fotosRonda || [])
-          .filter(f => (String(f.pendencia || f.observacoes || '').trim() !== ''))
           .map(f => ({
             id: `${r.id}-foto-${f.id}`,
-            descricao: (f.observacoes && f.observacoes.trim() !== '') ? f.observacoes : (f.pendencia || ''),
+            descricao: f.observacoes || f.pendencia || f.local || 'Chamado sem descrição',
             data: f.data || r.data,
             especialidade: f.especialidade || '—',
             responsavel: (f.responsavel || '—').toUpperCase()
