@@ -51,6 +51,10 @@ export function AreaTecnicaCard({
           </div>
         </div>
 
+        <div className="mt-2 p-2 border border-green-500 rounded text-black text-sm font-medium text-center">
+          Feito teste de funcionamento do ativo
+        </div>
+
         {areaTecnica.observacoes && (
           <div className="pt-2 border-t">
             <p className="text-sm text-gray-600">
@@ -124,6 +128,10 @@ export function AreaTecnicaCard({
           <Badge variant={getStatusColor(areaTecnica.status)}>
             {getStatusLabel(areaTecnica.status)}
           </Badge>
+        </div>
+
+        <div className="mt-2 p-2 border border-green-500 rounded text-black text-sm font-medium text-center">
+          Feito teste de funcionamento do ativo
         </div>
 
         {areaTecnica.foto && (
