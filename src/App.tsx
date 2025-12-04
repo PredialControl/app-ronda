@@ -835,16 +835,26 @@ function App() {
       if (editingAreaTecnica) {
         // Editando área existente - atualizar no banco
         console.log('🔄 Editando área técnica existente no banco:', areaTecnica);
-        areaSalva = await areaTecnicaService.update(areaTecnica.id, areaTecnica);
+        const areaAtualizada = await areaTecnicaService.update(areaTecnica.id, areaTecnica);
+        // Mapear teste_status do banco para testeStatus do frontend
+        areaSalva = {
+          ...areaAtualizada,
+          testeStatus: (areaAtualizada as any).teste_status || (areaAtualizada as any).testeStatus || areaTecnica.testeStatus
+        };
         console.log('✅ Área técnica atualizada no banco:', areaSalva);
       } else {
         // Adicionando nova área - criar no banco
         console.log('🆕 Criando nova área técnica no banco:', areaTecnica);
         const { id, ...areaSemId } = areaTecnica;
-        areaSalva = await areaTecnicaService.create({
+        const areaCriada = await areaTecnicaService.create({
           ...areaSemId,
           ronda_id: rondaId
         });
+        // Mapear teste_status do banco para testeStatus do frontend
+        areaSalva = {
+          ...areaCriada,
+          testeStatus: (areaCriada as any).teste_status || (areaCriada as any).testeStatus || areaTecnica.testeStatus
+        };
         console.log('✅ Nova área técnica criada no banco:', areaSalva);
       }
 
