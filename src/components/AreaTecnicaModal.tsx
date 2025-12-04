@@ -168,6 +168,7 @@ export function AreaTecnicaModal({
         id: crypto.randomUUID(),
         nome: formData.nome || `Área ${index + 1}`, // Usa o nome selecionado para TODAS
         status: formData.status as 'ATIVO' | 'EM MANUTENÇÃO' | 'ATENÇÃO',
+        testeStatus: formData.testeStatus as 'TESTADO' | 'NAO_TESTADO' | undefined,
         contrato: contratoRonda,
         endereco: enderecoRonda,
         data: dataRonda,
@@ -192,6 +193,7 @@ export function AreaTecnicaModal({
       id: areaTecnica?.id || crypto.randomUUID(),
       nome: formData.nome || 'Área',
       status: formData.status as 'ATIVO' | 'EM MANUTENÇÃO' | 'ATENÇÃO',
+      testeStatus: formData.testeStatus as 'TESTADO' | 'NAO_TESTADO' | undefined,
       contrato: contratoRonda,
       endereco: enderecoRonda,
       data: dataRonda,
