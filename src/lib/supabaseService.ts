@@ -535,6 +535,7 @@ export const rondaService = {
             id: area.id?.toString() || '',
             nome: area.nome || '',
             status: area.status || 'ATIVO',
+            testeStatus: area.teste_status || 'TESTADO',
             contrato: area.contrato || '',
             endereco: area.endereco || '',
             data: area.data || '',
@@ -886,6 +887,7 @@ export const areaTecnicaService = {
           ronda_id: area.ronda_id,
           nome: area.nome,
           status: area.status,
+          teste_status: (area as any).testeStatus || 'TESTADO',
           contrato: area.contrato,
           endereco: area.endereco,
           data: area.data,
@@ -948,6 +950,7 @@ export const areaTecnicaService = {
         .update({
           nome: updates.nome,
           status: updates.status,
+          teste_status: (updates as any).testeStatus,
           contrato: updates.contrato,
           endereco: updates.endereco,
           data: updates.data,
