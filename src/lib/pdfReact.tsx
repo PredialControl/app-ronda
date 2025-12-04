@@ -499,12 +499,14 @@ const CardArea: React.FC<{ area: AreaTecnica }> = ({ area }) => {
         marginBottom: 6,
         padding: 4,
         borderWidth: 1,
-        borderColor: '#22c55e',
+        borderColor: area.testeStatus === 'NAO_TESTADO' ? '#ef4444' : '#22c55e',
         borderRadius: 4,
         alignItems: 'center'
       }}>
         <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#000000' }}>
-          Feito teste de funcionamento do ativo
+          {area.testeStatus === 'NAO_TESTADO'
+            ? 'Não foi possível realizar o teste do ativo'
+            : 'Feito teste de funcionamento do ativo'}
         </Text>
       </View>
 

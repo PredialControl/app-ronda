@@ -33,6 +33,7 @@ export function AreaTecnicaModal({
   const [formData, setFormData] = useState<Partial<AreaTecnica>>({
     nome: areaTecnica?.nome || '',
     status: areaTecnica?.status || 'ATIVO',
+    testeStatus: areaTecnica?.testeStatus || 'TESTADO',
     contrato: contratoRonda,
     endereco: enderecoRonda,
     data: dataRonda,
@@ -71,6 +72,7 @@ export function AreaTecnicaModal({
       setFormData({
         nome: areaTecnica.nome,
         status: areaTecnica.status,
+        testeStatus: areaTecnica.testeStatus || 'TESTADO',
         contrato: areaTecnica.contrato,
         endereco: areaTecnica.endereco,
         data: areaTecnica.data,
@@ -271,6 +273,19 @@ export function AreaTecnicaModal({
                 <option value="ATIVO">Ativo</option>
                 <option value="EM MANUTENÇÃO">Em Manutenção</option>
                 <option value="ATENÇÃO">Atenção</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Status do Teste *</label>
+              <select
+                value={formData.testeStatus || 'TESTADO'}
+                onChange={(e) => handleInputChange('testeStatus', e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              >
+                <option value="TESTADO">✅ Feito teste de funcionamento do ativo</option>
+                <option value="NAO_TESTADO">❌ Não foi possível realizar o teste do ativo</option>
               </select>
             </div>
 

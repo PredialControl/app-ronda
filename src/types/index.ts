@@ -2,6 +2,7 @@ export interface AreaTecnica {
   id: string;
   nome: string;
   status: 'ATIVO' | 'EM MANUTENÇÃO' | 'ATENÇÃO';
+  testeStatus?: 'TESTADO' | 'NAO_TESTADO';
   contrato: string;
   endereco: string;
   data: string;
