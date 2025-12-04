@@ -495,6 +495,19 @@ const CardArea: React.FC<{ area: AreaTecnica }> = ({ area }) => {
         <StatusBadge status={area.status} />
       </View>
 
+      <View style={{
+        marginBottom: 6,
+        padding: 4,
+        borderWidth: 1,
+        borderColor: '#22c55e',
+        borderRadius: 4,
+        alignItems: 'center'
+      }}>
+        <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#000000' }}>
+          Feito teste de funcionamento do ativo
+        </Text>
+      </View>
+
       {area.foto ? (
         <View style={styles.imageContainer}>
           <PDFImage src={area.foto} style={styles.image} />
