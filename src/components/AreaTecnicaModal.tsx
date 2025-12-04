@@ -284,7 +284,6 @@ export function AreaTecnicaModal({
               <select
                 value={formData.testeStatus || 'TESTADO'}
                 onChange={(e) => {
-                  alert(`STATUS DE TESTE MUDOU PARA: ${e.target.value}`);
                   console.log('⚠️⚠️⚠️ STATUS DE TESTE MUDOU PARA:', e.target.value);
                   handleInputChange('testeStatus', e.target.value);
                 }}
