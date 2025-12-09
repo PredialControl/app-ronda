@@ -66,7 +66,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     };
 
     const handleUpdateSecao = (tempId: string, field: keyof SecaoLocal, value: any) => {
-        setSecoes(secoes.map(s => s.tempId === tempId ? { ...s, [field]: value } : s));
+        setSecoes(secoes.map(s => s.tempId === tempId ? ({ ...s, [field]: value } as SecaoLocal) : s));
     };
 
     const handleDeleteSecao = (tempId: string) => {
@@ -119,6 +119,41 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             handleUpdatePendencia(secaoTempId, pendenciaTempId, 'file', file);
             handleUpdatePendencia(secaoTempId, pendenciaTempId, 'preview', URL.createObjectURL(file));
         }
+    };
+
+    const handleBulkPhotos = (secaoTempId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        const secao = secoes.find(s => s.tempId === secaoTempId);
+        if (!secao) return;
+
+        // Limpar partes comuns do título para deixar o local mais limpo (opcional, mas solicitado pelo usuário 'automatico pegando titulo e sub titulo')
+        // Vamos usar exatamente o que ele pediu: Concatenar.
+        // Ex: Título: VIII.1 – 4º SUBSOLO, Subtítulo: VIII.1.A – HALL
+        // Local Gerado: 4º SUBSOLO - HALL (Tentativa de limpar numeração romana se possível, ou usar direto)
+        // O usuário disse: "Local: 4º Subsolo - Hall" na imagem.
+        // Vamos tentar extrair apenas o texto relevante ou concatenar direto.
+        // Simplificação: Usar Título Principal + " - " + Subtítulo. O usuário pode editar depois.
+
+        const localAutomatico = `${secao.titulo_principal} - ${secao.subtitulo}`;
+
+        const newPendencias: PendenciaLocal[] = files.map((file, idx) => ({
+            tempId: `pend-${Date.now()}-${idx}`,
+            ordem: secao.pendencias.length + idx,
+            local: localAutomatico,
+            descricao: '',
+            foto_url: null,
+            file: file,
+            preview: URL.createObjectURL(file),
+        }));
+
+        setSecoes(secoes.map(s => {
+            if (s.tempId === secaoTempId) {
+                return { ...s, pendencias: [...s.pendencias, ...newPendencias] };
+            }
+            return s;
+        }));
     };
 
     const handleSave = async () => {
@@ -277,43 +312,65 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             <CardContent className="space-y-4">
                                 <div>
                                     <Label htmlFor={`titulo-principal-${secao.tempId}`} className="text-gray-300">
-                                        Título Principal *
+                                        Título Principal da Seção
                                     </Label>
                                     <Input
                                         id={`titulo-principal-${secao.tempId}`}
                                         value={secao.titulo_principal}
                                         onChange={(e) => handleUpdateSecao(secao.tempId, 'titulo_principal', e.target.value)}
-                                        placeholder="Ex: VIII.1 – 4º SUBSOLO"
+                                        placeholder="Ex: 4º Subsolo"
                                         className="bg-gray-900 border-gray-700 text-white mt-1"
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">Este texto será usado automaticamente no início do campo "Local" das pendências.</p>
                                 </div>
 
                                 <div>
                                     <Label htmlFor={`subtitulo-${secao.tempId}`} className="text-gray-300">
-                                        Subtítulo *
+                                        Subtítulo / Área
                                     </Label>
                                     <Input
                                         id={`subtitulo-${secao.tempId}`}
                                         value={secao.subtitulo}
                                         onChange={(e) => handleUpdateSecao(secao.tempId, 'subtitulo', e.target.value)}
-                                        placeholder="Ex: VIII.1.A – HALL"
+                                        placeholder="Ex: Hall"
                                         className="bg-gray-900 border-gray-700 text-white mt-1"
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">Este texto será usado automaticamente no fim do campo "Local".</p>
                                 </div>
 
                                 {/* Pendências */}
                                 <div className="border-t border-gray-700 pt-4 mt-4">
                                     <div className="flex justify-between items-center mb-3">
-                                        <Label className="text-gray-300">Pendências</Label>
-                                        <Button
-                                            onClick={() => handleAddPendencia(secao.tempId)}
-                                            variant="outline"
-                                            size="sm"
-                                            className="text-green-400"
-                                        >
-                                            <Plus className="w-3 h-3 mr-1" />
-                                            Adicionar Pendência
-                                        </Button>
+                                        <Label className="text-gray-300">Pendências ({secao.pendencias.length})</Label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="file"
+                                                multiple
+                                                accept="image/*"
+                                                onChange={(e) => handleBulkPhotos(secao.tempId, e)}
+                                                className="hidden"
+                                                id={`bulk-photos-${secao.tempId}`}
+                                            />
+                                            <Button
+                                                onClick={() => document.getElementById(`bulk-photos-${secao.tempId}`)?.click()}
+                                                variant="secondary"
+                                                size="sm"
+                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                            >
+                                                <ImageIcon className="w-3 h-3 mr-1" />
+                                                Adicionar Várias Fotos
+                                            </Button>
+
+                                            <Button
+                                                onClick={() => handleAddPendencia(secao.tempId)}
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-green-400"
+                                            >
+                                                <Plus className="w-3 h-3 mr-1" />
+                                                Adicionar Manual
+                                            </Button>
+                                        </div>
                                     </div>
 
                                     {secao.pendencias.length === 0 ? (

@@ -66,7 +66,7 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
             if (!relatorioCompleto) {
                 throw new Error('Relatório não encontrado');
             }
-            await generateRelatorioPendenciasDOCX(relatorioCompleto, contratoSelecionado);
+            await generateRelatorioPendenciasDOCX(relatorioCompleto);
         } catch (error) {
             console.error('Erro ao exportar DOCX:', error);
             alert('Erro ao gerar documento DOCX.');

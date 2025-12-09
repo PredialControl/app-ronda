@@ -1,8 +1,8 @@
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, VerticalAlign, AlignmentType, ImageRun, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
-import { RelatorioPendencias, Contrato } from '@/types';
+import { RelatorioPendencias } from '@/types';
 
-export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPendencias, contrato: Contrato) {
+export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPendencias) {
     const children: (Paragraph | Table)[] = [];
 
     // Header com título do relatório
@@ -17,74 +17,94 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
 
     // Para cada seção
     for (const secao of relatorio.secoes || []) {
-        // Título Principal
+        // Título Principal e Subtítulo da Seção
         children.push(
             new Paragraph({
-                text: secao.titulo_principal,
-                heading: HeadingLevel.HEADING_2,
-                spacing: { before: 300, after: 200 },
+                children: [
+                    new TextRun({
+                        text: secao.titulo_principal,
+                        bold: true,
+                        size: 28, // 14pt
+                    }),
+                ],
+                spacing: { before: 400, after: 100 },
             })
         );
 
-        // Subtítulo
         children.push(
             new Paragraph({
-                text: secao.subtitulo,
-                heading: HeadingLevel.HEADING_3,
+                children: [
+                    new TextRun({
+                        text: secao.subtitulo,
+                        bold: true,
+                        size: 24, // 12pt
+                    }),
+                ],
                 spacing: { after: 200 },
             })
         );
 
         // Para cada pendência na seção
         for (const pendencia of secao.pendencias || []) {
-            // Criar tabela para a pendência
+            // Criar tabela para a pendência com layout específico
+            // Grid: [10%, 40%, 50%]
+            // Row 1: Cell 1 (Nº) span 1, Cell 2 (Texto) span 2
+            // Row 2: Cell 1 (Foto) span 2 (10+40=50%), Cell 2 (Vazio) span 1 (50%)
+
             const tableRows: TableRow[] = [];
 
-            // Primeira linha: número, local e descrição
-            tableRows.push(
-                new TableRow({
+            // ================= ROW 1: Número e Texto =================
+            const row1Cells: TableCell[] = [];
+
+            // Célula 1: Número (10%)
+            row1Cells.push(
+                new TableCell({
+                    width: { size: 10, type: WidthType.PERCENTAGE },
+                    verticalAlign: VerticalAlign.CENTER,
                     children: [
-                        new TableCell({
-                            width: { size: 800, type: WidthType.DXA },
-                            verticalAlign: VerticalAlign.CENTER,
+                        new Paragraph({
                             children: [
-                                new Paragraph({
-                                    children: [
-                                        new TextRun({
-                                            text: pendencia.ordem + 1 + '',
-                                            bold: true,
-                                            size: 24,
-                                        }),
-                                    ],
-                                    alignment: AlignmentType.CENTER,
+                                new TextRun({
+                                    text: (pendencia.ordem + 1).toString(),
+                                    bold: true,
+                                    size: 48, // 24pt
+                                }),
+                            ],
+                            alignment: AlignmentType.CENTER,
+                        }),
+                    ],
+                })
+            );
+
+            // Célula 2: Texto (90% - span 2 colunas virtuais)
+            row1Cells.push(
+                new TableCell({
+                    width: { size: 90, type: WidthType.PERCENTAGE },
+                    columnSpan: 2,
+                    children: [
+                        new Paragraph({
+                            children: [
+                                new TextRun({
+                                    text: 'Local: ',
+                                    bold: true,
+                                    size: 22, // 11pt
+                                }),
+                                new TextRun({
+                                    text: pendencia.local,
+                                    size: 22,
                                 }),
                             ],
                         }),
-                        new TableCell({
-                            width: { size: 8200, type: WidthType.DXA },
+                        new Paragraph({
                             children: [
-                                new Paragraph({
-                                    children: [
-                                        new TextRun({
-                                            text: 'Local: ',
-                                            bold: true,
-                                        }),
-                                        new TextRun({
-                                            text: pendencia.local,
-                                        }),
-                                    ],
-                                    spacing: { after: 100 },
+                                new TextRun({
+                                    text: 'Pendência: ',
+                                    bold: true,
+                                    size: 22, // 11pt
                                 }),
-                                new Paragraph({
-                                    children: [
-                                        new TextRun({
-                                            text: 'Pendência: ',
-                                            bold: true,
-                                        }),
-                                        new TextRun({
-                                            text: pendencia.descricao,
-                                        }),
-                                    ],
+                                new TextRun({
+                                    text: pendencia.descricao,
+                                    size: 22,
                                 }),
                             ],
                         }),
@@ -92,45 +112,77 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                 })
             );
 
-            // Segunda linha: imagem (se houver)
+            tableRows.push(new TableRow({ children: row1Cells }));
+
+            // ================= ROW 2: Foto e Espaço Vazio =================
+            const row2Cells: TableCell[] = [];
+
+            // Célula 1: Foto (50% - span 2 colunas virtuais se considerarmos grid complexo, ou span 1 com width manual)
+            // Vamos usar width manual para garantir.
+
+            let photoParagraph: Paragraph;
+
             if (pendencia.foto_url) {
-                tableRows.push(
-                    new TableRow({
+                try {
+                    // Tentar baixar a imagem e converter para Uint8Array
+                    const imageResponse = await fetch(pendencia.foto_url);
+                    const imageBuffer = await imageResponse.arrayBuffer();
+
+                    photoParagraph = new Paragraph({
                         children: [
-                            new TableCell({
-                                columnSpan: 2,
-                                children: [
-                                    new Paragraph({
-                                        children: [
-                                            new TextRun({
-                                                text: `Foto: ${pendencia.foto_url}`,
-                                                color: "0000FF",
-                                            }),
-                                        ],
-                                    }),
-                                ],
+                            new ImageRun({
+                                data: imageBuffer,
+                                transformation: {
+                                    width: 300, // Largura ajustada para caber na meia página
+                                    height: 225, // Proporção 4:3
+                                },
+                                type: "png", // Adicionado para satisfazer IImageOptions
                             }),
                         ],
-                    })
-                );
+                        alignment: AlignmentType.CENTER,
+                    });
+                } catch (error) {
+                    console.error('Erro ao carregar imagem:', error);
+                    photoParagraph = new Paragraph({
+                        children: [
+                            new TextRun({
+                                text: '[Erro ao carregar imagem]',
+                                italics: true,
+                                color: 'FF0000',
+                            }),
+                            new TextRun({
+                                text: ` URL: ${pendencia.foto_url}`,
+                                size: 16,
+                            }),
+                        ],
+                    });
+                }
             } else {
-                // Linha vazia para pendências sem foto
-                tableRows.push(
-                    new TableRow({
-                        children: [
-                            new TableCell({
-                                columnSpan: 2,
-                                children: [new Paragraph({ text: '' })],
-                            }),
-                        ],
-                    })
-                );
+                photoParagraph = new Paragraph({ text: '' });
             }
+
+            row2Cells.push(
+                new TableCell({
+                    width: { size: 50, type: WidthType.PERCENTAGE },
+                    children: [photoParagraph],
+                    verticalAlign: VerticalAlign.CENTER,
+                })
+            );
+
+            // Célula 2: Vazia (50%)
+            row2Cells.push(
+                new TableCell({
+                    width: { size: 50, type: WidthType.PERCENTAGE },
+                    children: [new Paragraph({})],
+                })
+            );
+
+            tableRows.push(new TableRow({ children: row2Cells }));
 
             // Adicionar tabela ao documento
             children.push(
                 new Table({
-                    width: { size: 9000, type: WidthType.DXA },
+                    width: { size: 100, type: WidthType.PERCENTAGE },
                     rows: tableRows,
                     margins: {
                         top: 100,
@@ -145,7 +197,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
             children.push(
                 new Paragraph({
                     text: '',
-                    spacing: { after: 200 },
+                    spacing: { after: 400 },
                 })
             );
         }
