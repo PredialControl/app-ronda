@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from './supabase';
 import { RelatorioPendencias, RelatorioSecao, RelatorioPendencia } from '@/types';
 
 export const relatorioPendenciasService = {

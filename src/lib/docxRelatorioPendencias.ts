@@ -23,7 +23,6 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                 text: secao.titulo_principal,
                 heading: HeadingLevel.HEADING_2,
                 spacing: { before: 300, after: 200 },
-                bold: true,
             })
         );
 
@@ -33,7 +32,6 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                 text: secao.subtitulo,
                 heading: HeadingLevel.HEADING_3,
                 spacing: { after: 200 },
-                bold: true,
             })
         );
 
@@ -96,51 +94,25 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
 
             // Segunda linha: imagem (se houver)
             if (pendencia.foto_url) {
-                try {
-                    const imageResponse = await fetch(pendencia.foto_url);
-                    const imageBuffer = await imageResponse.arrayBuffer();
-
-                    tableRows.push(
-                        new TableRow({
-                            children: [
-                                new TableCell({
-                                    columnSpan: 2,
-                                    children: [
-                                        new Paragraph({
-                                            children: [
-                                                new ImageRun({
-                                                    data: imageBuffer,
-                                                    transformation: {
-                                                        width: 400,
-                                                        height: 300,
-                                                    },
-                                                }),
-                                            ],
-                                            alignment: AlignmentType.LEFT,
-                                        }),
-                                    ],
-                                }),
-                            ],
-                        })
-                    );
-                } catch (error) {
-                    console.error('Erro ao carregar imagem:', error);
-                    tableRows.push(
-                        new TableRow({
-                            children: [
-                                new TableCell({
-                                    columnSpan: 2,
-                                    children: [
-                                        new Paragraph({
-                                            text: '[Erro ao carregar imagem]',
-                                            italics: true,
-                                        }),
-                                    ],
-                                }),
-                            ],
-                        })
-                    );
-                }
+                tableRows.push(
+                    new TableRow({
+                        children: [
+                            new TableCell({
+                                columnSpan: 2,
+                                children: [
+                                    new Paragraph({
+                                        children: [
+                                            new TextRun({
+                                                text: `Foto: ${pendencia.foto_url}`,
+                                                color: "0000FF",
+                                            }),
+                                        ],
+                                    }),
+                                ],
+                            }),
+                        ],
+                    })
+                );
             } else {
                 // Linha vazia para pendências sem foto
                 tableRows.push(
