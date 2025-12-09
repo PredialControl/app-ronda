@@ -51,11 +51,11 @@ export function AreaTecnicaCard({
           </div>
         </div>
 
-        <div className={`mt-2 p-2 border ${areaTecnica.testeStatus === 'NAO_TESTADO' ? 'border-red-500' : 'border-green-500'} rounded text-black text-sm font-medium text-center`}>
-          {areaTecnica.testeStatus === 'NAO_TESTADO'
-            ? 'Não foi possível realizar o teste do ativo'
-            : 'Feito teste de funcionamento do ativo'}
-        </div>
+        {areaTecnica.testeStatus !== 'NAO_TESTADO' && (
+          <div className="mt-2 p-2 border border-green-500 rounded text-black text-sm font-medium text-center">
+            Feito teste de funcionamento do ativo
+          </div>
+        )}
 
         {areaTecnica.observacoes && (
           <div className="pt-2 border-t">
@@ -132,11 +132,11 @@ export function AreaTecnicaCard({
           </Badge>
         </div>
 
-        <div className={`mt-2 p-2 border ${areaTecnica.testeStatus === 'NAO_TESTADO' ? 'border-red-500' : 'border-green-500'} rounded text-black text-sm font-medium text-center`}>
-          {areaTecnica.testeStatus === 'NAO_TESTADO'
-            ? 'Não foi possível realizar o teste do ativo'
-            : 'Feito teste de funcionamento do ativo'}
-        </div>
+        {areaTecnica.testeStatus !== 'NAO_TESTADO' && (
+          <div className="mt-2 p-2 border border-green-500 rounded text-black text-sm font-medium text-center">
+            Feito teste de funcionamento do ativo
+          </div>
+        )}
 
         {areaTecnica.foto && (
           <div className="pt-2 border-t">
