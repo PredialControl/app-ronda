@@ -4,11 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, FileText, Sparkles } from 'lucide-react';
+import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, FileText } from 'lucide-react';
 import { Contrato, ParecerTecnico as ParecerTecnicoType, ParecerTopico, ParecerImagem } from '@/types';
 import { parecerService } from '@/lib/parecerService';
 import { generateParecerTecnicoDOCX } from '@/lib/docxGenerator';
-import { improveText, isAIConfigured } from '@/lib/aiService';
 
 interface ParecerTecnicoEditorProps {
     contrato: Contrato;
@@ -46,7 +45,6 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
     const [topicos, setTopicos] = useState<TopicoLocal[]>([]);
     const [isSaving, setIsSaving] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
-    const [aiLoading, setAiLoading] = useState<{ [key: string]: boolean }>({});
 
     useEffect(() => {
         if (parecer?.topicos) {
@@ -159,45 +157,6 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
             alert('❌ Erro ao gerar documento DOCX. Verifique o console.');
         } finally {
             setIsExporting(false);
-        }
-    };
-
-    const handleImproveWithAI = async (field: 'finalidade' | 'narrativa' | string, currentValue: string) => {
-        if (!isAIConfigured()) {
-            alert('⚠️ API do Gemini não configurada. Por favor, adicione VITE_GEMINI_API_KEY no arquivo .env');
-            return;
-        }
-
-        if (!currentValue || currentValue.trim().length === 0) {
-            alert('Por favor, digite algum texto antes de usar a IA.');
-            return;
-        }
-
-        setAiLoading({ ...aiLoading, [field]: true });
-
-        try {
-            let context = 'topico';
-            if (field === 'finalidade') context = 'finalidade';
-            if (field === 'narrativa') context = 'narrativa';
-
-            const improvedText = await improveText(currentValue, context);
-
-            // Update the appropriate field
-            if (field === 'finalidade') {
-                setFinalidade(improvedText);
-            } else if (field === 'narrativa') {
-                setNarrativaCenario(improvedText);
-            } else {
-                // It's a topic description (field will be the tempId)
-                setTopicos(topicos.map(t =>
-                    t.tempId === field ? { ...t, descricao: improvedText } : t
-                ));
-            }
-        } catch (error: any) {
-            console.error('Erro ao melhorar texto:', error);
-            alert(`❌ ${error.message || 'Erro ao processar com IA'}`);
-        } finally {
-            setAiLoading({ ...aiLoading, [field]: false });
         }
     };
 
@@ -347,20 +306,7 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     </div>
 
                     <div>
-                        <div className="flex justify-between items-center mb-1">
-                            <Label htmlFor="finalidade" className="text-gray-300">1 – Finalidade do Relatório *</Label>
-                            <Button
-                                type="button"
-                                onClick={() => handleImproveWithAI('finalidade', finalidade)}
-                                disabled={aiLoading['finalidade'] || !finalidade.trim()}
-                                variant="outline"
-                                size="sm"
-                                className="text-purple-400 hover:text-purple-300 border-purple-500/30 hover:border-purple-500/50"
-                            >
-                                <Sparkles className="w-3 h-3 mr-1" />
-                                {aiLoading['finalidade'] ? 'Melhorando...' : 'Melhorar com IA'}
-                            </Button>
-                        </div>
+                        <Label htmlFor="finalidade" className="text-gray-300">1 – Finalidade do Relatório *</Label>
                         <Textarea
                             id="finalidade"
                             value={finalidade}
@@ -372,20 +318,7 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     </div>
 
                     <div>
-                        <div className="flex justify-between items-center mb-1">
-                            <Label htmlFor="narrativa" className="text-gray-300">2 – Narrativa do Cenário *</Label>
-                            <Button
-                                type="button"
-                                onClick={() => handleImproveWithAI('narrativa', narrativaCenario)}
-                                disabled={aiLoading['narrativa'] || !narrativaCenario.trim()}
-                                variant="outline"
-                                size="sm"
-                                className="text-purple-400 hover:text-purple-300 border-purple-500/30 hover:border-purple-500/50"
-                            >
-                                <Sparkles className="w-3 h-3 mr-1" />
-                                {aiLoading['narrativa'] ? 'Melhorando...' : 'Melhorar com IA'}
-                            </Button>
-                        </div>
+                        <Label htmlFor="narrativa" className="text-gray-300">2 – Narrativa do Cenário *</Label>
                         <Textarea
                             id="narrativa"
                             value={narrativaCenario}
@@ -495,20 +428,7 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                                 </div>
 
                                 <div>
-                                    <div className="flex justify-between items-center mb-1">
-                                        <Label htmlFor={`descricao-${topico.tempId}`} className="text-gray-300">Descrição *</Label>
-                                        <Button
-                                            type="button"
-                                            onClick={() => handleImproveWithAI(topico.tempId, topico.descricao)}
-                                            disabled={aiLoading[topico.tempId] || !topico.descricao.trim()}
-                                            variant="outline"
-                                            size="sm"
-                                            className="text-purple-400 hover:text-purple-300 border-purple-500/30 hover:border-purple-500/50"
-                                        >
-                                            <Sparkles className="w-3 h-3 mr-1" />
-                                            {aiLoading[topico.tempId] ? 'Melhorando...' : 'Melhorar com IA'}
-                                        </Button>
-                                    </div>
+                                    <Label htmlFor={`descricao-${topico.tempId}`} className="text-gray-300">Descrição *</Label>
                                     <Textarea
                                         id={`descricao-${topico.tempId}`}
                                         value={topico.descricao}
