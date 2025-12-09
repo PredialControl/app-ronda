@@ -7,6 +7,7 @@ import { KanbanBoard } from '@/components/KanbanBoard';
 import { LaudosKanban } from '@/components/LaudosKanban';
 import { CalendarView } from '@/components/CalendarView';
 import { ParecerTecnico } from '@/components/ParecerTecnico';
+import { RelatorioPendencias } from '@/components/RelatorioPendencias';
 
 import { FotoRondaModal } from '@/components/FotoRondaModal';
 import { TabelaRondas } from '@/components/TabelaRondas';
@@ -51,7 +52,7 @@ function App() {
 
   const [currentView, setCurrentView] = useState<'contratos' | 'rondas'>('contratos');
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
-  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'calendario' | 'parecer'>('tabela');
+  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'calendario' | 'parecer' | 'relatorios-pendencias'>('tabela');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
   const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
 
@@ -1602,6 +1603,19 @@ function App() {
                     Parecer Técnico
                   </div>
                 </button>
+
+                <button
+                  onClick={() => setViewMode('relatorios-pendencias')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'relatorios-pendencias'
+                    ? 'border-blue-400 text-blue-300'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                    }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileCheck className="w-4 h-4" />
+                    Relatórios de Pendências
+                  </div>
+                </button>
               </nav>
             </div>
 
@@ -1695,6 +1709,12 @@ function App() {
 
             {viewMode === 'parecer' && contratoSelecionado && (
               <ParecerTecnico
+                contratoSelecionado={contratoSelecionado}
+              />
+            )}
+
+            {viewMode === 'relatorios-pendencias' && contratoSelecionado && (
+              <RelatorioPendencias
                 contratoSelecionado={contratoSelecionado}
               />
             )}

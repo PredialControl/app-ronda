@@ -144,3 +144,34 @@ export interface ParecerImagem {
   descricao: string;
   created_at: string;
 }
+
+// Relatórios de Pendências Interfaces
+export interface RelatorioPendencias {
+  id: string;
+  contrato_id: string;
+  titulo: string;
+  secoes?: RelatorioSecao[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RelatorioSecao {
+  id: string;
+  relatorio_id: string;
+  ordem: number;
+  titulo_principal: string;
+  subtitulo: string;
+  pendencias?: RelatorioPendencia[];
+  created_at: string;
+}
+
+export interface RelatorioPendencia {
+  id: string;
+  secao_id: string;
+  ordem: number;
+  local: string;
+  descricao: string;
+  foto_url: string | null;
+  created_at: string;
+}
+
