@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Contrato } from '@/types';
-import { X, FileText, User, MapPin, Calendar, Clock, ArrowLeft } from 'lucide-react';
+import { X, FileText, User, MapPin, Calendar, Clock, ArrowLeft, Building, Building2 } from 'lucide-react';
 
 interface ContratoModalProps {
   contrato?: Contrato | null;
@@ -26,6 +26,8 @@ export function ContratoModal({
     endereco: '',
     periodicidade: 'MENSAL' as Contrato['periodicidade'],
     status: 'EM IMPLANTACAO' as 'IMPLANTADO' | 'EM IMPLANTACAO',
+    tipo_uso: '' as '' | 'RESIDENCIAL' | 'NAO_RESIDENCIAL' | 'RESIDENCIAL_E_NAO_RESIDENCIAL',
+    quantidade_torres: '' as string,
     observacoes: ''
   });
 
@@ -37,6 +39,8 @@ export function ContratoModal({
         endereco: contrato.endereco,
         periodicidade: contrato.periodicidade,
         status: contrato.status || 'EM IMPLANTACAO',
+        tipo_uso: contrato.tipo_uso || '',
+        quantidade_torres: contrato.quantidade_torres ? String(contrato.quantidade_torres) : '',
         observacoes: contrato.observacoes || ''
       });
     } else {
@@ -46,6 +50,8 @@ export function ContratoModal({
         endereco: '',
         periodicidade: 'MENSAL',
         status: 'EM IMPLANTACAO',
+        tipo_uso: '',
+        quantidade_torres: '',
         observacoes: ''
       });
     }
@@ -75,6 +81,8 @@ export function ContratoModal({
       endereco: formData.endereco,
       periodicidade: formData.periodicidade,
       status: formData.status,
+      tipo_uso: formData.tipo_uso || undefined,
+      quantidade_torres: formData.quantidade_torres ? parseInt(formData.quantidade_torres) : undefined,
       observacoes: formData.observacoes,
       dataCriacao: contrato?.dataCriacao || new Date().toISOString()
     };
@@ -184,6 +192,37 @@ export function ContratoModal({
                 <option value="EM IMPLANTACAO">Em Implantação</option>
                 <option value="IMPLANTADO">Implantado</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1 flex items-center gap-1">
+                <Building className="w-4 h-4" />
+                Tipo de Uso
+              </label>
+              <select
+                value={formData.tipo_uso}
+                onChange={(e) => handleInputChange('tipo_uso', e.target.value)}
+                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Selecione o tipo de uso</option>
+                <option value="RESIDENCIAL">Residencial</option>
+                <option value="NAO_RESIDENCIAL">Não Residencial</option>
+                <option value="RESIDENCIAL_E_NAO_RESIDENCIAL">Residencial e Não Residencial</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1 flex items-center gap-1">
+                <Building2 className="w-4 h-4" />
+                Quantidade de Torres
+              </label>
+              <Input
+                type="number"
+                min="1"
+                value={formData.quantidade_torres}
+                onChange={(e) => handleInputChange('quantidade_torres', e.target.value)}
+                placeholder="Ex: 1, 2, 3..."
+              />
             </div>
 
             <div>

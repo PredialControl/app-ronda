@@ -25,6 +25,8 @@ export const relatorioPendenciasService = {
     },
 
     async getById(id: string): Promise<RelatorioPendencias | null> {
+        console.log('🔍 getById - Buscando relatório:', id);
+
         const { data, error } = await supabase
             .from('relatorios_pendencias')
             .select(`
@@ -38,8 +40,25 @@ export const relatorioPendenciasService = {
             .single();
 
         if (error) {
-            console.error('Erro ao buscar relatório:', error);
+            console.error('❌ Erro ao buscar relatório:', error);
             throw error;
+        }
+
+        console.log('✅ getById - Dados brutos do Supabase:', data);
+
+        // Ordenar seções e pendências
+        if (data && data.secoes) {
+            // Ordenar seções por ordem
+            data.secoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+
+            // Ordenar pendências dentro de cada seção
+            data.secoes.forEach((secao: any) => {
+                if (secao.pendencias) {
+                    secao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+                }
+            });
+
+            console.log('✅ getById - Dados após ordenação:', data);
         }
 
         return data;
@@ -134,6 +153,8 @@ export const relatorioPendenciasService = {
 
     // ==================== PENDÊNCIAS ====================
     async createPendencia(pendencia: Omit<RelatorioPendencia, 'id' | 'created_at'>): Promise<RelatorioPendencia> {
+        console.log('➕ createPendencia - Dados enviados:', JSON.stringify(pendencia, null, 2));
+
         const { data, error } = await supabase
             .from('relatorio_pendencias')
             .insert([pendencia])
@@ -141,14 +162,18 @@ export const relatorioPendenciasService = {
             .single();
 
         if (error) {
-            console.error('Erro ao criar pendência:', error);
+            console.error('❌ Erro ao criar pendência:', error);
             throw error;
         }
 
+        console.log('✅ createPendencia - Dados retornados:', JSON.stringify(data, null, 2));
         return data;
     },
 
     async updatePendencia(id: string, pendencia: Partial<RelatorioPendencia>): Promise<RelatorioPendencia> {
+        console.log('📝 updatePendencia - ID:', id);
+        console.log('📝 updatePendencia - Dados enviados:', JSON.stringify(pendencia, null, 2));
+
         const { data, error } = await supabase
             .from('relatorio_pendencias')
             .update(pendencia)
@@ -157,10 +182,11 @@ export const relatorioPendenciasService = {
             .single();
 
         if (error) {
-            console.error('Erro ao atualizar pendência:', error);
+            console.error('❌ Erro ao atualizar pendência:', error);
             throw error;
         }
 
+        console.log('✅ updatePendencia - Dados retornados:', JSON.stringify(data, null, 2));
         return data;
     },
 
@@ -178,22 +204,33 @@ export const relatorioPendenciasService = {
 
     // ==================== UPLOAD DE FOTO ====================
     async uploadFoto(file: File, relatorioId: string, pendenciaId: string): Promise<string> {
+        console.log('📸 uploadFoto - Iniciando upload');
+        console.log('   - Nome do arquivo:', file.name);
+        console.log('   - Tamanho:', file.size, 'bytes');
+        console.log('   - Tipo:', file.type);
+        console.log('   - Relatório ID:', relatorioId);
+        console.log('   - Pendência ID:', pendenciaId);
+
         const fileExt = file.name.split('.').pop();
         const fileName = `${relatorioId}/${pendenciaId}-${Date.now()}.${fileExt}`;
         const filePath = `relatorios-pendencias/${fileName}`;
+
+        console.log('   - Caminho completo:', filePath);
 
         const { error: uploadError } = await supabase.storage
             .from('fotos')
             .upload(filePath, file);
 
         if (uploadError) {
-            console.error('Erro ao fazer upload da foto:', uploadError);
+            console.error('❌ Erro ao fazer upload da foto:', uploadError);
             throw uploadError;
         }
 
         const { data } = supabase.storage
             .from('fotos')
             .getPublicUrl(filePath);
+
+        console.log('✅ Upload concluído! URL pública:', data.publicUrl);
 
         return data.publicUrl;
     },

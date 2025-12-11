@@ -20,6 +20,8 @@ export const contratoService = {
         endereco: row.endereco,
         periodicidade: row.periodicidade,
         status: row.status || 'EM IMPLANTACAO', // Default fallback
+        tipo_uso: row.tipo_uso,
+        quantidade_torres: row.quantidade_torres,
         observacoes: row.observacoes,
         dataCriacao: row.data_criacao
       }));
@@ -41,6 +43,8 @@ export const contratoService = {
         endereco: contrato.endereco,
         periodicidade: contrato.periodicidade,
         status: contrato.status || 'EM IMPLANTACAO',
+        tipo_uso: contrato.tipo_uso || null,
+        quantidade_torres: contrato.quantidade_torres || null,
         observacoes: contrato.observacoes || null
       };
 
@@ -79,6 +83,8 @@ export const contratoService = {
               endereco: contratoRetornado.endereco || '',
               periodicidade: contratoRetornado.periodicidade || '',
               status: contratoRetornado.status || 'EM IMPLANTACAO',
+              tipo_uso: contratoRetornado.tipo_uso,
+              quantidade_torres: contratoRetornado.quantidade_torres,
               observacoes: contratoRetornado.observacoes || '',
               dataCriacao: contratoRetornado.data_criacao
             };
@@ -111,6 +117,8 @@ export const contratoService = {
           endereco: contratoBusca.endereco || '',
           periodicidade: contratoBusca.periodicidade || '',
           status: contratoBusca.status || 'EM IMPLANTACAO',
+          tipo_uso: contratoBusca.tipo_uso,
+          quantidade_torres: contratoBusca.quantidade_torres,
           observacoes: contratoBusca.observacoes || '',
           dataCriacao: contratoBusca.data_criacao
         };
@@ -131,6 +139,8 @@ export const contratoService = {
         endereco: contratoRetornado.endereco || '',
         periodicidade: contratoRetornado.periodicidade || '',
         status: contratoRetornado.status || 'EM IMPLANTACAO',
+        tipo_uso: contratoRetornado.tipo_uso,
+        quantidade_torres: contratoRetornado.quantidade_torres,
         observacoes: contratoRetornado.observacoes || '',
         dataCriacao: contratoRetornado.data_criacao
       };
@@ -153,6 +163,8 @@ export const contratoService = {
       if (updates.endereco !== undefined) dadosUpdate.endereco = updates.endereco;
       if (updates.periodicidade !== undefined) dadosUpdate.periodicidade = updates.periodicidade;
       if (updates.status !== undefined) dadosUpdate.status = updates.status;
+      if (updates.tipo_uso !== undefined) dadosUpdate.tipo_uso = updates.tipo_uso || null;
+      if (updates.quantidade_torres !== undefined) dadosUpdate.quantidade_torres = updates.quantidade_torres || null;
       if (updates.observacoes !== undefined) dadosUpdate.observacoes = updates.observacoes || null;
 
       console.log('🔄 Dados para atualização:', dadosUpdate);
@@ -189,6 +201,8 @@ export const contratoService = {
           endereco: contratoBusca.endereco || '',
           periodicidade: contratoBusca.periodicidade || '',
           status: contratoBusca.status || 'EM IMPLANTACAO',
+          tipo_uso: contratoBusca.tipo_uso,
+          quantidade_torres: contratoBusca.quantidade_torres,
           observacoes: contratoBusca.observacoes || '',
           dataCriacao: contratoBusca.data_criacao
         };
@@ -209,6 +223,8 @@ export const contratoService = {
         endereco: contratoAtualizado.endereco || '',
         periodicidade: contratoAtualizado.periodicidade || '',
         status: contratoAtualizado.status || 'EM IMPLANTACAO',
+        tipo_uso: contratoAtualizado.tipo_uso,
+        quantidade_torres: contratoAtualizado.quantidade_torres,
         observacoes: contratoAtualizado.observacoes || '',
         dataCriacao: contratoAtualizado.data_criacao
       };

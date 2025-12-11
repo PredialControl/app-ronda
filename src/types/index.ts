@@ -18,6 +18,8 @@ export interface Contrato {
   endereco: string;
   periodicidade: 'DIARIA' | 'SEMANAL' | 'QUINZENAL' | 'MENSAL' | 'BIMESTRAL' | 'TRIMESTRAL' | 'SEMESTRAL' | 'ANUAL';
   status?: 'IMPLANTADO' | 'EM IMPLANTACAO';
+  tipo_uso?: 'RESIDENCIAL' | 'NAO_RESIDENCIAL' | 'RESIDENCIAL_E_NAO_RESIDENCIAL';
+  quantidade_torres?: number;
   observacoes?: string;
   dataCriacao: string;
 }
@@ -150,6 +152,11 @@ export interface RelatorioPendencias {
   id: string;
   contrato_id: string;
   titulo: string;
+  capa_url?: string; // URL da imagem de capa personalizada
+  foto_localidade_url?: string; // URL da foto da localidade
+  data_inicio_vistoria?: string; // Data de início das vistorias (formato: DD/MM/YYYY)
+  historico_visitas?: string[]; // Lista de datas e descrições das visitas (ex: "24/10/25 – Início das vistorias")
+  data_situacao_atual?: string; // Data da situação atual (formato: DD/MM/YYYY)
   secoes?: RelatorioSecao[];
   created_at: string;
   updated_at: string;
@@ -172,6 +179,7 @@ export interface RelatorioPendencia {
   local: string;
   descricao: string;
   foto_url: string | null;
+  foto_depois_url: string | null; // Foto do "depois" (corrigido)
   created_at: string;
 }
 

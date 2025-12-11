@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Contrato } from '@/types';
-import { Edit, Trash2, FileText, MapPin, User, Calendar, Clock, Mail, CheckCircle } from 'lucide-react';
+import { Edit, Trash2, FileText, MapPin, User, Calendar, Clock, Mail, CheckCircle, Building, Building2 } from 'lucide-react';
 
 interface ContratoCardProps {
   contrato: Contrato;
@@ -134,6 +134,26 @@ export function ContratoCard({
             {contrato.status === 'IMPLANTADO' ? 'Implantado' : 'Em Implantação'}
           </Badge>
         </div>
+
+        {contrato.tipo_uso && (
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Building className="w-4 h-4 text-gray-500" />
+            <span className="font-medium">Tipo de Uso:</span>
+            <Badge variant="outline">
+              {contrato.tipo_uso === 'RESIDENCIAL' && 'Residencial'}
+              {contrato.tipo_uso === 'NAO_RESIDENCIAL' && 'Não Residencial'}
+              {contrato.tipo_uso === 'RESIDENCIAL_E_NAO_RESIDENCIAL' && 'Residencial e Não Residencial'}
+            </Badge>
+          </div>
+        )}
+
+        {contrato.quantidade_torres && (
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Building2 className="w-4 h-4 text-gray-500" />
+            <span className="font-medium">Torres:</span>
+            <Badge variant="outline">{contrato.quantidade_torres}</Badge>
+          </div>
+        )}
 
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <Clock className="w-4 h-4 text-gray-500" />
