@@ -124,7 +124,16 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const handleAddPendencia = (secaoTempId: string) => {
         setSecoes(secoes.map(s => {
             if (s.tempId === secaoTempId) {
-                const localAutomatico = `${s.titulo_principal} - ${s.subtitulo}`;
+                // Remover numeração romana do local (extrair apenas o texto após "–")
+                const extrairTexto = (texto: string) => {
+                    const partes = texto.split('–');
+                    return partes.length > 1 ? partes[1].trim() : texto.trim();
+                };
+
+                const tituloPrincipalLimpo = extrairTexto(s.titulo_principal);
+                const subtituloLimpo = extrairTexto(s.subtitulo);
+                const localAutomatico = `${tituloPrincipalLimpo} - ${subtituloLimpo}`;
+
                 const newPendencia: PendenciaLocal = {
                     tempId: `pend-${Date.now()}`,
                     ordem: s.pendencias.length,
@@ -231,7 +240,15 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         const secao = secoes.find(s => s.tempId === secaoTempId);
         if (!secao) return;
 
-        const localAutomatico = `${secao.titulo_principal} - ${secao.subtitulo}`;
+        // Remover numeração romana do local (extrair apenas o texto após "–")
+        const extrairTexto = (texto: string) => {
+            const partes = texto.split('–');
+            return partes.length > 1 ? partes[1].trim() : texto.trim();
+        };
+
+        const tituloPrincipalLimpo = extrairTexto(secao.titulo_principal);
+        const subtituloLimpo = extrairTexto(secao.subtitulo);
+        const localAutomatico = `${tituloPrincipalLimpo} - ${subtituloLimpo}`;
 
         const newPendencias: PendenciaLocal[] = files.map((file, idx) => ({
             tempId: `pend-${Date.now()}-${idx}`,
