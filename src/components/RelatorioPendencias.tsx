@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FileText, Plus, Search, Edit, Trash2, Download } from 'lucide-react';
+import { FileText, Plus, Search, Edit, Trash2, Download, FileDown } from 'lucide-react';
 import { Contrato, RelatorioPendencias as RelatorioPendenciasType } from '@/types';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 import { RelatorioPendenciasEditor } from './RelatorioPendenciasEditor';
@@ -151,50 +151,68 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
                     </CardContent>
                 </Card>
             ) : (
-                <div className="grid gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                     {filteredRelatorios.map((relatorio) => (
-                        <Card key={relatorio.id} className="bg-gray-800 border-gray-700 hover:border-purple-500 transition-all">
-                            <CardHeader>
-                                <div className="flex justify-between items-start">
-                                    <div className="flex-1">
-                                        <CardTitle className="text-white mb-2">{relatorio.titulo}</CardTitle>
-                                        <p className="text-sm text-gray-400">
-                                            {relatorio.secoes?.length || 0} seções •
-                                            {relatorio.secoes?.reduce((acc, sec) => acc + (sec.pendencias?.length || 0), 0) || 0} pendências
-                                        </p>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            Criado em: {new Date(relatorio.created_at).toLocaleString('pt-BR')}
-                                        </p>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button
-                                            onClick={() => handleExportDOCX(relatorio)}
-                                            variant="outline"
-                                            size="sm"
-                                            className="text-green-400 hover:text-green-300"
-                                        >
-                                            <Download className="w-4 h-4" />
-                                        </Button>
-                                        <Button
-                                            onClick={() => handleEditRelatorio(relatorio)}
-                                            variant="outline"
-                                            size="sm"
-                                            className="text-blue-400 hover:text-blue-300"
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                        </Button>
-                                        <Button
-                                            onClick={() => handleDeleteRelatorio(relatorio.id)}
-                                            variant="outline"
-                                            size="sm"
-                                            className="text-red-400 hover:text-red-300"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    </div>
+                        <div key={relatorio.id} className="group flex flex-col gap-2">
+                            {/* Card / Mini Capa */}
+                            <Card
+                                className="relative overflow-hidden border-0 shadow-md hover:shadow-2xl transition-all duration-300 group-hover:-translate-y-1"
+                                style={{ aspectRatio: '1/1.5' }}
+                            >
+                                {/* Background Image */}
+                                <div
+                                    className="absolute inset-0 bg-cover bg-center"
+                                    style={{
+                                        backgroundImage: `url(${relatorio.capa_url || '/placeholder-cover.jpg'})`,
+                                        backgroundColor: '#1f2937'
+                                    }}
+                                />
+
+                                {/* Hover Overlay with Actions */}
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-3 p-4">
+                                    <Button
+                                        onClick={() => handleEditRelatorio(relatorio)}
+                                        variant="secondary"
+                                        size="sm"
+                                        className="w-full bg-white/90 hover:bg-white text-gray-900"
+                                    >
+                                        <Edit className="w-4 h-4 mr-2" />
+                                        Editar
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleExportDOCX(relatorio)}
+                                        variant="secondary"
+                                        size="sm"
+                                        className="w-full bg-green-500/90 hover:bg-green-500 text-white border-0"
+                                    >
+                                        <Download className="w-4 h-4 mr-2" />
+                                        DOCX
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleDeleteRelatorio(relatorio.id)}
+                                        variant="secondary"
+                                        size="sm"
+                                        className="w-full bg-red-500/90 hover:bg-red-500 text-white border-0"
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Excluir
+                                    </Button>
                                 </div>
-                            </CardHeader>
-                        </Card>
+                            </Card>
+
+                            {/* Título e Info */}
+                            <div className="px-1">
+                                <h3 className="text-sm font-semibold text-white truncate" title={relatorio.titulo}>
+                                    {relatorio.titulo}
+                                </h3>
+                                <p className="text-xs text-gray-400 mt-1">
+                                    {relatorio.secoes?.length || 0} seções • {relatorio.secoes?.reduce((acc, sec) => acc + (sec.pendencias?.length || 0), 0) || 0} pendências
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    {new Date(relatorio.created_at).toLocaleDateString('pt-BR')}
+                                </p>
+                            </div>
+                        </div>
                     ))}
                 </div>
             )}
