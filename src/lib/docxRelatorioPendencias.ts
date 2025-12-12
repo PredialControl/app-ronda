@@ -280,11 +280,12 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                     new Paragraph({
                         children: [
                             new ImageRun({
-                                data: capaImage,
+                                data: new Uint8Array(capaImage),
                                 transformation: {
                                     width: a4WidthFull,
                                     height: a4HeightFull,
                                 },
+                                type: 'png',
                             }),
                         ],
                         alignment: AlignmentType.CENTER,

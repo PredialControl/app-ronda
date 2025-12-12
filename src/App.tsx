@@ -8,6 +8,7 @@ import { LaudosKanban } from '@/components/LaudosKanban';
 import { CalendarView } from '@/components/CalendarView';
 import { ParecerTecnico } from '@/components/ParecerTecnico';
 import { RelatorioPendencias } from '@/components/RelatorioPendencias';
+import { ItensCompilados } from '@/components/ItensCompilados';
 
 import { FotoRondaModal } from '@/components/FotoRondaModal';
 import { TabelaRondas } from '@/components/TabelaRondas';
@@ -52,7 +53,7 @@ function App() {
 
   const [currentView, setCurrentView] = useState<'contratos' | 'rondas'>('contratos');
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
-  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'calendario' | 'parecer' | 'relatorios-pendencias'>('tabela');
+  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'calendario' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados'>('tabela');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
   const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
 
@@ -1616,6 +1617,19 @@ function App() {
                     Relatórios de Pendências
                   </div>
                 </button>
+
+                <button
+                  onClick={() => setViewMode('itens-compilados')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'itens-compilados'
+                    ? 'border-blue-400 text-blue-300'
+                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                    }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileCheck className="w-4 h-4" />
+                    Evolução dos Recebimentos
+                  </div>
+                </button>
               </nav>
             </div>
 
@@ -1715,6 +1729,12 @@ function App() {
 
             {viewMode === 'relatorios-pendencias' && contratoSelecionado && (
               <RelatorioPendencias
+                contratoSelecionado={contratoSelecionado}
+              />
+            )}
+
+            {viewMode === 'itens-compilados' && contratoSelecionado && (
+              <ItensCompilados
                 contratoSelecionado={contratoSelecionado}
               />
             )}
