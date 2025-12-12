@@ -42,7 +42,25 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4 relative">
+      {/* Avatar do Manutencionista - Canto Inferior Esquerdo */}
+      <div className="fixed bottom-0 left-0 z-10 pointer-events-none flex flex-col items-center">
+        <div className="text-center mb-2 ml-8">
+          <div className="text-blue-400 font-bold text-xl drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
+            SALVE! SALVE!
+          </div>
+          <div className="text-blue-400 font-bold text-xl drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
+            MANUTENCISTA
+          </div>
+        </div>
+        <img
+          src="/avatar-manutencionista.png"
+          alt="Manutencionista"
+          className="w-64 h-auto object-contain"
+          style={{ backgroundColor: 'transparent' }}
+        />
+      </div>
+
       <div className="w-full max-w-md">
         {/* Logo e Título */}
         <div className="text-center mb-8">
