@@ -4,6 +4,7 @@ import { RelatorioPendencias, RelatorioSecao, RelatorioPendencia, RelatorioSubse
 export const relatorioPendenciasService = {
     // ==================== RELATÓRIOS ===================
     async getAll(contratoId: string): Promise<RelatorioPendencias[]> {
+        // Tentar buscar com subseções (nova estrutura)
         const { data, error } = await supabase
             .from('relatorios_pendencias')
             .select(`
@@ -20,6 +21,29 @@ export const relatorioPendenciasService = {
             .eq('contrato_id', contratoId)
             .order('created_at', { ascending: false });
 
+        // Se deu erro 400 (tabela não existe), buscar sem subseções (retrocompatibilidade)
+        if (error && error.code === 'PGRST116') {
+            console.warn('⚠️ Tabela relatorio_subsecoes não existe. Execute o migration_subsecoes.sql!');
+            const { data: dataOld, error: errorOld } = await supabase
+                .from('relatorios_pendencias')
+                .select(`
+                    *,
+                    secoes:relatorio_secoes(
+                        *,
+                        pendencias:relatorio_pendencias(*)
+                    )
+                `)
+                .eq('contrato_id', contratoId)
+                .order('created_at', { ascending: false });
+
+            if (errorOld) {
+                console.error('Erro ao buscar relatórios (modo retrocompatível):', errorOld);
+                throw errorOld;
+            }
+
+            return dataOld || [];
+        }
+
         if (error) {
             console.error('Erro ao buscar relatórios:', error);
             throw error;
@@ -31,6 +55,7 @@ export const relatorioPendenciasService = {
     async getById(id: string): Promise<RelatorioPendencias | null> {
         console.log('🔍 getById - Buscando relatório:', id);
 
+        // Tentar buscar com subseções (nova estrutura)
         const { data, error } = await supabase
             .from('relatorios_pendencias')
             .select(`
@@ -46,6 +71,39 @@ export const relatorioPendenciasService = {
             `)
             .eq('id', id)
             .single();
+
+        // Se deu erro 400 (tabela não existe), buscar sem subseções (retrocompatibilidade)
+        if (error && error.code === 'PGRST116') {
+            console.warn('⚠️ Tabela relatorio_subsecoes não existe. Execute o migration_subsecoes.sql!');
+            const { data: dataOld, error: errorOld } = await supabase
+                .from('relatorios_pendencias')
+                .select(`
+                    *,
+                    secoes:relatorio_secoes(
+                        *,
+                        pendencias:relatorio_pendencias(*)
+                    )
+                `)
+                .eq('id', id)
+                .single();
+
+            if (errorOld) {
+                console.error('❌ Erro ao buscar relatório (modo retrocompatível):', errorOld);
+                throw errorOld;
+            }
+
+            // Ordenar seções e pendências (modo antigo)
+            if (dataOld && dataOld.secoes) {
+                dataOld.secoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+                dataOld.secoes.forEach((secao: any) => {
+                    if (secao.pendencias) {
+                        secao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+                    }
+                });
+            }
+
+            return dataOld;
+        }
 
         if (error) {
             console.error('❌ Erro ao buscar relatório:', error);
