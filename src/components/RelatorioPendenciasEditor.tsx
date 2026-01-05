@@ -112,10 +112,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     // VIII.1, VIII.2, VIII.3... (sem subseção)
     // VIII.1A, VIII.1B, VIII.1C... (com subseção)
     const gerarNumeracaoSecao = (ordem: number): string => {
-        const numeroRomano = ordem + 8; // Começa em VIII (8)
-        const romano = toRoman(numeroRomano);
         const numeroSecao = ordem + 1; // 1, 2, 3...
-        return `${romano}.${numeroSecao}`;
+        return `VIII.${numeroSecao}`; // SEMPRE VIII
     };
 
     const handleAddSecao = () => {
@@ -1051,7 +1049,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 <div className="flex justify-between items-center">
                                     <CardTitle className="text-white flex items-center gap-2">
                                         <GripVertical className="w-5 h-5 text-gray-500" />
-                                        Seção {toRoman(secao.ordem + 8)}.{secao.ordem + 1}
+                                        Seção VIII.{secao.ordem + 1}
                                     </CardTitle>
                                     <Button
                                         onClick={() => handleDeleteSecao(secao.tempId)}
