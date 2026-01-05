@@ -1,121 +1,119 @@
--- DIAGNÓSTICO COMPLETO E SOLUÇÃO PARA TABELA outros_itens_corrigidos
+-- ========================================
+-- DIAGNÓSTICO E RECRIAÇÃO COMPLETA
 -- Execute este script no SQL Editor do Supabase
+-- ========================================
 
--- 1. VERIFICAR SE A TABELA EXISTE
-SELECT 
-    schemaname,
-    tablename,
-    tableowner,
-    tablespace,
-    hasindexes,
-    hasrules,
-    hastriggers,
-    rowsecurity
-FROM pg_tables 
-WHERE tablename = 'outros_itens_corrigidos';
+-- 1. VERIFICAR SE AS TABELAS JÁ EXISTEM
+SELECT '=== VERIFICANDO TABELAS EXISTENTES ===' as info;
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public' AND table_name LIKE '%relatorio%'
+ORDER BY table_name;
 
--- 2. SE A TABELA NÃO EXISTIR, CRIE-A:
--- CREATE TABLE IF NOT EXISTS outros_itens_corrigidos (
---     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
---     ronda_id UUID,
---     nome TEXT NOT NULL,
---     descricao TEXT NOT NULL,
---     local TEXT NOT NULL,
---     tipo TEXT NOT NULL,
---     prioridade TEXT NOT NULL,
---     status TEXT NOT NULL,
---     contrato TEXT NOT NULL,
---     endereco TEXT NOT NULL,
---     data TEXT NOT NULL,
---     hora TEXT NOT NULL,
---     foto TEXT,
---     observacoes TEXT,
---     responsavel TEXT,
---     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
---     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
--- );
+-- 2. DELETAR TUDO E RECRIAR
+DROP TABLE IF EXISTS relatorio_pendencias CASCADE;
+DROP TABLE IF EXISTS relatorio_secoes CASCADE;
+DROP TABLE IF EXISTS relatorios_pendencias CASCADE;
 
--- 3. VERIFICAR ESTRUTURA ATUAL
-SELECT 
-    column_name,
-    data_type,
-    is_nullable,
-    column_default,
-    ordinal_position
-FROM information_schema.columns 
-WHERE table_name = 'outros_itens_corrigidos'
-ORDER BY ordinal_position;
-
--- 4. VERIFICAR POLÍTICAS EXISTENTES
-SELECT 
-    schemaname,
-    tablename,
-    policyname,
-    permissive,
-    roles,
-    cmd,
-    qual,
-    with_check
-FROM pg_policies 
-WHERE tablename = 'outros_itens_corrigidos';
-
--- 5. REMOVER TODAS AS POLÍTICAS EXISTENTES (se houver)
--- DROP POLICY IF EXISTS "Permitir acesso total aos outros_itens_corrigidos" ON outros_itens_corrigidos;
--- DROP POLICY IF EXISTS "outros_itens_corrigidos_policy" ON outros_itens_corrigidos;
-
--- 6. DESABILITAR RLS FORÇADAMENTE
-ALTER TABLE outros_itens_corrigidos DISABLE ROW LEVEL SECURITY;
-
--- 7. VERIFICAR SE RLS FOI DESABILITADO
-SELECT 
-    schemaname,
-    tablename,
-    rowsecurity
-FROM pg_tables 
-WHERE tablename = 'outros_itens_corrigidos';
-
--- 8. TESTAR INSERÇÃO DIRETA
-INSERT INTO outros_itens_corrigidos (
-    ronda_id,
-    nome,
-    descricao,
-    local,
-    tipo,
-    prioridade,
-    status,
-    contrato,
-    endereco,
-    data,
-    hora,
-    foto,
-    observacoes,
-    responsavel
-) VALUES (
-    '00000000-0000-0000-0000-000000000000',
-    'Teste RLS',
-    'Teste para verificar se RLS está funcionando',
-    'Local de teste',
-    'CORREÇÃO',
-    'MÉDIA',
-    'PENDENTE',
-    'Contrato teste',
-    'Endereço teste',
-    '2024-01-01',
-    '10:00',
-    NULL,
-    'Teste de RLS',
-    'Sistema'
+-- 3. CRIAR TABELAS NO SCHEMA PUBLIC EXPLICITAMENTE
+CREATE TABLE public.relatorios_pendencias (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    contrato_id UUID NOT NULL,
+    titulo TEXT NOT NULL,
+    capa_url TEXT,
+    foto_localidade_url TEXT,
+    data_inicio_vistoria TEXT,
+    historico_visitas TEXT[],
+    data_situacao_atual TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 9. VERIFICAR SE A INSERÇÃO FUNCIONOU
-SELECT COUNT(*) as total_itens FROM outros_itens_corrigidos;
+CREATE TABLE public.relatorio_secoes (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    relatorio_id UUID NOT NULL REFERENCES public.relatorios_pendencias(id) ON DELETE CASCADE,
+    ordem INTEGER NOT NULL,
+    titulo_principal TEXT NOT NULL,
+    subtitulo TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- 10. SE TUDO FUNCIONAR, LIMPAR O ITEM DE TESTE
--- DELETE FROM outros_itens_corrigidos WHERE nome = 'Teste RLS';
+CREATE TABLE public.relatorio_pendencias (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    secao_id UUID NOT NULL REFERENCES public.relatorio_secoes(id) ON DELETE CASCADE,
+    ordem INTEGER NOT NULL,
+    local TEXT NOT NULL,
+    descricao TEXT,
+    foto_url TEXT,
+    foto_depois_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- RESULTADO ESPERADO:
--- rowsecurity deve ser 'f' (false)
--- A inserção de teste deve funcionar
--- Se não funcionar, a tabela precisa ser recriada
+-- 4. CRIAR ÍNDICES
+CREATE INDEX idx_relatorio_secoes_relatorio ON public.relatorio_secoes(relatorio_id);
+CREATE INDEX idx_relatorio_pendencias_secao ON public.relatorio_pendencias(secao_id);
 
+-- 5. DEFINIR OWNER E PERMISSÕES
+ALTER TABLE public.relatorios_pendencias OWNER TO postgres;
+ALTER TABLE public.relatorio_secoes OWNER TO postgres;
+ALTER TABLE public.relatorio_pendencias OWNER TO postgres;
 
+GRANT ALL ON public.relatorios_pendencias TO postgres, anon, authenticated, service_role;
+GRANT ALL ON public.relatorio_secoes TO postgres, anon, authenticated, service_role;
+GRANT ALL ON public.relatorio_pendencias TO postgres, anon, authenticated, service_role;
+
+-- 6. HABILITAR RLS
+ALTER TABLE public.relatorios_pendencias ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.relatorio_secoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.relatorio_pendencias ENABLE ROW LEVEL SECURITY;
+
+-- 7. CRIAR POLICIES PERMISSIVAS
+CREATE POLICY "allow_all" ON public.relatorios_pendencias
+    FOR ALL TO public USING (true) WITH CHECK (true);
+
+CREATE POLICY "allow_all" ON public.relatorio_secoes
+    FOR ALL TO public USING (true) WITH CHECK (true);
+
+CREATE POLICY "allow_all" ON public.relatorio_pendencias
+    FOR ALL TO public USING (true) WITH CHECK (true);
+
+-- 8. NOTIFICAR POSTGREST PARA RECARREGAR SCHEMA
+NOTIFY pgrst, 'reload schema';
+
+-- 9. INSERIR UM REGISTRO DE TESTE
+INSERT INTO public.relatorios_pendencias (
+    contrato_id,
+    titulo,
+    data_inicio_vistoria,
+    data_situacao_atual
+) VALUES (
+    'df669db3-ce0c-4d05-af58-2445c39d930a',
+    'Teste - Relatório de Pendências',
+    '2025-12-11',
+    '2025-12-11'
+) RETURNING id, titulo, created_at;
+
+-- 10. VERIFICAÇÃO FINAL
+SELECT '=== TABELAS CRIADAS ===' as status;
+SELECT table_name, table_type
+FROM information_schema.tables
+WHERE table_schema = 'public' AND table_name LIKE '%relatorio%'
+ORDER BY table_name;
+
+SELECT '=== PERMISSÕES ===' as status;
+SELECT DISTINCT grantee, table_name, privilege_type
+FROM information_schema.table_privileges
+WHERE table_name IN ('relatorios_pendencias', 'relatorio_secoes', 'relatorio_pendencias')
+AND table_schema = 'public'
+ORDER BY table_name, grantee;
+
+SELECT '=== POLICIES ===' as status;
+SELECT tablename, policyname
+FROM pg_policies
+WHERE tablename IN ('relatorios_pendencias', 'relatorio_secoes', 'relatorio_pendencias')
+ORDER BY tablename;
+
+SELECT '=== DADOS DE TESTE ===' as status;
+SELECT COUNT(*) as total_relatorios FROM public.relatorios_pendencias;
+
+SELECT '✅ CONCLUÍDO! Aguarde 30 segundos e recarregue a aplicação.' as resultado;

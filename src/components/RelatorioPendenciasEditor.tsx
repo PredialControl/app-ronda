@@ -1051,7 +1051,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 <div className="flex justify-between items-center">
                                     <CardTitle className="text-white flex items-center gap-2">
                                         <GripVertical className="w-5 h-5 text-gray-500" />
-                                        Seção {secao.ordem + 1}
+                                        Seção {toRoman(secao.ordem + 8)}.{secao.ordem + 1}
                                     </CardTitle>
                                     <Button
                                         onClick={() => handleDeleteSecao(secao.tempId)}
