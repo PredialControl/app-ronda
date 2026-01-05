@@ -1291,22 +1291,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                             </div>
                                         )}
                                     </div>
-                                ) : (
-                                    // Subtítulo (modo antigo, sem subseções)
-                                    <div>
-                                        <Label htmlFor={`subtitulo-${secao.tempId}`} className="text-gray-300">
-                                            Subtítulo / Área
-                                        </Label>
-                                        <Input
-                                            id={`subtitulo-${secao.tempId}`}
-                                            value={secao.subtitulo || ''}
-                                            onChange={(e) => handleUpdateSecao(secao.tempId, 'subtitulo', e.target.value)}
-                                            placeholder="Ex: Hall"
-                                            className="bg-gray-900 border-gray-700 text-white mt-1"
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">Este texto será usado automaticamente no fim do campo "Local".</p>
-                                    </div>
-                                )}
+                                ) : null}
 
                                 {/* Pendências (só aparecem se NÃO tiver subseções) */}
                                 {!secao.tem_subsecoes && (
