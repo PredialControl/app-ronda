@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { RelatorioPendencias, RelatorioSecao, RelatorioPendencia } from '@/types';
+import { RelatorioPendencias, RelatorioSecao, RelatorioPendencia, RelatorioSubsecao } from '@/types';
 
 export const relatorioPendenciasService = {
     // ==================== RELATÓRIOS ===================
@@ -10,6 +10,10 @@ export const relatorioPendenciasService = {
                 *,
                 secoes:relatorio_secoes(
                     *,
+                    subsecoes:relatorio_subsecoes(
+                        *,
+                        pendencias:relatorio_pendencias(*)
+                    ),
                     pendencias:relatorio_pendencias(*)
                 )
             `)
@@ -33,6 +37,10 @@ export const relatorioPendenciasService = {
                 *,
                 secoes:relatorio_secoes(
                     *,
+                    subsecoes:relatorio_subsecoes(
+                        *,
+                        pendencias:relatorio_pendencias(*)
+                    ),
                     pendencias:relatorio_pendencias(*)
                 )
             `)
@@ -46,13 +54,26 @@ export const relatorioPendenciasService = {
 
         console.log('✅ getById - Dados brutos do Supabase:', data);
 
-        // Ordenar seções e pendências
+        // Ordenar seções, subseções e pendências
         if (data && data.secoes) {
             // Ordenar seções por ordem
             data.secoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
 
-            // Ordenar pendências dentro de cada seção
+            // Ordenar subseções e pendências dentro de cada seção
             data.secoes.forEach((secao: any) => {
+                // Ordenar subseções
+                if (secao.subsecoes) {
+                    secao.subsecoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+
+                    // Ordenar pendências dentro de cada subseção
+                    secao.subsecoes.forEach((subsecao: any) => {
+                        if (subsecao.pendencias) {
+                            subsecao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+                        }
+                    });
+                }
+
+                // Ordenar pendências diretas da seção (quando não tem subseções)
                 if (secao.pendencias) {
                     secao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
                 }
@@ -147,6 +168,50 @@ export const relatorioPendenciasService = {
 
         if (error) {
             console.error('Erro ao deletar seção:', error);
+            throw error;
+        }
+    },
+
+    // ==================== SUBSEÇÕES ====================
+    async createSubsecao(subsecao: Omit<RelatorioSubsecao, 'id' | 'created_at'>): Promise<RelatorioSubsecao> {
+        const { data, error } = await supabase
+            .from('relatorio_subsecoes')
+            .insert([subsecao])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Erro ao criar subseção:', error);
+            throw error;
+        }
+
+        return data;
+    },
+
+    async updateSubsecao(id: string, subsecao: Partial<RelatorioSubsecao>): Promise<RelatorioSubsecao> {
+        const { data, error } = await supabase
+            .from('relatorio_subsecoes')
+            .update(subsecao)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Erro ao atualizar subseção:', error);
+            throw error;
+        }
+
+        return data;
+    },
+
+    async deleteSubsecao(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('relatorio_subsecoes')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('Erro ao deletar subseção:', error);
             throw error;
         }
     },

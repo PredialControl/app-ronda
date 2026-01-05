@@ -167,7 +167,18 @@ export interface RelatorioSecao {
   relatorio_id: string;
   ordem: number;
   titulo_principal: string;
-  subtitulo: string;
+  subtitulo?: string; // Agora opcional (usado quando não tem subseções)
+  tem_subsecoes: boolean; // NOVO: indica se esta seção tem subseções (A, B, C)
+  subsecoes?: RelatorioSubsecao[]; // NOVO: array de subseções (VIII.1A, VIII.1B, etc.)
+  pendencias?: RelatorioPendencia[]; // Usado quando NÃO tem subseções
+  created_at: string;
+}
+
+export interface RelatorioSubsecao {
+  id: string;
+  secao_id: string;
+  ordem: number; // 0=A, 1=B, 2=C, etc.
+  titulo: string; // Ex: "22 PAVIMENTO"
   pendencias?: RelatorioPendencia[];
   created_at: string;
 }
@@ -175,6 +186,7 @@ export interface RelatorioSecao {
 export interface RelatorioPendencia {
   id: string;
   secao_id: string;
+  subsecao_id?: string; // NOVO: ID da subseção (se pertencer a uma)
   ordem: number;
   local: string;
   descricao: string;

@@ -15,12 +15,22 @@ interface RelatorioPendenciasEditorProps {
     onCancel: () => void;
 }
 
+interface SubsecaoLocal {
+    id?: string;
+    tempId: string;
+    ordem: number;
+    titulo: string;
+    pendencias: PendenciaLocal[];
+}
+
 interface SecaoLocal {
     id?: string;
     tempId: string;
     ordem: number;
     titulo_principal: string;
-    subtitulo: string;
+    subtitulo?: string; // Agora opcional
+    tem_subsecoes: boolean; // NOVO
+    subsecoes?: SubsecaoLocal[]; // NOVO
     pendencias: PendenciaLocal[];
 }
 
@@ -58,6 +68,17 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             const secoesLocal: SecaoLocal[] = relatorio.secoes.map((s, idx) => ({
                 ...s,
                 tempId: `secao-${idx}`,
+                tem_subsecoes: s.tem_subsecoes || false,
+                subsecoes: (s.subsecoes || []).map((sub, subIdx) => ({
+                    ...sub,
+                    tempId: `subsecao-${idx}-${subIdx}`,
+                    pendencias: (sub.pendencias || []).map((p, pIdx) => ({
+                        ...p,
+                        tempId: `pend-${idx}-${subIdx}-${pIdx}`,
+                        preview: p.foto_url || undefined,
+                        previewDepois: p.foto_depois_url || undefined,
+                    })),
+                })),
                 pendencias: (s.pendencias || []).map((p, pIdx) => ({
                     ...p,
                     tempId: `pend-${idx}-${pIdx}`,
@@ -108,6 +129,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             ordem: ordem,
             titulo_principal: `${numeracao.principal} – `,
             subtitulo: `${numeracao.subsecao} – `,
+            tem_subsecoes: false, // Por padrão, sem subseções
+            subsecoes: [],
             pendencias: [],
         };
         setSecoes([...secoes, newSecao]);
@@ -120,6 +143,148 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const handleDeleteSecao = (tempId: string) => {
         setSecoes(secoes.filter(s => s.tempId !== tempId).map((s, idx) => ({ ...s, ordem: idx })));
     };
+
+    // ==================== FUNÇÕES PARA SUBSEÇÕES ====================
+    const handleAddSubsecao = (secaoTempId: string) => {
+        setSecoes(secoes.map(s => {
+            if (s.tempId === secaoTempId) {
+                const ordem = (s.subsecoes || []).length;
+                const letra = String.fromCharCode(65 + ordem); // A, B, C...
+                const newSubsecao: SubsecaoLocal = {
+                    tempId: `subsecao-${Date.now()}`,
+                    ordem: ordem,
+                    titulo: `${letra} - `,
+                    pendencias: [],
+                };
+                return { ...s, subsecoes: [...(s.subsecoes || []), newSubsecao] };
+            }
+            return s;
+        }));
+    };
+
+    const handleUpdateSubsecao = (secaoTempId: string, subsecaoTempId: string, field: keyof SubsecaoLocal, value: any) => {
+        setSecoes(secoes.map(s => {
+            if (s.tempId === secaoTempId) {
+                return {
+                    ...s,
+                    subsecoes: (s.subsecoes || []).map(sub =>
+                        sub.tempId === subsecaoTempId ? ({ ...sub, [field]: value } as SubsecaoLocal) : sub
+                    ),
+                };
+            }
+            return s;
+        }));
+    };
+
+    const handleDeleteSubsecao = (secaoTempId: string, subsecaoTempId: string) => {
+        setSecoes(secoes.map(s => {
+            if (s.tempId === secaoTempId) {
+                return {
+                    ...s,
+                    subsecoes: (s.subsecoes || [])
+                        .filter(sub => sub.tempId !== subsecaoTempId)
+                        .map((sub, idx) => ({ ...sub, ordem: idx })),
+                };
+            }
+            return s;
+        }));
+    };
+
+    const handleAddPendenciaSubsecao = (secaoTempId: string, subsecaoTempId: string) => {
+        setSecoes(secoes.map(s => {
+            if (s.tempId === secaoTempId) {
+                return {
+                    ...s,
+                    subsecoes: (s.subsecoes || []).map(sub => {
+                        if (sub.tempId === subsecaoTempId) {
+                            const extrairTexto = (texto: string) => {
+                                const partes = texto.split('–');
+                                return partes.length > 1 ? partes[1].trim() : texto.trim();
+                            };
+
+                            const tituloPrincipalLimpo = extrairTexto(s.titulo_principal);
+                            const subtituloLimpo = extrairTexto(sub.titulo);
+                            const localAutomatico = `${tituloPrincipalLimpo} - ${subtituloLimpo}`;
+
+                            const newPendencia: PendenciaLocal = {
+                                tempId: `pend-${Date.now()}`,
+                                ordem: sub.pendencias.length,
+                                local: localAutomatico,
+                                descricao: '',
+                                foto_url: null,
+                                foto_depois_url: null,
+                            };
+                            return { ...sub, pendencias: [...sub.pendencias, newPendencia] };
+                        }
+                        return sub;
+                    }),
+                };
+            }
+            return s;
+        }));
+    };
+
+    const handleUpdatePendenciaSubsecao = (secaoTempId: string, subsecaoTempId: string, pendenciaTempId: string, field: keyof PendenciaLocal, value: any) => {
+        setSecoes(secoes.map(s => {
+            if (s.tempId === secaoTempId) {
+                return {
+                    ...s,
+                    subsecoes: (s.subsecoes || []).map(sub => {
+                        if (sub.tempId === subsecaoTempId) {
+                            return {
+                                ...sub,
+                                pendencias: sub.pendencias.map(p =>
+                                    p.tempId === pendenciaTempId ? { ...p, [field]: value } : p
+                                ),
+                            };
+                        }
+                        return sub;
+                    }),
+                };
+            }
+            return s;
+        }));
+    };
+
+    const handleDeletePendenciaSubsecao = (secaoTempId: string, subsecaoTempId: string, pendenciaTempId: string) => {
+        setSecoes(secoes.map(s => {
+            if (s.tempId === secaoTempId) {
+                return {
+                    ...s,
+                    subsecoes: (s.subsecoes || []).map(sub => {
+                        if (sub.tempId === subsecaoTempId) {
+                            return {
+                                ...sub,
+                                pendencias: sub.pendencias
+                                    .filter(p => p.tempId !== pendenciaTempId)
+                                    .map((p, idx) => ({ ...p, ordem: idx })),
+                            };
+                        }
+                        return sub;
+                    }),
+                };
+            }
+            return s;
+        }));
+    };
+
+    const handleFotoChangeSubsecao = (secaoTempId: string, subsecaoTempId: string, pendenciaTempId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'file', file);
+            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'preview', URL.createObjectURL(file));
+        }
+    };
+
+    const handleFotoDepoisChangeSubsecao = (secaoTempId: string, subsecaoTempId: string, pendenciaTempId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'fileDepois', file);
+            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'previewDepois', URL.createObjectURL(file));
+        }
+    };
+
+    // ==================== FIM FUNÇÕES PARA SUBSEÇÕES ====================
 
     const handleAddPendencia = (secaoTempId: string) => {
         setSecoes(secoes.map(s => {
@@ -379,21 +544,81 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 if (secaoId) {
                     await relatorioPendenciasService.updateSecao(secaoId, {
                         titulo_principal: secao.titulo_principal,
-                        subtitulo: secao.subtitulo,
+                        subtitulo: secao.subtitulo || '',
+                        tem_subsecoes: secao.tem_subsecoes,
                         ordem: secao.ordem,
                     });
                 } else {
                     const newSecao = await relatorioPendenciasService.createSecao({
                         relatorio_id: relatorioId,
                         titulo_principal: secao.titulo_principal,
-                        subtitulo: secao.subtitulo,
+                        subtitulo: secao.subtitulo || '',
+                        tem_subsecoes: secao.tem_subsecoes,
                         ordem: secao.ordem,
                     });
                     secaoId = newSecao.id;
                 }
 
-                // Save pendencias
-                for (const pendencia of secao.pendencias) {
+                // Se TEM subseções, salvar subseções
+                if (secao.tem_subsecoes && secao.subsecoes) {
+                    for (const subsecao of secao.subsecoes) {
+                        let subsecaoId = subsecao.id;
+
+                        if (subsecaoId) {
+                            await relatorioPendenciasService.updateSubsecao(subsecaoId, {
+                                titulo: subsecao.titulo,
+                                ordem: subsecao.ordem,
+                            });
+                        } else {
+                            const newSubsecao = await relatorioPendenciasService.createSubsecao({
+                                secao_id: secaoId,
+                                titulo: subsecao.titulo,
+                                ordem: subsecao.ordem,
+                            });
+                            subsecaoId = newSubsecao.id;
+                        }
+
+                        // Salvar pendências da subseção
+                        for (const pendencia of subsecao.pendencias) {
+                            let fotoUrl = pendencia.foto_url;
+                            let fotoDepoisUrl = pendencia.foto_depois_url;
+
+                            // Upload foto ANTES
+                            if (pendencia.file) {
+                                fotoUrl = await relatorioPendenciasService.uploadFoto(pendencia.file, relatorioId, pendencia.tempId);
+                            } else if (!pendencia.preview && !pendencia.foto_url) {
+                                fotoUrl = null;
+                            }
+
+                            // Upload foto DEPOIS
+                            if (pendencia.fileDepois) {
+                                fotoDepoisUrl = await relatorioPendenciasService.uploadFoto(pendencia.fileDepois, relatorioId, `${pendencia.tempId}-depois`);
+                            } else if (!pendencia.previewDepois && !pendencia.foto_depois_url) {
+                                fotoDepoisUrl = null;
+                            }
+
+                            const pendenciaData = {
+                                local: pendencia.local,
+                                descricao: pendencia.descricao,
+                                foto_url: fotoUrl,
+                                foto_depois_url: fotoDepoisUrl,
+                                ordem: pendencia.ordem,
+                                subsecao_id: subsecaoId,
+                            };
+
+                            if (pendencia.id) {
+                                await relatorioPendenciasService.updatePendencia(pendencia.id, pendenciaData);
+                            } else {
+                                await relatorioPendenciasService.createPendencia({
+                                    secao_id: secaoId,
+                                    ...pendenciaData,
+                                });
+                            }
+                        }
+                    }
+                } else {
+                    // Se NÃO TEM subseções, salvar pendências diretas na seção
+                    for (const pendencia of secao.pendencias) {
                     // Preservar URLs existentes se não houver novos arquivos
                     let fotoUrl = pendencia.foto_url;
                     let fotoDepoisUrl = pendencia.foto_depois_url;
@@ -457,6 +682,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         });
                         console.log('✅ Pendência criada no banco');
                     }
+                    }
                 }
             }
 
@@ -486,6 +712,17 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                     const secoesAtualizadas: SecaoLocal[] = relatorioAtualizado.secoes.map((s, idx) => ({
                         ...s,
                         tempId: `secao-${idx}`,
+                        tem_subsecoes: s.tem_subsecoes || false,
+                        subsecoes: (s.subsecoes || []).map((sub, subIdx) => ({
+                            ...sub,
+                            tempId: `subsecao-${idx}-${subIdx}`,
+                            pendencias: (sub.pendencias || []).map((p, pIdx) => ({
+                                ...p,
+                                tempId: `pend-${idx}-${subIdx}-${pIdx}`,
+                                preview: p.foto_url || undefined,
+                                previewDepois: p.foto_depois_url || undefined,
+                            })),
+                        })),
                         pendencias: (s.pendencias || []).map((p, pIdx) => {
                             console.log(`🔄 Mapeando pendência ${pIdx + 1}:`, {
                                 foto_url: p.foto_url,
@@ -790,27 +1027,225 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                         id={`titulo-principal-${secao.tempId}`}
                                         value={secao.titulo_principal}
                                         onChange={(e) => handleUpdateSecao(secao.tempId, 'titulo_principal', e.target.value)}
-                                        placeholder="Ex: 4º Subsolo"
+                                        placeholder="Ex: HALLS RESIDENCIAL"
                                         className="bg-gray-900 border-gray-700 text-white mt-1"
                                     />
-                                    <p className="text-xs text-gray-500 mt-1">Este texto será usado automaticamente no início do campo "Local" das pendências.</p>
+                                    <p className="text-xs text-gray-500 mt-1">Título principal (Ex: VIII.1 - HALLS RESIDENCIAL)</p>
                                 </div>
 
-                                <div>
-                                    <Label htmlFor={`subtitulo-${secao.tempId}`} className="text-gray-300">
-                                        Subtítulo / Área
-                                    </Label>
-                                    <Input
-                                        id={`subtitulo-${secao.tempId}`}
-                                        value={secao.subtitulo}
-                                        onChange={(e) => handleUpdateSecao(secao.tempId, 'subtitulo', e.target.value)}
-                                        placeholder="Ex: Hall"
-                                        className="bg-gray-900 border-gray-700 text-white mt-1"
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">Este texto será usado automaticamente no fim do campo "Local".</p>
+                                {/* CHECKBOX: Tem Subseções */}
+                                <div className="bg-blue-900/20 border-2 border-blue-600/50 p-4 rounded-lg">
+                                    <div className="flex items-center space-x-3">
+                                        <input
+                                            type="checkbox"
+                                            id={`tem-subsecoes-${secao.tempId}`}
+                                            checked={secao.tem_subsecoes}
+                                            onChange={(e) => handleUpdateSecao(secao.tempId, 'tem_subsecoes', e.target.checked)}
+                                            className="w-5 h-5 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 cursor-pointer"
+                                        />
+                                        <Label htmlFor={`tem-subsecoes-${secao.tempId}`} className="text-blue-200 cursor-pointer font-semibold">
+                                            ✨ Esta seção tem subseções (VIII.1A, VIII.1B, VIII.1C...)
+                                        </Label>
+                                    </div>
+                                    <p className="text-xs text-blue-300/70 mt-2 ml-8">
+                                        Marque esta opção se esta seção precisar de subdivisões (ex: diferentes pavimentos, áreas, etc.)
+                                    </p>
                                 </div>
 
-                                {/* Pendências */}
+                                {/* SUBSEÇÕES (se habilitado) */}
+                                {secao.tem_subsecoes ? (
+                                    <div className="bg-blue-900/10 border border-blue-700/30 rounded-lg p-4 space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <Label className="text-blue-300 font-semibold">Subseções ({(secao.subsecoes || []).length})</Label>
+                                            <Button
+                                                onClick={() => handleAddSubsecao(secao.tempId)}
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-blue-400 border-blue-600 hover:bg-blue-900/30"
+                                            >
+                                                <Plus className="w-3 h-3 mr-1" />
+                                                Adicionar Subseção
+                                            </Button>
+                                        </div>
+
+                                        {(secao.subsecoes || []).length === 0 ? (
+                                            <p className="text-sm text-gray-500 text-center py-4">
+                                                Nenhuma subseção. Clique em "Adicionar Subseção" para começar.
+                                            </p>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {(secao.subsecoes || []).map((subsecao, subIdx) => (
+                                                    <div key={subsecao.tempId} className="bg-gray-800 border border-blue-600/30 rounded p-3">
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <Label className="text-blue-300">
+                                                                Subseção {String.fromCharCode(65 + subIdx)} (VIII.{secao.ordem + 1}{String.fromCharCode(65 + subIdx)})
+                                                            </Label>
+                                                            <Button
+                                                                onClick={() => handleDeleteSubsecao(secao.tempId, subsecao.tempId)}
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="text-red-400 hover:text-red-300 h-6 w-6 p-0"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
+                                                        </div>
+
+                                                        <Input
+                                                            value={subsecao.titulo}
+                                                            onChange={(e) => handleUpdateSubsecao(secao.tempId, subsecao.tempId, 'titulo', e.target.value)}
+                                                            placeholder="Ex: 22 PAVIMENTO"
+                                                            className="bg-gray-900 border-gray-600 text-white mb-3"
+                                                        />
+
+                                                        {/* Pendências da Subseção */}
+                                                        <div className="border-t border-blue-600/20 pt-3 mt-2">
+                                                            <div className="flex justify-between items-center mb-2">
+                                                                <Label className="text-gray-400 text-sm">Pendências ({subsecao.pendencias.length})</Label>
+                                                                <Button
+                                                                    onClick={() => handleAddPendenciaSubsecao(secao.tempId, subsecao.tempId)}
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="text-green-400 h-7 text-xs"
+                                                                >
+                                                                    <Plus className="w-3 h-3 mr-1" />
+                                                                    Adicionar
+                                                                </Button>
+                                                            </div>
+
+                                                            {subsecao.pendencias.length === 0 ? (
+                                                                <p className="text-xs text-gray-500 text-center py-2">Nenhuma pendência</p>
+                                                            ) : (
+                                                                <div className="space-y-2">
+                                                                    {subsecao.pendencias.map((pend, pIdx) => (
+                                                                        <div key={pend.tempId} className="bg-gray-900 border border-gray-600 rounded p-2">
+                                                                            <div className="flex items-center gap-2 mb-1">
+                                                                                <span className="text-white font-bold text-sm">{pIdx + 1}.</span>
+                                                                                <Input
+                                                                                    value={pend.local}
+                                                                                    onChange={(e) => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'local', e.target.value)}
+                                                                                    placeholder="Local"
+                                                                                    className="bg-gray-800 border-gray-600 text-white h-7 text-sm flex-1"
+                                                                                />
+                                                                                <Button
+                                                                                    onClick={() => handleDeletePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId)}
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    className="text-red-400 h-6 w-6 p-0"
+                                                                                >
+                                                                                    <X className="w-3 h-3" />
+                                                                                </Button>
+                                                                            </div>
+                                                                            <Textarea
+                                                                                value={pend.descricao}
+                                                                                onChange={(e) => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'descricao', e.target.value)}
+                                                                                placeholder="Descrição da pendência"
+                                                                                rows={2}
+                                                                                className="bg-gray-800 border-gray-600 text-white text-sm resize-y mb-2"
+                                                                            />
+
+                                                                            {/* Fotos da Pendência da Subseção */}
+                                                                            <div className="flex gap-2">
+                                                                                <div className="flex-1">
+                                                                                    <Label className="text-xs text-gray-400">Foto Antes</Label>
+                                                                                    {!pend.preview && !pend.foto_url ? (
+                                                                                        <div>
+                                                                                            <input
+                                                                                                type="file"
+                                                                                                accept="image/*"
+                                                                                                onChange={(e) => handleFotoChangeSubsecao(secao.tempId, subsecao.tempId, pend.tempId, e)}
+                                                                                                className="hidden"
+                                                                                                id={`foto-sub-${pend.tempId}`}
+                                                                                            />
+                                                                                            <Button
+                                                                                                onClick={() => document.getElementById(`foto-sub-${pend.tempId}`)?.click()}
+                                                                                                variant="outline"
+                                                                                                size="sm"
+                                                                                                className="w-full h-20 text-xs"
+                                                                                            >
+                                                                                                <ImageIcon className="w-4 h-4 mr-1" />
+                                                                                                Adicionar Foto
+                                                                                            </Button>
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <div className="relative">
+                                                                                            <img src={pend.preview || pend.foto_url || ''} alt="Preview" className="w-full h-20 object-cover rounded" />
+                                                                                            <Button
+                                                                                                onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'preview', undefined)}
+                                                                                                variant="ghost"
+                                                                                                size="sm"
+                                                                                                className="absolute top-0 right-0 text-red-400 h-6 w-6 p-0"
+                                                                                            >
+                                                                                                <X className="w-3 h-3" />
+                                                                                            </Button>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+
+                                                                                <div className="flex-1">
+                                                                                    <Label className="text-xs text-gray-400">Foto Depois</Label>
+                                                                                    {!pend.previewDepois && !pend.foto_depois_url ? (
+                                                                                        <div>
+                                                                                            <input
+                                                                                                type="file"
+                                                                                                accept="image/*"
+                                                                                                onChange={(e) => handleFotoDepoisChangeSubsecao(secao.tempId, subsecao.tempId, pend.tempId, e)}
+                                                                                                className="hidden"
+                                                                                                id={`foto-depois-sub-${pend.tempId}`}
+                                                                                            />
+                                                                                            <Button
+                                                                                                onClick={() => document.getElementById(`foto-depois-sub-${pend.tempId}`)?.click()}
+                                                                                                variant="outline"
+                                                                                                size="sm"
+                                                                                                className="w-full h-20 text-xs"
+                                                                                            >
+                                                                                                <ImageIcon className="w-4 h-4 mr-1" />
+                                                                                                Adicionar Foto
+                                                                                            </Button>
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <div className="relative">
+                                                                                            <img src={pend.previewDepois || pend.foto_depois_url || ''} alt="Preview Depois" className="w-full h-20 object-cover rounded" />
+                                                                                            <Button
+                                                                                                onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'previewDepois', undefined)}
+                                                                                                variant="ghost"
+                                                                                                size="sm"
+                                                                                                className="absolute top-0 right-0 text-red-400 h-6 w-6 p-0"
+                                                                                            >
+                                                                                                <X className="w-3 h-3" />
+                                                                                            </Button>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    // Subtítulo (modo antigo, sem subseções)
+                                    <div>
+                                        <Label htmlFor={`subtitulo-${secao.tempId}`} className="text-gray-300">
+                                            Subtítulo / Área
+                                        </Label>
+                                        <Input
+                                            id={`subtitulo-${secao.tempId}`}
+                                            value={secao.subtitulo || ''}
+                                            onChange={(e) => handleUpdateSecao(secao.tempId, 'subtitulo', e.target.value)}
+                                            placeholder="Ex: Hall"
+                                            className="bg-gray-900 border-gray-700 text-white mt-1"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">Este texto será usado automaticamente no fim do campo "Local".</p>
+                                    </div>
+                                )}
+
+                                {/* Pendências (só aparecem se NÃO tiver subseções) */}
+                                {!secao.tem_subsecoes && (
                                 <div className="border-t border-gray-700 pt-4 mt-4">
                                     <div className="flex justify-between items-center mb-3">
                                         <Label className="text-gray-300">Pendências ({secao.pendencias.length})</Label>
@@ -1028,6 +1463,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                         </div>
                                     )}
                                 </div>
+                                )}
                             </CardContent>
                         </Card>
                     ))

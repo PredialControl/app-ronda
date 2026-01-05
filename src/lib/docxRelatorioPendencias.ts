@@ -473,8 +473,30 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                 );
             }
 
-            // Subtítulo da seção
-            if (secao.subtitulo && secao.subtitulo.trim()) {
+            // Se tem subseções (VIII.1A, VIII.1B, etc.)
+            if (secao.tem_subsecoes && secao.subsecoes && secao.subsecoes.length > 0) {
+                for (let j = 0; j < secao.subsecoes.length; j++) {
+                    const subsecao = secao.subsecoes[j];
+                    const letraSubsecao = String.fromCharCode(65 + j); // 65 = 'A', 66 = 'B', etc.
+                    const numeroSubsecao = `VIII.${i + 1}${letraSubsecao}`;
+                    const tituloSubsecao = `${numeroSubsecao} – ${subsecao.titulo}`;
+
+                    children.push(
+                        new Paragraph({
+                            children: [
+                                new TextRun({
+                                    text: tituloSubsecao,
+                                    size: 24, // 12pt (ABNT)
+                                    font: 'Arial',
+                                }),
+                            ],
+                            spacing: { after: 100, line: 360 },
+                            indent: { left: 1200 }, // Recuado (subitem de VIII.X)
+                        })
+                    );
+                }
+            } else if (secao.subtitulo && secao.subtitulo.trim()) {
+                // Subtítulo da seção (modo antigo, sem letras)
                 children.push(
                     new Paragraph({
                         children: [
@@ -1178,12 +1200,18 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
         console.log(`Seção ${secaoIndex}:`, {
             titulo_principal: secao.titulo_principal,
             subtitulo: secao.subtitulo,
+            tem_subsecoes: secao.tem_subsecoes,
+            subsecoes: secao.subsecoes?.length,
             pendencias: secao.pendencias?.length
         });
 
         // Adicionar quebra de página antes de cada seção (exceto a primeira)
-        // IMPORTANTE: Só adiciona se a seção tiver pendências
-        if (secaoIndex > 0 && (secao.pendencias || []).length > 0) {
+        // IMPORTANTE: Só adiciona se a seção tiver pendências (diretas ou em subseções)
+        const temPendencias = secao.tem_subsecoes
+            ? (secao.subsecoes || []).some(sub => (sub.pendencias || []).length > 0)
+            : (secao.pendencias || []).length > 0;
+
+        if (secaoIndex > 0 && temPendencias) {
             children.push(
                 new Paragraph({
                     children: [new PageBreak()],
@@ -1191,7 +1219,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
             );
         }
 
-        // Título Principal e Subtítulo da Seção
+        // Título Principal da Seção
         if (secao.titulo_principal && secao.titulo_principal.trim()) {
             // Adicionar numeração VIII.1, VIII.2, etc.
             const numeroSecao = `VIII.${secaoIndex + 1}`;
@@ -1211,26 +1239,32 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
             );
         }
 
-        if (secao.subtitulo && secao.subtitulo.trim()) {
-            children.push(
-                new Paragraph({
-                    children: [
-                        new TextRun({
-                            text: secao.subtitulo,
-                            bold: true,
-                            size: 24, // 12pt
-                        }),
-                    ],
-                    spacing: { after: 200 },
-                })
-            );
-        }
+        // Se TEM subseções (VIII.1A, VIII.1B, etc.)
+        if (secao.tem_subsecoes && secao.subsecoes && secao.subsecoes.length > 0) {
+            for (let subsecaoIndex = 0; subsecaoIndex < secao.subsecoes.length; subsecaoIndex++) {
+                const subsecao = secao.subsecoes[subsecaoIndex];
+                const letraSubsecao = String.fromCharCode(65 + subsecaoIndex); // A, B, C, etc.
+                const numeroSubsecao = `VIII.${secaoIndex + 1}${letraSubsecao}`;
+                const tituloSubsecao = `${numeroSubsecao} – ${subsecao.titulo}`;
 
-        // Para cada pendência na seção
-        let pendenciaCount = 0;
-        for (const pendencia of secao.pendencias || []) {
-            pendenciaCount++;
-            numeroPendenciaGlobal++;
+                children.push(
+                    new Paragraph({
+                        children: [
+                            new TextRun({
+                                text: tituloSubsecao,
+                                bold: true,
+                                size: 24, // 12pt
+                            }),
+                        ],
+                        spacing: { after: 200 },
+                    })
+                );
+
+                // Para cada pendência na subseção
+                let pendenciaCount = 0;
+                for (const pendencia of subsecao.pendencias || []) {
+                    pendenciaCount++;
+                    numeroPendenciaGlobal++;
             // Criar tabela para a pendência com layout específico
             // Layout com 3 colunas:
             // Row 1: [Número (rowspan 2, 5%) | Local (colSpan 2, 95%)]
@@ -1464,25 +1498,300 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                 })
             );
 
-            // Espaçamento entre tabelas
-            children.push(
-                new Paragraph({
-                    text: '',
-                    spacing: { after: 200 }, // Reduzir espaçamento entre pendências
-                })
-            );
+                    // Espaçamento entre tabelas
+                    children.push(
+                        new Paragraph({
+                            text: '',
+                            spacing: { after: 200 }, // Reduzir espaçamento entre pendências
+                        })
+                    );
 
-            // Adicionar quebra de página a cada 2 pendências (mas NÃO na última pendência da seção)
-            const isUltimaPendenciaDaSecao = pendenciaCount === (secao.pendencias || []).length;
-            if (pendenciaCount % 2 === 0 && !isUltimaPendenciaDaSecao) {
+                    // Adicionar quebra de página a cada 2 pendências (mas NÃO na última pendência da subseção)
+                    const isUltimaPendenciaDaSubsecao = pendenciaCount === (subsecao.pendencias || []).length;
+                    if (pendenciaCount % 2 === 0 && !isUltimaPendenciaDaSubsecao) {
+                        children.push(
+                            new Paragraph({
+                                children: [new PageBreak()],
+                            })
+                        );
+                    }
+                } // Fim do loop de pendências da subseção
+            } // Fim do loop de subseções
+        } else {
+            // Se NÃO TEM subseções (modo antigo com subtítulo opcional)
+            if (secao.subtitulo && secao.subtitulo.trim()) {
                 children.push(
                     new Paragraph({
-                        children: [new PageBreak()],
+                        children: [
+                            new TextRun({
+                                text: secao.subtitulo,
+                                bold: true,
+                                size: 24, // 12pt
+                            }),
+                        ],
+                        spacing: { after: 200 },
                     })
                 );
             }
-        }
-    }
+
+            // Para cada pendência na seção (sem subseções)
+            let pendenciaCount = 0;
+            for (const pendencia of secao.pendencias || []) {
+                pendenciaCount++;
+                numeroPendenciaGlobal++;
+            // Criar tabela para a pendência com layout específico
+            // Layout com 3 colunas:
+            // Row 1: [Número (rowspan 2, 5%) | Local (colSpan 2, 95%)]
+            // Row 2: [mesma célula do número | Pendência (colSpan 2, 95%)]
+            // Row 3: [Foto (colSpan 2, 50%) | Espaço vazio (50%)]
+
+            const tableRows: TableRow[] = [];
+
+            // ================= ROW 1: Número (rowspan 2) + Local =================
+            const row1Cells: TableCell[] = [];
+
+            // Célula 1: Número em célula quadrada (rowSpan 2 para ocupar altura de Local + Pendência)
+            row1Cells.push(
+                new TableCell({
+                    width: { size: 8, type: WidthType.PERCENTAGE },
+                    rowSpan: 2,
+                    verticalAlign: VerticalAlign.CENTER,
+                    children: [
+                        new Paragraph({
+                            children: [
+                                new TextRun({
+                                    text: numeroPendenciaGlobal.toString(),
+                                    bold: true,
+                                    size: 40, // 20pt
+                                }),
+                            ],
+                            alignment: AlignmentType.CENTER,
+                        }),
+                    ],
+                    margins: {
+                        top: 250,
+                        bottom: 250,
+                        left: 150,
+                        right: 150,
+                    },
+                })
+            );
+
+            // Célula 2: Local (colSpan 2 para ocupar as outras 2 colunas)
+            row1Cells.push(
+                new TableCell({
+                    width: { size: 92, type: WidthType.PERCENTAGE },
+                    columnSpan: 2,
+                    children: [
+                        new Paragraph({
+                            children: [
+                                new TextRun({
+                                    text: 'Local: ',
+                                    bold: true,
+                                    size: 24,
+                                }),
+                                new TextRun({
+                                    text: pendencia.local.replace(/^([IVX]+\.\d+[A-Z]?|[IVX]+|\d+)\s*[-–]\s*/, ''), // Remove números romanos e árabicos do início
+                                    size: 24,
+                                }),
+                            ],
+                        }),
+                    ],
+                    margins: {
+                        top: 150,
+                        bottom: 100,
+                        left: 200,
+                        right: 200,
+                    },
+                })
+            );
+
+            tableRows.push(new TableRow({ children: row1Cells }));
+
+            // ================= ROW 2: Pendência (continua célula do número) =================
+            const row2Cells: TableCell[] = [];
+
+            // Não adicionar célula do número (rowSpan 2 já cobre isso)
+            // Célula: Pendência (colSpan 2)
+            row2Cells.push(
+                new TableCell({
+                    width: { size: 92, type: WidthType.PERCENTAGE },
+                    columnSpan: 2,
+                    children: [
+                        new Paragraph({
+                            children: [
+                                new TextRun({
+                                    text: 'Pendência: ',
+                                    bold: true,
+                                    size: 24,
+                                }),
+                                new TextRun({
+                                    text: pendencia.descricao.replace(/^([IVX]+\.\d+[A-Z]?|[IVX]+|\d+)\s*[-–]\s*/, ''), // Remove números romanos e árabicos do início
+                                    size: 24,
+                                }),
+                            ],
+                        }),
+                    ],
+                    margins: {
+                        top: 100,
+                        bottom: 150,
+                        left: 200,
+                        right: 200,
+                    },
+                })
+            );
+
+            tableRows.push(new TableRow({ children: row2Cells }));
+
+            // ================= ROW 3: Foto ANTES (ocupa número + foto) + Foto DEPOIS =================
+            const row3Cells: TableCell[] = [];
+
+            // Célula 1: Foto ANTES (colSpan 2, 54% = 8% número + 46% foto)
+            let photoParagraph: Paragraph;
+
+            if (pendencia.foto_url) {
+                try {
+                    console.log('🔍 Carregando foto ANTES:', pendencia.foto_url);
+                    const imageResponse = await fetch(pendencia.foto_url);
+                    const imageBuffer = await imageResponse.arrayBuffer();
+                    console.log('✅ Foto ANTES carregada. Tamanho:', imageBuffer.byteLength, 'bytes');
+
+                    photoParagraph = new Paragraph({
+                        children: [
+                            new ImageRun({
+                                data: imageBuffer,
+                                transformation: {
+                                    width: 280,
+                                    height: 210,
+                                },
+                                type: "png",
+                            }),
+                        ],
+                        alignment: AlignmentType.LEFT,
+                        spacing: { before: 100, after: 100 },
+                    });
+                } catch (error) {
+                    console.error('❌ Erro ao carregar imagem ANTES:', error);
+                    photoParagraph = new Paragraph({
+                        children: [
+                            new TextRun({
+                                text: '[Erro ao carregar imagem]',
+                                italics: true,
+                                color: 'FF0000',
+                            }),
+                        ],
+                    });
+                }
+            } else {
+                photoParagraph = new Paragraph({ text: '' });
+            }
+
+            row3Cells.push(
+                new TableCell({
+                    width: { size: 54, type: WidthType.PERCENTAGE },
+                    columnSpan: 2,
+                    children: [photoParagraph],
+                    verticalAlign: VerticalAlign.TOP,
+                    margins: {
+                        top: 150,
+                        bottom: 150,
+                        left: 100,
+                        right: 100,
+                    },
+                })
+            );
+
+            // Célula 2: Foto DEPOIS (46% - o quadrado em branco)
+            let photoDepoisParagraph: Paragraph;
+
+            if (pendencia.foto_depois_url) {
+                try {
+                    console.log('🔍 Carregando foto DEPOIS:', pendencia.foto_depois_url);
+                    const imageDepoisResponse = await fetch(pendencia.foto_depois_url);
+                    const imageDepoisBuffer = await imageDepoisResponse.arrayBuffer();
+                    console.log('✅ Foto DEPOIS carregada. Tamanho:', imageDepoisBuffer.byteLength, 'bytes');
+
+                    photoDepoisParagraph = new Paragraph({
+                        children: [
+                            new ImageRun({
+                                data: imageDepoisBuffer,
+                                transformation: {
+                                    width: 280,
+                                    height: 210,
+                                },
+                                type: "png",
+                            }),
+                        ],
+                        alignment: AlignmentType.LEFT,
+                        spacing: { before: 100, after: 100 },
+                    });
+                } catch (error) {
+                    console.error('❌ Erro ao carregar imagem DEPOIS:', error);
+                    photoDepoisParagraph = new Paragraph({
+                        children: [
+                            new TextRun({
+                                text: '[Erro ao carregar imagem depois]',
+                                italics: true,
+                                color: 'FF0000',
+                            }),
+                        ],
+                    });
+                }
+            } else {
+                console.log('⚠️ Nenhuma foto_depois_url encontrada');
+                photoDepoisParagraph = new Paragraph({ text: '' });
+            }
+
+            row3Cells.push(
+                new TableCell({
+                    width: { size: 46, type: WidthType.PERCENTAGE },
+                    children: [photoDepoisParagraph],
+                    verticalAlign: VerticalAlign.TOP,
+                    margins: {
+                        top: 150,
+                        bottom: 150,
+                        left: 100,
+                        right: 100,
+                    },
+                })
+            );
+
+            tableRows.push(new TableRow({ children: row3Cells }));
+
+            // Adicionar tabela ao documento
+            children.push(
+                new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    rows: tableRows,
+                    margins: {
+                        top: 100,
+                        bottom: 100,
+                        left: 100,
+                        right: 100,
+                    },
+                })
+            );
+
+                // Espaçamento entre tabelas
+                children.push(
+                    new Paragraph({
+                        text: '',
+                        spacing: { after: 200 }, // Reduzir espaçamento entre pendências
+                    })
+                );
+
+                // Adicionar quebra de página a cada 2 pendências (mas NÃO na última pendência da seção)
+                const isUltimaPendenciaDaSecao = pendenciaCount === (secao.pendencias || []).length;
+                if (pendenciaCount % 2 === 0 && !isUltimaPendenciaDaSecao) {
+                    children.push(
+                        new Paragraph({
+                            children: [new PageBreak()],
+                        })
+                    );
+                }
+            } // Fim do loop de pendências da seção sem subseções
+        } // Fim do else (sem subseções)
+    } // Fim do loop de seções
 
     // ==================== CAPÍTULO IX: DOCUMENTAÇÃO TÉCNICA ====================
 
