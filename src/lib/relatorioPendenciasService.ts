@@ -21,9 +21,14 @@ export const relatorioPendenciasService = {
             .eq('contrato_id', contratoId)
             .order('created_at', { ascending: false });
 
-        // Se deu erro 400 (tabela não existe), buscar sem subseções (retrocompatibilidade)
-        if (error && error.code === 'PGRST116') {
-            console.warn('⚠️ Tabela relatorio_subsecoes não existe. Execute o migration_subsecoes.sql!');
+        // Se deu erro (tabela não existe OU cache desatualizado), buscar sem subseções (retrocompatibilidade)
+        if (error && (error.code === 'PGRST116' || error.code === 'PGRST200')) {
+            if (error.code === 'PGRST200') {
+                console.warn('⚠️ Cache do Supabase desatualizado! Tentando modo retrocompatível...');
+            } else {
+                console.warn('⚠️ Tabela relatorio_subsecoes não existe. Execute o migration_subsecoes.sql!');
+            }
+
             const { data: dataOld, error: errorOld } = await supabase
                 .from('relatorios_pendencias')
                 .select(`
@@ -72,9 +77,14 @@ export const relatorioPendenciasService = {
             .eq('id', id)
             .single();
 
-        // Se deu erro 400 (tabela não existe), buscar sem subseções (retrocompatibilidade)
-        if (error && error.code === 'PGRST116') {
-            console.warn('⚠️ Tabela relatorio_subsecoes não existe. Execute o migration_subsecoes.sql!');
+        // Se deu erro (tabela não existe OU cache desatualizado), buscar sem subseções (retrocompatibilidade)
+        if (error && (error.code === 'PGRST116' || error.code === 'PGRST200')) {
+            if (error.code === 'PGRST200') {
+                console.warn('⚠️ Cache do Supabase desatualizado! Tentando modo retrocompatível...');
+            } else {
+                console.warn('⚠️ Tabela relatorio_subsecoes não existe. Execute o migration_subsecoes.sql!');
+            }
+
             const { data: dataOld, error: errorOld } = await supabase
                 .from('relatorios_pendencias')
                 .select(`

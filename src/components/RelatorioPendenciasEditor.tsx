@@ -585,21 +585,51 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 let secaoId = secao.id;
 
                 if (secaoId) {
-                    await relatorioPendenciasService.updateSecao(secaoId, {
-                        titulo_principal: secao.titulo_principal,
-                        subtitulo: secao.subtitulo || '',
-                        tem_subsecoes: secao.tem_subsecoes,
-                        ordem: secao.ordem,
-                    });
+                    try {
+                        await relatorioPendenciasService.updateSecao(secaoId, {
+                            titulo_principal: secao.titulo_principal,
+                            subtitulo: secao.subtitulo || '',
+                            tem_subsecoes: secao.tem_subsecoes,
+                            ordem: secao.ordem,
+                        });
+                    } catch (err: any) {
+                        // Se der erro de coluna não encontrada, tentar sem tem_subsecoes
+                        if (err?.code === 'PGRST204') {
+                            console.warn('⚠️ Salvando sem tem_subsecoes (modo retrocompatível)');
+                            await relatorioPendenciasService.updateSecao(secaoId, {
+                                titulo_principal: secao.titulo_principal,
+                                subtitulo: secao.subtitulo || '',
+                                ordem: secao.ordem,
+                            });
+                        } else {
+                            throw err;
+                        }
+                    }
                 } else {
-                    const newSecao = await relatorioPendenciasService.createSecao({
-                        relatorio_id: relatorioId,
-                        titulo_principal: secao.titulo_principal,
-                        subtitulo: secao.subtitulo || '',
-                        tem_subsecoes: secao.tem_subsecoes,
-                        ordem: secao.ordem,
-                    });
-                    secaoId = newSecao.id;
+                    try {
+                        const newSecao = await relatorioPendenciasService.createSecao({
+                            relatorio_id: relatorioId,
+                            titulo_principal: secao.titulo_principal,
+                            subtitulo: secao.subtitulo || '',
+                            tem_subsecoes: secao.tem_subsecoes,
+                            ordem: secao.ordem,
+                        });
+                        secaoId = newSecao.id;
+                    } catch (err: any) {
+                        // Se der erro de coluna não encontrada, tentar sem tem_subsecoes
+                        if (err?.code === 'PGRST204') {
+                            console.warn('⚠️ Salvando sem tem_subsecoes (modo retrocompatível)');
+                            const newSecao = await relatorioPendenciasService.createSecao({
+                                relatorio_id: relatorioId,
+                                titulo_principal: secao.titulo_principal,
+                                subtitulo: secao.subtitulo || '',
+                                ordem: secao.ordem,
+                            });
+                            secaoId = newSecao.id;
+                        } else {
+                            throw err;
+                        }
+                    }
                 }
 
                 // Se TEM subseções, salvar subseções
