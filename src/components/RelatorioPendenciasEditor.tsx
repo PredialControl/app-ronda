@@ -109,15 +109,13 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     };
 
     // Função para gerar numeração automática da seção
-    // VIII.1 → VIII.1.A, IX.1 → IX.1.A, X.1 → X.1.A...
-    const gerarNumeracaoSecao = (ordem: number): { principal: string, subsecao: string } => {
+    // VIII.1, VIII.2, VIII.3... (sem subseção)
+    // VIII.1A, VIII.1B, VIII.1C... (com subseção)
+    const gerarNumeracaoSecao = (ordem: number): string => {
         const numeroRomano = ordem + 8; // Começa em VIII (8)
         const romano = toRoman(numeroRomano);
-
-        return {
-            principal: `${romano}.1`,
-            subsecao: `${romano}.1.A`
-        };
+        const numeroSecao = ordem + 1; // 1, 2, 3...
+        return `${romano}.${numeroSecao}`;
     };
 
     const handleAddSecao = () => {
@@ -127,8 +125,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         const newSecao: SecaoLocal = {
             tempId: `secao-${Date.now()}`,
             ordem: ordem,
-            titulo_principal: `${numeracao.principal} – `,
-            subtitulo: `${numeracao.subsecao} – `,
+            titulo_principal: `${numeracao} – `,
+            subtitulo: '',
             tem_subsecoes: false, // Por padrão, sem subseções
             subsecoes: [],
             pendencias: [],
@@ -296,7 +294,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 };
 
                 const tituloPrincipalLimpo = extrairTexto(s.titulo_principal);
-                const subtituloLimpo = extrairTexto(s.subtitulo);
+                const subtituloLimpo = extrairTexto(s.subtitulo || '');
                 const localAutomatico = `${tituloPrincipalLimpo} - ${subtituloLimpo}`;
 
                 const newPendencia: PendenciaLocal = {
@@ -412,7 +410,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         };
 
         const tituloPrincipalLimpo = extrairTexto(secao.titulo_principal);
-        const subtituloLimpo = extrairTexto(secao.subtitulo);
+        const subtituloLimpo = extrairTexto(secao.subtitulo || '');
         const localAutomatico = `${tituloPrincipalLimpo} - ${subtituloLimpo}`;
 
         const newPendencias: PendenciaLocal[] = files.map((file, idx) => ({
@@ -429,6 +427,53 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         setSecoes(secoes.map(s => {
             if (s.tempId === secaoTempId) {
                 return { ...s, pendencias: [...s.pendencias, ...newPendencias] };
+            }
+            return s;
+        }));
+    };
+
+    const handleBulkPhotosSubsecao = (secaoTempId: string, subsecaoTempId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        const secao = secoes.find(s => s.tempId === secaoTempId);
+        if (!secao) return;
+
+        const subsecao = (secao.subsecoes || []).find(sub => sub.tempId === subsecaoTempId);
+        if (!subsecao) return;
+
+        // Remover numeração romana do local (extrair apenas o texto após "–")
+        const extrairTexto = (texto: string) => {
+            const partes = texto.split('–');
+            return partes.length > 1 ? partes[1].trim() : texto.trim();
+        };
+
+        const tituloPrincipalLimpo = extrairTexto(secao.titulo_principal);
+        const subsecaoLimpo = extrairTexto(subsecao.titulo);
+        const localAutomatico = `${tituloPrincipalLimpo} - ${subsecaoLimpo}`;
+
+        const newPendencias: PendenciaLocal[] = files.map((file, idx) => ({
+            tempId: `pend-${Date.now()}-${idx}`,
+            ordem: subsecao.pendencias.length + idx,
+            local: localAutomatico,
+            descricao: '',
+            foto_url: null,
+            foto_depois_url: null,
+            file: file,
+            preview: URL.createObjectURL(file),
+        }));
+
+        setSecoes(secoes.map(s => {
+            if (s.tempId === secaoTempId) {
+                return {
+                    ...s,
+                    subsecoes: (s.subsecoes || []).map(sub => {
+                        if (sub.tempId === subsecaoTempId) {
+                            return { ...sub, pendencias: [...sub.pendencias, ...newPendencias] };
+                        }
+                        return sub;
+                    }),
+                };
             }
             return s;
         }));
@@ -1101,15 +1146,34 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                         <div className="border-t border-blue-600/20 pt-3 mt-2">
                                                             <div className="flex justify-between items-center mb-2">
                                                                 <Label className="text-gray-400 text-sm">Pendências ({subsecao.pendencias.length})</Label>
-                                                                <Button
-                                                                    onClick={() => handleAddPendenciaSubsecao(secao.tempId, subsecao.tempId)}
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    className="text-green-400 h-7 text-xs"
-                                                                >
-                                                                    <Plus className="w-3 h-3 mr-1" />
-                                                                    Adicionar
-                                                                </Button>
+                                                                <div className="flex gap-2">
+                                                                    <input
+                                                                        type="file"
+                                                                        multiple
+                                                                        accept="image/*"
+                                                                        onChange={(e) => handleBulkPhotosSubsecao(secao.tempId, subsecao.tempId, e)}
+                                                                        className="hidden"
+                                                                        id={`bulk-photos-${subsecao.tempId}`}
+                                                                    />
+                                                                    <Button
+                                                                        onClick={() => document.getElementById(`bulk-photos-${subsecao.tempId}`)?.click()}
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="text-blue-400 h-7 text-xs"
+                                                                    >
+                                                                        <ImageIcon className="w-3 h-3 mr-1" />
+                                                                        Várias Fotos
+                                                                    </Button>
+                                                                    <Button
+                                                                        onClick={() => handleAddPendenciaSubsecao(secao.tempId, subsecao.tempId)}
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="text-green-400 h-7 text-xs"
+                                                                    >
+                                                                        <Plus className="w-3 h-3 mr-1" />
+                                                                        Adicionar
+                                                                    </Button>
+                                                                </div>
                                                             </div>
 
                                                             {subsecao.pendencias.length === 0 ? (
