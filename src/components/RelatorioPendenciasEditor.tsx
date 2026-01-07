@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, Loader2, ArrowLeft } from 'lucide-react';
 import { Contrato, RelatorioPendencias as RelatorioPendenciasType } from '@/types';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 
@@ -193,19 +193,10 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                     ...s,
                     subsecoes: (s.subsecoes || []).map(sub => {
                         if (sub.tempId === subsecaoTempId) {
-                            const extrairTexto = (texto: string) => {
-                                const partes = texto.split('–');
-                                return partes.length > 1 ? partes[1].trim() : texto.trim();
-                            };
-
-                            const tituloPrincipalLimpo = extrairTexto(s.titulo_principal);
-                            const subtituloLimpo = extrairTexto(sub.titulo);
-                            const localAutomatico = `${tituloPrincipalLimpo} - ${subtituloLimpo}`;
-
                             const newPendencia: PendenciaLocal = {
                                 tempId: `pend-${Date.now()}`,
                                 ordem: sub.pendencias.length,
-                                local: localAutomatico,
+                                local: '', // Campo manual
                                 descricao: '',
                                 foto_url: null,
                                 foto_depois_url: null,
@@ -285,20 +276,10 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const handleAddPendencia = (secaoTempId: string) => {
         setSecoes(secoes.map(s => {
             if (s.tempId === secaoTempId) {
-                // Remover numeração romana do local (extrair apenas o texto após "–")
-                const extrairTexto = (texto: string) => {
-                    const partes = texto.split('–');
-                    return partes.length > 1 ? partes[1].trim() : texto.trim();
-                };
-
-                const tituloPrincipalLimpo = extrairTexto(s.titulo_principal);
-                const subtituloLimpo = extrairTexto(s.subtitulo || '');
-                const localAutomatico = `${tituloPrincipalLimpo} - ${subtituloLimpo}`;
-
                 const newPendencia: PendenciaLocal = {
                     tempId: `pend-${Date.now()}`,
                     ordem: s.pendencias.length,
-                    local: localAutomatico,
+                    local: '', // Campo manual
                     descricao: '',
                     foto_url: null,
                     foto_depois_url: null,
@@ -401,20 +382,10 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         const secao = secoes.find(s => s.tempId === secaoTempId);
         if (!secao) return;
 
-        // Remover numeração romana do local (extrair apenas o texto após "–")
-        const extrairTexto = (texto: string) => {
-            const partes = texto.split('–');
-            return partes.length > 1 ? partes[1].trim() : texto.trim();
-        };
-
-        const tituloPrincipalLimpo = extrairTexto(secao.titulo_principal);
-        const subtituloLimpo = extrairTexto(secao.subtitulo || '');
-        const localAutomatico = `${tituloPrincipalLimpo} - ${subtituloLimpo}`;
-
         const newPendencias: PendenciaLocal[] = files.map((file, idx) => ({
             tempId: `pend-${Date.now()}-${idx}`,
             ordem: secao.pendencias.length + idx,
-            local: localAutomatico,
+            local: '', // Campo manual
             descricao: '',
             foto_url: null,
             foto_depois_url: null,
@@ -440,20 +411,10 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         const subsecao = (secao.subsecoes || []).find(sub => sub.tempId === subsecaoTempId);
         if (!subsecao) return;
 
-        // Remover numeração romana do local (extrair apenas o texto após "–")
-        const extrairTexto = (texto: string) => {
-            const partes = texto.split('–');
-            return partes.length > 1 ? partes[1].trim() : texto.trim();
-        };
-
-        const tituloPrincipalLimpo = extrairTexto(secao.titulo_principal);
-        const subsecaoLimpo = extrairTexto(subsecao.titulo);
-        const localAutomatico = `${tituloPrincipalLimpo} - ${subsecaoLimpo}`;
-
         const newPendencias: PendenciaLocal[] = files.map((file, idx) => ({
             tempId: `pend-${Date.now()}-${idx}`,
             ordem: subsecao.pendencias.length + idx,
-            local: localAutomatico,
+            local: '', // Campo manual
             descricao: '',
             foto_url: null,
             foto_depois_url: null,
@@ -584,12 +545,15 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             for (const secao of secoes) {
                 let secaoId = secao.id;
 
+                // Detectar automaticamente se tem subseções
+                const temSubsecoes = (secao.subsecoes || []).length > 0;
+
                 if (secaoId) {
                     try {
                         await relatorioPendenciasService.updateSecao(secaoId, {
                             titulo_principal: secao.titulo_principal,
                             subtitulo: secao.subtitulo || '',
-                            tem_subsecoes: secao.tem_subsecoes,
+                            tem_subsecoes: temSubsecoes,
                             ordem: secao.ordem,
                         });
                     } catch (err: any) {
@@ -611,7 +575,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             relatorio_id: relatorioId,
                             titulo_principal: secao.titulo_principal,
                             subtitulo: secao.subtitulo || '',
-                            tem_subsecoes: secao.tem_subsecoes,
+                            tem_subsecoes: temSubsecoes,
                             ordem: secao.ordem,
                         });
                         secaoId = newSecao.id;
@@ -632,8 +596,43 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                     }
                 }
 
-                // Se TEM subseções, salvar subseções
-                if (secao.tem_subsecoes && secao.subsecoes) {
+                // Salvar pendências diretas na seção (SEMPRE salvar se existirem)
+                for (const pendencia of secao.pendencias) {
+                    let fotoUrl = pendencia.foto_url;
+                    let fotoDepoisUrl = pendencia.foto_depois_url;
+
+                    if (pendencia.file) {
+                        fotoUrl = await relatorioPendenciasService.uploadFoto(pendencia.file, relatorioId, pendencia.tempId);
+                    } else if (!pendencia.preview && !pendencia.foto_url) {
+                        fotoUrl = null;
+                    }
+
+                    if (pendencia.fileDepois) {
+                        fotoDepoisUrl = await relatorioPendenciasService.uploadFoto(pendencia.fileDepois, relatorioId, `${pendencia.tempId}-depois`);
+                    } else if (!pendencia.previewDepois && !pendencia.foto_depois_url) {
+                        fotoDepoisUrl = null;
+                    }
+
+                    const pendenciaData = {
+                        local: pendencia.local,
+                        descricao: pendencia.descricao,
+                        foto_url: fotoUrl,
+                        foto_depois_url: fotoDepoisUrl,
+                        ordem: pendencia.ordem,
+                    };
+
+                    if (pendencia.id) {
+                        await relatorioPendenciasService.updatePendencia(pendencia.id, pendenciaData);
+                    } else {
+                        await relatorioPendenciasService.createPendencia({
+                            secao_id: secaoId,
+                            ...pendenciaData,
+                        });
+                    }
+                }
+
+                // Salvar subseções (se existirem)
+                if (secao.subsecoes && secao.subsecoes.length > 0) {
                     for (const subsecao of secao.subsecoes) {
                         let subsecaoId = subsecao.id;
 
@@ -656,14 +655,12 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             let fotoUrl = pendencia.foto_url;
                             let fotoDepoisUrl = pendencia.foto_depois_url;
 
-                            // Upload foto ANTES
                             if (pendencia.file) {
                                 fotoUrl = await relatorioPendenciasService.uploadFoto(pendencia.file, relatorioId, pendencia.tempId);
                             } else if (!pendencia.preview && !pendencia.foto_url) {
                                 fotoUrl = null;
                             }
 
-                            // Upload foto DEPOIS
                             if (pendencia.fileDepois) {
                                 fotoDepoisUrl = await relatorioPendenciasService.uploadFoto(pendencia.fileDepois, relatorioId, `${pendencia.tempId}-depois`);
                             } else if (!pendencia.previewDepois && !pendencia.foto_depois_url) {
@@ -688,73 +685,6 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 });
                             }
                         }
-                    }
-                } else {
-                    // Se NÃO TEM subseções, salvar pendências diretas na seção
-                    for (const pendencia of secao.pendencias) {
-                    // Preservar URLs existentes se não houver novos arquivos
-                    let fotoUrl = pendencia.foto_url;
-                    let fotoDepoisUrl = pendencia.foto_depois_url;
-
-                    console.log('💾 Salvando pendência:', {
-                        id: pendencia.id,
-                        tempId: pendencia.tempId,
-                        foto_url_atual: pendencia.foto_url,
-                        foto_depois_url_atual: pendencia.foto_depois_url,
-                        tem_file: !!pendencia.file,
-                        tem_fileDepois: !!pendencia.fileDepois,
-                        preview: pendencia.preview,
-                        previewDepois: pendencia.previewDepois,
-                    });
-
-                    // Upload new foto ANTES if file exists
-                    if (pendencia.file) {
-                        console.log('📤 Fazendo upload da foto ANTES...');
-                        fotoUrl = await relatorioPendenciasService.uploadFoto(pendencia.file, relatorioId, pendencia.tempId);
-                        console.log('✅ Foto ANTES salva:', fotoUrl);
-                    } else if (pendencia.preview && pendencia.preview.startsWith('blob:')) {
-                        // Se há preview mas não é URL do banco, significa que foi removida
-                        console.log('⚠️ Preview blob detectado mas sem file - mantendo URL atual');
-                    } else if (!pendencia.preview && !pendencia.foto_url) {
-                        // Foi explicitamente removida
-                        fotoUrl = null;
-                        console.log('🗑️ Foto ANTES foi removida');
-                    }
-
-                    // Upload new foto DEPOIS if file exists
-                    if (pendencia.fileDepois) {
-                        console.log('📤 Fazendo upload da foto DEPOIS...');
-                        fotoDepoisUrl = await relatorioPendenciasService.uploadFoto(pendencia.fileDepois, relatorioId, `${pendencia.tempId}-depois`);
-                        console.log('✅ Foto DEPOIS salva:', fotoDepoisUrl);
-                    } else if (pendencia.previewDepois && pendencia.previewDepois.startsWith('blob:')) {
-                        // Se há preview mas não é URL do banco, significa que foi removida
-                        console.log('⚠️ Preview blob DEPOIS detectado mas sem fileDepois - mantendo URL atual');
-                    } else if (!pendencia.previewDepois && !pendencia.foto_depois_url) {
-                        // Foi explicitamente removida
-                        fotoDepoisUrl = null;
-                        console.log('🗑️ Foto DEPOIS foi removida');
-                    }
-
-                    const pendenciaData = {
-                        local: pendencia.local,
-                        descricao: pendencia.descricao,
-                        foto_url: fotoUrl,
-                        foto_depois_url: fotoDepoisUrl,
-                        ordem: pendencia.ordem,
-                    };
-
-                    console.log('💿 Salvando no banco:', pendenciaData);
-
-                    if (pendencia.id) {
-                        await relatorioPendenciasService.updatePendencia(pendencia.id, pendenciaData);
-                        console.log('✅ Pendência atualizada no banco');
-                    } else {
-                        await relatorioPendenciasService.createPendencia({
-                            secao_id: secaoId,
-                            ...pendenciaData,
-                        });
-                        console.log('✅ Pendência criada no banco');
-                    }
                     }
                 }
             }
@@ -1072,8 +1002,10 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             <p>Nenhuma seção adicionada. Clique em "Adicionar Seção" para começar.</p>
                         </CardContent>
                     </Card>
-                ) : (
-                    secoes.map((secao) => (
+                ) : (() => {
+                    let globalPendenciaCounter = 0;
+
+                    return secoes.map((secao) => (
                         <Card key={secao.tempId} className="bg-gray-800 border-gray-700">
                             <CardHeader>
                                 <div className="flex justify-between items-center">
@@ -1106,226 +1038,10 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                     <p className="text-xs text-gray-500 mt-1">Título principal (Ex: VIII.1 - HALLS RESIDENCIAL)</p>
                                 </div>
 
-                                {/* CHECKBOX: Tem Subseções */}
-                                <div className="bg-blue-900/20 border-2 border-blue-600/50 p-4 rounded-lg">
-                                    <div className="flex items-center space-x-3">
-                                        <input
-                                            type="checkbox"
-                                            id={`tem-subsecoes-${secao.tempId}`}
-                                            checked={secao.tem_subsecoes}
-                                            onChange={(e) => handleUpdateSecao(secao.tempId, 'tem_subsecoes', e.target.checked)}
-                                            className="w-5 h-5 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 cursor-pointer"
-                                        />
-                                        <Label htmlFor={`tem-subsecoes-${secao.tempId}`} className="text-blue-200 cursor-pointer font-semibold">
-                                            ✨ Esta seção tem subseções (VIII.1A, VIII.1B, VIII.1C...)
-                                        </Label>
-                                    </div>
-                                    <p className="text-xs text-blue-300/70 mt-2 ml-8">
-                                        Marque esta opção se esta seção precisar de subdivisões (ex: diferentes pavimentos, áreas, etc.)
-                                    </p>
-                                </div>
-
-                                {/* SUBSEÇÕES (se habilitado) */}
-                                {secao.tem_subsecoes ? (
-                                    <div className="bg-blue-900/10 border border-blue-700/30 rounded-lg p-4 space-y-4">
-                                        <div className="flex justify-between items-center">
-                                            <Label className="text-blue-300 font-semibold">Subseções ({(secao.subsecoes || []).length})</Label>
-                                            <Button
-                                                onClick={() => handleAddSubsecao(secao.tempId)}
-                                                variant="outline"
-                                                size="sm"
-                                                className="text-blue-400 border-blue-600 hover:bg-blue-900/30"
-                                            >
-                                                <Plus className="w-3 h-3 mr-1" />
-                                                Adicionar Subseção
-                                            </Button>
-                                        </div>
-
-                                        {(secao.subsecoes || []).length === 0 ? (
-                                            <p className="text-sm text-gray-500 text-center py-4">
-                                                Nenhuma subseção. Clique em "Adicionar Subseção" para começar.
-                                            </p>
-                                        ) : (
-                                            <div className="space-y-3">
-                                                {(secao.subsecoes || []).map((subsecao, subIdx) => (
-                                                    <div key={subsecao.tempId} className="bg-gray-800 border border-blue-600/30 rounded p-3">
-                                                        <div className="flex justify-between items-center mb-2">
-                                                            <Label className="text-blue-300">
-                                                                Subseção {String.fromCharCode(65 + subIdx)} (VIII.{secao.ordem + 1}{String.fromCharCode(65 + subIdx)})
-                                                            </Label>
-                                                            <Button
-                                                                onClick={() => handleDeleteSubsecao(secao.tempId, subsecao.tempId)}
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="text-red-400 hover:text-red-300 h-6 w-6 p-0"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
-
-                                                        <Input
-                                                            value={subsecao.titulo}
-                                                            onChange={(e) => handleUpdateSubsecao(secao.tempId, subsecao.tempId, 'titulo', e.target.value)}
-                                                            placeholder="Ex: 22 PAVIMENTO"
-                                                            className="bg-gray-900 border-gray-600 text-white mb-3"
-                                                        />
-
-                                                        {/* Pendências da Subseção */}
-                                                        <div className="border-t border-blue-600/20 pt-3 mt-2">
-                                                            <div className="flex justify-between items-center mb-2">
-                                                                <Label className="text-gray-400 text-sm">Pendências ({subsecao.pendencias.length})</Label>
-                                                                <div className="flex gap-2">
-                                                                    <input
-                                                                        type="file"
-                                                                        multiple
-                                                                        accept="image/*"
-                                                                        onChange={(e) => handleBulkPhotosSubsecao(secao.tempId, subsecao.tempId, e)}
-                                                                        className="hidden"
-                                                                        id={`bulk-photos-${subsecao.tempId}`}
-                                                                    />
-                                                                    <Button
-                                                                        onClick={() => document.getElementById(`bulk-photos-${subsecao.tempId}`)?.click()}
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        className="text-blue-400 h-7 text-xs"
-                                                                    >
-                                                                        <ImageIcon className="w-3 h-3 mr-1" />
-                                                                        Várias Fotos
-                                                                    </Button>
-                                                                    <Button
-                                                                        onClick={() => handleAddPendenciaSubsecao(secao.tempId, subsecao.tempId)}
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        className="text-green-400 h-7 text-xs"
-                                                                    >
-                                                                        <Plus className="w-3 h-3 mr-1" />
-                                                                        Adicionar
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-
-                                                            {subsecao.pendencias.length === 0 ? (
-                                                                <p className="text-xs text-gray-500 text-center py-2">Nenhuma pendência</p>
-                                                            ) : (
-                                                                <div className="space-y-2">
-                                                                    {subsecao.pendencias.map((pend, pIdx) => (
-                                                                        <div key={pend.tempId} className="bg-gray-900 border border-gray-600 rounded p-2">
-                                                                            <div className="flex items-center gap-2 mb-1">
-                                                                                <span className="text-white font-bold text-sm">{pIdx + 1}.</span>
-                                                                                <Input
-                                                                                    value={pend.local}
-                                                                                    onChange={(e) => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'local', e.target.value)}
-                                                                                    placeholder="Local"
-                                                                                    className="bg-gray-800 border-gray-600 text-white h-7 text-sm flex-1"
-                                                                                />
-                                                                                <Button
-                                                                                    onClick={() => handleDeletePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId)}
-                                                                                    variant="ghost"
-                                                                                    size="sm"
-                                                                                    className="text-red-400 h-6 w-6 p-0"
-                                                                                >
-                                                                                    <X className="w-3 h-3" />
-                                                                                </Button>
-                                                                            </div>
-                                                                            <Textarea
-                                                                                value={pend.descricao}
-                                                                                onChange={(e) => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'descricao', e.target.value)}
-                                                                                placeholder="Descrição da pendência"
-                                                                                rows={2}
-                                                                                className="bg-gray-800 border-gray-600 text-white text-sm resize-y mb-2"
-                                                                            />
-
-                                                                            {/* Fotos da Pendência da Subseção */}
-                                                                            <div className="flex gap-2">
-                                                                                <div className="flex-1">
-                                                                                    <Label className="text-xs text-gray-400">Foto Antes</Label>
-                                                                                    {!pend.preview && !pend.foto_url ? (
-                                                                                        <div>
-                                                                                            <input
-                                                                                                type="file"
-                                                                                                accept="image/*"
-                                                                                                onChange={(e) => handleFotoChangeSubsecao(secao.tempId, subsecao.tempId, pend.tempId, e)}
-                                                                                                className="hidden"
-                                                                                                id={`foto-sub-${pend.tempId}`}
-                                                                                            />
-                                                                                            <Button
-                                                                                                onClick={() => document.getElementById(`foto-sub-${pend.tempId}`)?.click()}
-                                                                                                variant="outline"
-                                                                                                size="sm"
-                                                                                                className="w-full h-20 text-xs"
-                                                                                            >
-                                                                                                <ImageIcon className="w-4 h-4 mr-1" />
-                                                                                                Adicionar Foto
-                                                                                            </Button>
-                                                                                        </div>
-                                                                                    ) : (
-                                                                                        <div className="relative">
-                                                                                            <img src={pend.preview || pend.foto_url || ''} alt="Preview" className="w-full h-20 object-cover rounded" />
-                                                                                            <Button
-                                                                                                onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'preview', undefined)}
-                                                                                                variant="ghost"
-                                                                                                size="sm"
-                                                                                                className="absolute top-0 right-0 text-red-400 h-6 w-6 p-0"
-                                                                                            >
-                                                                                                <X className="w-3 h-3" />
-                                                                                            </Button>
-                                                                                        </div>
-                                                                                    )}
-                                                                                </div>
-
-                                                                                <div className="flex-1">
-                                                                                    <Label className="text-xs text-gray-400">Foto Depois</Label>
-                                                                                    {!pend.previewDepois && !pend.foto_depois_url ? (
-                                                                                        <div>
-                                                                                            <input
-                                                                                                type="file"
-                                                                                                accept="image/*"
-                                                                                                onChange={(e) => handleFotoDepoisChangeSubsecao(secao.tempId, subsecao.tempId, pend.tempId, e)}
-                                                                                                className="hidden"
-                                                                                                id={`foto-depois-sub-${pend.tempId}`}
-                                                                                            />
-                                                                                            <Button
-                                                                                                onClick={() => document.getElementById(`foto-depois-sub-${pend.tempId}`)?.click()}
-                                                                                                variant="outline"
-                                                                                                size="sm"
-                                                                                                className="w-full h-20 text-xs"
-                                                                                            >
-                                                                                                <ImageIcon className="w-4 h-4 mr-1" />
-                                                                                                Adicionar Foto
-                                                                                            </Button>
-                                                                                        </div>
-                                                                                    ) : (
-                                                                                        <div className="relative">
-                                                                                            <img src={pend.previewDepois || pend.foto_depois_url || ''} alt="Preview Depois" className="w-full h-20 object-cover rounded" />
-                                                                                            <Button
-                                                                                                onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'previewDepois', undefined)}
-                                                                                                variant="ghost"
-                                                                                                size="sm"
-                                                                                                className="absolute top-0 right-0 text-red-400 h-6 w-6 p-0"
-                                                                                            >
-                                                                                                <X className="w-3 h-3" />
-                                                                                            </Button>
-                                                                                        </div>
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : null}
-
-                                {/* Pendências (só aparecem se NÃO tiver subseções) */}
-                                {!secao.tem_subsecoes && (
+                                {/* Pendências da Seção (renderizadas ANTES das subseções) */}
                                 <div className="border-t border-gray-700 pt-4 mt-4">
                                     <div className="flex justify-between items-center mb-3">
-                                        <Label className="text-gray-300">Pendências ({secao.pendencias.length})</Label>
+                                        <Label className="text-gray-300">Pendências da Seção ({secao.pendencias.length})</Label>
                                         <div className="flex gap-2">
                                             <input
                                                 type="file"
@@ -1357,180 +1073,345 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                         </div>
                                     </div>
 
-                                    {secao.pendencias.length === 0 ? (
-                                        <p className="text-sm text-gray-500 text-center py-4">
-                                            Nenhuma pendência adicionada
-                                        </p>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {secao.pendencias.map((pendencia, pIdx) => (
-                                                <div key={pendencia.tempId} className="bg-gray-900 border border-gray-600 rounded-sm overflow-hidden mb-4">
-                                                    {/* Row 1: Número e Campos de Texto */}
-                                                    <div className="flex border-b border-gray-600 min-h-[5rem]">
-                                                        {/* Coluna do Número */}
-                                                        <div className="w-[8%] min-w-[3.5rem] bg-gray-800 flex items-center justify-center border-r border-gray-600">
-                                                            <span className="text-3xl font-bold text-white">
-                                                                {pIdx + 1}
-                                                            </span>
-                                                        </div>
-
-                                                        {/* Coluna dos Campos */}
-                                                        <div className="flex-1 p-3 space-y-2 relative">
-                                                            <Button
-                                                                onClick={() => handleDeletePendencia(secao.tempId, pendencia.tempId)}
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="absolute top-1 right-1 text-red-400 hover:text-red-300 h-6 w-6 p-0 z-10"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
-
-                                                            <div className="flex items-center gap-2">
-                                                                <Label className="text-gray-300 font-bold whitespace-nowrap w-20 text-right">Local:</Label>
-                                                                <Input
-                                                                    value={pendencia.local}
-                                                                    onChange={(e) => handleUpdatePendencia(secao.tempId, pendencia.tempId, 'local', e.target.value)}
-                                                                    className="bg-gray-800/50 border-gray-600 text-white h-8 flex-1"
-                                                                />
+                                    {secao.pendencias.length > 0 && (
+                                        <div className="space-y-3 mb-6">
+                                            {secao.pendencias.map((pendencia, pIdx) => {
+                                                globalPendenciaCounter++;
+                                                return (
+                                                    <div key={pendencia.tempId} className="bg-gray-900 border border-gray-600 rounded-sm overflow-hidden mb-4 shadow-sm">
+                                                        {/* Row 1: Número e Campos de Texto */}
+                                                        <div className="flex border-b border-gray-600 min-h-[5rem]">
+                                                            {/* Coluna do Número */}
+                                                            <div className="w-[8%] min-w-[3.5rem] bg-indigo-900/30 flex items-center justify-center border-r border-gray-600">
+                                                                <span className="text-3xl font-bold text-white">
+                                                                    {globalPendenciaCounter}
+                                                                </span>
                                                             </div>
-                                                            <div className="flex items-start gap-2">
-                                                                <Label className="text-gray-300 font-bold whitespace-nowrap w-20 text-right mt-1.5">Pendência:</Label>
-                                                                <Textarea
-                                                                    value={pendencia.descricao}
-                                                                    onChange={(e) => handleUpdatePendencia(secao.tempId, pendencia.tempId, 'descricao', e.target.value)}
-                                                                    rows={2}
-                                                                    className="bg-gray-800/50 border-gray-600 text-white flex-1 resize-y"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
 
-                                                    {/* Row 2: Foto e Espaço Vazio */}
-                                                    <div className="flex min-h-[10rem]">
-                                                        {/* Coluna da Foto (50%) */}
-                                                        <div className="w-1/2 border-r border-gray-600 p-2 flex items-center justify-center bg-black/20 relative">
-                                                            {!pendencia.preview && !pendencia.foto_url ? (
-                                                                <div className="text-center w-full">
-                                                                    <input
-                                                                        type="file"
-                                                                        accept="image/*"
-                                                                        onChange={(e) => handleFotoChange(secao.tempId, pendencia.tempId, e)}
-                                                                        className="hidden"
-                                                                        id={`foto-${pendencia.tempId}`}
+                                                            {/* Coluna dos Campos */}
+                                                            <div className="flex-1 p-3 space-y-2 relative">
+                                                                <Button
+                                                                    onClick={() => handleDeletePendencia(secao.tempId, pendencia.tempId)}
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="absolute top-1 right-1 text-red-500 hover:text-red-400 h-6 w-6 p-0 z-10"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+
+                                                                <div className="flex items-center gap-2">
+                                                                    <Label className="text-gray-300 font-bold whitespace-nowrap w-20 text-right">Local:</Label>
+                                                                    <Input
+                                                                        value={pendencia.local}
+                                                                        onChange={(e) => handleUpdatePendencia(secao.tempId, pendencia.tempId, 'local', e.target.value)}
+                                                                        className="bg-gray-800 border-gray-600 text-white h-8 flex-1 focus:border-blue-500 transition-colors"
                                                                     />
-                                                                    <Button
-                                                                        onClick={() => document.getElementById(`foto-${pendencia.tempId}`)?.click()}
-                                                                        variant="ghost"
-                                                                        className="w-full h-full min-h-[8rem] border-2 border-dashed border-gray-600 hover:border-blue-500 hover:bg-gray-800/50 text-gray-400"
-                                                                    >
-                                                                        <div className="flex flex-col items-center">
-                                                                            <ImageIcon className="w-8 h-8 mb-2" />
-                                                                            <span>Adicionar Foto</span>
-                                                                        </div>
-                                                                    </Button>
                                                                 </div>
-                                                            ) : (
-                                                                <div className="relative w-full h-full flex items-center justify-center">
-                                                                    <img
-                                                                        src={pendencia.preview || pendencia.foto_url || ''}
-                                                                        alt="Preview"
-                                                                        className="max-w-full max-h-[15rem] object-contain rounded"
+                                                                <div className="flex items-start gap-2">
+                                                                    <Label className="text-gray-300 font-bold whitespace-nowrap w-20 text-right mt-1.5">Pendência:</Label>
+                                                                    <Textarea
+                                                                        value={pendencia.descricao}
+                                                                        onChange={(e) => handleUpdatePendencia(secao.tempId, pendencia.tempId, 'descricao', e.target.value)}
+                                                                        rows={2}
+                                                                        className="bg-gray-800 border-gray-600 text-white flex-1 resize-y min-h-[50px] focus:border-blue-500 transition-colors"
                                                                     />
-                                                                    <div className="absolute top-1 right-1 flex gap-1">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Row 2: Fotos */}
+                                                        <div className="flex min-h-[10rem]">
+                                                            {/* Coluna da Foto ANTES (50%) */}
+                                                            <div className="w-1/2 border-r border-gray-600 p-2 flex items-center justify-center bg-gray-900 relative">
+                                                                {!pendencia.preview && !pendencia.foto_url ? (
+                                                                    <div className="text-center w-full h-full flex items-center">
                                                                         <input
                                                                             type="file"
                                                                             accept="image/*"
                                                                             onChange={(e) => handleFotoChange(secao.tempId, pendencia.tempId, e)}
                                                                             className="hidden"
-                                                                            id={`edit-foto-${pendencia.tempId}`}
+                                                                            id={`foto-${pendencia.tempId}`}
                                                                         />
                                                                         <Button
-                                                                            onClick={() => document.getElementById(`edit-foto-${pendencia.tempId}`)?.click()}
-                                                                            variant="secondary"
-                                                                            size="sm"
-                                                                            className="h-6 w-6 p-0 bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
-                                                                            title="Trocar Foto"
+                                                                            onClick={() => document.getElementById(`foto-${pendencia.tempId}`)?.click()}
+                                                                            variant="ghost"
+                                                                            className="w-full h-full min-h-[8rem] border-2 border-dashed border-gray-700 hover:border-indigo-500 hover:bg-indigo-900/10 text-gray-500 hover:text-indigo-400 transition-all"
                                                                         >
-                                                                            <ImageIcon className="w-3 h-3" />
-                                                                        </Button>
-                                                                        <Button
-                                                                            onClick={() => {
-                                                                                handleUpdatePendencia(secao.tempId, pendencia.tempId, 'preview', null);
-                                                                                handleUpdatePendencia(secao.tempId, pendencia.tempId, 'file', undefined);
-                                                                                handleUpdatePendencia(secao.tempId, pendencia.tempId, 'foto_url', null);
-                                                                            }}
-                                                                            variant="secondary"
-                                                                            size="sm"
-                                                                            className="h-6 w-6 p-0 bg-red-600 hover:bg-red-700 text-white shadow-lg"
-                                                                            title="Remover Foto"
-                                                                        >
-                                                                            <Trash2 className="w-3 h-3" />
+                                                                            <div className="flex flex-col items-center">
+                                                                                <ImageIcon className="w-8 h-8 mb-2 opacity-50" />
+                                                                                <span>Foto Antes</span>
+                                                                            </div>
                                                                         </Button>
                                                                     </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Coluna da Foto DEPOIS (50%) */}
-                                                        <div className="w-1/2 p-2 flex items-center justify-center bg-black/20 relative">
-                                                            {!pendencia.previewDepois && !pendencia.foto_depois_url ? (
-                                                                <div className="text-center w-full">
-                                                                    <input
-                                                                        type="file"
-                                                                        accept="image/*"
-                                                                        onChange={(e) => handleFotoDepoisChange(secao.tempId, pendencia.tempId, e)}
-                                                                        className="hidden"
-                                                                        id={`foto-depois-${pendencia.tempId}`}
-                                                                    />
-                                                                    <Button
-                                                                        onClick={() => document.getElementById(`foto-depois-${pendencia.tempId}`)?.click()}
-                                                                        variant="ghost"
-                                                                        className="w-full h-full min-h-[8rem] border-2 border-dashed border-gray-600 hover:border-green-500 hover:bg-gray-800/50 text-gray-400"
-                                                                    >
-                                                                        <div className="flex flex-col items-center">
-                                                                            <ImageIcon className="w-8 h-8 mb-2" />
-                                                                            <span>Foto Depois</span>
+                                                                ) : (
+                                                                    <div className="relative w-full h-full flex items-center justify-center p-1">
+                                                                        <img
+                                                                            src={pendencia.preview || pendencia.foto_url || ''}
+                                                                            alt="Preview"
+                                                                            className="max-w-full max-h-[15rem] object-contain rounded shadow-lg"
+                                                                        />
+                                                                        <div className="absolute top-2 right-2 flex gap-1">
+                                                                            <input
+                                                                                type="file"
+                                                                                accept="image/*"
+                                                                                onChange={(e) => handleFotoChange(secao.tempId, pendencia.tempId, e)}
+                                                                                className="hidden"
+                                                                                id={`edit-foto-${pendencia.tempId}`}
+                                                                            />
+                                                                            <Button
+                                                                                onClick={() => document.getElementById(`edit-foto-${pendencia.tempId}`)?.click()}
+                                                                                variant="secondary"
+                                                                                size="sm"
+                                                                                className="h-7 w-7 p-0 bg-blue-600 text-white shadow-xl hover:bg-blue-500"
+                                                                            >
+                                                                                <ImageIcon className="w-3.5 h-3.5" />
+                                                                            </Button>
+                                                                            <Button
+                                                                                onClick={() => {
+                                                                                    handleUpdatePendencia(secao.tempId, pendencia.tempId, 'preview', null);
+                                                                                    handleUpdatePendencia(secao.tempId, pendencia.tempId, 'file', undefined);
+                                                                                    handleUpdatePendencia(secao.tempId, pendencia.tempId, 'foto_url', null);
+                                                                                }}
+                                                                                variant="secondary"
+                                                                                size="sm"
+                                                                                className="h-7 w-7 p-0 bg-red-600 text-white shadow-xl hover:bg-red-500"
+                                                                            >
+                                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                            </Button>
                                                                         </div>
-                                                                    </Button>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="relative w-full h-full flex items-center justify-center">
-                                                                    <img
-                                                                        src={pendencia.previewDepois || pendencia.foto_depois_url || ''}
-                                                                        alt="Preview Depois"
-                                                                        className="max-w-full max-h-[15rem] object-contain rounded"
-                                                                    />
-                                                                    <div className="absolute top-1 right-1 flex gap-1">
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Coluna da Foto DEPOIS (50%) */}
+                                                            <div className="w-1/2 p-2 flex items-center justify-center bg-gray-900 relative">
+                                                                {!pendencia.previewDepois && !pendencia.foto_depois_url ? (
+                                                                    <div className="text-center w-full h-full flex items-center">
                                                                         <input
                                                                             type="file"
                                                                             accept="image/*"
                                                                             onChange={(e) => handleFotoDepoisChange(secao.tempId, pendencia.tempId, e)}
                                                                             className="hidden"
-                                                                            id={`edit-foto-depois-${pendencia.tempId}`}
+                                                                            id={`foto-depois-${pendencia.tempId}`}
                                                                         />
                                                                         <Button
-                                                                            onClick={() => document.getElementById(`edit-foto-depois-${pendencia.tempId}`)?.click()}
-                                                                            variant="secondary"
-                                                                            size="sm"
-                                                                            className="h-6 w-6 p-0 bg-green-600 hover:bg-green-700 text-white shadow-lg"
-                                                                            title="Trocar Foto Depois"
+                                                                            onClick={() => document.getElementById(`foto-depois-${pendencia.tempId}`)?.click()}
+                                                                            variant="ghost"
+                                                                            className="w-full h-full min-h-[8rem] border-2 border-dashed border-gray-700 hover:border-emerald-500 hover:bg-emerald-900/10 text-gray-500 hover:text-emerald-400 transition-all"
                                                                         >
-                                                                            <ImageIcon className="w-3 h-3" />
-                                                                        </Button>
-                                                                        <Button
-                                                                            onClick={() => {
-                                                                                handleUpdatePendencia(secao.tempId, pendencia.tempId, 'previewDepois', null);
-                                                                                handleUpdatePendencia(secao.tempId, pendencia.tempId, 'fileDepois', undefined);
-                                                                                handleUpdatePendencia(secao.tempId, pendencia.tempId, 'foto_depois_url', null);
-                                                                            }}
-                                                                            variant="secondary"
-                                                                            size="sm"
-                                                                            className="h-6 w-6 p-0 bg-red-600 hover:bg-red-700 text-white shadow-lg"
-                                                                            title="Remover Foto Depois"
-                                                                        >
-                                                                            <Trash2 className="w-3 h-3" />
+                                                                            <div className="flex flex-col items-center">
+                                                                                <ImageIcon className="w-8 h-8 mb-2 opacity-50" />
+                                                                                <span>Foto Depois</span>
+                                                                            </div>
                                                                         </Button>
                                                                     </div>
+                                                                ) : (
+                                                                    <div className="relative w-full h-full flex items-center justify-center p-1">
+                                                                        <img
+                                                                            src={pendencia.previewDepois || pendencia.foto_depois_url || ''}
+                                                                            alt="Preview Depois"
+                                                                            className="max-w-full max-h-[15rem] object-contain rounded shadow-lg"
+                                                                        />
+                                                                        <div className="absolute top-2 right-2 flex gap-1">
+                                                                            <input
+                                                                                type="file"
+                                                                                accept="image/*"
+                                                                                onChange={(e) => handleFotoDepoisChange(secao.tempId, pendencia.tempId, e)}
+                                                                                className="hidden"
+                                                                                id={`edit-foto-depois-${pendencia.tempId}`}
+                                                                            />
+                                                                            <Button
+                                                                                onClick={() => document.getElementById(`edit-foto-depois-${pendencia.tempId}`)?.click()}
+                                                                                variant="secondary"
+                                                                                size="sm"
+                                                                                className="h-7 w-7 p-0 bg-emerald-600 text-white shadow-xl hover:bg-emerald-500"
+                                                                            >
+                                                                                <ImageIcon className="w-3.5 h-3.5" />
+                                                                            </Button>
+                                                                            <Button
+                                                                                onClick={() => {
+                                                                                    handleUpdatePendencia(secao.tempId, pendencia.tempId, 'previewDepois', null);
+                                                                                    handleUpdatePendencia(secao.tempId, pendencia.tempId, 'fileDepois', undefined);
+                                                                                    handleUpdatePendencia(secao.tempId, pendencia.tempId, 'foto_depois_url', null);
+                                                                                }}
+                                                                                variant="secondary"
+                                                                                size="sm"
+                                                                                className="h-7 w-7 p-0 bg-red-600 text-white shadow-xl hover:bg-red-500"
+                                                                            >
+                                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                            </Button>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* SUBSEÇÕES (agora renderizadas DEPOIS das pendências da seção) */}
+                                <div className="bg-indigo-900/10 border border-indigo-700/30 rounded-lg p-4 space-y-4 shadow-inner">
+                                    <div className="flex justify-between items-center">
+                                        <Label className="text-indigo-300 font-semibold text-base uppercase tracking-wider">Subseções ({(secao.subsecoes || []).length})</Label>
+                                        <Button
+                                            onClick={() => handleAddSubsecao(secao.tempId)}
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-indigo-400 border-indigo-600 hover:bg-indigo-900/30 font-bold"
+                                        >
+                                            <Plus className="w-3.5 h-3.5 mr-1.5" />
+                                            Adicionar Subseção
+                                        </Button>
+                                    </div>
+
+                                    {(secao.subsecoes || []).length === 0 ? (
+                                        <p className="text-sm text-gray-500 text-center py-6 italic">
+                                            Nenhuma subseção cadastrada.
+                                        </p>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {(secao.subsecoes || []).map((subsecao, subIdx) => (
+                                                <div key={subsecao.tempId} className="bg-gray-800 border border-indigo-600/30 rounded-md overflow-hidden shadow-md">
+                                                    <div className="bg-indigo-900/20 px-3 py-2 border-b border-indigo-600/20 flex justify-between items-center font-bold">
+                                                        <span className="text-indigo-300">
+                                                            Subseção {String.fromCharCode(65 + subIdx)} (VIII.{secao.ordem + 1}{String.fromCharCode(65 + subIdx)})
+                                                        </span>
+                                                        <Button
+                                                            onClick={() => handleDeleteSubsecao(secao.tempId, subsecao.tempId)}
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="text-red-400 hover:text-red-300 hover:bg-red-950/30 h-7 w-7 p-0"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+
+                                                    <div className="p-3 space-y-4">
+                                                        <Input
+                                                            value={subsecao.titulo}
+                                                            onChange={(e) => handleUpdateSubsecao(secao.tempId, subsecao.tempId, 'titulo', e.target.value)}
+                                                            placeholder="Título da subseção (Ex: 22º PAVIMENTO)"
+                                                            className="bg-gray-900 border-gray-700 text-white font-semibold"
+                                                        />
+
+                                                        {/* Pendências da Subseção */}
+                                                        <div className="pt-2">
+                                                            <div className="flex justify-between items-center mb-3">
+                                                                <Label className="text-gray-400 text-sm font-medium">Pendências da Subseção ({subsecao.pendencias.length})</Label>
+                                                                <div className="flex gap-2">
+                                                                    <input
+                                                                        type="file"
+                                                                        multiple
+                                                                        accept="image/*"
+                                                                        onChange={(e) => handleBulkPhotosSubsecao(secao.tempId, subsecao.tempId, e)}
+                                                                        className="hidden"
+                                                                        id={`bulk-photos-${subsecao.tempId}`}
+                                                                    />
+                                                                    <Button
+                                                                        onClick={() => document.getElementById(`bulk-photos-${subsecao.tempId}`)?.click()}
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="text-blue-400 h-7 text-xs border-blue-800 hover:bg-blue-900/20"
+                                                                    >
+                                                                        <ImageIcon className="w-3.5 h-3.5 mr-1" />
+                                                                        Fotos
+                                                                    </Button>
+                                                                    <Button
+                                                                        onClick={() => handleAddPendenciaSubsecao(secao.tempId, subsecao.tempId)}
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="text-emerald-400 h-7 text-xs border-emerald-800 hover:bg-emerald-900/20"
+                                                                    >
+                                                                        <Plus className="w-3.5 h-3.5 mr-1" />
+                                                                        Adicionar
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+
+                                                            {subsecao.pendencias.length === 0 ? (
+                                                                <p className="text-xs text-gray-500 text-center py-4 border border-dashed border-gray-700 rounded bg-gray-900/50">Nenhuma pendência na subseção</p>
+                                                            ) : (
+                                                                <div className="space-y-3">
+                                                                    {subsecao.pendencias.map((pend, pIdx) => {
+                                                                        globalPendenciaCounter++;
+                                                                        return (
+                                                                            <div key={pend.tempId} className="bg-gray-900 border border-gray-700 rounded-sm overflow-hidden shadow-sm">
+                                                                                <div className="flex min-h-[4rem] border-b border-gray-700">
+                                                                                    <div className="w-[8%] min-w-[3rem] bg-indigo-900/20 flex items-center justify-center border-r border-gray-700 font-bold text-lg text-indigo-300">
+                                                                                        {globalPendenciaCounter}
+                                                                                    </div>
+                                                                                    <div className="flex-1 p-2 space-y-2 relative">
+                                                                                        <Button
+                                                                                            onClick={() => handleDeletePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId)}
+                                                                                            variant="ghost"
+                                                                                            size="sm"
+                                                                                            className="absolute top-1 right-1 text-red-500 h-5 w-5 p-0"
+                                                                                        >
+                                                                                            <X className="w-3.5 h-3.5" />
+                                                                                        </Button>
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <Label className="text-gray-400 text-[10px] font-bold uppercase w-12 text-right">Local:</Label>
+                                                                                            <Input
+                                                                                                value={pend.local}
+                                                                                                onChange={(e) => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'local', e.target.value)}
+                                                                                                className="bg-gray-800 border-gray-700 h-7 text-xs text-white flex-1"
+                                                                                            />
+                                                                                        </div>
+                                                                                        <div className="flex items-start gap-2">
+                                                                                            <Label className="text-gray-400 text-[10px] font-bold uppercase w-12 text-right mt-1.5">Item:</Label>
+                                                                                            <Textarea
+                                                                                                value={pend.descricao}
+                                                                                                onChange={(e) => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'descricao', e.target.value)}
+                                                                                                rows={1}
+                                                                                                className="bg-gray-800 border-gray-700 text-xs text-white flex-1 min-h-[32px] py-1"
+                                                                                            />
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="flex h-24 divide-x divide-gray-700">
+                                                                                    <div className="w-1/2 relative bg-black/10">
+                                                                                        {!pend.preview && !pend.foto_url ? (
+                                                                                            <div className="w-full h-full flex items-center justify-center">
+                                                                                                <input type="file" accept="image/*" onChange={(e) => handleFotoChangeSubsecao(secao.tempId, subsecao.tempId, pend.tempId, e)} className="hidden" id={`foto-sub-${pend.tempId}`} />
+                                                                                                <Button onClick={() => document.getElementById(`foto-sub-${pend.tempId}`)?.click()} variant="ghost" className="w-full h-full text-[10px] text-gray-500 hover:text-indigo-400 hover:bg-indigo-900/10">
+                                                                                                    <ImageIcon className="w-4 h-4 mr-1 opacity-40" />
+                                                                                                    Antes
+                                                                                                </Button>
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <div className="w-full h-full p-1 relative">
+                                                                                                <img src={pend.preview || pend.foto_url || ''} className="w-full h-full object-cover rounded-sm" />
+                                                                                                <Button onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'preview', undefined)} variant="secondary" size="sm" className="absolute top-1 right-1 h-5 w-5 p-0 bg-red-600/80 hover:bg-red-600 text-white">
+                                                                                                    <X className="w-3 h-3" />
+                                                                                                </Button>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                    <div className="w-1/2 relative bg-black/10">
+                                                                                        {!pend.previewDepois && !pend.foto_depois_url ? (
+                                                                                            <div className="w-full h-full flex items-center justify-center">
+                                                                                                <input type="file" accept="image/*" onChange={(e) => handleFotoDepoisChangeSubsecao(secao.tempId, subsecao.tempId, pend.tempId, e)} className="hidden" id={`foto-depois-sub-${pend.tempId}`} />
+                                                                                                <Button onClick={() => document.getElementById(`foto-depois-sub-${pend.tempId}`)?.click()} variant="ghost" className="w-full h-full text-[10px] text-gray-500 hover:text-emerald-400 hover:bg-emerald-900/10">
+                                                                                                    <ImageIcon className="w-4 h-4 mr-1 opacity-40" />
+                                                                                                    Depois
+                                                                                                </Button>
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <div className="w-full h-full p-1 relative">
+                                                                                                <img src={pend.previewDepois || pend.foto_depois_url || ''} className="w-full h-full object-cover rounded-sm" />
+                                                                                                <Button onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'previewDepois', undefined)} variant="secondary" size="sm" className="absolute top-1 right-1 h-5 w-5 p-0 bg-red-600/80 hover:bg-red-600 text-white">
+                                                                                                    <X className="w-3 h-3" />
+                                                                                                </Button>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    })}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -1540,12 +1421,44 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                         </div>
                                     )}
                                 </div>
-                                )}
                             </CardContent>
                         </Card>
-                    ))
+                    ));
+                })()}
+
+                {secoes.length > 0 && (
+                    <div className="flex flex-col gap-6 pt-8 pb-12 border-t border-gray-700 mt-8">
+                        <Button
+                            onClick={handleAddSecao}
+                            variant="outline"
+                            className="w-full py-8 border-dashed border-2 border-blue-900/50 hover:border-blue-500 hover:bg-blue-900/10 text-blue-400 font-bold text-lg transition-all"
+                        >
+                            <Plus className="w-6 h-6 mr-2" />
+                            Adicionar Nova Seção
+                        </Button>
+
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <Button
+                                onClick={onCancel}
+                                variant="outline"
+                                className="flex-1 py-6 text-gray-400 border-gray-700 hover:bg-gray-800"
+                                disabled={isSaving}
+                            >
+                                <ArrowLeft className="w-4 h-4 mr-2" />
+                                Voltar
+                            </Button>
+                            <Button
+                                onClick={handleSave}
+                                className="flex-[2] py-6 bg-green-600 hover:bg-green-700 text-white font-bold text-lg shadow-lg hover:shadow-green-900/20"
+                                disabled={isSaving}
+                            >
+                                <Save className="w-5 h-5 mr-2" />
+                                {isSaving ? 'Salvando...' : 'Salvar Relatório'}
+                            </Button>
+                        </div>
+                    </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 }

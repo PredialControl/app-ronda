@@ -4,54 +4,46 @@ import { RelatorioPendencias, RelatorioSecao, RelatorioPendencia, RelatorioSubse
 export const relatorioPendenciasService = {
     // ==================== RELATÓRIOS ===================
     async getAll(contratoId: string): Promise<RelatorioPendencias[]> {
-        // Tentar buscar com subseções (nova estrutura)
         const { data, error } = await supabase
             .from('relatorios_pendencias')
             .select(`
                 *,
                 secoes:relatorio_secoes(
                     *,
+                    pendencias:relatorio_pendencias(*),
                     subsecoes:relatorio_subsecoes(
                         *,
                         pendencias:relatorio_pendencias(*)
-                    ),
-                    pendencias:relatorio_pendencias(*)
+                    )
                 )
             `)
             .eq('contrato_id', contratoId)
             .order('created_at', { ascending: false });
-
-        // Se deu erro (tabela não existe OU cache desatualizado), buscar sem subseções (retrocompatibilidade)
-        if (error && (error.code === 'PGRST116' || error.code === 'PGRST200')) {
-            if (error.code === 'PGRST200') {
-                console.warn('⚠️ Cache do Supabase desatualizado! Tentando modo retrocompatível...');
-            } else {
-                console.warn('⚠️ Tabela relatorio_subsecoes não existe. Execute o migration_subsecoes.sql!');
-            }
-
-            const { data: dataOld, error: errorOld } = await supabase
-                .from('relatorios_pendencias')
-                .select(`
-                    *,
-                    secoes:relatorio_secoes(
-                        *,
-                        pendencias:relatorio_pendencias(*)
-                    )
-                `)
-                .eq('contrato_id', contratoId)
-                .order('created_at', { ascending: false });
-
-            if (errorOld) {
-                console.error('Erro ao buscar relatórios (modo retrocompatível):', errorOld);
-                throw errorOld;
-            }
-
-            return dataOld || [];
-        }
-
         if (error) {
             console.error('Erro ao buscar relatórios:', error);
             throw error;
+        }
+
+        if (data) {
+            data.forEach((relatorio: any) => {
+                if (relatorio.secoes) {
+                    relatorio.secoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+                    relatorio.secoes.forEach((secao: any) => {
+                        if (secao.pendencias) {
+                            secao.pendencias = secao.pendencias.filter((p: any) => !p.subsecao_id);
+                            secao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+                        }
+                        if (secao.subsecoes) {
+                            secao.subsecoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+                            secao.subsecoes.forEach((sub: any) => {
+                                if (sub.pendencias) {
+                                    sub.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+                                }
+                            });
+                        }
+                    });
+                }
+            });
         }
 
         return data || [];
@@ -60,60 +52,21 @@ export const relatorioPendenciasService = {
     async getById(id: string): Promise<RelatorioPendencias | null> {
         console.log('🔍 getById - Buscando relatório:', id);
 
-        // Tentar buscar com subseções (nova estrutura)
         const { data, error } = await supabase
             .from('relatorios_pendencias')
             .select(`
                 *,
                 secoes:relatorio_secoes(
                     *,
+                    pendencias:relatorio_pendencias(*),
                     subsecoes:relatorio_subsecoes(
                         *,
                         pendencias:relatorio_pendencias(*)
-                    ),
-                    pendencias:relatorio_pendencias(*)
+                    )
                 )
             `)
             .eq('id', id)
             .single();
-
-        // Se deu erro (tabela não existe OU cache desatualizado), buscar sem subseções (retrocompatibilidade)
-        if (error && (error.code === 'PGRST116' || error.code === 'PGRST200')) {
-            if (error.code === 'PGRST200') {
-                console.warn('⚠️ Cache do Supabase desatualizado! Tentando modo retrocompatível...');
-            } else {
-                console.warn('⚠️ Tabela relatorio_subsecoes não existe. Execute o migration_subsecoes.sql!');
-            }
-
-            const { data: dataOld, error: errorOld } = await supabase
-                .from('relatorios_pendencias')
-                .select(`
-                    *,
-                    secoes:relatorio_secoes(
-                        *,
-                        pendencias:relatorio_pendencias(*)
-                    )
-                `)
-                .eq('id', id)
-                .single();
-
-            if (errorOld) {
-                console.error('❌ Erro ao buscar relatório (modo retrocompatível):', errorOld);
-                throw errorOld;
-            }
-
-            // Ordenar seções e pendências (modo antigo)
-            if (dataOld && dataOld.secoes) {
-                dataOld.secoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
-                dataOld.secoes.forEach((secao: any) => {
-                    if (secao.pendencias) {
-                        secao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
-                    }
-                });
-            }
-
-            return dataOld;
-        }
 
         if (error) {
             console.error('❌ Erro ao buscar relatório:', error);
@@ -122,32 +75,25 @@ export const relatorioPendenciasService = {
 
         console.log('✅ getById - Dados brutos do Supabase:', data);
 
-        // Ordenar seções, subseções e pendências
+        // Ordenar seções, subseções e pendências, e FILTRAR pendências duplicadas
         if (data && data.secoes) {
-            // Ordenar seções por ordem
             data.secoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
-
-            // Ordenar subseções e pendências dentro de cada seção
             data.secoes.forEach((secao: any) => {
-                // Ordenar subseções
+                // Filtrar pendências da seção para garantir que só pegamos as DIRETAS (sem subsecao_id)
+                if (secao.pendencias) {
+                    secao.pendencias = secao.pendencias.filter((p: any) => !p.subsecao_id);
+                    secao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+                }
+
                 if (secao.subsecoes) {
                     secao.subsecoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
-
-                    // Ordenar pendências dentro de cada subseção
-                    secao.subsecoes.forEach((subsecao: any) => {
-                        if (subsecao.pendencias) {
-                            subsecao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+                    secao.subsecoes.forEach((sub: any) => {
+                        if (sub.pendencias) {
+                            sub.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
                         }
                     });
                 }
-
-                // Ordenar pendências diretas da seção (quando não tem subseções)
-                if (secao.pendencias) {
-                    secao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
-                }
             });
-
-            console.log('✅ getById - Dados após ordenação:', data);
         }
 
         return data;
