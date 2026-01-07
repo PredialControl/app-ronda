@@ -168,7 +168,7 @@ export interface RelatorioSecao {
   ordem: number;
   titulo_principal: string;
   subtitulo?: string; // Agora opcional (usado quando não tem subseções)
-  tem_subsecoes: boolean; // NOVO: indica se esta seção tem subseções (A, B, C)
+  tem_subsecoes?: boolean; // NOVO: indica se esta seção tem subseções (A, B, C)
   subsecoes?: RelatorioSubsecao[]; // NOVO: array de subseções (VIII.1A, VIII.1B, etc.)
   pendencias?: RelatorioPendencia[]; // Usado quando NÃO tem subseções
   created_at: string;
