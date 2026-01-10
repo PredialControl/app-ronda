@@ -87,37 +87,8 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
     return { total, ativos, manutencao, itensChamado: totalItensChamado, itensAtencao };
   };
 
-  if (rondas.length === 0) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <div className="flex items-center justify-between mb-4">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
-              Contrato: {contrato.nome}
-            </CardTitle>
-          </div>
-
-
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12">
-            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg mb-4">
-              Nenhuma ronda realizada ainda para este contrato.
-            </p>
-            <p className="text-gray-600 mb-4">
-              Crie sua primeira ronda para começar a documentar as verificações técnicas.
-            </p>
-            <Button onClick={onNovaRonda} className="bg-green-600 hover:bg-green-700">
-              <FileText className="w-4 h-4 mr-2" />
-              Criar Primeira Ronda
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Gerar lista de anos disponíveis (últimos 3 anos + próximo ano)
+  const anosDisponiveis = [anoAtual - 2, anoAtual - 1, anoAtual, anoAtual + 1];
 
   return (
     <Card className="w-full">
@@ -151,7 +122,7 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
                     <SelectValue placeholder="Ano" />
                   </SelectTrigger>
                   <SelectContent>
-                    {[anoAtual - 1, anoAtual, anoAtual + 1].map((ano) => (
+                    {anosDisponiveis.map((ano) => (
                       <SelectItem key={ano} value={ano.toString()}>{ano}</SelectItem>
                     ))}
                   </SelectContent>
@@ -235,8 +206,19 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
               <tbody>
                 {rondasFiltradas.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-8 text-gray-500">
-                      Nenhuma ronda encontrada para {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][mesSelecionado]} de {anoSelecionado}.
+                    <td colSpan={9} className="text-center py-12">
+                      <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500 text-base mb-2">
+                        {rondas.length === 0
+                          ? 'Nenhuma ronda realizada ainda para este contrato.'
+                          : `Nenhuma ronda encontrada para ${['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][mesSelecionado]} de ${anoSelecionado}.`
+                        }
+                      </p>
+                      {rondas.length === 0 && (
+                        <p className="text-gray-600 text-sm mb-4">
+                          Crie sua primeira ronda para começar a documentar as verificações técnicas.
+                        </p>
+                      )}
                     </td>
                   </tr>
                 ) : (

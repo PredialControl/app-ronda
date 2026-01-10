@@ -261,8 +261,7 @@ export const rondaService = {
       const { data, error } = await supabase
         .from('rondas')
         .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais')
-        .order('data_criacao', { ascending: false })
-        .limit(10);
+        .order('data_criacao', { ascending: false });
 
       if (error) {
         console.warn('⚠️ Erro no banco, usando rondas locais:', error.message);
