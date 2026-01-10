@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, Loader2, ArrowLeft } from 'lucide-react';
+import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Mic, MicOff } from 'lucide-react';
 import { Contrato, RelatorioPendencias as RelatorioPendenciasType } from '@/types';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
+import { useVoiceCapture } from '@/hooks/useVoiceCapture';
 
 interface RelatorioPendenciasEditorProps {
     contrato: Contrato;
@@ -63,6 +64,11 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const [secoes, setSecoes] = useState<SecaoLocal[]>([]);
     const [isSaving, setIsSaving] = useState(false);
 
+    // Captura de voz
+    const voice = useVoiceCapture();
+    const [secaoAtivaParaVoz, setSecaoAtivaParaVoz] = useState<string | null>(null);
+    const [subsecaoAtivaParaVoz, setSubsecaoAtivaParaVoz] = useState<string | null>(null);
+
     useEffect(() => {
         if (relatorio?.secoes) {
             const secoesLocal: SecaoLocal[] = relatorio.secoes.map((s, idx) => ({
@@ -90,6 +96,62 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             setSecoes(secoesLocal);
         }
     }, [relatorio]);
+
+    // Detectar pendência por voz
+    useEffect(() => {
+        voice.onPendenciaDetected((textoLiteral: string) => {
+            if (!secaoAtivaParaVoz) {
+                alert('Selecione uma seção antes de capturar por voz!');
+                voice.stopListening();
+                return;
+            }
+
+            // Adicionar pendência com texto literal
+            if (subsecaoAtivaParaVoz) {
+                // Adicionar em subseção
+                setSecoes(secoes.map(s => {
+                    if (s.tempId === secaoAtivaParaVoz) {
+                        return {
+                            ...s,
+                            subsecoes: (s.subsecoes || []).map(sub => {
+                                if (sub.tempId === subsecaoAtivaParaVoz) {
+                                    const newPendencia: PendenciaLocal = {
+                                        tempId: `pend-${Date.now()}`,
+                                        ordem: sub.pendencias.length,
+                                        local: '', // Usuário preenche depois
+                                        descricao: textoLiteral, // LITERAL
+                                        foto_url: null,
+                                        foto_depois_url: null,
+                                    };
+                                    return { ...sub, pendencias: [...sub.pendencias, newPendencia] };
+                                }
+                                return sub;
+                            }),
+                        };
+                    }
+                    return s;
+                }));
+            } else {
+                // Adicionar em seção
+                setSecoes(secoes.map(s => {
+                    if (s.tempId === secaoAtivaParaVoz) {
+                        const newPendencia: PendenciaLocal = {
+                            tempId: `pend-${Date.now()}`,
+                            ordem: s.pendencias.length,
+                            local: '', // Usuário preenche depois
+                            descricao: textoLiteral, // LITERAL
+                            foto_url: null,
+                            foto_depois_url: null,
+                        };
+                        return { ...s, pendencias: [...s.pendencias, newPendencia] };
+                    }
+                    return s;
+                }));
+            }
+
+            console.log('✅ Pendência adicionada por voz:', textoLiteral);
+        });
+    }, [voice, secaoAtivaParaVoz, subsecaoAtivaParaVoz, secoes]);
 
     // Função para converter número para romano
     const toRoman = (num: number): string => {
@@ -1070,6 +1132,28 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                 <Plus className="w-3 h-3 mr-1" />
                                                 Adicionar Manual
                                             </Button>
+
+                                            <Button
+                                                onClick={() => {
+                                                    setSecaoAtivaParaVoz(secao.tempId);
+                                                    setSubsecaoAtivaParaVoz(null);
+                                                    if (voice.isListening) {
+                                                        voice.stopListening();
+                                                    } else {
+                                                        voice.startListening();
+                                                    }
+                                                }}
+                                                variant="outline"
+                                                size="sm"
+                                                className={voice.isListening && secaoAtivaParaVoz === secao.tempId ? "text-red-400 border-red-400" : "text-purple-400"}
+                                                disabled={!voice.isSupported}
+                                            >
+                                                {voice.isListening && secaoAtivaParaVoz === secao.tempId ? (
+                                                    <><MicOff className="w-3 h-3 mr-1" />Parar Voz</>
+                                                ) : (
+                                                    <><Mic className="w-3 h-3 mr-1" />Capturar por Voz</>
+                                                )}
+                                            </Button>
                                         </div>
                                     </div>
 
@@ -1327,6 +1411,27 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                     >
                                                                         <Plus className="w-3.5 h-3.5 mr-1" />
                                                                         Adicionar
+                                                                    </Button>
+                                                                    <Button
+                                                                        onClick={() => {
+                                                                            setSecaoAtivaParaVoz(secao.tempId);
+                                                                            setSubsecaoAtivaParaVoz(subsecao.tempId);
+                                                                            if (voice.isListening) {
+                                                                                voice.stopListening();
+                                                                            } else {
+                                                                                voice.startListening();
+                                                                            }
+                                                                        }}
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className={voice.isListening && subsecaoAtivaParaVoz === subsecao.tempId ? "text-red-400 border-red-400 h-7 text-xs" : "text-purple-400 h-7 text-xs border-purple-800 hover:bg-purple-900/20"}
+                                                                        disabled={!voice.isSupported}
+                                                                    >
+                                                                        {voice.isListening && subsecaoAtivaParaVoz === subsecao.tempId ? (
+                                                                            <><MicOff className="w-3 h-3 mr-1" />Parar</>
+                                                                        ) : (
+                                                                            <><Mic className="w-3 h-3 mr-1" />Voz</>
+                                                                        )}
                                                                     </Button>
                                                                 </div>
                                                             </div>
