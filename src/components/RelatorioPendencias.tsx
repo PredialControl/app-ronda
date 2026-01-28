@@ -206,7 +206,11 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
                                     {relatorio.titulo}
                                 </h3>
                                 <p className="text-xs text-gray-400 mt-1">
-                                    {relatorio.secoes?.length || 0} seções • {relatorio.secoes?.reduce((acc, sec) => acc + (sec.pendencias?.length || 0), 0) || 0} pendências
+                                    {relatorio.secoes?.length || 0} seções • {relatorio.secoes?.reduce((acc, sec) => {
+                                        const pendenciasDiretas = sec.pendencias?.length || 0;
+                                        const pendenciasSubsecoes = (sec.subsecoes || []).reduce((subAcc, sub) => subAcc + (sub.pendencias?.length || 0), 0);
+                                        return acc + pendenciasDiretas + pendenciasSubsecoes;
+                                    }, 0) || 0} pendências
                                 </p>
                                 <p className="text-xs text-gray-500">
                                     {new Date(relatorio.created_at).toLocaleDateString('pt-BR')}
