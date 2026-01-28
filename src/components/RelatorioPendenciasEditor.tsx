@@ -1204,7 +1204,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                         </div>
 
                                                         {/* Row 2: Fotos */}
-                                                        <div className="flex min-h-[10rem]">
+                                                        <div className="flex h-64">
                                                             {/* Coluna da Foto ANTES (50%) */}
                                                             <div className="w-1/2 border-r border-gray-600 p-2 flex items-center justify-center bg-gray-900 relative">
                                                                 {!pendencia.preview && !pendencia.foto_url ? (
@@ -1219,7 +1219,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                         <Button
                                                                             onClick={() => document.getElementById(`foto-${pendencia.tempId}`)?.click()}
                                                                             variant="ghost"
-                                                                            className="w-full h-full min-h-[8rem] border-2 border-dashed border-gray-700 hover:border-indigo-500 hover:bg-indigo-900/10 text-gray-500 hover:text-indigo-400 transition-all"
+                                                                            className="w-full h-full border-2 border-dashed border-gray-700 hover:border-indigo-500 hover:bg-indigo-900/10 text-gray-500 hover:text-indigo-400 transition-all"
                                                                         >
                                                                             <div className="flex flex-col items-center">
                                                                                 <ImageIcon className="w-8 h-8 mb-2 opacity-50" />
@@ -1232,7 +1232,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                         <img
                                                                             src={pendencia.preview || pendencia.foto_url || ''}
                                                                             alt="Preview"
-                                                                            className="max-w-full max-h-[15rem] object-contain rounded shadow-lg"
+                                                                            className="w-full h-full object-cover rounded shadow-lg"
                                                                         />
                                                                         <div className="absolute top-2 right-2 flex gap-1">
                                                                             <input
@@ -1281,7 +1281,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                         <Button
                                                                             onClick={() => document.getElementById(`foto-depois-${pendencia.tempId}`)?.click()}
                                                                             variant="ghost"
-                                                                            className="w-full h-full min-h-[8rem] border-2 border-dashed border-gray-700 hover:border-emerald-500 hover:bg-emerald-900/10 text-gray-500 hover:text-emerald-400 transition-all"
+                                                                            className="w-full h-full border-2 border-dashed border-gray-700 hover:border-emerald-500 hover:bg-emerald-900/10 text-gray-500 hover:text-emerald-400 transition-all"
                                                                         >
                                                                             <div className="flex flex-col items-center">
                                                                                 <ImageIcon className="w-8 h-8 mb-2 opacity-50" />
@@ -1294,7 +1294,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                         <img
                                                                             src={pendencia.previewDepois || pendencia.foto_depois_url || ''}
                                                                             alt="Preview Depois"
-                                                                            className="max-w-full max-h-[15rem] object-contain rounded shadow-lg"
+                                                                            className="w-full h-full object-cover rounded shadow-lg"
                                                                         />
                                                                         <div className="absolute top-2 right-2 flex gap-1">
                                                                             <input
@@ -1476,21 +1476,21 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                         </div>
                                                                                     </div>
                                                                                 </div>
-                                                                                <div className="flex h-24 divide-x divide-gray-700">
+                                                                                <div className="flex h-64 divide-x divide-gray-700">
                                                                                     <div className="w-1/2 relative bg-black/10">
                                                                                         {!pend.preview && !pend.foto_url ? (
                                                                                             <div className="w-full h-full flex items-center justify-center">
                                                                                                 <input type="file" accept="image/*" onChange={(e) => handleFotoChangeSubsecao(secao.tempId, subsecao.tempId, pend.tempId, e)} className="hidden" id={`foto-sub-${pend.tempId}`} />
-                                                                                                <Button onClick={() => document.getElementById(`foto-sub-${pend.tempId}`)?.click()} variant="ghost" className="w-full h-full text-[10px] text-gray-500 hover:text-indigo-400 hover:bg-indigo-900/10">
-                                                                                                    <ImageIcon className="w-4 h-4 mr-1 opacity-40" />
+                                                                                                <Button onClick={() => document.getElementById(`foto-sub-${pend.tempId}`)?.click()} variant="ghost" className="w-full h-full text-xs text-gray-500 hover:text-indigo-400 hover:bg-indigo-900/10 border-2 border-dashed border-gray-700">
+                                                                                                    <ImageIcon className="w-6 h-6 mr-1 opacity-40" />
                                                                                                     Antes
                                                                                                 </Button>
                                                                                             </div>
                                                                                         ) : (
                                                                                             <div className="w-full h-full p-1 relative">
                                                                                                 <img src={pend.preview || pend.foto_url || ''} className="w-full h-full object-cover rounded-sm" />
-                                                                                                <Button onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'preview', undefined)} variant="secondary" size="sm" className="absolute top-1 right-1 h-5 w-5 p-0 bg-red-600/80 hover:bg-red-600 text-white">
-                                                                                                    <X className="w-3 h-3" />
+                                                                                                <Button onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'preview', undefined)} variant="secondary" size="sm" className="absolute top-1 right-1 h-6 w-6 p-0 bg-red-600/80 hover:bg-red-600 text-white">
+                                                                                                    <X className="w-4 h-4" />
                                                                                                 </Button>
                                                                                             </div>
                                                                                         )}
@@ -1499,16 +1499,16 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                         {!pend.previewDepois && !pend.foto_depois_url ? (
                                                                                             <div className="w-full h-full flex items-center justify-center">
                                                                                                 <input type="file" accept="image/*" onChange={(e) => handleFotoDepoisChangeSubsecao(secao.tempId, subsecao.tempId, pend.tempId, e)} className="hidden" id={`foto-depois-sub-${pend.tempId}`} />
-                                                                                                <Button onClick={() => document.getElementById(`foto-depois-sub-${pend.tempId}`)?.click()} variant="ghost" className="w-full h-full text-[10px] text-gray-500 hover:text-emerald-400 hover:bg-emerald-900/10">
-                                                                                                    <ImageIcon className="w-4 h-4 mr-1 opacity-40" />
+                                                                                                <Button onClick={() => document.getElementById(`foto-depois-sub-${pend.tempId}`)?.click()} variant="ghost" className="w-full h-full text-xs text-gray-500 hover:text-emerald-400 hover:bg-emerald-900/10 border-2 border-dashed border-gray-700">
+                                                                                                    <ImageIcon className="w-6 h-6 mr-1 opacity-40" />
                                                                                                     Depois
                                                                                                 </Button>
                                                                                             </div>
                                                                                         ) : (
                                                                                             <div className="w-full h-full p-1 relative">
                                                                                                 <img src={pend.previewDepois || pend.foto_depois_url || ''} className="w-full h-full object-cover rounded-sm" />
-                                                                                                <Button onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'previewDepois', undefined)} variant="secondary" size="sm" className="absolute top-1 right-1 h-5 w-5 p-0 bg-red-600/80 hover:bg-red-600 text-white">
-                                                                                                    <X className="w-3 h-3" />
+                                                                                                <Button onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'previewDepois', undefined)} variant="secondary" size="sm" className="absolute top-1 right-1 h-6 w-6 p-0 bg-red-600/80 hover:bg-red-600 text-white">
+                                                                                                    <X className="w-4 h-4" />
                                                                                                 </Button>
                                                                                             </div>
                                                                                         )}
