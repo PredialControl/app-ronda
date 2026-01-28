@@ -62,6 +62,7 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
 
             relatoriosData.forEach(relatorio => {
                 relatorio.secoes?.forEach(secao => {
+                    // Processar pendências diretas da seção
                     secao.pendencias?.forEach(pendencia => {
                         const evolucao = evolucaoMap.get(pendencia.id);
                         todosItens.push({
@@ -76,6 +77,26 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
                             data_recebido: evolucao?.data_recebido || null,
                             construtora: evolucao?.construtora || '',
                             sindico: evolucao?.sindico || '',
+                        });
+                    });
+
+                    // Processar pendências das subseções
+                    secao.subsecoes?.forEach(subsecao => {
+                        subsecao.pendencias?.forEach(pendencia => {
+                            const evolucao = evolucaoMap.get(pendencia.id);
+                            todosItens.push({
+                                id: pendencia.id,
+                                relatorio_id: relatorio.id,
+                                relatorio_titulo: relatorio.titulo,
+                                secao_titulo: `${secao.titulo_principal} - ${subsecao.titulo}`,
+                                item_numero: itemNumero++,
+                                local: pendencia.local,
+                                descricao: pendencia.descricao || '',
+                                situacao: evolucao?.situacao || 'PENDENTE',
+                                data_recebido: evolucao?.data_recebido || null,
+                                construtora: evolucao?.construtora || '',
+                                sindico: evolucao?.sindico || '',
+                            });
                         });
                     });
                 });
