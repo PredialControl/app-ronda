@@ -1,0 +1,6 @@
+﻿
+> app-ronda-ricardo@0.0.0 build
+> tsc --project tsconfig.prod.json && vite build --config vite.config.prod.ts
+
+src/components/RelatorioPendenciasEditor.tsx(586,91): error TS2345: Argument of type '{ relatorio_id: string; titulo_principal: string; subtitulo: string; ordem: number; }' is not assignable to parameter of type 'Omit<RelatorioSecao, "id" | "created_at">'.
+  Property 'tem_subsecoes' is missing in type '{ relatorio_id: string; titulo_principal: string; subtitulo: string; ordem: number; }' but required in type 'Omit<RelatorioSecao, "id" | "created_at">'.

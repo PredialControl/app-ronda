@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Contrato } from '@/types';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 import { supabase } from '@/lib/supabase';
-import { Save, X, Filter } from 'lucide-react';
+import { Save, X, Filter, FileSpreadsheet } from 'lucide-react';
+import { exportarEvolucaoParaExcel } from '@/lib/excelEvolucaoService';
 
 interface ItensCompiladosProps {
     contratoSelecionado: Contrato;
@@ -220,8 +221,20 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
         <div className="space-y-6">
             {/* Header */}
             <div className="bg-gradient-to-r from-orange-900 to-red-900 rounded-lg shadow-lg p-6">
-                <h2 className="text-2xl font-bold text-white">Evolução dos Recebimentos - {contratoSelecionado.nome}</h2>
-                <p className="text-gray-300 text-sm mt-1">Acompanhamento de pendências e recebimentos dos relatórios</p>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h2 className="text-2xl font-bold text-white">Evolução dos Recebimentos - {contratoSelecionado.nome}</h2>
+                        <p className="text-gray-300 text-sm mt-1">Acompanhamento de pendências e recebimentos dos relatórios</p>
+                    </div>
+                    <Button
+                        onClick={() => exportarEvolucaoParaExcel(itens, evolucaoData, contratoSelecionado.nome)}
+                        className="bg-green-600 hover:bg-green-700"
+                        disabled={itens.length === 0}
+                    >
+                        <FileSpreadsheet className="w-4 h-4 mr-2" />
+                        Exportar para Excel
+                    </Button>
+                </div>
             </div>
 
             {/* Sub-abas dos Relatórios */}
