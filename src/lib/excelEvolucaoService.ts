@@ -118,31 +118,34 @@ export async function exportarEvolucaoParaExcel(
         }
     }
 
-    // ==================== GRÁFICO DE PIZZA ====================
+    // ==================== VISUALIZAÇÃO ADICIONAL ====================
     if (itensApontados > 0) {
-        resumoSheet.getCell('E4').value = 'Distribuição das Pendências';
+        // Adicionar visualização textual da distribuição
+        resumoSheet.getCell('E4').value = 'Distribuição Visual';
         resumoSheet.getCell('E4').font = { size: 12, bold: true };
 
-        // Adicionar gráfico de pizza
-        const chart = resumoSheet.addChart({
-            type: 'pie',
-            title: {
-                name: 'Distribuição',
-                color: '000000',
-                size: 14,
-            },
-            categories: {
-                formula: `Resumo!$A$6:$A$8`,
-            },
-            values: {
-                formula: `Resumo!$B$6:$B$8`,
-            },
-            position: {
-                type: 'twoCellAnchor',
-                from: { col: 4, row: 4 },
-                to: { col: 9, row: 18 }
-            }
-        });
+        const criarBarraVisual = (percentual: number, cor: string) => {
+            const blocos = Math.round(percentual / 5);
+            return '█'.repeat(blocos);
+        };
+
+        // Recebidos
+        resumoSheet.getCell('E6').value = `Recebidos (${percentualRecebidos}%)`;
+        resumoSheet.getCell('F6').value = criarBarraVisual(percentualRecebidos, 'verde');
+        resumoSheet.getCell('F6').font = { color: { argb: 'FF22C55E' }, size: 14 };
+
+        // Pendentes
+        resumoSheet.getCell('E7').value = `Pendentes (${percentualPendentes}%)`;
+        resumoSheet.getCell('F7').value = criarBarraVisual(percentualPendentes, 'laranja');
+        resumoSheet.getCell('F7').font = { color: { argb: 'FFF97316' }, size: 14 };
+
+        // Não Farão
+        resumoSheet.getCell('E8').value = `Não Farão (${percentualNaoFarao}%)`;
+        resumoSheet.getCell('F8').value = criarBarraVisual(percentualNaoFarao, 'vermelho');
+        resumoSheet.getCell('F8').font = { color: { argb: 'FFEF4444' }, size: 14 };
+
+        resumoSheet.getColumn('E').width = 25;
+        resumoSheet.getColumn('F').width = 30;
     }
 
     // ==================== ABA 2: EVOLUÇÃO POR DATA ====================
@@ -174,12 +177,14 @@ export async function exportarEvolucaoParaExcel(
             columns: [
                 { name: 'Data', filterButton: true },
                 { name: 'Quantidade Recebida', filterButton: true },
-                { name: 'Total Acumulado', filterButton: true }
+                { name: 'Total Acumulado', filterButton: true },
+                { name: 'Progresso', filterButton: false }
             ],
             rows: evolucaoData.map(item => [
                 new Date(item.data + 'T00:00:00').toLocaleDateString('pt-BR'),
                 item.quantidade,
-                item.acumulado
+                item.acumulado,
+                '' // Progresso será preenchido depois
             ])
         });
 
@@ -187,35 +192,31 @@ export async function exportarEvolucaoParaExcel(
         evolucaoSheet.getColumn('A').width = 15;
         evolucaoSheet.getColumn('B').width = 20;
         evolucaoSheet.getColumn('C').width = 20;
+        evolucaoSheet.getColumn('D').width = 35;
 
-        // Centralizar valores
+        // ==================== VISUALIZAÇÃO DE TENDÊNCIA ====================
+        const maxAcumulado = evolucaoData[evolucaoData.length - 1].acumulado;
+
+        // Centralizar valores e adicionar progresso
         for (let i = 4; i < 4 + evolucaoData.length; i++) {
-            evolucaoSheet.getRow(i).getCell(2).alignment = { horizontal: 'center' };
-            evolucaoSheet.getRow(i).getCell(3).alignment = { horizontal: 'center' };
-            evolucaoSheet.getRow(i).getCell(2).font = { bold: true, color: { argb: 'FF22C55E' } };
-            evolucaoSheet.getRow(i).getCell(3).font = { bold: true, color: { argb: 'FF2563EB' } };
-        }
+            const dataIndex = i - 4;
+            const row = evolucaoSheet.getRow(i);
 
-        // ==================== GRÁFICO DE LINHA ====================
-        const lineChart = evolucaoSheet.addChart({
-            type: 'line',
-            title: {
-                name: 'Evolução dos Recebimentos ao Longo do Tempo',
-                color: '000000',
-                size: 14,
-            },
-            categories: {
-                formula: `'Evolução por Data'!$A$4:$A$${3 + evolucaoData.length}`,
-            },
-            values: {
-                formula: `'Evolução por Data'!$B$4:$B$${3 + evolucaoData.length}`,
-            },
-            position: {
-                type: 'twoCellAnchor',
-                from: { col: 4, row: 2 },
-                to: { col: 11, row: 20 }
-            }
-        });
+            row.getCell(2).alignment = { horizontal: 'center' };
+            row.getCell(3).alignment = { horizontal: 'center' };
+            row.getCell(2).font = { bold: true, color: { argb: 'FF22C55E' } };
+            row.getCell(3).font = { bold: true, color: { argb: 'FF2563EB' } };
+
+            // Adicionar barra de progresso
+            const percentual = Math.round((evolucaoData[dataIndex].acumulado / maxAcumulado) * 100);
+            const blocos = Math.round(percentual / 5);
+
+            row.getCell(4).value = '█'.repeat(blocos) + ` ${percentual}%`;
+            row.getCell(4).font = {
+                color: { argb: 'FF22C55E' },
+                size: 10
+            };
+        }
     }
 
     // ==================== ABA 3: DETALHAMENTO ====================
