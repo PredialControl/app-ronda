@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Mic, MicOff } from 'lucide-react';
+import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Mic, MicOff, Edit3 } from 'lucide-react';
 import { Contrato, RelatorioPendencias as RelatorioPendenciasType } from '@/types';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 import { useVoiceCapture } from '@/hooks/useVoiceCapture';
+import { ImageEditor } from '@/components/ImageEditor';
 
 interface RelatorioPendenciasEditorProps {
     contrato: Contrato;
@@ -68,6 +69,15 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const voice = useVoiceCapture();
     const [secaoAtivaParaVoz, setSecaoAtivaParaVoz] = useState<string | null>(null);
     const [subsecaoAtivaParaVoz, setSubsecaoAtivaParaVoz] = useState<string | null>(null);
+
+    // Editor de imagem
+    const [editingImage, setEditingImage] = useState<{
+        secaoTempId: string;
+        pendenciaTempId: string;
+        imageUrl: string;
+        type: 'antes' | 'depois';
+        subsecaoTempId?: string;
+    } | null>(null);
 
     useEffect(() => {
         if (relatorio?.secoes) {
@@ -400,18 +410,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
 
     const handleFotoDepoisChange = (secaoTempId: string, pendenciaTempId: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        console.log('🖼️ handleFotoDepoisChange chamado!');
-        console.log('   - Seção:', secaoTempId);
-        console.log('   - Pendência:', pendenciaTempId);
-        console.log('   - Arquivo:', file);
-
         if (file) {
-            console.log('   - Nome do arquivo:', file.name);
-            console.log('   - Tamanho:', file.size, 'bytes');
             const blobUrl = URL.createObjectURL(file);
-            console.log('   - Blob URL criada:', blobUrl);
-
-            // IMPORTANTE: Atualizar fileDepois e previewDepois de uma vez só!
             setSecoes(secoes.map(s => {
                 if (s.tempId === secaoTempId) {
                     return {
@@ -430,11 +430,85 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 }
                 return s;
             }));
-
-            console.log('✅ fileDepois e previewDepois setados DE UMA VEZ!');
-        } else {
-            console.log('⚠️ Nenhum arquivo foi selecionado');
         }
+    };
+
+    // ==================== EDITOR DE IMAGEM ====================
+    const handleOpenImageEditor = (
+        secaoTempId: string,
+        pendenciaTempId: string,
+        imageUrl: string,
+        type: 'antes' | 'depois',
+        subsecaoTempId?: string
+    ) => {
+        setEditingImage({
+            secaoTempId,
+            pendenciaTempId,
+            imageUrl,
+            type,
+            subsecaoTempId
+        });
+    };
+
+    const handleSaveEditedImage = (blob: Blob) => {
+        if (!editingImage) return;
+
+        const file = new File([blob], 'edited-image.png', { type: 'image/png' });
+        const blobUrl = URL.createObjectURL(blob);
+
+        const { secaoTempId, pendenciaTempId, type, subsecaoTempId } = editingImage;
+
+        if (subsecaoTempId) {
+            // Atualizar imagem em subseção
+            setSecoes(secoes.map(s => {
+                if (s.tempId === secaoTempId) {
+                    return {
+                        ...s,
+                        subsecoes: (s.subsecoes || []).map(sub => {
+                            if (sub.tempId === subsecaoTempId) {
+                                return {
+                                    ...sub,
+                                    pendencias: sub.pendencias.map(p => {
+                                        if (p.tempId === pendenciaTempId) {
+                                            if (type === 'antes') {
+                                                return { ...p, file, preview: blobUrl };
+                                            } else {
+                                                return { ...p, fileDepois: file, previewDepois: blobUrl };
+                                            }
+                                        }
+                                        return p;
+                                    })
+                                };
+                            }
+                            return sub;
+                        })
+                    };
+                }
+                return s;
+            }));
+        } else {
+            // Atualizar imagem em seção
+            setSecoes(secoes.map(s => {
+                if (s.tempId === secaoTempId) {
+                    return {
+                        ...s,
+                        pendencias: s.pendencias.map(p => {
+                            if (p.tempId === pendenciaTempId) {
+                                if (type === 'antes') {
+                                    return { ...p, file, preview: blobUrl };
+                                } else {
+                                    return { ...p, fileDepois: file, previewDepois: blobUrl };
+                                }
+                            }
+                            return p;
+                        })
+                    };
+                }
+                return s;
+            }));
+        }
+
+        setEditingImage(null);
     };
 
     const handleBulkPhotos = (secaoTempId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1235,6 +1309,20 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                             className="w-full h-full object-cover rounded shadow-lg"
                                                                         />
                                                                         <div className="absolute top-2 right-2 flex gap-1">
+                                                                            <Button
+                                                                                onClick={() => handleOpenImageEditor(
+                                                                                    secao.tempId,
+                                                                                    pendencia.tempId,
+                                                                                    pendencia.preview || pendencia.foto_url || '',
+                                                                                    'antes'
+                                                                                )}
+                                                                                variant="secondary"
+                                                                                size="sm"
+                                                                                className="h-7 w-7 p-0 bg-purple-600 text-white shadow-xl hover:bg-purple-500"
+                                                                                title="Editar com marcações"
+                                                                            >
+                                                                                <Edit3 className="w-3.5 h-3.5" />
+                                                                            </Button>
                                                                             <input
                                                                                 type="file"
                                                                                 accept="image/*"
@@ -1247,6 +1335,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                 variant="secondary"
                                                                                 size="sm"
                                                                                 className="h-7 w-7 p-0 bg-blue-600 text-white shadow-xl hover:bg-blue-500"
+                                                                                title="Trocar foto"
                                                                             >
                                                                                 <ImageIcon className="w-3.5 h-3.5" />
                                                                             </Button>
@@ -1259,6 +1348,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                 variant="secondary"
                                                                                 size="sm"
                                                                                 className="h-7 w-7 p-0 bg-red-600 text-white shadow-xl hover:bg-red-500"
+                                                                                title="Remover foto"
                                                                             >
                                                                                 <Trash2 className="w-3.5 h-3.5" />
                                                                             </Button>
@@ -1297,6 +1387,20 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                             className="w-full h-full object-cover rounded shadow-lg"
                                                                         />
                                                                         <div className="absolute top-2 right-2 flex gap-1">
+                                                                            <Button
+                                                                                onClick={() => handleOpenImageEditor(
+                                                                                    secao.tempId,
+                                                                                    pendencia.tempId,
+                                                                                    pendencia.previewDepois || pendencia.foto_depois_url || '',
+                                                                                    'depois'
+                                                                                )}
+                                                                                variant="secondary"
+                                                                                size="sm"
+                                                                                className="h-7 w-7 p-0 bg-purple-600 text-white shadow-xl hover:bg-purple-500"
+                                                                                title="Editar com marcações"
+                                                                            >
+                                                                                <Edit3 className="w-3.5 h-3.5" />
+                                                                            </Button>
                                                                             <input
                                                                                 type="file"
                                                                                 accept="image/*"
@@ -1309,6 +1413,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                 variant="secondary"
                                                                                 size="sm"
                                                                                 className="h-7 w-7 p-0 bg-emerald-600 text-white shadow-xl hover:bg-emerald-500"
+                                                                                title="Trocar foto"
                                                                             >
                                                                                 <ImageIcon className="w-3.5 h-3.5" />
                                                                             </Button>
@@ -1321,6 +1426,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                 variant="secondary"
                                                                                 size="sm"
                                                                                 className="h-7 w-7 p-0 bg-red-600 text-white shadow-xl hover:bg-red-500"
+                                                                                title="Remover foto"
                                                                             >
                                                                                 <Trash2 className="w-3.5 h-3.5" />
                                                                             </Button>
@@ -1489,9 +1595,32 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                         ) : (
                                                                                             <div className="w-full h-full p-1 relative">
                                                                                                 <img src={pend.preview || pend.foto_url || ''} className="w-full h-full object-cover rounded-sm" />
-                                                                                                <Button onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'preview', undefined)} variant="secondary" size="sm" className="absolute top-1 right-1 h-6 w-6 p-0 bg-red-600/80 hover:bg-red-600 text-white">
-                                                                                                    <X className="w-4 h-4" />
-                                                                                                </Button>
+                                                                                                <div className="absolute top-1 right-1 flex gap-1">
+                                                                                                    <Button
+                                                                                                        onClick={() => handleOpenImageEditor(
+                                                                                                            secao.tempId,
+                                                                                                            pend.tempId,
+                                                                                                            pend.preview || pend.foto_url || '',
+                                                                                                            'antes',
+                                                                                                            subsecao.tempId
+                                                                                                        )}
+                                                                                                        variant="secondary"
+                                                                                                        size="sm"
+                                                                                                        className="h-6 w-6 p-0 bg-purple-600/80 hover:bg-purple-600 text-white"
+                                                                                                        title="Editar com marcações"
+                                                                                                    >
+                                                                                                        <Edit3 className="w-3.5 h-3.5" />
+                                                                                                    </Button>
+                                                                                                    <Button
+                                                                                                        onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'preview', undefined)}
+                                                                                                        variant="secondary"
+                                                                                                        size="sm"
+                                                                                                        className="h-6 w-6 p-0 bg-red-600/80 hover:bg-red-600 text-white"
+                                                                                                        title="Remover foto"
+                                                                                                    >
+                                                                                                        <X className="w-4 h-4" />
+                                                                                                    </Button>
+                                                                                                </div>
                                                                                             </div>
                                                                                         )}
                                                                                     </div>
@@ -1507,9 +1636,32 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                         ) : (
                                                                                             <div className="w-full h-full p-1 relative">
                                                                                                 <img src={pend.previewDepois || pend.foto_depois_url || ''} className="w-full h-full object-cover rounded-sm" />
-                                                                                                <Button onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'previewDepois', undefined)} variant="secondary" size="sm" className="absolute top-1 right-1 h-6 w-6 p-0 bg-red-600/80 hover:bg-red-600 text-white">
-                                                                                                    <X className="w-4 h-4" />
-                                                                                                </Button>
+                                                                                                <div className="absolute top-1 right-1 flex gap-1">
+                                                                                                    <Button
+                                                                                                        onClick={() => handleOpenImageEditor(
+                                                                                                            secao.tempId,
+                                                                                                            pend.tempId,
+                                                                                                            pend.previewDepois || pend.foto_depois_url || '',
+                                                                                                            'depois',
+                                                                                                            subsecao.tempId
+                                                                                                        )}
+                                                                                                        variant="secondary"
+                                                                                                        size="sm"
+                                                                                                        className="h-6 w-6 p-0 bg-purple-600/80 hover:bg-purple-600 text-white"
+                                                                                                        title="Editar com marcações"
+                                                                                                    >
+                                                                                                        <Edit3 className="w-3.5 h-3.5" />
+                                                                                                    </Button>
+                                                                                                    <Button
+                                                                                                        onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'previewDepois', undefined)}
+                                                                                                        variant="secondary"
+                                                                                                        size="sm"
+                                                                                                        className="h-6 w-6 p-0 bg-red-600/80 hover:bg-red-600 text-white"
+                                                                                                        title="Remover foto"
+                                                                                                    >
+                                                                                                        <X className="w-4 h-4" />
+                                                                                                    </Button>
+                                                                                                </div>
                                                                                             </div>
                                                                                         )}
                                                                                     </div>
@@ -1564,6 +1716,15 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                     </div>
                 )}
             </div>
+
+            {/* Modal do Image Editor */}
+            {editingImage && (
+                <ImageEditor
+                    imageUrl={editingImage.imageUrl}
+                    onSave={handleSaveEditedImage}
+                    onCancel={() => setEditingImage(null)}
+                />
+            )}
         </div >
     );
 }
