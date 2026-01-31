@@ -14,6 +14,15 @@ interface DashboardProps {
 }
 
 export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
+  console.log('🔍 DEBUG DASHBOARD - Contrato:', contrato.nome);
+  console.log('🔍 DEBUG DASHBOARD - Total de rondas recebidas:', rondas.length);
+  console.log('🔍 DEBUG DASHBOARD - Rondas:', rondas.map(r => ({
+    nome: r.nome,
+    data: r.data,
+    areasTecnicas: r.areasTecnicas?.length || 0,
+    fotosRonda: r.fotosRonda?.length || 0
+  })));
+
   // Filtro por mês (AAAA-MM)
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
@@ -52,14 +61,24 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
     );
     // Atenção: considerar Áreas Técnicas com status "ATENÇÃO" no mês selecionado (itens únicos por área)
     const nomesAtencao = new Set<string>();
+    console.log('🔍 DEBUG ATENÇÃO - Rondas do mês:', rondasMes.length);
     rondasMes.forEach(r => {
+      console.log('🔍 Ronda:', r.nome, 'Data:', r.data, 'Áreas:', r.areasTecnicas?.length || 0);
       (r.areasTecnicas || [])
-        .filter(at => String(at.status || '').toUpperCase().includes('ATEN'))
+        .filter(at => {
+          const temAtencao = String(at.status || '').toUpperCase().includes('ATEN');
+          console.log('🔍 Área:', at.nome, 'Status:', at.status, 'Tem ATENÇÃO?', temAtencao);
+          return temAtencao;
+        })
         .forEach(at => {
-          if (at.nome) nomesAtencao.add(at.nome);
+          if (at.nome) {
+            console.log('✅ Adicionando área com ATENÇÃO:', at.nome);
+            nomesAtencao.add(at.nome);
+          }
         });
     });
     const itensAtencao = Array.from(nomesAtencao);
+    console.log('🔍 Total de itens de ATENÇÃO únicos:', itensAtencao.length, itensAtencao);
 
     // Chamados abertos (todas as fotos de ronda são consideradas chamados)
     const chamadosAbertos = fotosMes;
@@ -123,16 +142,24 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
 
     // Status da última visita: usar APENAS a última ronda inteira
     const statusEquipamentos = (() => {
+      console.log('🔍 DEBUG STATUS EQUIPAMENTOS - Total de rondas:', rondas.length);
       const rondaMaisRecente = [...rondas]
         .sort((a, b) => b.data.localeCompare(a.data))[0];
+      console.log('🔍 Ronda mais recente:', rondaMaisRecente?.nome, 'Data:', rondaMaisRecente?.data);
       const areas = rondaMaisRecente?.areasTecnicas || [];
-      return areas.map((at) => ({
+      console.log('🔍 Áreas técnicas da última ronda:', areas.length);
+      areas.forEach(at => {
+        console.log('🔍 Área:', at.nome, 'Status:', at.status, 'Observações:', at.observacoes);
+      });
+      const resultado = areas.map((at) => ({
         id: at.id,
         nome: at.nome,
         ultimaVisita: rondaMaisRecente?.data || null,
         statusUltimaVisita: at.status || 'NÃO VISITADO',
         observacoes: at.observacoes || null
       }));
+      console.log('🔍 Status equipamentos resultado:', resultado);
+      return resultado;
     })();
 
     return {
