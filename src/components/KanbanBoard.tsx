@@ -107,6 +107,22 @@ interface KanbanItem {
     dataVistoria?: string;
     dataEntregaRelatorio?: string;
   };
+  // Checklist para cards de RECEBIMENTO_INCENDIO
+  checklistRecebimentoIncendio?: {
+    extintores: boolean;
+    dataExtintores?: string;
+    mangueiras: boolean;
+    dataMangueiras?: string;
+    engates: boolean;
+    dataEngates?: string;
+    tampas: boolean;
+    dataTampas?: string;
+    chavesStorz: boolean;
+    dataChavesStorz?: string;
+    bicos: boolean;
+    dataBicos?: string;
+    observacoes?: string;
+  };
 }
 
 const initialItems: KanbanItem[] = [
@@ -1097,8 +1113,8 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
 
                 {/* Checklist para VISTORIA */}
                 {selectedCard.category === 'VISTORIA' && (
-                  <div className="bg-blue-600 border-2 border-blue-700 rounded-lg p-4">
-                    <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
                       <CheckCircle className="w-4 h-4" />
                       Checklist de Vistoria
                     </h3>
@@ -1125,7 +1141,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                           }}
                           className="w-5 h-5 cursor-pointer"
                         />
-                        <span className="text-white font-medium">✓ Vistoria Realizada</span>
+                        <span className="text-blue-900 font-bold">✓ Vistoria Realizada</span>
                       </label>
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
@@ -1149,11 +1165,11 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                           }}
                           className="w-5 h-5 cursor-pointer"
                         />
-                        <span className="text-white font-medium">✓ Criação de Relatório</span>
+                        <span className="text-blue-900 font-bold">✓ Criação de Relatório</span>
                       </label>
 
                       <div className="mt-3">
-                        <label className="block text-white font-medium mb-2">
+                        <label className="block text-blue-900 font-bold mb-2">
                           📝 Observações (Acompanhamento, etc.)
                         </label>
                         <textarea
@@ -1175,13 +1191,13 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             setSelectedCard(updated);
                           }}
                           placeholder="Digite observações sobre acompanhamento, pendências, etc..."
-                          className="w-full px-3 py-2 border-2 border-blue-800 rounded-md focus:outline-none focus:ring-2 focus:ring-white focus:border-white h-24 resize-none text-gray-900 font-medium"
+                          className="w-full px-3 py-2 border-2 border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-24 resize-none text-gray-900 font-medium"
                         />
                       </div>
 
                       {/* Data da Vistoria */}
                       <div className="mt-3">
-                        <label className="block text-white font-medium mb-2">
+                        <label className="block text-blue-900 font-bold mb-2">
                           📅 Data da Vistoria
                         </label>
                         <input
@@ -1203,13 +1219,13 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             ));
                             setSelectedCard(updated);
                           }}
-                          className="w-full px-3 py-2 border-2 border-blue-800 rounded-md focus:outline-none focus:ring-2 focus:ring-white focus:border-white text-gray-900 font-medium"
+                          className="w-full px-3 py-2 border-2 border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium"
                         />
                       </div>
 
                       {/* Data da Entrega do Relatório */}
                       <div className="mt-3">
-                        <label className="block text-white font-medium mb-2">
+                        <label className="block text-blue-900 font-bold mb-2">
                           📄 Data da Entrega do Relatório
                         </label>
                         <input
@@ -1231,14 +1247,474 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             ));
                             setSelectedCard(updated);
                           }}
-                          className="w-full px-3 py-2 border-2 border-blue-800 rounded-md focus:outline-none focus:ring-2 focus:ring-white focus:border-white text-gray-900 font-medium"
+                          className="w-full px-3 py-2 border-2 border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium"
                         />
                       </div>
                     </div>
                     {selectedCard.checklistVistoria?.vistoriaRealizada &&
                      selectedCard.checklistVistoria?.relatorioGerado && (
-                      <div className="mt-3 bg-green-600 text-white px-3 py-1 rounded text-xs font-bold">
+                      <div className="mt-3 bg-green-100 text-green-800 border-2 border-green-600 px-3 py-1 rounded text-xs font-bold">
                         ✅ Checklist Completo - Pode mover para Finalizado
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Checklist para RECEBIMENTO_INCENDIO */}
+                {selectedCard.category === 'RECEBIMENTO_INCENDIO' && (
+                  <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-yellow-900 mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Checklist de Recebimento de Incêndio
+                    </h3>
+                    <div className="space-y-3">
+                      {/* EXTINTORES */}
+                      <div className="bg-white rounded-md p-3">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistRecebimentoIncendio?.extintores || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistRecebimentoIncendio: {
+                                  ...selectedCard.checklistRecebimentoIncendio,
+                                  extintores: e.target.checked,
+                                  dataExtintores: selectedCard.checklistRecebimentoIncendio?.dataExtintores || '',
+                                  mangueiras: selectedCard.checklistRecebimentoIncendio?.mangueiras || false,
+                                  dataMangueiras: selectedCard.checklistRecebimentoIncendio?.dataMangueiras || '',
+                                  engates: selectedCard.checklistRecebimentoIncendio?.engates || false,
+                                  dataEngates: selectedCard.checklistRecebimentoIncendio?.dataEngates || '',
+                                  tampas: selectedCard.checklistRecebimentoIncendio?.tampas || false,
+                                  dataTampas: selectedCard.checklistRecebimentoIncendio?.dataTampas || '',
+                                  chavesStorz: selectedCard.checklistRecebimentoIncendio?.chavesStorz || false,
+                                  dataChavesStorz: selectedCard.checklistRecebimentoIncendio?.dataChavesStorz || '',
+                                  bicos: selectedCard.checklistRecebimentoIncendio?.bicos || false,
+                                  dataBicos: selectedCard.checklistRecebimentoIncendio?.dataBicos || '',
+                                  observacoes: selectedCard.checklistRecebimentoIncendio?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-black font-bold">✓ RECEBIDO EXTINTORES</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistRecebimentoIncendio?.dataExtintores || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoIncendio: {
+                                ...selectedCard.checklistRecebimentoIncendio,
+                                extintores: selectedCard.checklistRecebimentoIncendio?.extintores || false,
+                                dataExtintores: e.target.value,
+                                mangueiras: selectedCard.checklistRecebimentoIncendio?.mangueiras || false,
+                                dataMangueiras: selectedCard.checklistRecebimentoIncendio?.dataMangueiras || '',
+                                engates: selectedCard.checklistRecebimentoIncendio?.engates || false,
+                                dataEngates: selectedCard.checklistRecebimentoIncendio?.dataEngates || '',
+                                tampas: selectedCard.checklistRecebimentoIncendio?.tampas || false,
+                                dataTampas: selectedCard.checklistRecebimentoIncendio?.dataTampas || '',
+                                chavesStorz: selectedCard.checklistRecebimentoIncendio?.chavesStorz || false,
+                                dataChavesStorz: selectedCard.checklistRecebimentoIncendio?.dataChavesStorz || '',
+                                bicos: selectedCard.checklistRecebimentoIncendio?.bicos || false,
+                                dataBicos: selectedCard.checklistRecebimentoIncendio?.dataBicos || '',
+                                observacoes: selectedCard.checklistRecebimentoIncendio?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 font-medium"
+                        />
+                      </div>
+
+                      {/* MANGUEIRAS */}
+                      <div className="bg-white rounded-md p-3">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistRecebimentoIncendio?.mangueiras || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistRecebimentoIncendio: {
+                                  ...selectedCard.checklistRecebimentoIncendio,
+                                  extintores: selectedCard.checklistRecebimentoIncendio?.extintores || false,
+                                  dataExtintores: selectedCard.checklistRecebimentoIncendio?.dataExtintores || '',
+                                  mangueiras: e.target.checked,
+                                  dataMangueiras: selectedCard.checklistRecebimentoIncendio?.dataMangueiras || '',
+                                  engates: selectedCard.checklistRecebimentoIncendio?.engates || false,
+                                  dataEngates: selectedCard.checklistRecebimentoIncendio?.dataEngates || '',
+                                  tampas: selectedCard.checklistRecebimentoIncendio?.tampas || false,
+                                  dataTampas: selectedCard.checklistRecebimentoIncendio?.dataTampas || '',
+                                  chavesStorz: selectedCard.checklistRecebimentoIncendio?.chavesStorz || false,
+                                  dataChavesStorz: selectedCard.checklistRecebimentoIncendio?.dataChavesStorz || '',
+                                  bicos: selectedCard.checklistRecebimentoIncendio?.bicos || false,
+                                  dataBicos: selectedCard.checklistRecebimentoIncendio?.dataBicos || '',
+                                  observacoes: selectedCard.checklistRecebimentoIncendio?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-black font-bold">✓ RECEBIDO MANGUEIRAS</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistRecebimentoIncendio?.dataMangueiras || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoIncendio: {
+                                ...selectedCard.checklistRecebimentoIncendio,
+                                extintores: selectedCard.checklistRecebimentoIncendio?.extintores || false,
+                                dataExtintores: selectedCard.checklistRecebimentoIncendio?.dataExtintores || '',
+                                mangueiras: selectedCard.checklistRecebimentoIncendio?.mangueiras || false,
+                                dataMangueiras: e.target.value,
+                                engates: selectedCard.checklistRecebimentoIncendio?.engates || false,
+                                dataEngates: selectedCard.checklistRecebimentoIncendio?.dataEngates || '',
+                                tampas: selectedCard.checklistRecebimentoIncendio?.tampas || false,
+                                dataTampas: selectedCard.checklistRecebimentoIncendio?.dataTampas || '',
+                                chavesStorz: selectedCard.checklistRecebimentoIncendio?.chavesStorz || false,
+                                dataChavesStorz: selectedCard.checklistRecebimentoIncendio?.dataChavesStorz || '',
+                                bicos: selectedCard.checklistRecebimentoIncendio?.bicos || false,
+                                dataBicos: selectedCard.checklistRecebimentoIncendio?.dataBicos || '',
+                                observacoes: selectedCard.checklistRecebimentoIncendio?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 font-medium"
+                        />
+                      </div>
+
+                      {/* ENGATES */}
+                      <div className="bg-white rounded-md p-3">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistRecebimentoIncendio?.engates || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistRecebimentoIncendio: {
+                                  ...selectedCard.checklistRecebimentoIncendio,
+                                  extintores: selectedCard.checklistRecebimentoIncendio?.extintores || false,
+                                  dataExtintores: selectedCard.checklistRecebimentoIncendio?.dataExtintores || '',
+                                  mangueiras: selectedCard.checklistRecebimentoIncendio?.mangueiras || false,
+                                  dataMangueiras: selectedCard.checklistRecebimentoIncendio?.dataMangueiras || '',
+                                  engates: e.target.checked,
+                                  dataEngates: selectedCard.checklistRecebimentoIncendio?.dataEngates || '',
+                                  tampas: selectedCard.checklistRecebimentoIncendio?.tampas || false,
+                                  dataTampas: selectedCard.checklistRecebimentoIncendio?.dataTampas || '',
+                                  chavesStorz: selectedCard.checklistRecebimentoIncendio?.chavesStorz || false,
+                                  dataChavesStorz: selectedCard.checklistRecebimentoIncendio?.dataChavesStorz || '',
+                                  bicos: selectedCard.checklistRecebimentoIncendio?.bicos || false,
+                                  dataBicos: selectedCard.checklistRecebimentoIncendio?.dataBicos || '',
+                                  observacoes: selectedCard.checklistRecebimentoIncendio?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-black font-bold">✓ RECEBIDO ENGATES</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistRecebimentoIncendio?.dataEngates || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoIncendio: {
+                                ...selectedCard.checklistRecebimentoIncendio,
+                                extintores: selectedCard.checklistRecebimentoIncendio?.extintores || false,
+                                dataExtintores: selectedCard.checklistRecebimentoIncendio?.dataExtintores || '',
+                                mangueiras: selectedCard.checklistRecebimentoIncendio?.mangueiras || false,
+                                dataMangueiras: selectedCard.checklistRecebimentoIncendio?.dataMangueiras || '',
+                                engates: selectedCard.checklistRecebimentoIncendio?.engates || false,
+                                dataEngates: e.target.value,
+                                tampas: selectedCard.checklistRecebimentoIncendio?.tampas || false,
+                                dataTampas: selectedCard.checklistRecebimentoIncendio?.dataTampas || '',
+                                chavesStorz: selectedCard.checklistRecebimentoIncendio?.chavesStorz || false,
+                                dataChavesStorz: selectedCard.checklistRecebimentoIncendio?.dataChavesStorz || '',
+                                bicos: selectedCard.checklistRecebimentoIncendio?.bicos || false,
+                                dataBicos: selectedCard.checklistRecebimentoIncendio?.dataBicos || '',
+                                observacoes: selectedCard.checklistRecebimentoIncendio?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 font-medium"
+                        />
+                      </div>
+
+                      {/* TAMPAS */}
+                      <div className="bg-white rounded-md p-3">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistRecebimentoIncendio?.tampas || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistRecebimentoIncendio: {
+                                  ...selectedCard.checklistRecebimentoIncendio,
+                                  extintores: selectedCard.checklistRecebimentoIncendio?.extintores || false,
+                                  dataExtintores: selectedCard.checklistRecebimentoIncendio?.dataExtintores || '',
+                                  mangueiras: selectedCard.checklistRecebimentoIncendio?.mangueiras || false,
+                                  dataMangueiras: selectedCard.checklistRecebimentoIncendio?.dataMangueiras || '',
+                                  engates: selectedCard.checklistRecebimentoIncendio?.engates || false,
+                                  dataEngates: selectedCard.checklistRecebimentoIncendio?.dataEngates || '',
+                                  tampas: e.target.checked,
+                                  dataTampas: selectedCard.checklistRecebimentoIncendio?.dataTampas || '',
+                                  chavesStorz: selectedCard.checklistRecebimentoIncendio?.chavesStorz || false,
+                                  dataChavesStorz: selectedCard.checklistRecebimentoIncendio?.dataChavesStorz || '',
+                                  bicos: selectedCard.checklistRecebimentoIncendio?.bicos || false,
+                                  dataBicos: selectedCard.checklistRecebimentoIncendio?.dataBicos || '',
+                                  observacoes: selectedCard.checklistRecebimentoIncendio?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-black font-bold">✓ RECEBIDO TAMPAS</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistRecebimentoIncendio?.dataTampas || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoIncendio: {
+                                ...selectedCard.checklistRecebimentoIncendio,
+                                extintores: selectedCard.checklistRecebimentoIncendio?.extintores || false,
+                                dataExtintores: selectedCard.checklistRecebimentoIncendio?.dataExtintores || '',
+                                mangueiras: selectedCard.checklistRecebimentoIncendio?.mangueiras || false,
+                                dataMangueiras: selectedCard.checklistRecebimentoIncendio?.dataMangueiras || '',
+                                engates: selectedCard.checklistRecebimentoIncendio?.engates || false,
+                                dataEngates: selectedCard.checklistRecebimentoIncendio?.dataEngates || '',
+                                tampas: selectedCard.checklistRecebimentoIncendio?.tampas || false,
+                                dataTampas: e.target.value,
+                                chavesStorz: selectedCard.checklistRecebimentoIncendio?.chavesStorz || false,
+                                dataChavesStorz: selectedCard.checklistRecebimentoIncendio?.dataChavesStorz || '',
+                                bicos: selectedCard.checklistRecebimentoIncendio?.bicos || false,
+                                dataBicos: selectedCard.checklistRecebimentoIncendio?.dataBicos || '',
+                                observacoes: selectedCard.checklistRecebimentoIncendio?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 font-medium"
+                        />
+                      </div>
+
+                      {/* CHAVES STORZ */}
+                      <div className="bg-white rounded-md p-3">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistRecebimentoIncendio?.chavesStorz || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistRecebimentoIncendio: {
+                                  ...selectedCard.checklistRecebimentoIncendio,
+                                  extintores: selectedCard.checklistRecebimentoIncendio?.extintores || false,
+                                  dataExtintores: selectedCard.checklistRecebimentoIncendio?.dataExtintores || '',
+                                  mangueiras: selectedCard.checklistRecebimentoIncendio?.mangueiras || false,
+                                  dataMangueiras: selectedCard.checklistRecebimentoIncendio?.dataMangueiras || '',
+                                  engates: selectedCard.checklistRecebimentoIncendio?.engates || false,
+                                  dataEngates: selectedCard.checklistRecebimentoIncendio?.dataEngates || '',
+                                  tampas: selectedCard.checklistRecebimentoIncendio?.tampas || false,
+                                  dataTampas: selectedCard.checklistRecebimentoIncendio?.dataTampas || '',
+                                  chavesStorz: e.target.checked,
+                                  dataChavesStorz: selectedCard.checklistRecebimentoIncendio?.dataChavesStorz || '',
+                                  bicos: selectedCard.checklistRecebimentoIncendio?.bicos || false,
+                                  dataBicos: selectedCard.checklistRecebimentoIncendio?.dataBicos || '',
+                                  observacoes: selectedCard.checklistRecebimentoIncendio?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-black font-bold">✓ RECEBIDO CHAVES STORZ</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistRecebimentoIncendio?.dataChavesStorz || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoIncendio: {
+                                ...selectedCard.checklistRecebimentoIncendio,
+                                extintores: selectedCard.checklistRecebimentoIncendio?.extintores || false,
+                                dataExtintores: selectedCard.checklistRecebimentoIncendio?.dataExtintores || '',
+                                mangueiras: selectedCard.checklistRecebimentoIncendio?.mangueiras || false,
+                                dataMangueiras: selectedCard.checklistRecebimentoIncendio?.dataMangueiras || '',
+                                engates: selectedCard.checklistRecebimentoIncendio?.engates || false,
+                                dataEngates: selectedCard.checklistRecebimentoIncendio?.dataEngates || '',
+                                tampas: selectedCard.checklistRecebimentoIncendio?.tampas || false,
+                                dataTampas: selectedCard.checklistRecebimentoIncendio?.dataTampas || '',
+                                chavesStorz: selectedCard.checklistRecebimentoIncendio?.chavesStorz || false,
+                                dataChavesStorz: e.target.value,
+                                bicos: selectedCard.checklistRecebimentoIncendio?.bicos || false,
+                                dataBicos: selectedCard.checklistRecebimentoIncendio?.dataBicos || '',
+                                observacoes: selectedCard.checklistRecebimentoIncendio?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 font-medium"
+                        />
+                      </div>
+
+                      {/* BICOS */}
+                      <div className="bg-white rounded-md p-3">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistRecebimentoIncendio?.bicos || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistRecebimentoIncendio: {
+                                  ...selectedCard.checklistRecebimentoIncendio,
+                                  extintores: selectedCard.checklistRecebimentoIncendio?.extintores || false,
+                                  dataExtintores: selectedCard.checklistRecebimentoIncendio?.dataExtintores || '',
+                                  mangueiras: selectedCard.checklistRecebimentoIncendio?.mangueiras || false,
+                                  dataMangueiras: selectedCard.checklistRecebimentoIncendio?.dataMangueiras || '',
+                                  engates: selectedCard.checklistRecebimentoIncendio?.engates || false,
+                                  dataEngates: selectedCard.checklistRecebimentoIncendio?.dataEngates || '',
+                                  tampas: selectedCard.checklistRecebimentoIncendio?.tampas || false,
+                                  dataTampas: selectedCard.checklistRecebimentoIncendio?.dataTampas || '',
+                                  chavesStorz: selectedCard.checklistRecebimentoIncendio?.chavesStorz || false,
+                                  dataChavesStorz: selectedCard.checklistRecebimentoIncendio?.dataChavesStorz || '',
+                                  bicos: e.target.checked,
+                                  dataBicos: selectedCard.checklistRecebimentoIncendio?.dataBicos || '',
+                                  observacoes: selectedCard.checklistRecebimentoIncendio?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-black font-bold">✓ RECEBIDO BICOS</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistRecebimentoIncendio?.dataBicos || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoIncendio: {
+                                ...selectedCard.checklistRecebimentoIncendio,
+                                extintores: selectedCard.checklistRecebimentoIncendio?.extintores || false,
+                                dataExtintores: selectedCard.checklistRecebimentoIncendio?.dataExtintores || '',
+                                mangueiras: selectedCard.checklistRecebimentoIncendio?.mangueiras || false,
+                                dataMangueiras: selectedCard.checklistRecebimentoIncendio?.dataMangueiras || '',
+                                engates: selectedCard.checklistRecebimentoIncendio?.engates || false,
+                                dataEngates: selectedCard.checklistRecebimentoIncendio?.dataEngates || '',
+                                tampas: selectedCard.checklistRecebimentoIncendio?.tampas || false,
+                                dataTampas: selectedCard.checklistRecebimentoIncendio?.dataTampas || '',
+                                chavesStorz: selectedCard.checklistRecebimentoIncendio?.chavesStorz || false,
+                                dataChavesStorz: selectedCard.checklistRecebimentoIncendio?.dataChavesStorz || '',
+                                bicos: selectedCard.checklistRecebimentoIncendio?.bicos || false,
+                                dataBicos: e.target.value,
+                                observacoes: selectedCard.checklistRecebimentoIncendio?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 font-medium"
+                        />
+                      </div>
+
+                      {/* OBSERVAÇÕES */}
+                      <div className="mt-3">
+                        <label className="block text-yellow-900 font-bold mb-2">
+                          📝 Observações Gerais
+                        </label>
+                        <textarea
+                          value={selectedCard.checklistRecebimentoIncendio?.observacoes || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoIncendio: {
+                                ...selectedCard.checklistRecebimentoIncendio,
+                                extintores: selectedCard.checklistRecebimentoIncendio?.extintores || false,
+                                dataExtintores: selectedCard.checklistRecebimentoIncendio?.dataExtintores || '',
+                                mangueiras: selectedCard.checklistRecebimentoIncendio?.mangueiras || false,
+                                dataMangueiras: selectedCard.checklistRecebimentoIncendio?.dataMangueiras || '',
+                                engates: selectedCard.checklistRecebimentoIncendio?.engates || false,
+                                dataEngates: selectedCard.checklistRecebimentoIncendio?.dataEngates || '',
+                                tampas: selectedCard.checklistRecebimentoIncendio?.tampas || false,
+                                dataTampas: selectedCard.checklistRecebimentoIncendio?.dataTampas || '',
+                                chavesStorz: selectedCard.checklistRecebimentoIncendio?.chavesStorz || false,
+                                dataChavesStorz: selectedCard.checklistRecebimentoIncendio?.dataChavesStorz || '',
+                                bicos: selectedCard.checklistRecebimentoIncendio?.bicos || false,
+                                dataBicos: selectedCard.checklistRecebimentoIncendio?.dataBicos || '',
+                                observacoes: e.target.value
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          placeholder="Digite observações gerais sobre o recebimento..."
+                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 h-24 resize-none text-gray-900 font-medium"
+                        />
+                      </div>
+                    </div>
+                    {selectedCard.checklistRecebimentoIncendio?.extintores &&
+                     selectedCard.checklistRecebimentoIncendio?.mangueiras &&
+                     selectedCard.checklistRecebimentoIncendio?.engates &&
+                     selectedCard.checklistRecebimentoIncendio?.tampas &&
+                     selectedCard.checklistRecebimentoIncendio?.chavesStorz &&
+                     selectedCard.checklistRecebimentoIncendio?.bicos && (
+                      <div className="mt-3 bg-green-100 text-green-800 border-2 border-green-600 px-3 py-1 rounded text-xs font-bold">
+                        ✅ Checklist Completo - Todos os itens recebidos
                       </div>
                     )}
                   </div>
