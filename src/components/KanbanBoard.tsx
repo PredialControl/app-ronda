@@ -123,6 +123,114 @@ interface KanbanItem {
     dataBicos?: string;
     observacoes?: string;
   };
+  // Checklist para cards de RECEBIMENTO_AREAS
+  checklistRecebimentoAreas?: {
+    conferenciaMemorial: boolean;
+    dataConferenciaMemorial?: string;
+    conferenciaChaves: boolean;
+    dataConferenciaChaves?: string;
+    testeEquipamentos: boolean;
+    dataTesteEquipamentos?: string;
+    conferenciaEstetica: boolean;
+    dataConferenciaEstetica?: string;
+    observacoes?: string;
+  };
+  // Checklist para cards de RECEBIMENTO_CHAVES
+  checklistRecebimentoChaves?: {
+    chavesAreasComuns: boolean;
+    dataChavesAreasComuns?: string;
+    chavesAreasTecnicas: boolean;
+    dataChavesAreasTecnicas?: string;
+    observacoes?: string;
+  };
+  // Checklist para ACESSIBILIDADE ELEVADORES
+  checklistAcessibilidadeElevadores?: {
+    braileBatentes: boolean;
+    dataBraileBatentes?: string;
+    brailePlacaAdvertencia: boolean;
+    dataBrailePlacaAdvertencia?: string;
+    pisoTatil: boolean;
+    dataPisoTatil?: string;
+    identificacaoSonora: boolean;
+    dataIdentificacaoSonora?: string;
+    intercomunicador: boolean;
+    dataIntercomunicador?: string;
+    observacoes?: string;
+  };
+  // Checklist para ACESSIBILIDADE ESCADAS
+  checklistAcessibilidadeEscadas?: {
+    corrimaoDuplo: boolean;
+    dataCorrimaoDuplo?: string;
+    braileCorrimao: boolean;
+    dataBraileCorrimao?: string;
+    pisoTatilEscadas: boolean;
+    dataPisoTatilEscadas?: string;
+    fitaFotoluminescente: boolean;
+    dataFitaFotoluminescente?: string;
+    demarcacaoAreaResgate: boolean;
+    dataDemarcacaoAreaResgate?: string;
+    areaResgate: boolean;
+    dataAreaResgate?: string;
+    alarmeIntercomunicador: boolean;
+    dataAlarmeIntercomunicador?: string;
+    observacoes?: string;
+  };
+  // Checklist para ACESSIBILIDADE WCS
+  checklistAcessibilidadeWCs?: {
+    revestimentoPorta: boolean;
+    dataRevestimentoPorta?: string;
+    desnivelPiso: boolean;
+    dataDesnivelPiso?: string;
+    larguraPorta: boolean;
+    dataLarguraPorta?: string;
+    portaTranqueta: boolean;
+    dataPortaTranqueta?: string;
+    barras: boolean;
+    dataBarras?: string;
+    alarmeIntercomunicador: boolean;
+    dataAlarmeIntercomunicador?: string;
+    lavatorio: boolean;
+    dataLavatorio?: string;
+    areaManobra: boolean;
+    dataAreaManobra?: string;
+    observacoes?: string;
+  };
+  // Checklist para ACESSIBILIDADE ÁREAS COMUNS
+  checklistAcessibilidadeAreasComuns?: {
+    larguraPorta: boolean;
+    dataLarguraPorta?: string;
+    desnivelPiso: boolean;
+    dataDesnivelPiso?: string;
+    alarmeIntercomunicador: boolean;
+    dataAlarmeIntercomunicador?: string;
+    areaCirculacao: boolean;
+    dataAreaCirculacao?: string;
+    observacoes?: string;
+  };
+  // Checklist para ACESSIBILIDADE PISCINA
+  checklistAcessibilidadePiscina?: {
+    desnivelPiso: boolean;
+    dataDesnivelPiso?: string;
+    placaProfundidade: boolean;
+    dataPlacaProfundidade?: string;
+    cadeiraAcesso: boolean;
+    dataCadeiraAcesso?: string;
+    observacoes?: string;
+  };
+  // Checklist para ACESSIBILIDADE ENTRADA DO PRÉDIO
+  checklistAcessibilidadeEntrada?: {
+    pisoTatilCalcada: boolean;
+    dataPisoTatilCalcada?: string;
+    calcadaFaixaLivre: boolean;
+    dataCalcadaFaixaLivre?: string;
+    placaBraile: boolean;
+    dataPlacaBraile?: string;
+    desnivelPiso: boolean;
+    dataDesnivelPiso?: string;
+    alarmeSonoro: boolean;
+    dataAlarmeSonoro?: string;
+    observacoes?: string;
+  };
 }
 
 const initialItems: KanbanItem[] = [
@@ -145,8 +253,13 @@ const initialItems: KanbanItem[] = [
 
   // 5. CONFERÊNCIA (roxo)
   { id: '55', title: 'ITENS DE BOMBEIRO', category: 'CONFERENCIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
-  { id: '56', title: 'MEMORIAL DESCRITIVO', category: 'CONFERENCIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
   { id: '57', title: 'ACESSIBILIDADE', category: 'CONFERENCIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '59', title: 'ACESSIBILIDADE ELEVADORES', category: 'CONFERENCIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '60', title: 'ACESSIBILIDADE ESCADAS', category: 'CONFERENCIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '61', title: 'ACESSIBILIDADE WCS', category: 'CONFERENCIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '62', title: 'ACESSIBILIDADE ÁREAS COMUNS', category: 'CONFERENCIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '63', title: 'ACESSIBILIDADE PISCINA', category: 'CONFERENCIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '64', title: 'ACESSIBILIDADE ENTRADA DO PRÉDIO', category: 'CONFERENCIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
 
   // 6. COMISSIONAMENTO
   { id: '9', title: 'GERADOR', category: 'COMISSIONAMENTO', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
@@ -982,30 +1095,30 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
       {/* Modal de Detalhes do Card */}
       {
         showCardDetails && selectedCard && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-              <div className={`p-4 ${getCategoryColor(selectedCard.category).replace('border-l-4', 'border-l-8')} border-l-solid bg-gray-50 flex justify-between items-start shrink-0`}>
+          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+            <div className="bg-black rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col border-2 border-gray-700">
+              <div className={`p-4 ${getCategoryColor(selectedCard.category).replace('border-l-4', 'border-l-8')} border-l-solid bg-gray-900 flex justify-between items-start shrink-0`}>
                 <div>
                   <div className="mb-2">
                     {getCategoryBadge(selectedCard.category)}
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">{selectedCard.title}</h2>
-                  <p className="text-sm text-gray-500">ID: {selectedCard.id}</p>
+                  <h2 className="text-xl font-bold text-white">{selectedCard.title}</h2>
+                  <p className="text-sm text-gray-400">ID: {selectedCard.id}</p>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowCardDetails(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-white hover:bg-gray-800"
                 >
                   <X className="w-5 h-5" />
                 </Button>
               </div>
 
-              <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              <div className="p-6 space-y-6 overflow-y-auto flex-1 bg-black">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-1 font-semibold">Status Atual</h3>
+                    <h3 className="text-sm font-medium text-gray-300 mb-1 font-semibold">Status Atual</h3>
                     <Badge className={`
                     ${selectedCard.status === 'aguardando' ? 'bg-red-600 text-white' : ''}
                     ${selectedCard.status === 'em_andamento' ? 'bg-yellow-500 text-black' : ''}
@@ -1020,22 +1133,22 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-1 font-semibold">Categoria</h3>
-                    <span className="text-gray-900 font-bold text-base">
+                    <h3 className="text-sm font-medium text-gray-300 mb-1 font-semibold">Categoria</h3>
+                    <span className="text-white font-bold text-base">
                       {Object.values(CATEGORIES).find(c => c.id === selectedCard.category)?.label}
                     </span>
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-1 font-semibold">Data de Criação</h3>
-                    <p className="text-gray-900 font-bold text-base">
+                    <h3 className="text-sm font-medium text-gray-300 mb-1 font-semibold">Data de Criação</h3>
+                    <p className="text-white font-bold text-base">
                       {new Date(selectedCard.createdAt).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-1 font-semibold">Última Atualização</h3>
-                    <p className="text-gray-900 font-bold text-base">
+                    <h3 className="text-sm font-medium text-gray-300 mb-1 font-semibold">Última Atualização</h3>
+                    <p className="text-white font-bold text-base">
                       {new Date(selectedCard.updatedAt).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
@@ -1043,7 +1156,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                   {selectedCard.dataVistoria && (
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="text-sm font-medium text-gray-700 font-semibold">Data da Vistoria</h3>
+                        <h3 className="text-sm font-medium text-gray-300 font-semibold">Data da Vistoria</h3>
                         <Button
                           variant="default"
                           size="sm"
@@ -1069,7 +1182,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                           Editar
                         </Button>
                       </div>
-                      <p className="text-gray-900 font-bold text-base">
+                      <p className="text-white font-bold text-base">
                         {new Date(selectedCard.dataVistoria + 'T00:00:00').toLocaleDateString('pt-BR')}
                       </p>
                     </div>
@@ -1078,7 +1191,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                   {selectedCard.dataRecebimento && (
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <h3 className="text-sm font-medium text-gray-700 font-semibold">Data de Recebimento</h3>
+                        <h3 className="text-sm font-medium text-gray-300 font-semibold">Data de Recebimento</h3>
                         <Button
                           variant="default"
                           size="sm"
@@ -1104,7 +1217,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                           Editar
                         </Button>
                       </div>
-                      <p className="text-gray-900 font-bold text-base">
+                      <p className="text-white font-bold text-base">
                         {new Date(selectedCard.dataRecebimento + 'T00:00:00').toLocaleDateString('pt-BR')}
                       </p>
                     </div>
@@ -1113,8 +1226,8 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
 
                 {/* Checklist para VISTORIA */}
                 {selectedCard.category === 'VISTORIA' && (
-                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
-                    <h3 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
+                  <div className="bg-black border-2 border-blue-500 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-blue-400 mb-3 flex items-center gap-2">
                       <CheckCircle className="w-4 h-4" />
                       Checklist de Vistoria
                     </h3>
@@ -1141,7 +1254,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                           }}
                           className="w-5 h-5 cursor-pointer"
                         />
-                        <span className="text-blue-900 font-bold">✓ Vistoria Realizada</span>
+                        <span className="text-white font-bold">✓ Vistoria Realizada</span>
                       </label>
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
@@ -1165,11 +1278,11 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                           }}
                           className="w-5 h-5 cursor-pointer"
                         />
-                        <span className="text-blue-900 font-bold">✓ Criação de Relatório</span>
+                        <span className="text-white font-bold">✓ Criação de Relatório</span>
                       </label>
 
                       <div className="mt-3">
-                        <label className="block text-blue-900 font-bold mb-2">
+                        <label className="block text-white font-bold mb-2">
                           📝 Observações (Acompanhamento, etc.)
                         </label>
                         <textarea
@@ -1191,13 +1304,13 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             setSelectedCard(updated);
                           }}
                           placeholder="Digite observações sobre acompanhamento, pendências, etc..."
-                          className="w-full px-3 py-2 border-2 border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-24 resize-none text-gray-900 font-medium"
+                          className="w-full px-3 py-2 border-2 border-blue-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-24 resize-none text-white bg-gray-900 font-medium"
                         />
                       </div>
 
                       {/* Data da Vistoria */}
                       <div className="mt-3">
-                        <label className="block text-blue-900 font-bold mb-2">
+                        <label className="block text-white font-bold mb-2">
                           📅 Data da Vistoria
                         </label>
                         <input
@@ -1219,13 +1332,13 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             ));
                             setSelectedCard(updated);
                           }}
-                          className="w-full px-3 py-2 border-2 border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium"
+                          className="w-full px-3 py-2 border-2 border-blue-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white bg-gray-900 font-medium"
                         />
                       </div>
 
                       {/* Data da Entrega do Relatório */}
                       <div className="mt-3">
-                        <label className="block text-blue-900 font-bold mb-2">
+                        <label className="block text-white font-bold mb-2">
                           📄 Data da Entrega do Relatório
                         </label>
                         <input
@@ -1247,13 +1360,13 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             ));
                             setSelectedCard(updated);
                           }}
-                          className="w-full px-3 py-2 border-2 border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-medium"
+                          className="w-full px-3 py-2 border-2 border-blue-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white bg-gray-900 font-medium"
                         />
                       </div>
                     </div>
                     {selectedCard.checklistVistoria?.vistoriaRealizada &&
                      selectedCard.checklistVistoria?.relatorioGerado && (
-                      <div className="mt-3 bg-green-100 text-green-800 border-2 border-green-600 px-3 py-1 rounded text-xs font-bold">
+                      <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
                         ✅ Checklist Completo - Pode mover para Finalizado
                       </div>
                     )}
@@ -1262,14 +1375,14 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
 
                 {/* Checklist para RECEBIMENTO_INCENDIO */}
                 {selectedCard.category === 'RECEBIMENTO_INCENDIO' && (
-                  <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
-                    <h3 className="text-sm font-bold text-yellow-900 mb-3 flex items-center gap-2">
+                  <div className="bg-black border-2 border-yellow-500 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
                       <CheckCircle className="w-4 h-4" />
                       Checklist de Recebimento de Incêndio
                     </h3>
                     <div className="space-y-3">
                       {/* EXTINTORES */}
-                      <div className="bg-white rounded-md p-3">
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
                         <label className="flex items-center gap-3 cursor-pointer mb-2">
                           <input
                             type="checkbox"
@@ -1301,7 +1414,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             }}
                             className="w-5 h-5 cursor-pointer"
                           />
-                          <span className="text-black font-bold">✓ RECEBIDO EXTINTORES</span>
+                          <span className="text-white font-bold">✓ RECEBIDO EXTINTORES</span>
                         </label>
                         <input
                           type="date"
@@ -1331,12 +1444,12 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             ));
                             setSelectedCard(updated);
                           }}
-                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 font-medium"
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
                         />
                       </div>
 
                       {/* MANGUEIRAS */}
-                      <div className="bg-white rounded-md p-3">
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
                         <label className="flex items-center gap-3 cursor-pointer mb-2">
                           <input
                             type="checkbox"
@@ -1368,7 +1481,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             }}
                             className="w-5 h-5 cursor-pointer"
                           />
-                          <span className="text-black font-bold">✓ RECEBIDO MANGUEIRAS</span>
+                          <span className="text-white font-bold">✓ RECEBIDO MANGUEIRAS</span>
                         </label>
                         <input
                           type="date"
@@ -1398,12 +1511,12 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             ));
                             setSelectedCard(updated);
                           }}
-                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 font-medium"
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
                         />
                       </div>
 
                       {/* ENGATES */}
-                      <div className="bg-white rounded-md p-3">
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
                         <label className="flex items-center gap-3 cursor-pointer mb-2">
                           <input
                             type="checkbox"
@@ -1435,7 +1548,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             }}
                             className="w-5 h-5 cursor-pointer"
                           />
-                          <span className="text-black font-bold">✓ RECEBIDO ENGATES</span>
+                          <span className="text-white font-bold">✓ RECEBIDO ENGATES</span>
                         </label>
                         <input
                           type="date"
@@ -1465,12 +1578,12 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             ));
                             setSelectedCard(updated);
                           }}
-                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 font-medium"
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
                         />
                       </div>
 
                       {/* TAMPAS */}
-                      <div className="bg-white rounded-md p-3">
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
                         <label className="flex items-center gap-3 cursor-pointer mb-2">
                           <input
                             type="checkbox"
@@ -1502,7 +1615,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             }}
                             className="w-5 h-5 cursor-pointer"
                           />
-                          <span className="text-black font-bold">✓ RECEBIDO TAMPAS</span>
+                          <span className="text-white font-bold">✓ RECEBIDO TAMPAS</span>
                         </label>
                         <input
                           type="date"
@@ -1532,12 +1645,12 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             ));
                             setSelectedCard(updated);
                           }}
-                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 font-medium"
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
                         />
                       </div>
 
                       {/* CHAVES STORZ */}
-                      <div className="bg-white rounded-md p-3">
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
                         <label className="flex items-center gap-3 cursor-pointer mb-2">
                           <input
                             type="checkbox"
@@ -1569,7 +1682,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             }}
                             className="w-5 h-5 cursor-pointer"
                           />
-                          <span className="text-black font-bold">✓ RECEBIDO CHAVES STORZ</span>
+                          <span className="text-white font-bold">✓ RECEBIDO CHAVES STORZ</span>
                         </label>
                         <input
                           type="date"
@@ -1599,12 +1712,12 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             ));
                             setSelectedCard(updated);
                           }}
-                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 font-medium"
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
                         />
                       </div>
 
                       {/* BICOS */}
-                      <div className="bg-white rounded-md p-3">
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
                         <label className="flex items-center gap-3 cursor-pointer mb-2">
                           <input
                             type="checkbox"
@@ -1636,7 +1749,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             }}
                             className="w-5 h-5 cursor-pointer"
                           />
-                          <span className="text-black font-bold">✓ RECEBIDO BICOS</span>
+                          <span className="text-white font-bold">✓ RECEBIDO BICOS</span>
                         </label>
                         <input
                           type="date"
@@ -1666,13 +1779,13 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             ));
                             setSelectedCard(updated);
                           }}
-                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 font-medium"
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
                         />
                       </div>
 
                       {/* OBSERVAÇÕES */}
                       <div className="mt-3">
-                        <label className="block text-yellow-900 font-bold mb-2">
+                        <label className="block text-white font-bold mb-2">
                           📝 Observações Gerais
                         </label>
                         <textarea
@@ -1703,7 +1816,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                             setSelectedCard(updated);
                           }}
                           placeholder="Digite observações gerais sobre o recebimento..."
-                          className="w-full px-3 py-2 border-2 border-yellow-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 h-24 resize-none text-gray-900 font-medium"
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 h-24 resize-none text-white bg-gray-900 font-medium"
                         />
                       </div>
                     </div>
@@ -1713,26 +1826,2812 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                      selectedCard.checklistRecebimentoIncendio?.tampas &&
                      selectedCard.checklistRecebimentoIncendio?.chavesStorz &&
                      selectedCard.checklistRecebimentoIncendio?.bicos && (
-                      <div className="mt-3 bg-green-100 text-green-800 border-2 border-green-600 px-3 py-1 rounded text-xs font-bold">
+                      <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
                         ✅ Checklist Completo - Todos os itens recebidos
                       </div>
                     )}
                   </div>
                 )}
 
+                {/* Checklist para RECEBIMENTO_AREAS */}
+                {selectedCard.category === 'RECEBIMENTO_AREAS' && (
+                  <div className="bg-black border-2 border-yellow-500 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Checklist de Recebimento de Áreas Comuns
+                    </h3>
+                    <div className="space-y-3">
+                      {/* CONFERÊNCIA MEMORIAL DESCRITIVO */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistRecebimentoAreas: {
+                                  conferenciaMemorial: e.target.checked,
+                                  dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
+                                  conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
+                                  dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
+                                  testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
+                                  dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
+                                  conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
+                                  dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
+                                  observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ CONFERÊNCIA MEMORIAL DESCRITIVO</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoAreas: {
+                                conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
+                                dataConferenciaMemorial: e.target.value,
+                                conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
+                                dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
+                                testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
+                                dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
+                                conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
+                                dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
+                                observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* CONFERÊNCIA DAS CHAVES */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistRecebimentoAreas: {
+                                  conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
+                                  dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
+                                  conferenciaChaves: e.target.checked,
+                                  dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
+                                  testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
+                                  dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
+                                  conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
+                                  dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
+                                  observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ CONFERÊNCIA DAS CHAVES</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoAreas: {
+                                conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
+                                dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
+                                conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
+                                dataConferenciaChaves: e.target.value,
+                                testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
+                                dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
+                                conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
+                                dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
+                                observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* TESTE DE TODOS EQUIPAMENTOS INSTALADOS */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistRecebimentoAreas: {
+                                  conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
+                                  dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
+                                  conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
+                                  dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
+                                  testeEquipamentos: e.target.checked,
+                                  dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
+                                  conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
+                                  dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
+                                  observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ TESTE DE TODOS EQUIPAMENTOS INSTALADOS</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoAreas: {
+                                conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
+                                dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
+                                conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
+                                dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
+                                testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
+                                dataTesteEquipamentos: e.target.value,
+                                conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
+                                dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
+                                observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* CONFERÊNCIA ESTÉTICA DO AMBIENTE */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistRecebimentoAreas: {
+                                  conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
+                                  dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
+                                  conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
+                                  dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
+                                  testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
+                                  dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
+                                  conferenciaEstetica: e.target.checked,
+                                  dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
+                                  observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ CONFERÊNCIA ESTÉTICA DO AMBIENTE</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoAreas: {
+                                conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
+                                dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
+                                conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
+                                dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
+                                testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
+                                dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
+                                conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
+                                dataConferenciaEstetica: e.target.value,
+                                observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* OBSERVAÇÕES */}
+                      <div className="mt-3">
+                        <label className="block text-white font-bold mb-2">
+                          📝 Observações Gerais
+                        </label>
+                        <textarea
+                          value={selectedCard.checklistRecebimentoAreas?.observacoes || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoAreas: {
+                                conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
+                                dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
+                                conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
+                                dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
+                                testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
+                                dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
+                                conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
+                                dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
+                                observacoes: e.target.value
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          placeholder="Digite observações gerais sobre o recebimento..."
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 h-24 resize-none text-white bg-gray-900 font-medium"
+                        />
+                      </div>
+                    </div>
+                    {selectedCard.checklistRecebimentoAreas?.conferenciaMemorial &&
+                     selectedCard.checklistRecebimentoAreas?.conferenciaChaves &&
+                     selectedCard.checklistRecebimentoAreas?.testeEquipamentos &&
+                     selectedCard.checklistRecebimentoAreas?.conferenciaEstetica && (
+                      <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
+                        ✅ Checklist Completo - Todos os itens conferidos
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Checklist para RECEBIMENTO_CHAVES */}
+                {selectedCard.category === 'RECEBIMENTO_CHAVES' && (
+                  <div className="bg-black border-2 border-yellow-500 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Checklist de Recebimento de Chaves do Condomínio
+                    </h3>
+                    <div className="space-y-3">
+                      {/* RECEBIMENTO CHAVES ÁREAS COMUNS */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistRecebimentoChaves?.chavesAreasComuns || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistRecebimentoChaves: {
+                                  chavesAreasComuns: e.target.checked,
+                                  dataChavesAreasComuns: selectedCard.checklistRecebimentoChaves?.dataChavesAreasComuns || '',
+                                  chavesAreasTecnicas: selectedCard.checklistRecebimentoChaves?.chavesAreasTecnicas || false,
+                                  dataChavesAreasTecnicas: selectedCard.checklistRecebimentoChaves?.dataChavesAreasTecnicas || '',
+                                  observacoes: selectedCard.checklistRecebimentoChaves?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ RECEBIMENTO CHAVES ÁREAS COMUNS</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistRecebimentoChaves?.dataChavesAreasComuns || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoChaves: {
+                                chavesAreasComuns: selectedCard.checklistRecebimentoChaves?.chavesAreasComuns || false,
+                                dataChavesAreasComuns: e.target.value,
+                                chavesAreasTecnicas: selectedCard.checklistRecebimentoChaves?.chavesAreasTecnicas || false,
+                                dataChavesAreasTecnicas: selectedCard.checklistRecebimentoChaves?.dataChavesAreasTecnicas || '',
+                                observacoes: selectedCard.checklistRecebimentoChaves?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* RECEBIMENTO CHAVES ÁREAS TÉCNICAS */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistRecebimentoChaves?.chavesAreasTecnicas || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistRecebimentoChaves: {
+                                  chavesAreasComuns: selectedCard.checklistRecebimentoChaves?.chavesAreasComuns || false,
+                                  dataChavesAreasComuns: selectedCard.checklistRecebimentoChaves?.dataChavesAreasComuns || '',
+                                  chavesAreasTecnicas: e.target.checked,
+                                  dataChavesAreasTecnicas: selectedCard.checklistRecebimentoChaves?.dataChavesAreasTecnicas || '',
+                                  observacoes: selectedCard.checklistRecebimentoChaves?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ RECEBIMENTO CHAVES ÁREAS TÉCNICAS</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistRecebimentoChaves?.dataChavesAreasTecnicas || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoChaves: {
+                                chavesAreasComuns: selectedCard.checklistRecebimentoChaves?.chavesAreasComuns || false,
+                                dataChavesAreasComuns: selectedCard.checklistRecebimentoChaves?.dataChavesAreasComuns || '',
+                                chavesAreasTecnicas: selectedCard.checklistRecebimentoChaves?.chavesAreasTecnicas || false,
+                                dataChavesAreasTecnicas: e.target.value,
+                                observacoes: selectedCard.checklistRecebimentoChaves?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* OBSERVAÇÕES */}
+                      <div className="mt-3">
+                        <label className="block text-white font-bold mb-2">
+                          📝 Observações Gerais
+                        </label>
+                        <textarea
+                          value={selectedCard.checklistRecebimentoChaves?.observacoes || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistRecebimentoChaves: {
+                                chavesAreasComuns: selectedCard.checklistRecebimentoChaves?.chavesAreasComuns || false,
+                                dataChavesAreasComuns: selectedCard.checklistRecebimentoChaves?.dataChavesAreasComuns || '',
+                                chavesAreasTecnicas: selectedCard.checklistRecebimentoChaves?.chavesAreasTecnicas || false,
+                                dataChavesAreasTecnicas: selectedCard.checklistRecebimentoChaves?.dataChavesAreasTecnicas || '',
+                                observacoes: e.target.value
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          placeholder="Digite observações gerais sobre o recebimento de chaves..."
+                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 h-24 resize-none text-white bg-gray-900 font-medium"
+                        />
+                      </div>
+                    </div>
+                    {selectedCard.checklistRecebimentoChaves?.chavesAreasComuns &&
+                     selectedCard.checklistRecebimentoChaves?.chavesAreasTecnicas && (
+                      <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
+                        ✅ Checklist Completo - Todas as chaves recebidas
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Checklist para ACESSIBILIDADE ELEVADORES */}
+                {selectedCard.title === 'ACESSIBILIDADE ELEVADORES' && (
+                  <div className="bg-black border-2 border-purple-500 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-purple-400 mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Checklist de Acessibilidade - Elevadores
+                    </h3>
+                    <div className="space-y-3">
+                      {/* BRAILE NOS DOIS BATENTES */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeElevadores?.braileBatentes || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeElevadores: {
+                                  braileBatentes: e.target.checked,
+                                  dataBraileBatentes: selectedCard.checklistAcessibilidadeElevadores?.dataBraileBatentes || '',
+                                  brailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.brailePlacaAdvertencia || false,
+                                  dataBrailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.dataBrailePlacaAdvertencia || '',
+                                  pisoTatil: selectedCard.checklistAcessibilidadeElevadores?.pisoTatil || false,
+                                  dataPisoTatil: selectedCard.checklistAcessibilidadeElevadores?.dataPisoTatil || '',
+                                  identificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false,
+                                  dataIdentificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || '',
+                                  intercomunicador: selectedCard.checklistAcessibilidadeElevadores?.intercomunicador || false,
+                                  dataIntercomunicador: selectedCard.checklistAcessibilidadeElevadores?.dataIntercomunicador || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ BRAILE NOS DOIS BATENTES DO ELEVADOR</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeElevadores?.dataBraileBatentes || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeElevadores: {
+                                braileBatentes: selectedCard.checklistAcessibilidadeElevadores?.braileBatentes || false,
+                                dataBraileBatentes: e.target.value,
+                                brailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.brailePlacaAdvertencia || false,
+                                dataBrailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.dataBrailePlacaAdvertencia || '',
+                                pisoTatil: selectedCard.checklistAcessibilidadeElevadores?.pisoTatil || false,
+                                dataPisoTatil: selectedCard.checklistAcessibilidadeElevadores?.dataPisoTatil || '',
+                                identificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false,
+                                dataIdentificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || '',
+                                observacoes: selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* BRAILE NA PLACA DE ADVERTÊNCIA */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeElevadores?.brailePlacaAdvertencia || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeElevadores: {
+                                  braileBatentes: selectedCard.checklistAcessibilidadeElevadores?.braileBatentes || false,
+                                  dataBraileBatentes: selectedCard.checklistAcessibilidadeElevadores?.dataBraileBatentes || '',
+                                  brailePlacaAdvertencia: e.target.checked,
+                                  dataBrailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.dataBrailePlacaAdvertencia || '',
+                                  pisoTatil: selectedCard.checklistAcessibilidadeElevadores?.pisoTatil || false,
+                                  dataPisoTatil: selectedCard.checklistAcessibilidadeElevadores?.dataPisoTatil || '',
+                                  identificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false,
+                                  dataIdentificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || '',
+                                  intercomunicador: selectedCard.checklistAcessibilidadeElevadores?.intercomunicador || false,
+                                  dataIntercomunicador: selectedCard.checklistAcessibilidadeElevadores?.dataIntercomunicador || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ BRAILE NA PLACA DE ADVERTÊNCIA E USO</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeElevadores?.dataBrailePlacaAdvertencia || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeElevadores: {
+                                braileBatentes: selectedCard.checklistAcessibilidadeElevadores?.braileBatentes || false,
+                                dataBraileBatentes: selectedCard.checklistAcessibilidadeElevadores?.dataBraileBatentes || '',
+                                brailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.brailePlacaAdvertencia || false,
+                                dataBrailePlacaAdvertencia: e.target.value,
+                                pisoTatil: selectedCard.checklistAcessibilidadeElevadores?.pisoTatil || false,
+                                dataPisoTatil: selectedCard.checklistAcessibilidadeElevadores?.dataPisoTatil || '',
+                                identificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false,
+                                dataIdentificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || '',
+                                observacoes: selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* PISO TÁTIL NA PORTA */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeElevadores?.pisoTatil || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeElevadores: {
+                                  braileBatentes: selectedCard.checklistAcessibilidadeElevadores?.braileBatentes || false,
+                                  dataBraileBatentes: selectedCard.checklistAcessibilidadeElevadores?.dataBraileBatentes || '',
+                                  brailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.brailePlacaAdvertencia || false,
+                                  dataBrailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.dataBrailePlacaAdvertencia || '',
+                                  pisoTatil: e.target.checked,
+                                  dataPisoTatil: selectedCard.checklistAcessibilidadeElevadores?.dataPisoTatil || '',
+                                  identificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false,
+                                  dataIdentificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || '',
+                                  intercomunicador: selectedCard.checklistAcessibilidadeElevadores?.intercomunicador || false,
+                                  dataIntercomunicador: selectedCard.checklistAcessibilidadeElevadores?.dataIntercomunicador || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ PISO TÁTIL NA PORTA DO ELEVADOR</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeElevadores?.dataPisoTatil || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeElevadores: {
+                                braileBatentes: selectedCard.checklistAcessibilidadeElevadores?.braileBatentes || false,
+                                dataBraileBatentes: selectedCard.checklistAcessibilidadeElevadores?.dataBraileBatentes || '',
+                                brailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.brailePlacaAdvertencia || false,
+                                dataBrailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.dataBrailePlacaAdvertencia || '',
+                                pisoTatil: selectedCard.checklistAcessibilidadeElevadores?.pisoTatil || false,
+                                dataPisoTatil: e.target.value,
+                                identificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false,
+                                dataIdentificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || '',
+                                observacoes: selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* IDENTIFICAÇÃO SONORA DO ANDAR */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeElevadores: {
+                                  braileBatentes: selectedCard.checklistAcessibilidadeElevadores?.braileBatentes || false,
+                                  dataBraileBatentes: selectedCard.checklistAcessibilidadeElevadores?.dataBraileBatentes || '',
+                                  brailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.brailePlacaAdvertencia || false,
+                                  dataBrailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.dataBrailePlacaAdvertencia || '',
+                                  pisoTatil: selectedCard.checklistAcessibilidadeElevadores?.pisoTatil || false,
+                                  dataPisoTatil: selectedCard.checklistAcessibilidadeElevadores?.dataPisoTatil || '',
+                                  identificacaoSonora: e.target.checked,
+                                  dataIdentificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || '',
+                                  intercomunicador: selectedCard.checklistAcessibilidadeElevadores?.intercomunicador || false,
+                                  dataIntercomunicador: selectedCard.checklistAcessibilidadeElevadores?.dataIntercomunicador || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ IDENTIFICAÇÃO SONORA DO ANDAR</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeElevadores: {
+                                braileBatentes: selectedCard.checklistAcessibilidadeElevadores?.braileBatentes || false,
+                                dataBraileBatentes: selectedCard.checklistAcessibilidadeElevadores?.dataBraileBatentes || '',
+                                brailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.brailePlacaAdvertencia || false,
+                                dataBrailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.dataBrailePlacaAdvertencia || '',
+                                pisoTatil: selectedCard.checklistAcessibilidadeElevadores?.pisoTatil || false,
+                                dataPisoTatil: selectedCard.checklistAcessibilidadeElevadores?.dataPisoTatil || '',
+                                identificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false,
+                                dataIdentificacaoSonora: e.target.value,
+                                intercomunicador: selectedCard.checklistAcessibilidadeElevadores?.intercomunicador || false,
+                                dataIntercomunicador: selectedCard.checklistAcessibilidadeElevadores?.dataIntercomunicador || '',
+                                observacoes: selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* INTERCOMUNICADOR (ALTURA ENTRE 80CM E 1,20M) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeElevadores?.intercomunicador || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeElevadores: {
+                                  braileBatentes: selectedCard.checklistAcessibilidadeElevadores?.braileBatentes || false,
+                                  dataBraileBatentes: selectedCard.checklistAcessibilidadeElevadores?.dataBraileBatentes || '',
+                                  brailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.brailePlacaAdvertencia || false,
+                                  dataBrailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.dataBrailePlacaAdvertencia || '',
+                                  pisoTatil: selectedCard.checklistAcessibilidadeElevadores?.pisoTatil || false,
+                                  dataPisoTatil: selectedCard.checklistAcessibilidadeElevadores?.dataPisoTatil || '',
+                                  identificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false,
+                                  dataIdentificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || '',
+                                  intercomunicador: e.target.checked,
+                                  dataIntercomunicador: selectedCard.checklistAcessibilidadeElevadores?.dataIntercomunicador || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ INTERCOMUNICADOR (ALTURA ENTRE 80CM E 1,20M)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeElevadores?.dataIntercomunicador || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeElevadores: {
+                                braileBatentes: selectedCard.checklistAcessibilidadeElevadores?.braileBatentes || false,
+                                dataBraileBatentes: selectedCard.checklistAcessibilidadeElevadores?.dataBraileBatentes || '',
+                                brailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.brailePlacaAdvertencia || false,
+                                dataBrailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.dataBrailePlacaAdvertencia || '',
+                                pisoTatil: selectedCard.checklistAcessibilidadeElevadores?.pisoTatil || false,
+                                dataPisoTatil: selectedCard.checklistAcessibilidadeElevadores?.dataPisoTatil || '',
+                                identificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false,
+                                dataIdentificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || '',
+                                intercomunicador: selectedCard.checklistAcessibilidadeElevadores?.intercomunicador || false,
+                                dataIntercomunicador: e.target.value,
+                                observacoes: selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* OBSERVAÇÕES */}
+                      <div className="mt-3">
+                        <label className="block text-white font-bold mb-2">
+                          📝 Observações Gerais
+                        </label>
+                        <textarea
+                          value={selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeElevadores: {
+                                braileBatentes: selectedCard.checklistAcessibilidadeElevadores?.braileBatentes || false,
+                                dataBraileBatentes: selectedCard.checklistAcessibilidadeElevadores?.dataBraileBatentes || '',
+                                brailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.brailePlacaAdvertencia || false,
+                                dataBrailePlacaAdvertencia: selectedCard.checklistAcessibilidadeElevadores?.dataBrailePlacaAdvertencia || '',
+                                pisoTatil: selectedCard.checklistAcessibilidadeElevadores?.pisoTatil || false,
+                                dataPisoTatil: selectedCard.checklistAcessibilidadeElevadores?.dataPisoTatil || '',
+                                identificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false,
+                                dataIdentificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || '',
+                                intercomunicador: selectedCard.checklistAcessibilidadeElevadores?.intercomunicador || false,
+                                dataIntercomunicador: selectedCard.checklistAcessibilidadeElevadores?.dataIntercomunicador || '',
+                                observacoes: e.target.value
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          placeholder="Digite observações gerais sobre acessibilidade..."
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 h-24 resize-none text-white bg-gray-900 font-medium"
+                        />
+                      </div>
+                    </div>
+                    {selectedCard.checklistAcessibilidadeElevadores?.braileBatentes &&
+                     selectedCard.checklistAcessibilidadeElevadores?.brailePlacaAdvertencia &&
+                     selectedCard.checklistAcessibilidadeElevadores?.pisoTatil &&
+                     selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora &&
+                     selectedCard.checklistAcessibilidadeElevadores?.intercomunicador && (
+                      <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
+                        ✅ Checklist Completo - Todos os itens de acessibilidade conferidos
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Checklist para ACESSIBILIDADE ESCADAS */}
+                {selectedCard.title === 'ACESSIBILIDADE ESCADAS' && (
+                  <div className="bg-black border-2 border-purple-500 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-purple-400 mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Checklist de Acessibilidade - Escadas
+                    </h3>
+                    <div className="space-y-3">
+                      {/* CORRIMÃO DUPLO */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeEscadas: {
+                                  corrimaoDuplo: e.target.checked,
+                                  dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                  braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                  dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                  pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                  dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                  fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                  dataFitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                  demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                  dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                  areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                  dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ CORRIMÃO DUPLO (INFERIOR: 70CM, SUPERIOR: 92CM)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEscadas: {
+                                corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                dataCorrimaoDuplo: e.target.value,
+                                braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* BRAILE NO CORRIMÃO */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeEscadas: {
+                                  corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                  dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                  braileCorrimao: e.target.checked,
+                                  dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                  pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                  dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                  fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                  dataFitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                  demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                  dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                  areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                  dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ BRAILE NO CORRIMÃO (DOIS LADOS E NOS DOIS CORRIMÃOS)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEscadas: {
+                                corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                dataBraileCorrimao: e.target.value,
+                                pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* PISO TÁTIL NO INÍCIO E FIM DAS ESCADAS */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeEscadas: {
+                                  corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                  dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                  braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                  dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                  pisoTatilEscadas: e.target.checked,
+                                  dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                  fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                  dataFitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                  demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                  dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                  areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                  dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ PISO TÁTIL NO INÍCIO E FIM DAS ESCADAS</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEscadas: {
+                                corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                dataPisoTatilEscadas: e.target.value,
+                                fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                dataFitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* FITA FOTOLUMINESCENTE NOS DEGRAUS */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeEscadas: {
+                                  corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                  dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                  braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                  dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                  pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                  dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                  fitaFotoluminescente: e.target.checked,
+                                  dataFitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                  demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                  dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                  areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                  dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ FITA FOTOLUMINESCENTE NOS DEGRAUS</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEscadas: {
+                                corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                dataFitaFotoluminescente: e.target.value,
+                                demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* DEMARCAÇÃO ÁREA DE RESGATE (MÍNIMO 15 X 15CM) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeEscadas: {
+                                  corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                  dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                  braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                  dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                  pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                  dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                  fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                  dataFitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                  demarcacaoAreaResgate: e.target.checked,
+                                  dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                  areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                  dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ DEMARCAÇÃO ÁREA DE RESGATE (MÍNIMO 15 X 15CM)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEscadas: {
+                                corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                dataFitoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                dataDemarcacaoAreaResgate: e.target.value,
+                                areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* ÁREA DE RESGATE (DIMENSÕES 80CM X 1,20M) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeEscadas: {
+                                  corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                  dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                  braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                  dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                  pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                  dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                  fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                  dataFitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                  demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                  dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                  areaResgate: e.target.checked,
+                                  dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ ÁREA DE RESGATE (DIMENSÕES 80CM X 1,20M)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEscadas: {
+                                corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                dataFitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                dataAreaResgate: e.target.value,
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* ALARME/INTERCOMUNICADOR ÁREA DE RESGATE */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeEscadas: {
+                                  corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                  dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                  braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                  dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                  pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                  dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                  fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                  dataFitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                  demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                  dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                  areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                  dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
+                                  alarmeIntercomunicador: e.target.checked,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ ALARME E/OU INTERCOMUNICADOR (ALTURA ENTRE 80CM E 1,20M)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEscadas: {
+                                corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: e.target.value,
+                                observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* OBSERVAÇÕES */}
+                      <div className="mt-3">
+                        <label className="block text-white font-bold mb-2">
+                          📝 Observações Gerais
+                        </label>
+                        <textarea
+                          value={selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEscadas: {
+                                corrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo || false,
+                                dataCorrimaoDuplo: selectedCard.checklistAcessibilidadeEscadas?.dataCorrimaoDuplo || '',
+                                braileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao || false,
+                                dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
+                                pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
+                                dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
+                                observacoes: e.target.value
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          placeholder="Digite observações gerais sobre acessibilidade das escadas..."
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 h-24 resize-none text-white bg-gray-900 font-medium"
+                        />
+                      </div>
+                    </div>
+                    {selectedCard.checklistAcessibilidadeEscadas?.corrimaoDuplo &&
+                     selectedCard.checklistAcessibilidadeEscadas?.braileCorrimao &&
+                     selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas &&
+                     selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente &&
+                     selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate &&
+                     selectedCard.checklistAcessibilidadeEscadas?.areaResgate &&
+                     selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador && (
+                      <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
+                        ✅ Checklist Completo - Todos os itens de acessibilidade das escadas conferidos
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Checklist para ACESSIBILIDADE WCS */}
+                {selectedCard.title === 'ACESSIBILIDADE WCS' && (
+                  <div className="bg-black border-2 border-purple-500 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-purple-400 mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Checklist de Acessibilidade - WCs
+                    </h3>
+                    <div className="space-y-3">
+                      {/* REVESTIMENTO RESISTENTE A IMPACTO NA PORTA (MÍNIMO 40CM) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeWCs: {
+                                  revestimentoPorta: e.target.checked,
+                                  dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                  larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                  dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                  portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                  dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                  barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                  dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                  lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                  dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                  areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                  dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ REVESTIMENTO RESISTENTE A IMPACTO NA PORTA (MÍNIMO 40CM)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeWCs: {
+                                revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                dataRevestimentoPorta: e.target.value,
+                                desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* DESNÍVEL DO PISO DE ATÉ 5MM (PORTA DE ACESSO) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeWCs: {
+                                  revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                  dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                  desnivelPiso: e.target.checked,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                  larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                  dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                  portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                  dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                  barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                  dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                  lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                  dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                  areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                  dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ DESNÍVEL DO PISO DE ATÉ 5MM (PORTA DE ACESSO)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeWCs: {
+                                revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                dataDesnivelPiso: e.target.value,
+                                larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* LARGURA DA PORTA (MÍNIMO 80CM) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeWCs: {
+                                  revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                  dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                  larguraPorta: e.target.checked,
+                                  dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                  portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                  dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                  barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                  dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                  lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                  dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                  areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                  dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ LARGURA DA PORTA (MÍNIMO 80CM)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeWCs: {
+                                revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                dataLarguraPorta: e.target.value,
+                                portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* PORTA FECHADA COM TRANQUETA */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeWCs: {
+                                  revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                  dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                  larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                  dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                  portaTranqueta: e.target.checked,
+                                  dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                  barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                  dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                  lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                  dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                  areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                  dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ PORTA FECHADA COM TRANQUETA</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeWCs: {
+                                revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                dataPortaTranqueta: e.target.value,
+                                barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* BARRAS NA PORTA, LAVATÓRIO E VASO SANITÁRIO */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeWCs?.barras || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeWCs: {
+                                  revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                  dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                  larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                  dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                  portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                  dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                  barras: e.target.checked,
+                                  dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                  lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                  dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                  areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                  dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ BARRAS NA PORTA, LAVATÓRIO E VASO SANITÁRIO</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeWCs?.dataBarras || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeWCs: {
+                                revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                dataBarras: e.target.value,
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* ALARME DE EMERGÊNCIA / INTERCOMUNICADOR */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeWCs: {
+                                  revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                  dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                  larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                  dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                  portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                  dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                  barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                  dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                  alarmeIntercomunicador: e.target.checked,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                  lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                  dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                  areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                  dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ ALARME DE EMERGÊNCIA / INTERCOMUNICADOR</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeWCs: {
+                                revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: e.target.value,
+                                lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* LAVATÓRIO SEM COLUNA ABAIXO (ALTURA ENTRE 78 E 80CM) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeWCs?.lavatorio || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeWCs: {
+                                  revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                  dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                  larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                  dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                  portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                  dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                  barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                  dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                  lavatorio: e.target.checked,
+                                  dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                  areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                  dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ LAVATÓRIO SEM COLUNA ABAIXO (ALTURA ENTRE 78 E 80CM)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeWCs: {
+                                revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                dataLavatorio: e.target.value,
+                                areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* ÁREA DE MANOBRA (MÍNIMO 1,5M DE DIÂMETRO) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeWCs?.areaManobra || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeWCs: {
+                                  revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                  dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                  larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                  dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                  portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                  dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                  barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                  dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                  lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                  dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                  areaManobra: e.target.checked,
+                                  dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ ÁREA DE MANOBRA (MÍNIMO 1,5M DE DIÂMETRO)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeWCs: {
+                                revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                dataAreaManobra: e.target.value,
+                                observacoes: selectedCard.checklistAcessibilidadeWCs?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* OBSERVAÇÕES */}
+                      <div className="mt-3">
+                        <label className="block text-white font-bold mb-2">
+                          📝 Observações Gerais
+                        </label>
+                        <textarea
+                          value={selectedCard.checklistAcessibilidadeWCs?.observacoes || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeWCs: {
+                                revestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta || false,
+                                dataRevestimentoPorta: selectedCard.checklistAcessibilidadeWCs?.dataRevestimentoPorta || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeWCs?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeWCs?.dataDesnivelPiso || '',
+                                larguraPorta: selectedCard.checklistAcessibilidadeWCs?.larguraPorta || false,
+                                dataLarguraPorta: selectedCard.checklistAcessibilidadeWCs?.dataLarguraPorta || '',
+                                portaTranqueta: selectedCard.checklistAcessibilidadeWCs?.portaTranqueta || false,
+                                dataPortaTranqueta: selectedCard.checklistAcessibilidadeWCs?.dataPortaTranqueta || '',
+                                barras: selectedCard.checklistAcessibilidadeWCs?.barras || false,
+                                dataBarras: selectedCard.checklistAcessibilidadeWCs?.dataBarras || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeWCs?.dataAlarmeIntercomunicador || '',
+                                lavatorio: selectedCard.checklistAcessibilidadeWCs?.lavatorio || false,
+                                dataLavatorio: selectedCard.checklistAcessibilidadeWCs?.dataLavatorio || '',
+                                areaManobra: selectedCard.checklistAcessibilidadeWCs?.areaManobra || false,
+                                dataAreaManobra: selectedCard.checklistAcessibilidadeWCs?.dataAreaManobra || '',
+                                observacoes: e.target.value
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          placeholder="Digite observações gerais sobre acessibilidade dos WCs..."
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 h-24 resize-none text-white bg-gray-900 font-medium"
+                        />
+                      </div>
+                    </div>
+                    {selectedCard.checklistAcessibilidadeWCs?.revestimentoPorta &&
+                     selectedCard.checklistAcessibilidadeWCs?.desnivelPiso &&
+                     selectedCard.checklistAcessibilidadeWCs?.larguraPorta &&
+                     selectedCard.checklistAcessibilidadeWCs?.portaTranqueta &&
+                     selectedCard.checklistAcessibilidadeWCs?.barras &&
+                     selectedCard.checklistAcessibilidadeWCs?.alarmeIntercomunicador &&
+                     selectedCard.checklistAcessibilidadeWCs?.lavatorio &&
+                     selectedCard.checklistAcessibilidadeWCs?.areaManobra && (
+                      <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
+                        ✅ Checklist Completo - Todos os itens de acessibilidade dos WCs conferidos
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Checklist para ACESSIBILIDADE ÁREAS COMUNS */}
+                {selectedCard.title === 'ACESSIBILIDADE ÁREAS COMUNS' && (
+                  <div className="bg-black border-2 border-purple-500 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-purple-400 mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Checklist de Acessibilidade - Áreas Comuns
+                    </h3>
+                    <div className="space-y-3">
+                      {/* LARGURA DA PORTA */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeAreasComuns?.larguraPorta || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeAreasComuns: {
+                                  larguraPorta: e.target.checked,
+                                  dataLarguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.dataLarguraPorta || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.dataDesnivelPiso || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.dataAlarmeIntercomunicador || '',
+                                  areaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.areaCirculacao || false,
+                                  dataAreaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.dataAreaCirculacao || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeAreasComuns?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ LARGURA DA PORTA</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeAreasComuns?.dataLarguraPorta || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeAreasComuns: {
+                                larguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.larguraPorta || false,
+                                dataLarguraPorta: e.target.value,
+                                desnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.dataDesnivelPiso || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.dataAlarmeIntercomunicador || '',
+                                areaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.areaCirculacao || false,
+                                dataAreaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.dataAreaCirculacao || '',
+                                observacoes: selectedCard.checklistAcessibilidadeAreasComuns?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* DESNÍVEL DO PISO DE ATÉ 5MM (PORTA DE ACESSO) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeAreasComuns?.desnivelPiso || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeAreasComuns: {
+                                  larguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.larguraPorta || false,
+                                  dataLarguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.dataLarguraPorta || '',
+                                  desnivelPiso: e.target.checked,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.dataDesnivelPiso || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.dataAlarmeIntercomunicador || '',
+                                  areaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.areaCirculacao || false,
+                                  dataAreaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.dataAreaCirculacao || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeAreasComuns?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ DESNÍVEL DO PISO DE ATÉ 5MM (PORTA DE ACESSO)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeAreasComuns?.dataDesnivelPiso || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeAreasComuns: {
+                                larguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.larguraPorta || false,
+                                dataLarguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.dataLarguraPorta || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.desnivelPiso || false,
+                                dataDesnivelPiso: e.target.value,
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.dataAlarmeIntercomunicador || '',
+                                areaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.areaCirculacao || false,
+                                dataAreaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.dataAreaCirculacao || '',
+                                observacoes: selectedCard.checklistAcessibilidadeAreasComuns?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* ALARME DE EMERGÊNCIA / INTERCOMUNICADOR */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeAreasComuns?.alarmeIntercomunicador || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeAreasComuns: {
+                                  larguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.larguraPorta || false,
+                                  dataLarguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.dataLarguraPorta || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.dataDesnivelPiso || '',
+                                  alarmeIntercomunicador: e.target.checked,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.dataAlarmeIntercomunicador || '',
+                                  areaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.areaCirculacao || false,
+                                  dataAreaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.dataAreaCirculacao || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeAreasComuns?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ ALARME DE EMERGÊNCIA / INTERCOMUNICADOR</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeAreasComuns?.dataAlarmeIntercomunicador || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeAreasComuns: {
+                                larguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.larguraPorta || false,
+                                dataLarguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.dataLarguraPorta || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.dataDesnivelPiso || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: e.target.value,
+                                areaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.areaCirculacao || false,
+                                dataAreaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.dataAreaCirculacao || '',
+                                observacoes: selectedCard.checklistAcessibilidadeAreasComuns?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* ÁREA DE CIRCULAÇÃO (MAIOR DE 90CM DE LARGURA) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeAreasComuns?.areaCirculacao || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeAreasComuns: {
+                                  larguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.larguraPorta || false,
+                                  dataLarguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.dataLarguraPorta || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.dataDesnivelPiso || '',
+                                  alarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.alarmeIntercomunicador || false,
+                                  dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.dataAlarmeIntercomunicador || '',
+                                  areaCirculacao: e.target.checked,
+                                  dataAreaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.dataAreaCirculacao || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeAreasComuns?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ ÁREA DE CIRCULAÇÃO (MAIOR DE 90CM DE LARGURA)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeAreasComuns?.dataAreaCirculacao || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeAreasComuns: {
+                                larguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.larguraPorta || false,
+                                dataLarguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.dataLarguraPorta || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.dataDesnivelPiso || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.dataAlarmeIntercomunicador || '',
+                                areaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.areaCirculacao || false,
+                                dataAreaCirculacao: e.target.value,
+                                observacoes: selectedCard.checklistAcessibilidadeAreasComuns?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* OBSERVAÇÕES */}
+                      <div className="mt-3">
+                        <label className="block text-white font-bold mb-2">
+                          📝 Observações Gerais
+                        </label>
+                        <textarea
+                          value={selectedCard.checklistAcessibilidadeAreasComuns?.observacoes || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeAreasComuns: {
+                                larguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.larguraPorta || false,
+                                dataLarguraPorta: selectedCard.checklistAcessibilidadeAreasComuns?.dataLarguraPorta || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeAreasComuns?.dataDesnivelPiso || '',
+                                alarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.alarmeIntercomunicador || false,
+                                dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeAreasComuns?.dataAlarmeIntercomunicador || '',
+                                areaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.areaCirculacao || false,
+                                dataAreaCirculacao: selectedCard.checklistAcessibilidadeAreasComuns?.dataAreaCirculacao || '',
+                                observacoes: e.target.value
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          placeholder="Digite observações gerais sobre acessibilidade das áreas comuns..."
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 h-24 resize-none text-white bg-gray-900 font-medium"
+                        />
+                      </div>
+                    </div>
+                    {selectedCard.checklistAcessibilidadeAreasComuns?.larguraPorta &&
+                     selectedCard.checklistAcessibilidadeAreasComuns?.desnivelPiso &&
+                     selectedCard.checklistAcessibilidadeAreasComuns?.alarmeIntercomunicador &&
+                     selectedCard.checklistAcessibilidadeAreasComuns?.areaCirculacao && (
+                      <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
+                        ✅ Checklist Completo - Todos os itens de acessibilidade das áreas comuns conferidos
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Checklist para ACESSIBILIDADE PISCINA */}
+                {selectedCard.title === 'ACESSIBILIDADE PISCINA' && (
+                  <div className="bg-black border-2 border-purple-500 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-purple-400 mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Checklist de Acessibilidade - Piscina
+                    </h3>
+                    <div className="space-y-3">
+                      {/* DESNÍVEL DO PISO DE ATÉ 5MM (PORTA DE ACESSO) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadePiscina: {
+                                  desnivelPiso: e.target.checked,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
+                                  placaBraile: selectedCard.checklistAcessibilidadePiscina?.placaBraile || false,
+                                  dataPlacaBraile: selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || '',
+                                  cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
+                                  dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
+                                  observacoes: selectedCard.checklistAcessibilidadePiscina?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ DESNÍVEL DO PISO DE ATÉ 5MM (PORTA DE ACESSO)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadePiscina: {
+                                desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
+                                dataDesnivelPiso: e.target.value,
+                                placaBraile: selectedCard.checklistAcessibilidadePiscina?.placaBraile || false,
+                                dataPlacaBraile: selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || '',
+                                cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
+                                dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
+                                observacoes: selectedCard.checklistAcessibilidadePiscina?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* PLACA COM A PROFUNDIDADE DA PISCINA EM BRAILE */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadePiscina?.placaBraile || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadePiscina: {
+                                  desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
+                                  placaBraile: e.target.checked,
+                                  dataPlacaBraile: selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || '',
+                                  cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
+                                  dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
+                                  observacoes: selectedCard.checklistAcessibilidadePiscina?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ PLACA COM A PROFUNDIDADE DA PISCINA EM BRAILE</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadePiscina: {
+                                desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
+                                placaBraile: selectedCard.checklistAcessibilidadePiscina?.placaBraile || false,
+                                dataPlacaBraile: e.target.value,
+                                cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
+                                dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
+                                observacoes: selectedCard.checklistAcessibilidadePiscina?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* CADEIRA PARA ACESSO */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadePiscina: {
+                                  desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
+                                  placaBraile: selectedCard.checklistAcessibilidadePiscina?.placaBraile || false,
+                                  dataPlacaBraile: selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || '',
+                                  cadeiraAcesso: e.target.checked,
+                                  dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
+                                  observacoes: selectedCard.checklistAcessibilidadePiscina?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ CADEIRA PARA ACESSO</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadePiscina: {
+                                desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
+                                placaBraile: selectedCard.checklistAcessibilidadePiscina?.placaBraile || false,
+                                dataPlacaBraile: selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || '',
+                                cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
+                                dataCadeiraAcesso: e.target.value,
+                                observacoes: selectedCard.checklistAcessibilidadePiscina?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* OBSERVAÇÕES */}
+                      <div className="mt-3">
+                        <label className="block text-white font-bold mb-2">
+                          📝 Observações Gerais
+                        </label>
+                        <textarea
+                          value={selectedCard.checklistAcessibilidadePiscina?.observacoes || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadePiscina: {
+                                desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
+                                placaBraile: selectedCard.checklistAcessibilidadePiscina?.placaBraile || false,
+                                dataPlacaBraile: selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || '',
+                                cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
+                                dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
+                                observacoes: e.target.value
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          placeholder="Digite observações gerais sobre acessibilidade da piscina..."
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 h-24 resize-none text-white bg-gray-900 font-medium"
+                        />
+                      </div>
+                    </div>
+                    {selectedCard.checklistAcessibilidadePiscina?.desnivelPiso &&
+                     selectedCard.checklistAcessibilidadePiscina?.placaBraile &&
+                     selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso && (
+                      <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
+                        ✅ Checklist Completo - Todos os itens de acessibilidade da piscina conferidos
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Checklist para ACESSIBILIDADE ENTRADA DO PRÉDIO */}
+                {selectedCard.title === 'ACESSIBILIDADE ENTRADA DO PRÉDIO' && (
+                  <div className="bg-black border-2 border-purple-500 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-purple-400 mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Checklist de Acessibilidade - Entrada do Prédio
+                    </h3>
+                    <div className="space-y-3">
+                      {/* PISO TÁTIL NA CALÇADA (CONTÍNUO E DE PARADA) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeEntrada: {
+                                  pisoTatilCalcada: e.target.checked,
+                                  dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
+                                  faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
+                                  dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                  placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
+                                  dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
+                                  alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
+                                  dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ PISO TÁTIL NA CALÇADA (CONTÍNUO E DE PARADA)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEntrada: {
+                                pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
+                                dataPisoTatilCalcada: e.target.value,
+                                faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
+                                dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
+                                dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
+                                alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
+                                dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* CALÇADA COM FAIXA LIVRE DE ACESSO (MÍNIMO 1,20 DE LARGURA) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeEntrada: {
+                                  pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
+                                  dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
+                                  faixaLivreAcesso: e.target.checked,
+                                  dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                  placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
+                                  dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
+                                  alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
+                                  dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ CALÇADA COM FAIXA LIVRE DE ACESSO (MÍNIMO 1,20 DE LARGURA)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEntrada: {
+                                pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
+                                dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
+                                faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
+                                dataFaixaLivreAcesso: e.target.value,
+                                placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
+                                dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
+                                alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
+                                dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* PLACA EM BRAILE COM IDENTIFICAÇÃO DOS LOCAIS */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeEntrada: {
+                                  pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
+                                  dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
+                                  faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
+                                  dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                  placaBraile: e.target.checked,
+                                  dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
+                                  alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
+                                  dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ PLACA EM BRAILE COM IDENTIFICAÇÃO DOS LOCAIS</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEntrada: {
+                                pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
+                                dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
+                                faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
+                                dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
+                                dataPlacaBraile: e.target.value,
+                                desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
+                                alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
+                                dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* DESNÍVEL DO PISO DE ATÉ 5MM (PORTA DE ACESSO) */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeEntrada: {
+                                  pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
+                                  dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
+                                  faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
+                                  dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                  placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
+                                  dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
+                                  desnivelPiso: e.target.checked,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
+                                  alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
+                                  dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ DESNÍVEL DO PISO DE ATÉ 5MM (PORTA DE ACESSO)</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEntrada: {
+                                pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
+                                dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
+                                faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
+                                dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
+                                dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
+                                dataDesnivelPiso: e.target.value,
+                                alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
+                                dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* ALARME SONORO E VISUAL NA SAÍDA DE VEÍCULOS */}
+                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                        <label className="flex items-center gap-3 cursor-pointer mb-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false}
+                            onChange={(e) => {
+                              const updated = {
+                                ...selectedCard,
+                                checklistAcessibilidadeEntrada: {
+                                  pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
+                                  dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
+                                  faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
+                                  dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                  placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
+                                  dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
+                                  desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
+                                  dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
+                                  alarmeSaidaVeiculos: e.target.checked,
+                                  dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                  observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
+                                }
+                              };
+                              setItems(prev => prev.map(item =>
+                                item.id === selectedCard.id ? updated : item
+                              ));
+                              setSelectedCard(updated);
+                            }}
+                            className="w-5 h-5 cursor-pointer"
+                          />
+                          <span className="text-white font-bold">✓ ALARME SONORO E VISUAL NA SAÍDA DE VEÍCULOS</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEntrada: {
+                                pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
+                                dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
+                                faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
+                                dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
+                                dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
+                                alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
+                                dataAlarmeSaidaVeiculos: e.target.value,
+                                observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white bg-black font-medium"
+                        />
+                      </div>
+
+                      {/* OBSERVAÇÕES */}
+                      <div className="mt-3">
+                        <label className="block text-white font-bold mb-2">
+                          📝 Observações Gerais
+                        </label>
+                        <textarea
+                          value={selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              checklistAcessibilidadeEntrada: {
+                                pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
+                                dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
+                                faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
+                                dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
+                                dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
+                                desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
+                                dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
+                                alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
+                                dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                observacoes: e.target.value
+                              }
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          placeholder="Digite observações gerais sobre acessibilidade da entrada do prédio..."
+                          className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 h-24 resize-none text-white bg-gray-900 font-medium"
+                        />
+                      </div>
+                    </div>
+                    {selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada &&
+                     selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso &&
+                     selectedCard.checklistAcessibilidadeEntrada?.placaBraile &&
+                     selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso &&
+                     selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos && (
+                      <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
+                        ✅ Checklist Completo - Todos os itens de acessibilidade da entrada do prédio conferidos
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {selectedCard.oQueFalta && (
-                  <div className="bg-yellow-500 border-2 border-yellow-600 rounded-lg p-4">
-                    <h3 className="text-sm font-bold text-black mb-2 flex items-center gap-2">
+                  <div className="bg-black border-2 border-yellow-500 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-yellow-400 mb-2 flex items-center gap-2">
                       <Wrench className="w-4 h-4" />
                       O que falta para concluir
                     </h3>
-                    <p className="text-black text-sm whitespace-pre-wrap font-medium">
+                    <p className="text-white text-sm whitespace-pre-wrap font-medium">
                       {selectedCard.oQueFalta}
                     </p>
                     {selectedCard.dataAndamento && (
-                      <div className="mt-3 border-t-2 border-yellow-700 pt-3">
+                      <div className="mt-3 border-t-2 border-yellow-600 pt-3">
                         <div className="flex items-center justify-between mb-1">
-                          <h4 className="text-xs font-bold text-black">Data de Início do Andamento</h4>
+                          <h4 className="text-xs font-bold text-white">Data de Início do Andamento</h4>
                           <Button
                             variant="default"
                             size="sm"
@@ -1776,7 +4675,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                       {selectedCard.correcao}
                     </p>
                     {selectedCard.dataCorrecao && (
-                      <div className="mt-3 border-t-2 border-orange-800 pt-3">
+                      <div className="mt-3 border-t-2 border-orange-600 pt-3">
                         <div className="flex items-center justify-between mb-1">
                           <h4 className="text-xs font-bold text-white">Data da Correção</h4>
                           <Button
@@ -1813,8 +4712,8 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                 )}
 
                 {selectedCard.historicoCorrecao && (
-                  <div className="bg-gray-700 border-2 border-gray-800 rounded-lg p-4">
-                    <h3 className="text-sm font-bold text-white mb-2">Histórico de Correções</h3>
+                  <div className="bg-black border-2 border-gray-600 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-gray-300 mb-2">Histórico de Correções</h3>
                     <p className="text-white text-sm whitespace-pre-wrap font-medium">
                       {selectedCard.historicoCorrecao}
                     </p>
@@ -1822,7 +4721,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                 )}
               </div>
 
-              <div className="p-4 bg-gray-50 border-t flex justify-end shrink-0">
+              <div className="p-4 bg-gray-900 border-t border-gray-700 flex justify-end shrink-0">
                 <Button onClick={() => setShowCardDetails(false)} className="bg-blue-600 hover:bg-blue-700 text-white">
                   Fechar
                 </Button>
