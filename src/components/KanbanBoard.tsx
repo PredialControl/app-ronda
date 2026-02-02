@@ -4073,8 +4073,8 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 checklistAcessibilidadePiscina: {
                                   desnivelPiso: e.target.checked,
                                   dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
-                                  placaBraile: selectedCard.checklistAcessibilidadePiscina?.placaBraile || false,
-                                  dataPlacaBraile: selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || '',
+                                  placaProfundidade: selectedCard.checklistAcessibilidadePiscina?.placaProfundidade || false,
+                                  dataPlacaProfundidade: selectedCard.checklistAcessibilidadePiscina?.dataPlacaProfundidade || '',
                                   cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
                                   dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
                                   observacoes: selectedCard.checklistAcessibilidadePiscina?.observacoes || ''
@@ -4098,8 +4098,8 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                               checklistAcessibilidadePiscina: {
                                 desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
                                 dataDesnivelPiso: e.target.value,
-                                placaBraile: selectedCard.checklistAcessibilidadePiscina?.placaBraile || false,
-                                dataPlacaBraile: selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || '',
+                                placaProfundidade: selectedCard.checklistAcessibilidadePiscina?.placaProfundidade || false,
+                                dataPlacaProfundidade: selectedCard.checklistAcessibilidadePiscina?.dataPlacaProfundidade || '',
                                 cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
                                 dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
                                 observacoes: selectedCard.checklistAcessibilidadePiscina?.observacoes || ''
@@ -4119,7 +4119,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                         <label className="flex items-center gap-3 cursor-pointer mb-2">
                           <input
                             type="checkbox"
-                            checked={selectedCard.checklistAcessibilidadePiscina?.placaBraile || false}
+                            checked={selectedCard.checklistAcessibilidadePiscina?.placaProfundidade || false}
                             onChange={(e) => {
                               const updated = {
                                 ...selectedCard,
@@ -4127,7 +4127,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                   desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
                                   dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
                                   placaBraile: e.target.checked,
-                                  dataPlacaBraile: selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || '',
+                                  dataPlacaProfundidade: selectedCard.checklistAcessibilidadePiscina?.dataPlacaProfundidade || '',
                                   cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
                                   dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
                                   observacoes: selectedCard.checklistAcessibilidadePiscina?.observacoes || ''
@@ -4144,14 +4144,14 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                         </label>
                         <input
                           type="date"
-                          value={selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || ''}
+                          value={selectedCard.checklistAcessibilidadePiscina?.dataPlacaProfundidade || ''}
                           onChange={(e) => {
                             const updated = {
                               ...selectedCard,
                               checklistAcessibilidadePiscina: {
                                 desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
                                 dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
-                                placaBraile: selectedCard.checklistAcessibilidadePiscina?.placaBraile || false,
+                                placaProfundidade: selectedCard.checklistAcessibilidadePiscina?.placaProfundidade || false,
                                 dataPlacaBraile: e.target.value,
                                 cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
                                 dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
@@ -4179,8 +4179,8 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 checklistAcessibilidadePiscina: {
                                   desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
                                   dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
-                                  placaBraile: selectedCard.checklistAcessibilidadePiscina?.placaBraile || false,
-                                  dataPlacaBraile: selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || '',
+                                  placaProfundidade: selectedCard.checklistAcessibilidadePiscina?.placaProfundidade || false,
+                                  dataPlacaProfundidade: selectedCard.checklistAcessibilidadePiscina?.dataPlacaProfundidade || '',
                                   cadeiraAcesso: e.target.checked,
                                   dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
                                   observacoes: selectedCard.checklistAcessibilidadePiscina?.observacoes || ''
@@ -4204,8 +4204,8 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                               checklistAcessibilidadePiscina: {
                                 desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
                                 dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
-                                placaBraile: selectedCard.checklistAcessibilidadePiscina?.placaBraile || false,
-                                dataPlacaBraile: selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || '',
+                                placaProfundidade: selectedCard.checklistAcessibilidadePiscina?.placaProfundidade || false,
+                                dataPlacaProfundidade: selectedCard.checklistAcessibilidadePiscina?.dataPlacaProfundidade || '',
                                 cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
                                 dataCadeiraAcesso: e.target.value,
                                 observacoes: selectedCard.checklistAcessibilidadePiscina?.observacoes || ''
@@ -4233,8 +4233,8 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                               checklistAcessibilidadePiscina: {
                                 desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
                                 dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
-                                placaBraile: selectedCard.checklistAcessibilidadePiscina?.placaBraile || false,
-                                dataPlacaBraile: selectedCard.checklistAcessibilidadePiscina?.dataPlacaBraile || '',
+                                placaProfundidade: selectedCard.checklistAcessibilidadePiscina?.placaProfundidade || false,
+                                dataPlacaProfundidade: selectedCard.checklistAcessibilidadePiscina?.dataPlacaProfundidade || '',
                                 cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
                                 dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
                                 observacoes: e.target.value
@@ -4251,7 +4251,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                       </div>
                     </div>
                     {selectedCard.checklistAcessibilidadePiscina?.desnivelPiso &&
-                     selectedCard.checklistAcessibilidadePiscina?.placaBraile &&
+                     selectedCard.checklistAcessibilidadePiscina?.placaProfundidade &&
                      selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso && (
                       <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
                         ✅ Checklist Completo - Todos os itens de acessibilidade da piscina conferidos
@@ -4280,14 +4280,14 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 checklistAcessibilidadeEntrada: {
                                   pisoTatilCalcada: e.target.checked,
                                   dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
-                                  faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
-                                  dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                  calcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.calcadaFaixaLivre || false,
+                                  dataCalcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.dataCalcadaFaixaLivre || '',
                                   placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
                                   dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
                                   desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
                                   dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
-                                  alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
-                                  dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                  alarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.alarmeSonoro || false,
+                                  dataAlarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSonoro || '',
                                   observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
                                 }
                               };
@@ -4309,14 +4309,14 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                               checklistAcessibilidadeEntrada: {
                                 pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
                                 dataPisoTatilCalcada: e.target.value,
-                                faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
-                                dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                calcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.calcadaFaixaLivre || false,
+                                dataCalcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.dataCalcadaFaixaLivre || '',
                                 placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
                                 dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
                                 desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
                                 dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
-                                alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
-                                dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                alarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.alarmeSonoro || false,
+                                dataAlarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSonoro || '',
                                 observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
                               }
                             };
@@ -4334,21 +4334,21 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                         <label className="flex items-center gap-3 cursor-pointer mb-2">
                           <input
                             type="checkbox"
-                            checked={selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false}
+                            checked={selectedCard.checklistAcessibilidadeEntrada?.calcadaFaixaLivre || false}
                             onChange={(e) => {
                               const updated = {
                                 ...selectedCard,
                                 checklistAcessibilidadeEntrada: {
                                   pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
                                   dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
-                                  faixaLivreAcesso: e.target.checked,
-                                  dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                  calcadaFaixaLivre: e.target.checked,
+                                  dataCalcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.dataCalcadaFaixaLivre || '',
                                   placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
                                   dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
                                   desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
                                   dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
-                                  alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
-                                  dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                  alarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.alarmeSonoro || false,
+                                  dataAlarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSonoro || '',
                                   observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
                                 }
                               };
@@ -4363,21 +4363,21 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                         </label>
                         <input
                           type="date"
-                          value={selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || ''}
+                          value={selectedCard.checklistAcessibilidadeEntrada?.dataCalcadaFaixaLivre || ''}
                           onChange={(e) => {
                             const updated = {
                               ...selectedCard,
                               checklistAcessibilidadeEntrada: {
                                 pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
                                 dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
-                                faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
-                                dataFaixaLivreAcesso: e.target.value,
+                                calcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.calcadaFaixaLivre || false,
+                                dataCalcadaFaixaLivre: e.target.value,
                                 placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
                                 dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
                                 desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
                                 dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
-                                alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
-                                dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                alarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.alarmeSonoro || false,
+                                dataAlarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSonoro || '',
                                 observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
                               }
                             };
@@ -4402,14 +4402,14 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 checklistAcessibilidadeEntrada: {
                                   pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
                                   dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
-                                  faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
-                                  dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                  calcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.calcadaFaixaLivre || false,
+                                  dataCalcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.dataCalcadaFaixaLivre || '',
                                   placaBraile: e.target.checked,
                                   dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
                                   desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
                                   dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
-                                  alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
-                                  dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                  alarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.alarmeSonoro || false,
+                                  dataAlarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSonoro || '',
                                   observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
                                 }
                               };
@@ -4431,14 +4431,14 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                               checklistAcessibilidadeEntrada: {
                                 pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
                                 dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
-                                faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
-                                dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                calcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.calcadaFaixaLivre || false,
+                                dataCalcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.dataCalcadaFaixaLivre || '',
                                 placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
                                 dataPlacaBraile: e.target.value,
                                 desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
                                 dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
-                                alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
-                                dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                alarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.alarmeSonoro || false,
+                                dataAlarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSonoro || '',
                                 observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
                               }
                             };
@@ -4463,14 +4463,14 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 checklistAcessibilidadeEntrada: {
                                   pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
                                   dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
-                                  faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
-                                  dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                  calcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.calcadaFaixaLivre || false,
+                                  dataCalcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.dataCalcadaFaixaLivre || '',
                                   placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
                                   dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
                                   desnivelPiso: e.target.checked,
                                   dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
-                                  alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
-                                  dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                  alarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.alarmeSonoro || false,
+                                  dataAlarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSonoro || '',
                                   observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
                                 }
                               };
@@ -4492,14 +4492,14 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                               checklistAcessibilidadeEntrada: {
                                 pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
                                 dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
-                                faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
-                                dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                calcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.calcadaFaixaLivre || false,
+                                dataCalcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.dataCalcadaFaixaLivre || '',
                                 placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
                                 dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
                                 desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
                                 dataDesnivelPiso: e.target.value,
-                                alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
-                                dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                alarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.alarmeSonoro || false,
+                                dataAlarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSonoro || '',
                                 observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
                               }
                             };
@@ -4517,21 +4517,21 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                         <label className="flex items-center gap-3 cursor-pointer mb-2">
                           <input
                             type="checkbox"
-                            checked={selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false}
+                            checked={selectedCard.checklistAcessibilidadeEntrada?.alarmeSonoro || false}
                             onChange={(e) => {
                               const updated = {
                                 ...selectedCard,
                                 checklistAcessibilidadeEntrada: {
                                   pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
                                   dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
-                                  faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
-                                  dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                  calcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.calcadaFaixaLivre || false,
+                                  dataCalcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.dataCalcadaFaixaLivre || '',
                                   placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
                                   dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
                                   desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
                                   dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
-                                  alarmeSaidaVeiculos: e.target.checked,
-                                  dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                  alarmeSonoro: e.target.checked,
+                                  dataAlarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSonoro || '',
                                   observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
                                 }
                               };
@@ -4546,21 +4546,21 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                         </label>
                         <input
                           type="date"
-                          value={selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || ''}
+                          value={selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSonoro || ''}
                           onChange={(e) => {
                             const updated = {
                               ...selectedCard,
                               checklistAcessibilidadeEntrada: {
                                 pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
                                 dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
-                                faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
-                                dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                calcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.calcadaFaixaLivre || false,
+                                dataCalcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.dataCalcadaFaixaLivre || '',
                                 placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
                                 dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
                                 desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
                                 dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
-                                alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
-                                dataAlarmeSaidaVeiculos: e.target.value,
+                                alarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.alarmeSonoro || false,
+                                dataAlarmeSonoro: e.target.value,
                                 observacoes: selectedCard.checklistAcessibilidadeEntrada?.observacoes || ''
                               }
                             };
@@ -4586,14 +4586,14 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                               checklistAcessibilidadeEntrada: {
                                 pisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada || false,
                                 dataPisoTatilCalcada: selectedCard.checklistAcessibilidadeEntrada?.dataPisoTatilCalcada || '',
-                                faixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso || false,
-                                dataFaixaLivreAcesso: selectedCard.checklistAcessibilidadeEntrada?.dataFaixaLivreAcesso || '',
+                                calcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.calcadaFaixaLivre || false,
+                                dataCalcadaFaixaLivre: selectedCard.checklistAcessibilidadeEntrada?.dataCalcadaFaixaLivre || '',
                                 placaBraile: selectedCard.checklistAcessibilidadeEntrada?.placaBraile || false,
                                 dataPlacaBraile: selectedCard.checklistAcessibilidadeEntrada?.dataPlacaBraile || '',
                                 desnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso || false,
                                 dataDesnivelPiso: selectedCard.checklistAcessibilidadeEntrada?.dataDesnivelPiso || '',
-                                alarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos || false,
-                                dataAlarmeSaidaVeiculos: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSaidaVeiculos || '',
+                                alarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.alarmeSonoro || false,
+                                dataAlarmeSonoro: selectedCard.checklistAcessibilidadeEntrada?.dataAlarmeSonoro || '',
                                 observacoes: e.target.value
                               }
                             };
@@ -4608,10 +4608,10 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                       </div>
                     </div>
                     {selectedCard.checklistAcessibilidadeEntrada?.pisoTatilCalcada &&
-                     selectedCard.checklistAcessibilidadeEntrada?.faixaLivreAcesso &&
+                     selectedCard.checklistAcessibilidadeEntrada?.calcadaFaixaLivre &&
                      selectedCard.checklistAcessibilidadeEntrada?.placaBraile &&
                      selectedCard.checklistAcessibilidadeEntrada?.desnivelPiso &&
-                     selectedCard.checklistAcessibilidadeEntrada?.alarmeSaidaVeiculos && (
+                     selectedCard.checklistAcessibilidadeEntrada?.alarmeSonoro && (
                       <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
                         ✅ Checklist Completo - Todos os itens de acessibilidade da entrada do prédio conferidos
                       </div>
