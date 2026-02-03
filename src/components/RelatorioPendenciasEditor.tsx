@@ -22,7 +22,12 @@ interface SubsecaoLocal {
     tempId: string;
     ordem: number;
     titulo: string;
+    tipo?: 'MANUAL' | 'CONSTATACAO';
     pendencias: PendenciaLocal[];
+    fotos_constatacao?: string[];
+    fotos_constatacao_files?: File[];
+    fotos_constatacao_previews?: string[];
+    descricao_constatacao?: string;
 }
 
 interface SecaoLocal {
@@ -90,6 +95,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 subsecoes: (s.subsecoes || []).map((sub, subIdx) => ({
                     ...sub,
                     tempId: `subsecao-${idx}-${subIdx}`,
+                    fotos_constatacao_previews: sub.fotos_constatacao || [],
                     pendencias: (sub.pendencias || []).map((p, pIdx) => ({
                         ...p,
                         tempId: `pend-${idx}-${subIdx}-${pIdx}`,
@@ -215,7 +221,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     };
 
     // ==================== FUNÇÕES PARA SUBSEÇÕES ====================
-    const handleAddSubsecao = (secaoTempId: string) => {
+    const handleAddSubsecao = (secaoTempId: string, tipo: 'MANUAL' | 'CONSTATACAO' = 'MANUAL') => {
         setSecoes(secoes.map(s => {
             if (s.tempId === secaoTempId) {
                 const ordem = (s.subsecoes || []).length;
@@ -223,8 +229,13 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 const newSubsecao: SubsecaoLocal = {
                     tempId: `subsecao-${Date.now()}`,
                     ordem: ordem,
-                    titulo: `${letra} - `,
+                    titulo: tipo === 'CONSTATACAO' ? `${letra} - CONSTATAÇÃO` : `${letra} - `,
+                    tipo: tipo,
                     pendencias: [],
+                    fotos_constatacao: tipo === 'CONSTATACAO' ? [] : undefined,
+                    fotos_constatacao_files: tipo === 'CONSTATACAO' ? [] : undefined,
+                    fotos_constatacao_previews: tipo === 'CONSTATACAO' ? [] : undefined,
+                    descricao_constatacao: tipo === 'CONSTATACAO' ? '' : undefined,
                 };
                 return { ...s, subsecoes: [...(s.subsecoes || []), newSubsecao] };
             }
@@ -254,6 +265,65 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                     subsecoes: (s.subsecoes || [])
                         .filter(sub => sub.tempId !== subsecaoTempId)
                         .map((sub, idx) => ({ ...sub, ordem: idx })),
+                };
+            }
+            return s;
+        }));
+    };
+
+    const handleFotosConstatacao = (secaoTempId: string, subsecaoTempId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        setSecoes(secoes.map(s => {
+            if (s.tempId === secaoTempId) {
+                return {
+                    ...s,
+                    subsecoes: (s.subsecoes || []).map(sub => {
+                        if (sub.tempId === subsecaoTempId) {
+                            const newPreviews = files.map(file => URL.createObjectURL(file));
+                            return {
+                                ...sub,
+                                fotos_constatacao_files: [...(sub.fotos_constatacao_files || []), ...files],
+                                fotos_constatacao_previews: [...(sub.fotos_constatacao_previews || []), ...newPreviews],
+                            };
+                        }
+                        return sub;
+                    }),
+                };
+            }
+            return s;
+        }));
+
+        e.target.value = '';
+    };
+
+    const handleRemoveFotoConstatacao = (secaoTempId: string, subsecaoTempId: string, index: number) => {
+        setSecoes(secoes.map(s => {
+            if (s.tempId === secaoTempId) {
+                return {
+                    ...s,
+                    subsecoes: (s.subsecoes || []).map(sub => {
+                        if (sub.tempId === subsecaoTempId) {
+                            const newFiles = [...(sub.fotos_constatacao_files || [])];
+                            const newPreviews = [...(sub.fotos_constatacao_previews || [])];
+                            const newUrls = [...(sub.fotos_constatacao || [])];
+
+                            newFiles.splice(index, 1);
+                            newPreviews.splice(index, 1);
+                            if (newUrls.length > index) {
+                                newUrls.splice(index, 1);
+                            }
+
+                            return {
+                                ...sub,
+                                fotos_constatacao_files: newFiles,
+                                fotos_constatacao_previews: newPreviews,
+                                fotos_constatacao: newUrls,
+                            };
+                        }
+                        return sub;
+                    }),
                 };
             }
             return s;
@@ -794,21 +864,37 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                     for (const subsecao of secao.subsecoes) {
                         let subsecaoId = subsecao.id;
 
+                        // Upload fotos de constatação (se for tipo CONSTATACAO)
+                        let fotosConstatacaoUrls: string[] = [];
+                        if (subsecao.tipo === 'CONSTATACAO' && subsecao.fotos_constatacao_files) {
+                            for (const file of subsecao.fotos_constatacao_files) {
+                                const url = await relatorioPendenciasService.uploadFoto(file, relatorioId, `constatacao-${subsecao.tempId}-${Date.now()}`);
+                                fotosConstatacaoUrls.push(url);
+                            }
+                        }
+
                         if (subsecaoId) {
                             await relatorioPendenciasService.updateSubsecao(subsecaoId, {
                                 titulo: subsecao.titulo,
                                 ordem: subsecao.ordem,
+                                tipo: subsecao.tipo || 'MANUAL',
+                                fotos_constatacao: subsecao.tipo === 'CONSTATACAO' ? fotosConstatacaoUrls : undefined,
+                                descricao_constatacao: subsecao.tipo === 'CONSTATACAO' ? subsecao.descricao_constatacao : undefined,
                             });
                         } else {
                             const newSubsecao = await relatorioPendenciasService.createSubsecao({
                                 secao_id: secaoId,
                                 titulo: subsecao.titulo,
                                 ordem: subsecao.ordem,
+                                tipo: subsecao.tipo || 'MANUAL',
+                                fotos_constatacao: subsecao.tipo === 'CONSTATACAO' ? fotosConstatacaoUrls : undefined,
+                                descricao_constatacao: subsecao.tipo === 'CONSTATACAO' ? subsecao.descricao_constatacao : undefined,
                             });
                             subsecaoId = newSubsecao.id;
                         }
 
-                        // Salvar pendências da subseção
+                        // Salvar pendências da subseção (só para tipo MANUAL)
+                        if (subsecao.tipo !== 'CONSTATACAO') {
                         for (const pendencia of subsecao.pendencias) {
                             let fotoUrl = pendencia.foto_url;
                             let fotoDepoisUrl = pendencia.foto_depois_url;
@@ -844,6 +930,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                     ...pendenciaData,
                                 });
                             }
+                        }
                         }
                     }
                 }
@@ -1470,15 +1557,26 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 <div className="bg-indigo-900/10 border border-indigo-700/30 rounded-lg p-4 space-y-4 shadow-inner">
                                     <div className="flex justify-between items-center">
                                         <Label className="text-indigo-300 font-semibold text-base uppercase tracking-wider">Subseções ({(secao.subsecoes || []).length})</Label>
-                                        <Button
-                                            onClick={() => handleAddSubsecao(secao.tempId)}
-                                            variant="outline"
-                                            size="sm"
-                                            className="text-indigo-400 border-indigo-600 hover:bg-indigo-900/30 font-bold"
-                                        >
-                                            <Plus className="w-3.5 h-3.5 mr-1.5" />
-                                            Adicionar Subseção
-                                        </Button>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                onClick={() => handleAddSubsecao(secao.tempId, 'MANUAL')}
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-indigo-400 border-indigo-600 hover:bg-indigo-900/30 font-bold"
+                                            >
+                                                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                                                Subseção Manual
+                                            </Button>
+                                            <Button
+                                                onClick={() => handleAddSubsecao(secao.tempId, 'CONSTATACAO')}
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-amber-400 border-amber-600 hover:bg-amber-900/30 font-bold"
+                                            >
+                                                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                                                Constatação
+                                            </Button>
+                                        </div>
                                     </div>
 
                                     {(secao.subsecoes || []).length === 0 ? (
@@ -1511,7 +1609,67 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                             className="bg-gray-900 border-gray-700 text-white font-semibold"
                                                         />
 
-                                                        {/* Pendências da Subseção */}
+                                                        {/* CONSTATAÇÃO: Grid de Fotos */}
+                                                        {subsecao.tipo === 'CONSTATACAO' && (
+                                                            <div className="bg-amber-900/10 border border-amber-700/30 rounded-md p-3 space-y-3">
+                                                                <Label className="text-amber-300 font-semibold text-sm">Constatação (Múltiplas Fotos)</Label>
+
+                                                                <Textarea
+                                                                    value={subsecao.descricao_constatacao || ''}
+                                                                    onChange={(e) => handleUpdateSubsecao(secao.tempId, subsecao.tempId, 'descricao_constatacao', e.target.value)}
+                                                                    placeholder="Descrição da constatação (opcional)"
+                                                                    className="bg-gray-900 border-gray-700 text-white min-h-[60px]"
+                                                                />
+
+                                                                {/* Upload de múltiplas fotos */}
+                                                                <input
+                                                                    type="file"
+                                                                    multiple
+                                                                    accept="image/*"
+                                                                    onChange={(e) => handleFotosConstatacao(secao.tempId, subsecao.tempId, e)}
+                                                                    className="hidden"
+                                                                    id={`constatacao-fotos-${subsecao.tempId}`}
+                                                                />
+                                                                <Button
+                                                                    onClick={() => document.getElementById(`constatacao-fotos-${subsecao.tempId}`)?.click()}
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="w-full text-amber-400 border-amber-700 hover:bg-amber-900/30"
+                                                                >
+                                                                    <ImageIcon className="w-4 h-4 mr-2" />
+                                                                    Adicionar Fotos ({(subsecao.fotos_constatacao_previews || []).length})
+                                                                </Button>
+
+                                                                {/* Grid de fotos 2x2 */}
+                                                                {(subsecao.fotos_constatacao_previews || []).length > 0 && (
+                                                                    <div className="grid grid-cols-2 gap-2">
+                                                                        {(subsecao.fotos_constatacao_previews || []).map((preview, idx) => (
+                                                                            <div key={idx} className="relative aspect-square bg-gray-900 rounded border border-amber-700/30 overflow-hidden group">
+                                                                                <img
+                                                                                    src={preview}
+                                                                                    alt={`Foto ${idx + 1}`}
+                                                                                    className="w-full h-full object-cover"
+                                                                                />
+                                                                                <Button
+                                                                                    onClick={() => handleRemoveFotoConstatacao(secao.tempId, subsecao.tempId, idx)}
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    className="absolute top-1 right-1 h-6 w-6 p-0 bg-red-500/80 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                >
+                                                                                    <X className="w-4 h-4" />
+                                                                                </Button>
+                                                                                <span className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                                                                                    {idx + 1}
+                                                                                </span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Pendências da Subseção (só para tipo MANUAL) */}
+                                                        {subsecao.tipo !== 'CONSTATACAO' && (
                                                         <div className="pt-2">
                                                             <div className="flex justify-between items-center mb-3">
                                                                 <Label className="text-gray-400 text-sm font-medium">Pendências da Subseção ({subsecao.pendencias.length})</Label>
@@ -1696,6 +1854,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                 </div>
                                                             )}
                                                         </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}

@@ -1396,15 +1396,134 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                     })
                 );
 
-                let subCount = 0;
-                const pendenciasSubsecao = subsecao.pendencias || [];
-                for (const pendencia of pendenciasSubsecao) {
-                    subCount++;
-                    await processarPendencia(pendencia);
+                // Se for tipo CONSTATAÇÃO, renderizar grid de fotos
+                if (subsecao.tipo === 'CONSTATACAO') {
+                    // Descrição (se houver)
+                    if (subsecao.descricao_constatacao) {
+                        children.push(
+                            new Paragraph({
+                                children: [
+                                    new TextRun({
+                                        text: subsecao.descricao_constatacao,
+                                        size: 22,
+                                    }),
+                                ],
+                                spacing: { after: 200 },
+                            })
+                        );
+                    }
 
-                    // Quebra de página a cada 2 pendências (dentro da subseção)
-                    if (subCount % 2 === 0 && subCount < pendenciasSubsecao.length) {
-                        children.push(new Paragraph({ children: [new PageBreak()] }));
+                    // Grid de fotos 2x2
+                    const fotos = subsecao.fotos_constatacao || [];
+                    for (let i = 0; i < fotos.length; i += 2) {
+                        const foto1 = fotos[i];
+                        const foto2 = fotos[i + 1];
+
+                        const tableRows: any[] = [];
+
+                        // Primeira linha com fotos
+                        const cellChildren: any[] = [];
+
+                        // Foto 1
+                        if (foto1) {
+                            try {
+                                const imageData = await fetch(foto1).then(r => r.arrayBuffer());
+                                cellChildren.push(
+                                    new TableCell({
+                                        children: [
+                                            new Paragraph({
+                                                children: [
+                                                    new ImageRun({
+                                                        data: imageData,
+                                                        transformation: { width: 250, height: 190 },
+                                                        type: "png",
+                                                    }),
+                                                ],
+                                                alignment: AlignmentType.CENTER,
+                                            }),
+                                            new Paragraph({
+                                                children: [
+                                                    new TextRun({
+                                                        text: `Foto ${i + 1}`,
+                                                        size: 20,
+                                                        bold: true,
+                                                    }),
+                                                ],
+                                                alignment: AlignmentType.CENTER,
+                                                spacing: { before: 100 },
+                                            }),
+                                        ],
+                                        width: { size: 50, type: WidthType.PERCENTAGE },
+                                    })
+                                );
+                            } catch (err) {
+                                console.error('Erro ao carregar foto de constatação:', err);
+                            }
+                        }
+
+                        // Foto 2
+                        if (foto2) {
+                            try {
+                                const imageData = await fetch(foto2).then(r => r.arrayBuffer());
+                                cellChildren.push(
+                                    new TableCell({
+                                        children: [
+                                            new Paragraph({
+                                                children: [
+                                                    new ImageRun({
+                                                        data: imageData,
+                                                        transformation: { width: 250, height: 190 },
+                                                        type: "png",
+                                                    }),
+                                                ],
+                                                alignment: AlignmentType.CENTER,
+                                            }),
+                                            new Paragraph({
+                                                children: [
+                                                    new TextRun({
+                                                        text: `Foto ${i + 2}`,
+                                                        size: 20,
+                                                        bold: true,
+                                                    }),
+                                                ],
+                                                alignment: AlignmentType.CENTER,
+                                                spacing: { before: 100 },
+                                            }),
+                                        ],
+                                        width: { size: 50, type: WidthType.PERCENTAGE },
+                                    })
+                                );
+                            } catch (err) {
+                                console.error('Erro ao carregar foto de constatação:', err);
+                            }
+                        }
+
+                        if (cellChildren.length > 0) {
+                            tableRows.push(new TableRow({ children: cellChildren }));
+                        }
+
+                        if (tableRows.length > 0) {
+                            children.push(
+                                new Table({
+                                    rows: tableRows,
+                                    width: { size: 100, type: WidthType.PERCENTAGE },
+                                })
+                            );
+                            children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+                        }
+                    }
+                } else {
+                    // Tipo MANUAL: processar pendências normalmente
+                    let subCount = 0;
+                    const pendenciasSubsecao = subsecao.pendencias || [];
+                    for (const pendencia of pendenciasSubsecao) {
+                        subCount++;
+                        await processarPendencia(pendencia);
+
+                        // Quebra de página a cada 2 pendências (dentro da subseção)
+                        if (subCount % 2 === 0 && subCount < pendenciasSubsecao.length) {
+                            children.push(new Paragraph({ children: [new PageBreak()] }));
+                        }
                     }
                 }
             }

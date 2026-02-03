@@ -184,7 +184,10 @@ export interface RelatorioSubsecao {
   secao_id: string;
   ordem: number; // 0=A, 1=B, 2=C, etc.
   titulo: string; // Ex: "22 PAVIMENTO"
-  pendencias?: RelatorioPendencia[];
+  tipo?: 'MANUAL' | 'CONSTATACAO'; // Tipo da subseção: manual (pendências) ou constatação (grid de fotos)
+  pendencias?: RelatorioPendencia[]; // Usado para tipo MANUAL
+  fotos_constatacao?: string[]; // Usado para tipo CONSTATACAO - array de URLs das fotos
+  descricao_constatacao?: string; // Descrição opcional para constatação
   created_at: string;
 }
 
