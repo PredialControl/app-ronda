@@ -80,10 +80,12 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     // Editor de imagem
     const [editingImage, setEditingImage] = useState<{
         secaoTempId: string;
-        pendenciaTempId: string;
+        pendenciaTempId?: string;
         imageUrl: string;
         type: 'antes' | 'depois';
         subsecaoTempId?: string;
+        isConstatacao?: boolean;
+        constatacaoIndex?: number;
     } | null>(null);
 
     useEffect(() => {
@@ -540,16 +542,58 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         });
     };
 
+    const handleOpenImageEditorConstatacao = (
+        secaoTempId: string,
+        subsecaoTempId: string,
+        constatacaoIndex: number,
+        imageUrl: string
+    ) => {
+        setEditingImage({
+            secaoTempId,
+            imageUrl,
+            type: 'antes', // Não usado para constatação
+            subsecaoTempId,
+            isConstatacao: true,
+            constatacaoIndex
+        });
+    };
+
     const handleSaveEditedImage = (blob: Blob) => {
         if (!editingImage) return;
 
         const file = new File([blob], 'edited-image.png', { type: 'image/png' });
         const blobUrl = URL.createObjectURL(blob);
 
-        const { secaoTempId, pendenciaTempId, type, subsecaoTempId } = editingImage;
+        const { secaoTempId, pendenciaTempId, type, subsecaoTempId, isConstatacao, constatacaoIndex } = editingImage;
 
-        if (subsecaoTempId) {
-            // Atualizar imagem em subseção
+        // Se for constatação
+        if (isConstatacao && subsecaoTempId !== undefined && constatacaoIndex !== undefined) {
+            setSecoes(secoes.map(s => {
+                if (s.tempId === secaoTempId) {
+                    return {
+                        ...s,
+                        subsecoes: (s.subsecoes || []).map(sub => {
+                            if (sub.tempId === subsecaoTempId) {
+                                const newFiles = [...(sub.fotos_constatacao_files || [])];
+                                const newPreviews = [...(sub.fotos_constatacao_previews || [])];
+
+                                newFiles[constatacaoIndex] = file;
+                                newPreviews[constatacaoIndex] = blobUrl;
+
+                                return {
+                                    ...sub,
+                                    fotos_constatacao_files: newFiles,
+                                    fotos_constatacao_previews: newPreviews,
+                                };
+                            }
+                            return sub;
+                        })
+                    };
+                }
+                return s;
+            }));
+        } else if (subsecaoTempId) {
+            // Atualizar imagem em subseção (pendências)
             setSecoes(secoes.map(s => {
                 if (s.tempId === secaoTempId) {
                     return {
@@ -1646,14 +1690,25 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                     alt={`Foto ${idx + 1}`}
                                                                                     className="w-full h-full object-cover"
                                                                                 />
-                                                                                <Button
-                                                                                    onClick={() => handleRemoveFotoConstatacao(secao.tempId, subsecao.tempId, idx)}
-                                                                                    variant="ghost"
-                                                                                    size="sm"
-                                                                                    className="absolute top-1 right-1 h-6 w-6 p-0 bg-red-500/80 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                                >
-                                                                                    <X className="w-4 h-4" />
-                                                                                </Button>
+                                                                                <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                    <Button
+                                                                                        onClick={() => handleOpenImageEditorConstatacao(secao.tempId, subsecao.tempId, idx, preview)}
+                                                                                        variant="ghost"
+                                                                                        size="sm"
+                                                                                        className="h-6 w-6 p-0 bg-purple-600/80 hover:bg-purple-600 text-white"
+                                                                                        title="Editar com marcações"
+                                                                                    >
+                                                                                        <Edit3 className="w-3.5 h-3.5" />
+                                                                                    </Button>
+                                                                                    <Button
+                                                                                        onClick={() => handleRemoveFotoConstatacao(secao.tempId, subsecao.tempId, idx)}
+                                                                                        variant="ghost"
+                                                                                        size="sm"
+                                                                                        className="h-6 w-6 p-0 bg-red-500/80 hover:bg-red-600 text-white"
+                                                                                    >
+                                                                                        <X className="w-4 h-4" />
+                                                                                    </Button>
+                                                                                </div>
                                                                                 <span className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
                                                                                     {idx + 1}
                                                                                 </span>
