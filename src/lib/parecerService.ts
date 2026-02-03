@@ -249,6 +249,50 @@ class ParecerService {
             throw error;
         }
     }
+
+    // ==================== UPLOAD DE ARQUIVO WORD ====================
+
+    async uploadArquivoWord(file: File, parecerId: string): Promise<string> {
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${parecerId}/${Date.now()}.${fileExt}`;
+            const filePath = `parecer-word/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('app-ronda')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data } = supabase.storage
+                .from('app-ronda')
+                .getPublicUrl(filePath);
+
+            return data.publicUrl;
+        } catch (error) {
+            console.error('Erro ao fazer upload do arquivo Word:', error);
+            throw error;
+        }
+    }
+
+    async deleteArquivoWord(url: string): Promise<void> {
+        try {
+            // Extrair o caminho do arquivo da URL
+            const urlParts = url.split('/parecer-word/');
+            if (urlParts.length < 2) return;
+
+            const filePath = `parecer-word/${urlParts[1]}`;
+
+            const { error } = await supabase.storage
+                .from('app-ronda')
+                .remove([filePath]);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Erro ao deletar arquivo Word:', error);
+            throw error;
+        }
+    }
 }
 
 export const parecerService = new ParecerService();

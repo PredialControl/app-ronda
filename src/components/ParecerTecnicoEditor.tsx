@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, FileText } from 'lucide-react';
+import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, FileText, Download, Upload } from 'lucide-react';
 import { Contrato, ParecerTecnico as ParecerTecnicoType, ParecerTopico, ParecerImagem } from '@/types';
 import { parecerService } from '@/lib/parecerService';
 import { generateParecerTecnicoDOCX } from '@/lib/docxGenerator';
@@ -47,6 +47,9 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
     const [isSaving, setIsSaving] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [editingImage, setEditingImage] = useState<{ topicoTempId: string; imagemTempId: string; url: string } | null>(null);
+    const [arquivoWordUrl, setArquivoWordUrl] = useState(parecer?.arquivo_word_url || '');
+    const [arquivoWordNome, setArquivoWordNome] = useState(parecer?.arquivo_word_nome || '');
+    const [arquivoWordFile, setArquivoWordFile] = useState<File | null>(null);
 
     useEffect(() => {
         if (parecer?.topicos) {
@@ -167,6 +170,39 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
         setCapaUrl('');
     };
 
+    const handleArquivoWordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Validar se é arquivo Word
+            const isWord = file.name.endsWith('.doc') || file.name.endsWith('.docx');
+            if (!isWord) {
+                alert('Por favor, selecione um arquivo Word (.doc ou .docx)');
+                return;
+            }
+            setArquivoWordFile(file);
+            setArquivoWordNome(file.name);
+        }
+    };
+
+    const handleRemoveArquivoWord = async () => {
+        if (arquivoWordUrl && parecer?.id) {
+            try {
+                await parecerService.deleteArquivoWord(arquivoWordUrl);
+            } catch (error) {
+                console.error('Erro ao deletar arquivo Word:', error);
+            }
+        }
+        setArquivoWordFile(null);
+        setArquivoWordNome('');
+        setArquivoWordUrl('');
+    };
+
+    const handleDownloadArquivoWord = () => {
+        if (arquivoWordUrl) {
+            window.open(arquivoWordUrl, '_blank');
+        }
+    };
+
     const handleExportDOCX = async () => {
         if (!parecer) {
             alert('Salve o parecer antes de exportar!');
@@ -200,6 +236,7 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
         try {
             let parecerId = parecer?.id;
             let finalCapaUrl = capaUrl;
+            let finalArquivoWordUrl = arquivoWordUrl;
 
             // Create or update parecer first
             if (parecerId) {
@@ -208,6 +245,8 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     finalidade,
                     narrativa_cenario: narrativaCenario,
                     capa_url: finalCapaUrl,
+                    arquivo_word_url: finalArquivoWordUrl,
+                    arquivo_word_nome: arquivoWordNome,
                 });
             } else {
                 const newParecer = await parecerService.create({
@@ -216,6 +255,8 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     finalidade,
                     narrativa_cenario: narrativaCenario,
                     capa_url: finalCapaUrl,
+                    arquivo_word_url: finalArquivoWordUrl,
+                    arquivo_word_nome: arquivoWordNome,
                 });
                 parecerId = newParecer.id;
             }
@@ -229,6 +270,22 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     finalidade,
                     narrativa_cenario: narrativaCenario,
                     capa_url: finalCapaUrl,
+                    arquivo_word_url: finalArquivoWordUrl,
+                    arquivo_word_nome: arquivoWordNome,
+                });
+            }
+
+            // Upload Word file if new file selected
+            if (arquivoWordFile) {
+                finalArquivoWordUrl = await parecerService.uploadArquivoWord(arquivoWordFile, parecerId);
+                // Update parecer with arquivo Word URL
+                await parecerService.update(parecerId, {
+                    titulo,
+                    finalidade,
+                    narrativa_cenario: narrativaCenario,
+                    capa_url: finalCapaUrl,
+                    arquivo_word_url: finalArquivoWordUrl,
+                    arquivo_word_nome: arquivoWordNome,
                 });
             }
 
@@ -400,6 +457,75 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                                         <X className="w-4 h-4 mr-1" />
                                         Remover Capa
                                     </Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Upload de Arquivo Word */}
+            <Card className="bg-gray-800 border-gray-700">
+                <CardHeader>
+                    <CardTitle className="text-white">Arquivo Word do Parecer (Opcional)</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div>
+                        <Label htmlFor="arquivoWord" className="text-gray-300">
+                            Upload de Arquivo Word (.doc, .docx)
+                        </Label>
+                        <p className="text-sm text-gray-400 mb-3">
+                            Faça upload de um parecer técnico já pronto em Word para armazenar junto com este registro.
+                        </p>
+
+                        {!arquivoWordNome ? (
+                            <div className="mt-2">
+                                <label htmlFor="arquivoWord" className="cursor-pointer">
+                                    <div className="flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors w-fit">
+                                        <Upload className="w-4 h-4" />
+                                        <span>Selecionar Arquivo Word</span>
+                                    </div>
+                                </label>
+                                <Input
+                                    id="arquivoWord"
+                                    type="file"
+                                    accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                    onChange={handleArquivoWordChange}
+                                    className="hidden"
+                                />
+                            </div>
+                        ) : (
+                            <div className="mt-2 space-y-2">
+                                <div className="flex items-center gap-3 p-4 bg-gray-900 rounded-lg border border-gray-700">
+                                    <FileText className="w-8 h-8 text-blue-400 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-white font-medium truncate">{arquivoWordNome}</p>
+                                        <p className="text-sm text-gray-400">
+                                            {arquivoWordFile ? 'Pronto para enviar' : 'Arquivo anexado'}
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {arquivoWordUrl && !arquivoWordFile && (
+                                            <Button
+                                                onClick={handleDownloadArquivoWord}
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-green-400 hover:text-green-300"
+                                                title="Baixar arquivo"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                            </Button>
+                                        )}
+                                        <Button
+                                            onClick={handleRemoveArquivoWord}
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-red-400 hover:text-red-300"
+                                            title="Remover arquivo"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         )}
