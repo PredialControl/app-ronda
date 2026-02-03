@@ -21,6 +21,8 @@ export function ParecerTecnico({ contratoSelecionado }: ParecerTecnicoProps) {
     const [editingParecer, setEditingParecer] = useState<ParecerTecnicoType | null>(null);
     const [exportingId, setExportingId] = useState<string | null>(null);
     const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+    const uploadProntoInputRef = useRef<HTMLInputElement | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
         loadPareceres();
@@ -155,6 +157,46 @@ export function ParecerTecnico({ contratoSelecionado }: ParecerTecnicoProps) {
         }
     };
 
+    const handleUploadParecerPronto = async (file: File) => {
+        try {
+            // Validar se é arquivo Word
+            const isWord = file.name.endsWith('.doc') || file.name.endsWith('.docx');
+            if (!isWord) {
+                alert('Por favor, selecione um arquivo Word (.doc ou .docx)');
+                return;
+            }
+
+            setIsUploading(true);
+
+            // Criar parecer com apenas o título do arquivo
+            const titulo = file.name.replace(/\.(doc|docx)$/i, '');
+            const newParecer = await parecerService.create({
+                contrato_id: contratoSelecionado.id,
+                titulo: titulo,
+                finalidade: 'Parecer técnico anexado',
+                narrativa_cenario: 'Documento anexado em formato Word',
+                status: 'NAO_EXECUTADO',
+            });
+
+            // Upload do arquivo Word
+            const url = await parecerService.uploadArquivoWord(file, newParecer.id);
+
+            // Atualizar parecer com URL e nome do arquivo
+            await parecerService.update(newParecer.id, {
+                arquivo_word_url: url,
+                arquivo_word_nome: file.name,
+            });
+
+            alert('✅ Parecer pronto enviado com sucesso!');
+            await loadPareceres();
+        } catch (error) {
+            console.error('Erro ao fazer upload do parecer pronto:', error);
+            alert('❌ Erro ao enviar parecer pronto.');
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     const handleSaveComplete = () => {
         setShowEditor(false);
         setEditingParecer(null);
@@ -190,10 +232,34 @@ export function ParecerTecnico({ contratoSelecionado }: ParecerTecnicoProps) {
                     <h2 className="text-2xl font-bold text-white">Parecer Técnico</h2>
                     <p className="text-gray-400">Gerencie os pareceres técnicos do contrato {contratoSelecionado.nome}</p>
                 </div>
-                <Button onClick={handleNovoParecer} className="bg-blue-600 hover:bg-blue-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Novo Parecer
-                </Button>
+                <div className="flex gap-3">
+                    <input
+                        ref={uploadProntoInputRef}
+                        type="file"
+                        accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                                handleUploadParecerPronto(file);
+                            }
+                            // Limpar input para permitir upload do mesmo arquivo novamente
+                            e.target.value = '';
+                        }}
+                        className="hidden"
+                    />
+                    <Button
+                        onClick={() => uploadProntoInputRef.current?.click()}
+                        className="bg-purple-600 hover:bg-purple-700"
+                        disabled={isUploading}
+                    >
+                        <Upload className="w-4 h-4 mr-2" />
+                        {isUploading ? 'Enviando...' : 'Upload Parecer Pronto'}
+                    </Button>
+                    <Button onClick={handleNovoParecer} className="bg-blue-600 hover:bg-blue-700">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Novo Parecer
+                    </Button>
+                </div>
             </div>
 
             {/* Search */}
