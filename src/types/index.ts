@@ -197,6 +197,8 @@ export interface RelatorioPendencia {
   descricao: string;
   foto_url: string | null;
   foto_depois_url: string | null; // Foto do "depois" (corrigido)
+  data_recebimento?: string; // Data de recebimento (quando adiciona foto depois)
+  status?: 'PENDENTE' | 'RECEBIDO' | 'NAO_FARAO'; // Status da pendência
   created_at: string;
 }
 

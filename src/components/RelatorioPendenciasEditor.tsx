@@ -44,6 +44,8 @@ interface PendenciaLocal {
     descricao: string;
     foto_url: string | null;
     foto_depois_url: string | null;
+    data_recebimento?: string;
+    status?: 'PENDENTE' | 'RECEBIDO' | 'NAO_FARAO';
     file?: File;
     preview?: string;
     fileDepois?: File;
@@ -338,8 +340,17 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const handleFotoDepoisChangeSubsecao = (secaoTempId: string, subsecaoTempId: string, pendenciaTempId: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            // Pedir data de recebimento
+            const dataRecebimento = prompt('Data de recebimento (DD/MM/AAAA):');
+            if (!dataRecebimento) {
+                alert('Data de recebimento é obrigatória ao adicionar foto "depois"');
+                return;
+            }
+
             handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'fileDepois', file);
             handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'previewDepois', URL.createObjectURL(file));
+            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'data_recebimento', dataRecebimento);
+            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'status', 'RECEBIDO');
         }
     };
 
@@ -411,6 +422,13 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const handleFotoDepoisChange = (secaoTempId: string, pendenciaTempId: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            // Pedir data de recebimento
+            const dataRecebimento = prompt('Data de recebimento (DD/MM/AAAA):');
+            if (!dataRecebimento) {
+                alert('Data de recebimento é obrigatória ao adicionar foto "depois"');
+                return;
+            }
+
             const blobUrl = URL.createObjectURL(file);
             setSecoes(secoes.map(s => {
                 if (s.tempId === secaoTempId) {
@@ -422,6 +440,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                     ...p,
                                     fileDepois: file,
                                     previewDepois: blobUrl,
+                                    data_recebimento: dataRecebimento,
+                                    status: 'RECEBIDO' as const,
                                 };
                             }
                             return p;
@@ -754,6 +774,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         descricao: pendencia.descricao,
                         foto_url: fotoUrl,
                         foto_depois_url: fotoDepoisUrl,
+                        data_recebimento: pendencia.data_recebimento,
+                        status: pendencia.status || 'PENDENTE',
                         ordem: pendencia.ordem,
                     };
 
@@ -808,6 +830,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 descricao: pendencia.descricao,
                                 foto_url: fotoUrl,
                                 foto_depois_url: fotoDepoisUrl,
+                                data_recebimento: pendencia.data_recebimento,
+                                status: pendencia.status || 'PENDENTE',
                                 ordem: pendencia.ordem,
                                 subsecao_id: subsecaoId,
                             };
