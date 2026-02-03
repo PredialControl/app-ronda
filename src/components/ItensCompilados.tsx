@@ -186,28 +186,50 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
             item.situacao === 'RECEBIDO' && item.data_recebido
         );
 
-        // Agrupar por data
-        const porData = recebidosComData.reduce((acc, item) => {
+        const naoFaraoComData = itens.filter(item =>
+            item.situacao === 'NAO_FARA' && item.data_recebido
+        );
+
+        // Agrupar por data - Recebidos
+        const porDataRecebidos = recebidosComData.reduce((acc, item) => {
             const data = item.data_recebido!;
             acc[data] = (acc[data] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
 
-        // Ordenar datas e calcular acumulado
-        const datas = Object.keys(porData).sort();
-        let acumulado = 0;
+        // Agrupar por data - Não Farão
+        const porDataNaoFarao = naoFaraoComData.reduce((acc, item) => {
+            const data = item.data_recebido!;
+            acc[data] = (acc[data] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
 
-        return datas.map(data => {
-            acumulado += porData[data];
+        // Ordenar datas (união de ambas)
+        const todasDatas = [...new Set([...Object.keys(porDataRecebidos), ...Object.keys(porDataNaoFarao)])].sort();
+        let acumuladoRecebidos = 0;
+        let acumuladoNaoFarao = 0;
+
+        return todasDatas.map(data => {
+            acumuladoRecebidos += (porDataRecebidos[data] || 0);
+            acumuladoNaoFarao += (porDataNaoFarao[data] || 0);
             return {
                 data,
-                quantidade: porData[data],
-                acumulado
+                recebidos: porDataRecebidos[data] || 0,
+                naoFarao: porDataNaoFarao[data] || 0,
+                acumuladoRecebidos,
+                acumuladoNaoFarao
             };
         });
     };
 
     const evolucaoData = calcularEvolucao();
+
+    // Formato compatível com Excel (apenas recebidos, formato antigo)
+    const evolucaoDataExcel = evolucaoData.map(d => ({
+        data: d.data,
+        quantidade: d.recebidos,
+        acumulado: d.acumuladoRecebidos
+    }));
 
     if (loading) {
         return (
@@ -227,7 +249,7 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
                         <p className="text-gray-300 text-sm mt-1">Acompanhamento de pendências e recebimentos dos relatórios</p>
                     </div>
                     <Button
-                        onClick={() => exportarEvolucaoParaExcel(itens, evolucaoData, contratoSelecionado.nome)}
+                        onClick={() => exportarEvolucaoParaExcel(itens, evolucaoDataExcel, contratoSelecionado.nome)}
                         className="bg-green-600 hover:bg-green-700"
                         disabled={itens.length === 0}
                     >
@@ -349,140 +371,249 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
                     </CardContent>
                 </Card>
 
-                {/* Gráfico de Pizza (SVG simples) */}
-                <Card className="bg-gray-800 border-gray-700">
+                {/* Gráfico de Pizza MODERNO */}
+                <Card className="bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700 shadow-2xl">
                     <CardHeader>
-                        <CardTitle className="text-white">Distribuição</CardTitle>
+                        <CardTitle className="text-white text-xl font-bold flex items-center gap-2">
+                            <div className="w-2 h-8 bg-gradient-to-b from-green-400 to-blue-500 rounded-full"></div>
+                            Distribuição de Status
+                        </CardTitle>
                     </CardHeader>
-                    <CardContent className="flex items-center justify-center">
+                    <CardContent>
                         {itensApontados > 0 ? (
-                            <div className="relative w-64 h-64">
-                                <svg viewBox="0 0 200 200" className="transform -rotate-90">
-                                    {/* Fatia Recebidos (verde) */}
-                                    <circle
-                                        cx="100"
-                                        cy="100"
-                                        r="80"
-                                        fill="transparent"
-                                        stroke="#22c55e"
-                                        strokeWidth="60"
-                                        strokeDasharray={`${percentualRecebidos * 5.027} 502.7`}
-                                    />
-                                    {/* Fatia Pendentes (laranja) */}
-                                    <circle
-                                        cx="100"
-                                        cy="100"
-                                        r="80"
-                                        fill="transparent"
-                                        stroke="#f97316"
-                                        strokeWidth="60"
-                                        strokeDasharray={`${percentualPendentes * 5.027} 502.7`}
-                                        strokeDashoffset={-percentualRecebidos * 5.027}
-                                    />
-                                    {/* Fatia Não Farão (vermelho) */}
-                                    <circle
-                                        cx="100"
-                                        cy="100"
-                                        r="80"
-                                        fill="transparent"
-                                        stroke="#ef4444"
-                                        strokeWidth="60"
-                                        strokeDasharray={`${percentualNaoFarao * 5.027} 502.7`}
-                                        strokeDashoffset={-(percentualRecebidos + percentualPendentes) * 5.027}
-                                    />
-                                </svg>
-                                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <div className="text-center space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 bg-green-500 rounded"></div>
-                                            <span className="text-white text-xs">Recebidos {percentualRecebidos}%</span>
+                            <div className="space-y-6">
+                                {/* Barras de progresso modernas */}
+                                <div className="space-y-4">
+                                    {/* Recebidos */}
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-green-500 rounded-full shadow-lg shadow-green-500/50"></div>
+                                                <span className="text-white font-semibold">Recebidos</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl font-bold text-green-400">{itensRecebidos}</span>
+                                                <span className="text-sm text-gray-400">({percentualRecebidos}%)</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 bg-orange-500 rounded"></div>
-                                            <span className="text-white text-xs">Pendentes {percentualPendentes}%</span>
+                                        <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-1000 ease-out shadow-lg"
+                                                style={{ width: `${percentualRecebidos}%` }}
+                                            ></div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 bg-red-500 rounded"></div>
-                                            <span className="text-white text-xs">Não Farão {percentualNaoFarao}%</span>
+                                    </div>
+
+                                    {/* Pendentes */}
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-orange-500 rounded-full shadow-lg shadow-orange-500/50"></div>
+                                                <span className="text-white font-semibold">Pendentes</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl font-bold text-orange-400">{itensPendentes}</span>
+                                                <span className="text-sm text-gray-400">({percentualPendentes}%)</span>
+                                            </div>
                                         </div>
+                                        <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full transition-all duration-1000 ease-out shadow-lg"
+                                                style={{ width: `${percentualPendentes}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+
+                                    {/* Não Farão */}
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 bg-red-500 rounded-full shadow-lg shadow-red-500/50"></div>
+                                                <span className="text-white font-semibold">Não Farão</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl font-bold text-red-400">{naoFarao}</span>
+                                                <span className="text-sm text-gray-400">({percentualNaoFarao}%)</span>
+                                            </div>
+                                        </div>
+                                        <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-red-500 to-rose-400 rounded-full transition-all duration-1000 ease-out shadow-lg"
+                                                style={{ width: `${percentualNaoFarao}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Total */}
+                                <div className="pt-4 border-t border-gray-700">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-300 font-semibold">Total de Itens</span>
+                                        <span className="text-3xl font-bold text-white">{itensApontados}</span>
                                     </div>
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-gray-400">Sem dados para exibir</p>
+                            <div className="text-center py-12">
+                                <p className="text-gray-400 text-lg">Sem dados para exibir</p>
+                            </div>
                         )}
                     </CardContent>
                 </Card>
 
-                {/* Gráfico de Evolução (Linha do Tempo) */}
-                <Card className="bg-gray-800 border-gray-700">
+                {/* Gráfico de Evolução MODERNO */}
+                <Card className="bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700 shadow-2xl">
                     <CardHeader>
-                        <CardTitle className="text-white">Evolução dos Recebimentos</CardTitle>
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-white text-xl font-bold flex items-center gap-2">
+                                <div className="w-2 h-8 bg-gradient-to-b from-green-400 to-red-500 rounded-full"></div>
+                                Evolução dos Recebimentos
+                            </CardTitle>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-0.5 bg-green-500"></div>
+                                    <span className="text-xs text-gray-300">Recebidos</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-3 h-0.5 bg-red-500"></div>
+                                    <span className="text-xs text-gray-300">Não Farão</span>
+                                </div>
+                            </div>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         {evolucaoData.length > 0 ? (
-                            <div className="relative h-64">
-                                <svg viewBox="0 0 400 200" className="w-full h-full">
-                                    {/* Grade de fundo */}
-                                    {[0, 1, 2, 3, 4].map(i => (
+                            <div className="relative h-80 bg-gray-900/50 rounded-lg p-4">
+                                <svg viewBox="0 0 500 250" className="w-full h-full">
+                                    {/* Grade de fundo moderna */}
+                                    {[0, 1, 2, 3, 4, 5].map(i => (
                                         <line
                                             key={i}
-                                            x1="40"
-                                            y1={20 + i * 40}
-                                            x2="380"
-                                            y2={20 + i * 40}
+                                            x1="60"
+                                            y1={30 + i * 35}
+                                            x2="480"
+                                            y2={30 + i * 35}
                                             stroke="#374151"
                                             strokeWidth="0.5"
-                                            strokeDasharray="2,2"
+                                            strokeDasharray="4,4"
+                                            opacity="0.3"
                                         />
                                     ))}
 
                                     {/* Eixos */}
-                                    <line x1="40" y1="20" x2="40" y2="180" stroke="#9ca3af" strokeWidth="2" />
-                                    <line x1="40" y1="180" x2="380" y2="180" stroke="#9ca3af" strokeWidth="2" />
+                                    <line x1="60" y1="30" x2="60" y2="220" stroke="#6b7280" strokeWidth="2" />
+                                    <line x1="60" y1="220" x2="480" y2="220" stroke="#6b7280" strokeWidth="2" />
 
-                                    {/* Linha do gráfico */}
+                                    {/* Linhas do gráfico */}
                                     {(() => {
-                                        const maxQuantidade = Math.max(...evolucaoData.map(d => d.quantidade), 1);
-                                        const width = 340;
-                                        const height = 160;
+                                        const maxRecebidos = Math.max(...evolucaoData.map(d => d.acumuladoRecebidos), 1);
+                                        const maxNaoFarao = Math.max(...evolucaoData.map(d => d.acumuladoNaoFarao), 1);
+                                        const maxTotal = Math.max(maxRecebidos, maxNaoFarao, 1);
+                                        const width = 420;
+                                        const height = 190;
                                         const stepX = width / Math.max(evolucaoData.length - 1, 1);
 
-                                        // Criar pontos
-                                        const points = evolucaoData.map((d, i) => {
-                                            const x = 40 + i * stepX;
-                                            const y = 180 - (d.quantidade / maxQuantidade) * height;
+                                        // Pontos para linha verde (Recebidos)
+                                        const pointsRecebidos = evolucaoData.map((d, i) => {
+                                            const x = 60 + i * stepX;
+                                            const y = 220 - (d.acumuladoRecebidos / maxTotal) * height;
+                                            return `${x},${y}`;
+                                        }).join(' ');
+
+                                        // Pontos para linha vermelha (Não Farão)
+                                        const pointsNaoFarao = evolucaoData.map((d, i) => {
+                                            const x = 60 + i * stepX;
+                                            const y = 220 - (d.acumuladoNaoFarao / maxTotal) * height;
                                             return `${x},${y}`;
                                         }).join(' ');
 
                                         return (
                                             <>
-                                                {/* Linha */}
+                                                {/* Área sob a linha verde */}
+                                                <defs>
+                                                    <linearGradient id="gradientGreen" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                        <stop offset="0%" stopColor="#22c55e" stopOpacity="0.3" />
+                                                        <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+                                                    </linearGradient>
+                                                    <linearGradient id="gradientRed" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                        <stop offset="0%" stopColor="#ef4444" stopOpacity="0.3" />
+                                                        <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+                                                    </linearGradient>
+                                                </defs>
+
+                                                {/* Área preenchida verde */}
+                                                <polygon
+                                                    points={`60,220 ${pointsRecebidos} ${60 + (evolucaoData.length - 1) * stepX},220`}
+                                                    fill="url(#gradientGreen)"
+                                                />
+
+                                                {/* Linha verde (Recebidos) */}
                                                 <polyline
-                                                    points={points}
+                                                    points={pointsRecebidos}
                                                     fill="none"
                                                     stroke="#22c55e"
                                                     strokeWidth="3"
                                                     strokeLinecap="round"
                                                     strokeLinejoin="round"
+                                                    filter="drop-shadow(0 0 6px rgba(34, 197, 94, 0.5))"
                                                 />
 
-                                                {/* Pontos */}
+                                                {/* Área preenchida vermelha */}
+                                                <polygon
+                                                    points={`60,220 ${pointsNaoFarao} ${60 + (evolucaoData.length - 1) * stepX},220`}
+                                                    fill="url(#gradientRed)"
+                                                />
+
+                                                {/* Linha vermelha (Não Farão) */}
+                                                <polyline
+                                                    points={pointsNaoFarao}
+                                                    fill="none"
+                                                    stroke="#ef4444"
+                                                    strokeWidth="3"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    filter="drop-shadow(0 0 6px rgba(239, 68, 68, 0.5))"
+                                                />
+
+                                                {/* Pontos e valores - Recebidos */}
                                                 {evolucaoData.map((d, i) => {
-                                                    const x = 40 + i * stepX;
-                                                    const y = 180 - (d.quantidade / maxQuantidade) * height;
+                                                    if (d.acumuladoRecebidos === 0) return null;
+                                                    const x = 60 + i * stepX;
+                                                    const y = 220 - (d.acumuladoRecebidos / maxTotal) * height;
                                                     return (
-                                                        <g key={i}>
-                                                            <circle cx={x} cy={y} r="4" fill="#22c55e" />
+                                                        <g key={`r-${i}`}>
+                                                            <circle cx={x} cy={y} r="5" fill="#22c55e" stroke="#fff" strokeWidth="2" />
                                                             <text
                                                                 x={x}
-                                                                y={y - 10}
+                                                                y={y - 12}
                                                                 textAnchor="middle"
-                                                                fill="#fff"
-                                                                fontSize="10"
+                                                                fill="#22c55e"
+                                                                fontSize="11"
                                                                 fontWeight="bold"
                                                             >
-                                                                {d.quantidade}
+                                                                {d.acumuladoRecebidos}
+                                                            </text>
+                                                        </g>
+                                                    );
+                                                })}
+
+                                                {/* Pontos e valores - Não Farão */}
+                                                {evolucaoData.map((d, i) => {
+                                                    if (d.acumuladoNaoFarao === 0) return null;
+                                                    const x = 60 + i * stepX;
+                                                    const y = 220 - (d.acumuladoNaoFarao / maxTotal) * height;
+                                                    return (
+                                                        <g key={`nf-${i}`}>
+                                                            <circle cx={x} cy={y} r="5" fill="#ef4444" stroke="#fff" strokeWidth="2" />
+                                                            <text
+                                                                x={x}
+                                                                y={y - 12}
+                                                                textAnchor="middle"
+                                                                fill="#ef4444"
+                                                                fontSize="11"
+                                                                fontWeight="bold"
+                                                            >
+                                                                {d.acumuladoNaoFarao}
                                                             </text>
                                                         </g>
                                                     );
@@ -490,7 +621,7 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
 
                                                 {/* Labels das datas */}
                                                 {evolucaoData.map((d, i) => {
-                                                    const x = 40 + i * stepX;
+                                                    const x = 60 + i * stepX;
                                                     const dataFormatada = new Date(d.data + 'T00:00:00').toLocaleDateString('pt-BR', {
                                                         day: '2-digit',
                                                         month: '2-digit'
@@ -499,10 +630,11 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
                                                         <text
                                                             key={i}
                                                             x={x}
-                                                            y={195}
+                                                            y={235}
                                                             textAnchor="middle"
                                                             fill="#9ca3af"
-                                                            fontSize="9"
+                                                            fontSize="10"
+                                                            fontWeight="500"
                                                         >
                                                             {dataFormatada}
                                                         </text>
@@ -534,8 +666,9 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
                                 <thead className="bg-gray-900">
                                     <tr>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Data</th>
-                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Quantidade Recebida</th>
-                                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Total Acumulado</th>
+                                        <th className="px-4 py-3 text-center text-xs font-medium text-green-400 uppercase tracking-wider">Recebidos</th>
+                                        <th className="px-4 py-3 text-center text-xs font-medium text-red-400 uppercase tracking-wider">Não Farão</th>
+                                        <th className="px-4 py-3 text-center text-xs font-medium text-blue-400 uppercase tracking-wider">Total Recebidos</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-700">
@@ -545,10 +678,13 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
                                                 {new Date(registro.data + 'T00:00:00').toLocaleDateString('pt-BR')}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-center text-green-400 font-bold">
-                                                {registro.quantidade}
+                                                {registro.recebidos} ({registro.acumuladoRecebidos})
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-center text-red-400 font-bold">
+                                                {registro.naoFarao} ({registro.acumuladoNaoFarao})
                                             </td>
                                             <td className="px-4 py-3 text-sm text-center text-blue-400 font-bold">
-                                                {registro.acumulado}
+                                                {registro.acumuladoRecebidos}
                                             </td>
                                         </tr>
                                     ))}
