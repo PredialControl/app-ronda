@@ -196,6 +196,14 @@ export function ParecerTecnico({ contratoSelecionado }: ParecerTecnicoProps) {
                                     }}
                                 />
 
+                                {/* Status Indicator Circle */}
+                                <div
+                                    className={`absolute top-2 right-2 w-8 h-8 rounded-full border-4 border-white shadow-lg z-10 ${
+                                        parecer.status === 'EXECUTADO' ? 'bg-green-500' : 'bg-red-500'
+                                    }`}
+                                    title={parecer.status === 'EXECUTADO' ? 'Executado' : 'Não Executado'}
+                                />
+
                                 {/* Hover Overlay with Actions */}
                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-3 p-4">
                                     <Button
@@ -247,6 +255,17 @@ export function ParecerTecnico({ contratoSelecionado }: ParecerTecnicoProps) {
                                 <div className="flex items-center justify-between text-xs text-gray-400">
                                     <span>{new Date(parecer.created_at).toLocaleDateString('pt-BR')}</span>
                                     <span>{parecer.topicos?.length || 0} tópicos</span>
+                                </div>
+                                <div className="flex items-center justify-center pt-1">
+                                    <span
+                                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                            parecer.status === 'EXECUTADO'
+                                                ? 'bg-green-600 text-white'
+                                                : 'bg-red-600 text-white'
+                                        }`}
+                                    >
+                                        {parecer.status === 'EXECUTADO' ? '✓ Executado' : '✗ Não Executado'}
+                                    </span>
                                 </div>
                             </div>
                         </div>

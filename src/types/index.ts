@@ -127,6 +127,7 @@ export interface ParecerTecnico {
   capa_url?: string; // URL da imagem de capa personalizada
   arquivo_word_url?: string; // URL do arquivo Word (.doc, .docx) anexado
   arquivo_word_nome?: string; // Nome original do arquivo Word
+  status?: 'EXECUTADO' | 'NAO_EXECUTADO'; // Status do parecer
   topicos?: ParecerTopico[];
   created_at: string;
   updated_at: string;

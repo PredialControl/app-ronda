@@ -50,6 +50,7 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
     const [arquivoWordUrl, setArquivoWordUrl] = useState(parecer?.arquivo_word_url || '');
     const [arquivoWordNome, setArquivoWordNome] = useState(parecer?.arquivo_word_nome || '');
     const [arquivoWordFile, setArquivoWordFile] = useState<File | null>(null);
+    const [status, setStatus] = useState<'EXECUTADO' | 'NAO_EXECUTADO'>(parecer?.status || 'NAO_EXECUTADO');
 
     useEffect(() => {
         if (parecer?.topicos) {
@@ -247,6 +248,7 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     capa_url: finalCapaUrl,
                     arquivo_word_url: finalArquivoWordUrl,
                     arquivo_word_nome: arquivoWordNome,
+                    status,
                 });
             } else {
                 const newParecer = await parecerService.create({
@@ -257,6 +259,7 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     capa_url: finalCapaUrl,
                     arquivo_word_url: finalArquivoWordUrl,
                     arquivo_word_nome: arquivoWordNome,
+                    status,
                 });
                 parecerId = newParecer.id;
             }
@@ -272,6 +275,7 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     capa_url: finalCapaUrl,
                     arquivo_word_url: finalArquivoWordUrl,
                     arquivo_word_nome: arquivoWordNome,
+                    status,
                 });
             }
 
@@ -286,6 +290,7 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     capa_url: finalCapaUrl,
                     arquivo_word_url: finalArquivoWordUrl,
                     arquivo_word_nome: arquivoWordNome,
+                    status,
                 });
             }
 
@@ -411,6 +416,34 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                             rows={6}
                             className="bg-gray-900 border-gray-700 text-white mt-1"
                         />
+                    </div>
+
+                    <div>
+                        <Label htmlFor="status" className="text-gray-300">Status do Parecer *</Label>
+                        <div className="flex gap-3 mt-2">
+                            <button
+                                type="button"
+                                onClick={() => setStatus('EXECUTADO')}
+                                className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all font-semibold ${
+                                    status === 'EXECUTADO'
+                                        ? 'bg-green-600 border-green-600 text-white'
+                                        : 'bg-gray-900 border-gray-700 text-gray-400 hover:border-green-600'
+                                }`}
+                            >
+                                ✓ Executado
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setStatus('NAO_EXECUTADO')}
+                                className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all font-semibold ${
+                                    status === 'NAO_EXECUTADO'
+                                        ? 'bg-red-600 border-red-600 text-white'
+                                        : 'bg-gray-900 border-gray-700 text-gray-400 hover:border-red-600'
+                                }`}
+                            >
+                                ✗ Não Executado
+                            </button>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
