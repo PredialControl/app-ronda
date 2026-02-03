@@ -120,8 +120,11 @@ export function ParecerTecnico({ contratoSelecionado }: ParecerTecnicoProps) {
             // Upload do arquivo
             const url = await parecerService.uploadArquivoWord(file, parecerId);
 
-            // Note: arquivo_word_url and arquivo_word_nome don't exist in DB yet
-            // File is uploaded and stored, but metadata is not saved in parecer record
+            // Atualizar parecer com URL e nome do arquivo
+            await parecerService.update(parecerId, {
+                arquivo_word_url: url,
+                arquivo_word_nome: file.name,
+            });
 
             alert('✅ Arquivo Word enviado com sucesso!');
             await loadPareceres();
@@ -141,15 +144,13 @@ export function ParecerTecnico({ contratoSelecionado }: ParecerTecnicoProps) {
 
     const handleToggleStatus = async (parecer: ParecerTecnicoType) => {
         try {
-            // Note: status field doesn't exist in DB yet
-            // This functionality is disabled until database migration is complete
-            alert('⚠️ Funcionalidade de status temporariamente desabilitada');
+            const newStatus = parecer.status === 'EXECUTADO' ? 'NAO_EXECUTADO' : 'EXECUTADO';
 
-            // const newStatus = parecer.status === 'EXECUTADO' ? 'NAO_EXECUTADO' : 'EXECUTADO';
-            // await parecerService.update(parecer.id, {
-            //     status: newStatus,
-            // });
-            // await loadPareceres();
+            await parecerService.update(parecer.id, {
+                status: newStatus,
+            });
+
+            await loadPareceres();
         } catch (error) {
             console.error('Erro ao alterar status:', error);
             alert('❌ Erro ao alterar status do parecer.');
@@ -182,8 +183,12 @@ export function ParecerTecnico({ contratoSelecionado }: ParecerTecnicoProps) {
             // Upload do arquivo Word
             const url = await parecerService.uploadArquivoWord(file, newParecer.id);
 
-            // Note: arquivo_word_url, arquivo_word_nome, status don't exist in DB yet
-            // File is uploaded and stored, but metadata is not saved in parecer record
+            // Atualizar parecer com URL, nome do arquivo e status
+            await parecerService.update(newParecer.id, {
+                arquivo_word_url: url,
+                arquivo_word_nome: file.name,
+                status: 'NAO_EXECUTADO',
+            });
 
             alert('✅ Parecer pronto enviado com sucesso!');
             await loadPareceres();

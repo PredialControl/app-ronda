@@ -888,6 +888,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         descricao: pendencia.descricao,
                         foto_url: fotoUrl,
                         foto_depois_url: fotoDepoisUrl,
+                        data_recebimento: pendencia.data_recebimento,
+                        status: pendencia.status || 'PENDENTE',
                         ordem: pendencia.ordem,
                     };
 
@@ -921,12 +923,18 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             await relatorioPendenciasService.updateSubsecao(subsecaoId, {
                                 titulo: subsecao.titulo,
                                 ordem: subsecao.ordem,
+                                tipo: subsecao.tipo || 'MANUAL',
+                                fotos_constatacao: subsecao.tipo === 'CONSTATACAO' ? fotosConstatacaoUrls : undefined,
+                                descricao_constatacao: subsecao.tipo === 'CONSTATACAO' ? subsecao.descricao_constatacao : undefined,
                             });
                         } else {
                             const newSubsecao = await relatorioPendenciasService.createSubsecao({
                                 secao_id: secaoId,
                                 titulo: subsecao.titulo,
                                 ordem: subsecao.ordem,
+                                tipo: subsecao.tipo || 'MANUAL',
+                                fotos_constatacao: subsecao.tipo === 'CONSTATACAO' ? fotosConstatacaoUrls : undefined,
+                                descricao_constatacao: subsecao.tipo === 'CONSTATACAO' ? subsecao.descricao_constatacao : undefined,
                             });
                             subsecaoId = newSubsecao.id;
                         }
@@ -954,6 +962,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 descricao: pendencia.descricao,
                                 foto_url: fotoUrl,
                                 foto_depois_url: fotoDepoisUrl,
+                                data_recebimento: pendencia.data_recebimento,
+                                status: pendencia.status || 'PENDENTE',
                                 ordem: pendencia.ordem,
                                 subsecao_id: subsecaoId,
                             };

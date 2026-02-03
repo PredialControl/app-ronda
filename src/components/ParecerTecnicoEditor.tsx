@@ -246,6 +246,7 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     finalidade,
                     narrativa_cenario: narrativaCenario,
                     capa_url: finalCapaUrl,
+                    status,
                 });
             } else {
                 const newParecer = await parecerService.create({
@@ -254,6 +255,7 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     finalidade,
                     narrativa_cenario: narrativaCenario,
                     capa_url: finalCapaUrl,
+                    status,
                 });
                 parecerId = newParecer.id;
             }
@@ -267,17 +269,18 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     finalidade,
                     narrativa_cenario: narrativaCenario,
                     capa_url: finalCapaUrl,
+                    status,
                 });
             }
 
             // Upload Word file if new file selected
             if (arquivoWordFile) {
                 finalArquivoWordUrl = await parecerService.uploadArquivoWord(arquivoWordFile, parecerId);
-                // Update parecer with arquivo Word URL (note: these fields don't exist in DB yet)
-                // await parecerService.update(parecerId, {
-                //     arquivo_word_url: finalArquivoWordUrl,
-                //     arquivo_word_nome: arquivoWordNome,
-                // });
+                // Update parecer with arquivo Word URL
+                await parecerService.update(parecerId, {
+                    arquivo_word_url: finalArquivoWordUrl,
+                    arquivo_word_nome: arquivoWordNome,
+                });
             }
 
             // Save topicos and images
