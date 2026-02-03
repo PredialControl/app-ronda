@@ -246,9 +246,6 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     finalidade,
                     narrativa_cenario: narrativaCenario,
                     capa_url: finalCapaUrl,
-                    arquivo_word_url: finalArquivoWordUrl,
-                    arquivo_word_nome: arquivoWordNome,
-                    status,
                 });
             } else {
                 const newParecer = await parecerService.create({
@@ -257,9 +254,6 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     finalidade,
                     narrativa_cenario: narrativaCenario,
                     capa_url: finalCapaUrl,
-                    arquivo_word_url: finalArquivoWordUrl,
-                    arquivo_word_nome: arquivoWordNome,
-                    status,
                 });
                 parecerId = newParecer.id;
             }
@@ -273,25 +267,17 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                     finalidade,
                     narrativa_cenario: narrativaCenario,
                     capa_url: finalCapaUrl,
-                    arquivo_word_url: finalArquivoWordUrl,
-                    arquivo_word_nome: arquivoWordNome,
-                    status,
                 });
             }
 
             // Upload Word file if new file selected
             if (arquivoWordFile) {
                 finalArquivoWordUrl = await parecerService.uploadArquivoWord(arquivoWordFile, parecerId);
-                // Update parecer with arquivo Word URL
-                await parecerService.update(parecerId, {
-                    titulo,
-                    finalidade,
-                    narrativa_cenario: narrativaCenario,
-                    capa_url: finalCapaUrl,
-                    arquivo_word_url: finalArquivoWordUrl,
-                    arquivo_word_nome: arquivoWordNome,
-                    status,
-                });
+                // Update parecer with arquivo Word URL (note: these fields don't exist in DB yet)
+                // await parecerService.update(parecerId, {
+                //     arquivo_word_url: finalArquivoWordUrl,
+                //     arquivo_word_nome: arquivoWordNome,
+                // });
             }
 
             // Save topicos and images
