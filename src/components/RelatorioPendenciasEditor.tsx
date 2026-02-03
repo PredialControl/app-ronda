@@ -888,8 +888,6 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         descricao: pendencia.descricao,
                         foto_url: fotoUrl,
                         foto_depois_url: fotoDepoisUrl,
-                        data_recebimento: pendencia.data_recebimento,
-                        status: pendencia.status || 'PENDENTE',
                         ordem: pendencia.ordem,
                     };
 
@@ -956,8 +954,6 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 descricao: pendencia.descricao,
                                 foto_url: fotoUrl,
                                 foto_depois_url: fotoDepoisUrl,
-                                data_recebimento: pendencia.data_recebimento,
-                                status: pendencia.status || 'PENDENTE',
                                 ordem: pendencia.ordem,
                                 subsecao_id: subsecaoId,
                             };
