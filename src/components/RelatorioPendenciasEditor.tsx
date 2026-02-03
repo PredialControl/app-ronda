@@ -865,6 +865,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         let subsecaoId = subsecao.id;
 
                         // Upload fotos de constatação (se for tipo CONSTATACAO)
+                        // NOTE: Campos tipo, fotos_constatacao e descricao_constatacao não existem no banco ainda
+                        // As fotos são enviadas mas não são salvas nos metadados da subseção
                         let fotosConstatacaoUrls: string[] = [];
                         if (subsecao.tipo === 'CONSTATACAO' && subsecao.fotos_constatacao_files) {
                             for (const file of subsecao.fotos_constatacao_files) {
@@ -877,18 +879,12 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             await relatorioPendenciasService.updateSubsecao(subsecaoId, {
                                 titulo: subsecao.titulo,
                                 ordem: subsecao.ordem,
-                                tipo: subsecao.tipo || 'MANUAL',
-                                fotos_constatacao: subsecao.tipo === 'CONSTATACAO' ? fotosConstatacaoUrls : undefined,
-                                descricao_constatacao: subsecao.tipo === 'CONSTATACAO' ? subsecao.descricao_constatacao : undefined,
                             });
                         } else {
                             const newSubsecao = await relatorioPendenciasService.createSubsecao({
                                 secao_id: secaoId,
                                 titulo: subsecao.titulo,
                                 ordem: subsecao.ordem,
-                                tipo: subsecao.tipo || 'MANUAL',
-                                fotos_constatacao: subsecao.tipo === 'CONSTATACAO' ? fotosConstatacaoUrls : undefined,
-                                descricao_constatacao: subsecao.tipo === 'CONSTATACAO' ? subsecao.descricao_constatacao : undefined,
                             });
                             subsecaoId = newSubsecao.id;
                         }
