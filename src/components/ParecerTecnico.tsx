@@ -170,28 +170,31 @@ export function ParecerTecnico({ contratoSelecionado }: ParecerTecnicoProps) {
 
             // Criar parecer com apenas o título do arquivo
             const titulo = file.name.replace(/\.(doc|docx)$/i, '');
-            const newParecer = await parecerService.create({
+
+            const parecerData: any = {
                 contrato_id: contratoSelecionado.id,
                 titulo: titulo,
                 finalidade: 'Parecer técnico anexado',
                 narrativa_cenario: 'Documento anexado em formato Word',
-                status: 'NAO_EXECUTADO',
-            });
+            };
+
+            const newParecer = await parecerService.create(parecerData);
 
             // Upload do arquivo Word
             const url = await parecerService.uploadArquivoWord(file, newParecer.id);
 
-            // Atualizar parecer com URL e nome do arquivo
+            // Atualizar parecer com URL, nome do arquivo e status
             await parecerService.update(newParecer.id, {
                 arquivo_word_url: url,
                 arquivo_word_nome: file.name,
+                status: 'NAO_EXECUTADO',
             });
 
             alert('✅ Parecer pronto enviado com sucesso!');
             await loadPareceres();
         } catch (error) {
             console.error('Erro ao fazer upload do parecer pronto:', error);
-            alert('❌ Erro ao enviar parecer pronto.');
+            alert('❌ Erro ao enviar parecer pronto: ' + (error as Error).message);
         } finally {
             setIsUploading(false);
         }
@@ -325,7 +328,10 @@ export function ParecerTecnico({ contratoSelecionado }: ParecerTecnicoProps) {
                                 {/* Hover Overlay with Actions */}
                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2 p-3">
                                     <Button
-                                        onClick={() => handleEditParecer(parecer)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditParecer(parecer);
+                                        }}
                                         variant="secondary"
                                         size="sm"
                                         className="w-full bg-white/90 hover:bg-white text-gray-900"
@@ -336,7 +342,10 @@ export function ParecerTecnico({ contratoSelecionado }: ParecerTecnicoProps) {
 
                                     {/* Toggle Status */}
                                     <Button
-                                        onClick={() => handleToggleStatus(parecer)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleToggleStatus(parecer);
+                                        }}
                                         variant="secondary"
                                         size="sm"
                                         className={`w-full border-0 ${
@@ -348,41 +357,50 @@ export function ParecerTecnico({ contratoSelecionado }: ParecerTecnicoProps) {
                                         {parecer.status === 'EXECUTADO' ? (
                                             <>
                                                 <XCircle className="w-4 h-4 mr-2" />
-                                                Marcar Não Executado
+                                                Não Executado
                                             </>
                                         ) : (
                                             <>
                                                 <CheckCircle className="w-4 h-4 mr-2" />
-                                                Marcar Executado
+                                                Executado
                                             </>
                                         )}
                                     </Button>
 
                                     <Button
-                                        onClick={() => handleExportPDF(parecer)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleExportPDF(parecer);
+                                        }}
                                         variant="secondary"
                                         size="sm"
                                         className="w-full bg-blue-500/90 hover:bg-blue-500 text-white border-0"
                                         disabled={exportingId === parecer.id}
                                     >
                                         <FileDown className="w-4 h-4 mr-2" />
-                                        Exportar PDF
+                                        PDF
                                     </Button>
                                     <Button
-                                        onClick={() => handleExportDOCX(parecer)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleExportDOCX(parecer);
+                                        }}
                                         variant="secondary"
                                         size="sm"
                                         className="w-full bg-green-500/90 hover:bg-green-500 text-white border-0"
                                         disabled={exportingId === parecer.id}
                                     >
                                         <Download className="w-4 h-4 mr-2" />
-                                        Exportar DOCX
+                                        DOCX
                                     </Button>
 
-                                    {/* Upload/Download Word */}
-                                    {parecer.arquivo_word_url ? (
+                                    {/* Download Word somente se existir */}
+                                    {parecer.arquivo_word_url && (
                                         <Button
-                                            onClick={() => handleDownloadWord(parecer)}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDownloadWord(parecer);
+                                            }}
                                             variant="secondary"
                                             size="sm"
                                             className="w-full bg-purple-500/90 hover:bg-purple-500 text-white border-0"
@@ -390,35 +408,13 @@ export function ParecerTecnico({ contratoSelecionado }: ParecerTecnicoProps) {
                                             <Download className="w-4 h-4 mr-2" />
                                             Baixar Word
                                         </Button>
-                                    ) : (
-                                        <>
-                                            <input
-                                                ref={(el) => (fileInputRefs.current[parecer.id] = el)}
-                                                type="file"
-                                                accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                                                onChange={(e) => {
-                                                    const file = e.target.files?.[0];
-                                                    if (file) {
-                                                        handleUploadWord(parecer.id, file);
-                                                    }
-                                                }}
-                                                className="hidden"
-                                            />
-                                            <Button
-                                                onClick={() => fileInputRefs.current[parecer.id]?.click()}
-                                                variant="secondary"
-                                                size="sm"
-                                                className="w-full bg-purple-500/90 hover:bg-purple-500 text-white border-0"
-                                                disabled={exportingId === parecer.id}
-                                            >
-                                                <Upload className="w-4 h-4 mr-2" />
-                                                Upload Word
-                                            </Button>
-                                        </>
                                     )}
 
                                     <Button
-                                        onClick={() => handleDeleteParecer(parecer.id)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteParecer(parecer.id);
+                                        }}
                                         variant="secondary"
                                         size="sm"
                                         className="w-full bg-red-500/90 hover:bg-red-500 text-white border-0"
