@@ -157,7 +157,7 @@ export function ContratoCard({
 
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <Clock className="w-4 h-4 text-gray-500" />
-          <span className="font-medium">Criado em:</span>
+          <span className="font-medium">Início do contrato:</span>
           <span>{new Date(contrato.dataCriacao).toLocaleDateString('pt-BR')}</span>
         </div>
 

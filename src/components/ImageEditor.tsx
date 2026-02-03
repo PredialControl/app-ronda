@@ -16,6 +16,7 @@ interface Annotation {
     startY: number;
     endX: number;
     endY: number;
+    lineWidth: number;
 }
 
 export function ImageEditor({ imageUrl, onSave, onCancel }: ImageEditorProps) {
@@ -25,6 +26,7 @@ export function ImageEditor({ imageUrl, onSave, onCancel }: ImageEditorProps) {
     const [annotations, setAnnotations] = useState<Annotation[]>([]);
     const [currentAnnotation, setCurrentAnnotation] = useState<Annotation | null>(null);
     const [image, setImage] = useState<HTMLImageElement | null>(null);
+    const [lineWidth, setLineWidth] = useState<number>(6); // Espessura padrão aumentada
 
     // Carregar imagem
     useEffect(() => {
@@ -56,7 +58,6 @@ export function ImageEditor({ imageUrl, onSave, onCancel }: ImageEditorProps) {
 
         // Desenhar anotações
         ctx.strokeStyle = '#EF4444'; // Vermelho
-        ctx.lineWidth = 4;
         ctx.fillStyle = 'rgba(239, 68, 68, 0.2)'; // Vermelho transparente
 
         annots.forEach(annotation => {
@@ -65,7 +66,8 @@ export function ImageEditor({ imageUrl, onSave, onCancel }: ImageEditorProps) {
     };
 
     const drawAnnotation = (ctx: CanvasRenderingContext2D, annotation: Annotation) => {
-        const { type, startX, startY, endX, endY } = annotation;
+        const { type, startX, startY, endX, endY, lineWidth: annotLineWidth } = annotation;
+        ctx.lineWidth = annotLineWidth || 6; // Usar espessura da anotação
 
         ctx.beginPath();
 
@@ -121,6 +123,7 @@ export function ImageEditor({ imageUrl, onSave, onCancel }: ImageEditorProps) {
             startY: y,
             endX: x,
             endY: y,
+            lineWidth: lineWidth,
         });
     };
 
@@ -213,6 +216,24 @@ export function ImageEditor({ imageUrl, onSave, onCancel }: ImageEditorProps) {
                         <Move className="w-4 h-4 mr-2" />
                         Seta
                     </Button>
+
+                    {/* Seletor de Espessura */}
+                    <div className="flex items-center gap-2 mx-4 px-4 border-l border-r border-gray-600">
+                        <span className="text-sm text-gray-300">Espessura:</span>
+                        <select
+                            value={lineWidth}
+                            onChange={(e) => setLineWidth(Number(e.target.value))}
+                            className="bg-gray-700 text-white border border-gray-600 rounded px-2 py-1 text-sm"
+                        >
+                            <option value="2">Fina (2px)</option>
+                            <option value="4">Média (4px)</option>
+                            <option value="6">Normal (6px)</option>
+                            <option value="8">Grossa (8px)</option>
+                            <option value="10">Extra Grossa (10px)</option>
+                            <option value="15">Super Grossa (15px)</option>
+                        </select>
+                    </div>
+
                     <div className="flex-1"></div>
                     <Button
                         onClick={handleUndo}

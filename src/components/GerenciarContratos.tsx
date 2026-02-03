@@ -59,16 +59,18 @@ export function GerenciarContratos({
     setIsEmailModalOpen(true);
   };
 
-  const filteredContratos = contratos.filter(contrato => {
-    const matchesSearch = contrato.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contrato.sindico.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contrato.endereco.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredContratos = contratos
+    .filter(contrato => {
+      const matchesSearch = contrato.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contrato.sindico.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contrato.endereco.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesPeriodicidade = periodicidadeFilter === 'TODOS' || contrato.periodicidade === periodicidadeFilter;
-    const matchesStatus = statusFilter === 'TODOS' || contrato.status === statusFilter;
+      const matchesPeriodicidade = periodicidadeFilter === 'TODOS' || contrato.periodicidade === periodicidadeFilter;
+      const matchesStatus = statusFilter === 'TODOS' || contrato.status === statusFilter;
 
-    return matchesSearch && matchesPeriodicidade && matchesStatus;
-  });
+      return matchesSearch && matchesPeriodicidade && matchesStatus;
+    })
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
   const getPeriodicidadeOptions = () => [
     { value: 'TODOS', label: 'Todas as Periodicidades' },

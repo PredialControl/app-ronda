@@ -4,10 +4,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle, X, Upload, FileImage, Info } from 'lucide-react';
 import { otimizarFoto, calcularTamanhoBase64, formatarTamanho } from '@/lib/utils';
+import { PhotoUpload } from '@/components/PhotoUpload';
 
 interface FotoRonda {
   id: string;
   foto: string;
+  fotos?: string[];
   local: string;
   pendencia: string;
   especialidade: string;
@@ -56,7 +58,8 @@ export function FotoRondaModal({
       hour: '2-digit',
       minute: '2-digit'
     }),
-    foto: ''
+    foto: '',
+    fotos: []
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,7 +80,8 @@ export function FotoRondaModal({
         observacoes: fotoRonda.observacoes || '',
         data: fotoRonda.data,
         hora: fotoRonda.hora,
-        foto: fotoRonda.foto
+        foto: fotoRonda.foto,
+        fotos: fotoRonda.fotos || (fotoRonda.foto ? [fotoRonda.foto] : [])
       });
     } else {
       // Criando novo item - limpar todos os dados
@@ -94,7 +98,8 @@ export function FotoRondaModal({
           hour: '2-digit',
           minute: '2-digit'
         }),
-        foto: ''
+        foto: '',
+        fotos: []
       });
     }
   }, [fotoRonda]);
@@ -162,14 +167,18 @@ export function FotoRondaModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.foto || !formData.local || !formData.pendencia) {
+    // Validar se tem pelo menos uma foto
+    const temFotos = (formData.fotos && formData.fotos.length > 0) || formData.foto;
+
+    if (!temFotos || !formData.local || !formData.pendencia) {
       alert('Por favor, preencha todos os campos obrigatórios (Foto, Local e Pendência)');
       return;
     }
 
     const fotoRondaData: any = {
       id: fotoRonda?.id || crypto.randomUUID(),
-      foto: formData.foto,
+      foto: formData.foto || (formData.fotos && formData.fotos[0]) || '', // Retrocompatibilidade
+      fotos: formData.fotos || [], // Array de fotos
       local: formData.local,
       pendencia: formData.pendencia as string,
       criticidade: formData.criticidade || 'Média', // Valor padrão
@@ -200,68 +209,21 @@ export function FotoRondaModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Upload de Foto */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <FileImage className="w-5 h-5 text-blue-400" />
-              <span className="font-medium text-white">Foto da Ronda</span>
-            </div>
-
-            <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-blue-500 transition-colors bg-gray-900">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFotoChange}
-                className="hidden"
-              />
-
-              {formData.foto && formData.foto !== 'Carregando...' ? (
-                <div className="space-y-3">
-                  <img
-                    src={formData.foto}
-                    alt="Preview da foto"
-                    className="mx-auto max-w-full h-48 object-cover rounded-lg border border-gray-700 shadow-sm"
-                  />
-                  <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
-                    <Info className="w-4 h-4" />
-                    <span>Foto otimizada automaticamente</span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Trocar Foto
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <Upload className="w-8 h-8 text-gray-500 mx-auto" />
-                  <div>
-                    <p className="text-sm text-gray-400">
-                      {formData.foto === 'Carregando...' ? 'Otimizando foto...' : 'Clique para selecionar uma foto'}
-                    </p>
-                    {formData.foto === 'Carregando...' && (
-                      <p className="text-xs text-blue-400 mt-1">Reduzindo tamanho automaticamente...</p>
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={formData.foto === 'Carregando...'}
-                    className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700 disabled:opacity-50"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Selecionar Foto
-                  </Button>
-                </div>
-              )}
-            </div>
+          {/* Upload de Fotos */}
+          <div className="space-y-4 border-2 border-gray-600 rounded-lg p-4 bg-gray-900">
+            <PhotoUpload
+              photos={formData.fotos || []}
+              onPhotosChange={(novasFotos) => {
+                setFormData(prev => ({
+                  ...prev,
+                  fotos: novasFotos,
+                  foto: novasFotos[0] || '' // Manter retrocompatibilidade
+                }));
+              }}
+              maxPhotos={40}
+              label="📸 Fotos da Ronda"
+              showCounter={true}
+            />
           </div>
 
           {/* Local */}

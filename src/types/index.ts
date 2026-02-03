@@ -7,7 +7,8 @@ export interface AreaTecnica {
   endereco: string;
   data: string;
   hora: string;
-  foto: string | null;
+  foto: string | null; // Manter retrocompatibilidade
+  fotos?: string[]; // Array de fotos em WebP/AVIF (até 40)
   observacoes?: string;
 }
 
@@ -78,7 +79,8 @@ export interface FotoInfo {
 
 export interface FotoRonda {
   id: string;
-  foto: string;
+  foto: string; // Manter retrocompatibilidade - primeira foto do array ou foto única
+  fotos?: string[]; // Array de fotos em WebP/AVIF (até 40)
   local: string;
   pendencia: string;
   especialidade: string;

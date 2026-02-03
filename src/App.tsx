@@ -5,7 +5,6 @@ import { NovaRondaScreen } from '@/components/NovaRondaScreen';
 import { GerenciarContratos } from '@/components/GerenciarContratos';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { LaudosKanban } from '@/components/LaudosKanban';
-import { CalendarView } from '@/components/CalendarView';
 import { ParecerTecnico } from '@/components/ParecerTecnico';
 import { RelatorioPendencias } from '@/components/RelatorioPendencias';
 import { ItensCompilados } from '@/components/ItensCompilados';
@@ -20,7 +19,7 @@ import { Dashboard } from '@/components/Dashboard';
 import { LoginScreen } from '@/components/LoginScreen';
 import { AreaTecnica, Ronda, Contrato, FotoRonda, OutroItemCorrigido, UsuarioAutorizado } from '@/types';
 import { AREAS_TECNICAS_PREDEFINIDAS } from '@/data/areasTecnicas';
-import { FileText, Building2, BarChart3, LogOut, User, Calendar, Kanban, FileCheck, ArrowLeft } from 'lucide-react';
+import { FileText, Building2, BarChart3, LogOut, User, Kanban, FileCheck, ArrowLeft } from 'lucide-react';
 
 import { contratoService, rondaService, areaTecnicaService, fotoRondaService, outroItemService } from '@/lib/supabaseService';
 import { supabase } from '@/lib/supabase';
@@ -53,7 +52,7 @@ function App() {
 
   const [currentView, setCurrentView] = useState<'contratos' | 'rondas'>('contratos');
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
-  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'calendario' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados'>('tabela');
+  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados'>('tabela');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
   const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
 
@@ -1580,19 +1579,6 @@ function App() {
                 </button>
 
                 <button
-                  onClick={() => setViewMode('calendario')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'calendario'
-                    ? 'border-blue-400 text-blue-300'
-                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                    }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Calendário de Visitas
-                  </div>
-                </button>
-
-                <button
                   onClick={() => setViewMode('parecer')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'parecer'
                     ? 'border-blue-400 text-blue-300'
@@ -1711,13 +1697,6 @@ function App() {
                 contrato={contratoSelecionado}
                 rondas={rondasCompletas}
                 areasTecnicas={areasTecnicasDoContrato}
-              />
-            )}
-
-            {viewMode === 'calendario' && contratoSelecionado && (
-              <CalendarView
-                contrato={contratoSelecionado}
-                onSelectContrato={setContratoSelecionado}
               />
             )}
 

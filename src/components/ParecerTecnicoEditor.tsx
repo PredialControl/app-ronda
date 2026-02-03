@@ -8,6 +8,7 @@ import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, FileText } fro
 import { Contrato, ParecerTecnico as ParecerTecnicoType, ParecerTopico, ParecerImagem } from '@/types';
 import { parecerService } from '@/lib/parecerService';
 import { generateParecerTecnicoDOCX } from '@/lib/docxGenerator';
+import { ImageEditor } from '@/components/ImageEditor';
 
 interface ParecerTecnicoEditorProps {
     contrato: Contrato;
@@ -45,6 +46,7 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
     const [topicos, setTopicos] = useState<TopicoLocal[]>([]);
     const [isSaving, setIsSaving] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [editingImage, setEditingImage] = useState<{ topicoTempId: string; imagemTempId: string; url: string } | null>(null);
 
     useEffect(() => {
         if (parecer?.topicos) {
@@ -54,6 +56,7 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                 imagens: (t.imagens || []).map((img, imgIdx) => ({
                     ...img,
                     tempId: `img-${idx}-${imgIdx}`,
+                    preview: img.url, // Usar a URL como preview para imagens já salvas
                 })),
             }));
             setTopicos(topicosLocal);
@@ -122,6 +125,32 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
             }
             return t;
         }));
+    };
+
+    const handleSaveEditedImage = async (editedImageBlob: Blob) => {
+        if (!editingImage) return;
+
+        // Converter Blob para File
+        const file = new File([editedImageBlob], 'edited-image.png', { type: 'image/png' });
+        const preview = URL.createObjectURL(editedImageBlob);
+
+        // Atualizar a imagem no tópico
+        setTopicos(topicos.map(t => {
+            if (t.tempId === editingImage.topicoTempId) {
+                return {
+                    ...t,
+                    imagens: t.imagens.map(img => {
+                        if (img.tempId === editingImage.imagemTempId) {
+                            return { ...img, file, preview };
+                        }
+                        return img;
+                    }),
+                };
+            }
+            return t;
+        }));
+
+        setEditingImage(null);
     };
 
     const handleCapaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -259,9 +288,9 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
     };
 
     return (
-        <div className="space-y-6">
+        <div className="flex flex-col h-screen bg-gray-950">
             {/* Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center px-6 py-4 bg-gray-900 border-b border-gray-700 flex-shrink-0">
                 <h2 className="text-2xl font-bold text-white">
                     {parecer ? 'Editar Parecer Técnico' : 'Novo Parecer Técnico'}
                 </h2>
@@ -281,15 +310,13 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                         <X className="w-4 h-4 mr-2" />
                         Cancelar
                     </Button>
-                    <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700" disabled={isSaving}>
-                        <Save className="w-4 h-4 mr-2" />
-                        {isSaving ? 'Salvando...' : 'Salvar'}
-                    </Button>
                 </div>
             </div>
 
-            {/* Fixed Fields */}
-            <Card className="bg-gray-800 border-gray-700">
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+                {/* Fixed Fields */}
+                <Card className="bg-gray-800 border-gray-700">
                 <CardHeader>
                     <CardTitle className="text-white">Informações Básicas</CardTitle>
                 </CardHeader>
@@ -380,25 +407,19 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                 </CardContent>
             </Card>
 
-            {/* Dynamic Topics */}
-            <div className="space-y-4">
-                <div className="flex justify-between items-center">
+                {/* Dynamic Topics */}
+                <div className="space-y-4">
                     <h3 className="text-xl font-semibold text-white">Tópicos Adicionais</h3>
-                    <Button onClick={handleAddTopico} variant="outline" className="text-blue-400">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Adicionar Tópico
-                    </Button>
-                </div>
 
-                {topicos.length === 0 ? (
-                    <Card className="bg-gray-800 border-gray-700">
-                        <CardContent className="py-12 text-center text-gray-400">
-                            <p>Nenhum tópico adicional. Clique em "Adicionar Tópico" para começar.</p>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    topicos.map((topico, idx) => (
-                        <Card key={topico.tempId} className="bg-gray-800 border-gray-700">
+                    {topicos.length === 0 ? (
+                        <Card className="bg-gray-800 border-gray-700">
+                            <CardContent className="py-12 text-center text-gray-400">
+                                <p>Nenhum tópico adicional. Clique em "Adicionar Tópico" abaixo para começar.</p>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        topicos.map((topico, idx) => (
+                            <Card key={topico.tempId} className="bg-gray-800 border-gray-700">
                             <CardHeader>
                                 <div className="flex justify-between items-center">
                                     <CardTitle className="text-white flex items-center gap-2">
@@ -467,7 +488,9 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                                                         <img
                                                             src={imagem.preview}
                                                             alt="Preview"
-                                                            className="w-20 h-20 object-cover rounded"
+                                                            className="w-32 h-32 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                                                            onClick={() => setEditingImage({ topicoTempId: topico.tempId, imagemTempId: imagem.tempId, url: imagem.preview })}
+                                                            title="Clique para editar com marcações"
                                                         />
                                                     )}
                                                     <div className="flex-1">
@@ -493,9 +516,39 @@ export function ParecerTecnicoEditor({ contrato, parecer, onSave, onCancel }: Pa
                                 </div>
                             </CardContent>
                         </Card>
-                    ))
-                )}
+                        ))
+                    )}
+                </div>
             </div>
+
+            {/* Fixed Footer with Buttons */}
+            <div className="flex gap-3 px-6 py-4 bg-gray-900 border-t border-gray-700 flex-shrink-0">
+                <Button
+                    onClick={handleAddTopico}
+                    variant="outline"
+                    className="text-blue-400 hover:text-blue-300 flex-1"
+                >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Novo Tópico
+                </Button>
+                <Button
+                    onClick={handleSave}
+                    className="bg-green-600 hover:bg-green-700 flex-1"
+                    disabled={isSaving}
+                >
+                    <Save className="w-4 h-4 mr-2" />
+                    {isSaving ? 'Salvando...' : 'Salvar Parecer'}
+                </Button>
+            </div>
+
+            {/* Image Editor Modal */}
+            {editingImage && (
+                <ImageEditor
+                    imageUrl={editingImage.url}
+                    onSave={handleSaveEditedImage}
+                    onCancel={() => setEditingImage(null)}
+                />
+            )}
         </div>
     );
 }

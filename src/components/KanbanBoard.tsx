@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { KanbanPhotoUpload } from '@/components/KanbanPhotoUpload';
 import {
   Select,
   SelectContent,
@@ -231,6 +232,8 @@ interface KanbanItem {
     dataAlarmeSonoro?: string;
     observacoes?: string;
   };
+  // Fotos do card (até 40 fotos em WebP ou AVIF)
+  fotos?: string[]; // Array de URLs base64 ou URLs das imagens
 }
 
 const initialItems: KanbanItem[] = [
@@ -367,7 +370,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
   const getColumns = () => [
     {
       id: 'aguardando',
-      title: 'Aguardando',
+      title: 'Não recebido',
       icon: Search,
       color: 'bg-red-600 text-white',
       items: filteredItems.filter(item => item.status === 'aguardando')
@@ -815,6 +818,11 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                               Recebido: {new Date(item.dataRecebimento + 'T00:00:00').toLocaleDateString('pt-BR')}
                             </div>
                           )}
+                          {item.fotos && item.fotos.length > 0 && (
+                            <div className="text-[10px] text-white bg-green-600 px-2 py-0.5 rounded flex items-center gap-1">
+                              📸 {item.fotos.length} {item.fotos.length === 1 ? 'foto' : 'fotos'}
+                            </div>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -1125,7 +1133,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                     ${selectedCard.status === 'em_correcao' ? 'bg-orange-600 text-white' : ''}
                     ${selectedCard.status === 'finalizado' ? 'bg-emerald-600 text-white' : ''}
                   `}>
-                      {selectedCard.status === 'aguardando' && 'Aguardando'}
+                      {selectedCard.status === 'aguardando' && 'Não recebido'}
                       {selectedCard.status === 'em_andamento' && 'Em Andamento'}
                       {selectedCard.status === 'em_correcao' && 'Em Correção'}
                       {selectedCard.status === 'finalizado' && 'Finalizado'}
@@ -2310,6 +2318,8 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 dataPisoTatil: selectedCard.checklistAcessibilidadeElevadores?.dataPisoTatil || '',
                                 identificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false,
                                 dataIdentificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || '',
+                                intercomunicador: selectedCard.checklistAcessibilidadeElevadores?.intercomunicador || false,
+                                dataIntercomunicador: selectedCard.checklistAcessibilidadeElevadores?.dataIntercomunicador || '',
                                 observacoes: selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''
                               }
                             };
@@ -2369,6 +2379,8 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 dataPisoTatil: selectedCard.checklistAcessibilidadeElevadores?.dataPisoTatil || '',
                                 identificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false,
                                 dataIdentificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || '',
+                                intercomunicador: selectedCard.checklistAcessibilidadeElevadores?.intercomunicador || false,
+                                dataIntercomunicador: selectedCard.checklistAcessibilidadeElevadores?.dataIntercomunicador || '',
                                 observacoes: selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''
                               }
                             };
@@ -2428,6 +2440,8 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 dataPisoTatil: e.target.value,
                                 identificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.identificacaoSonora || false,
                                 dataIdentificacaoSonora: selectedCard.checklistAcessibilidadeElevadores?.dataIdentificacaoSonora || '',
+                                intercomunicador: selectedCard.checklistAcessibilidadeElevadores?.intercomunicador || false,
+                                dataIntercomunicador: selectedCard.checklistAcessibilidadeElevadores?.dataIntercomunicador || '',
                                 observacoes: selectedCard.checklistAcessibilidadeElevadores?.observacoes || ''
                               }
                             };
@@ -2665,6 +2679,12 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
                                 pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
                                 dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                dataFitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
                                 alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
                                 dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
                                 observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
@@ -2728,6 +2748,12 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 dataBraileCorrimao: e.target.value,
                                 pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
                                 dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                dataFitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
                                 alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
                                 dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
                                 observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
@@ -3067,6 +3093,12 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
                                 pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
                                 dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                dataFitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
                                 alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
                                 dataAlarmeIntercomunicador: e.target.value,
                                 observacoes: selectedCard.checklistAcessibilidadeEscadas?.observacoes || ''
@@ -3098,6 +3130,12 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 dataBraileCorrimao: selectedCard.checklistAcessibilidadeEscadas?.dataBraileCorrimao || '',
                                 pisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.pisoTatilEscadas || false,
                                 dataPisoTatilEscadas: selectedCard.checklistAcessibilidadeEscadas?.dataPisoTatilEscadas || '',
+                                fitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.fitaFotoluminescente || false,
+                                dataFitaFotoluminescente: selectedCard.checklistAcessibilidadeEscadas?.dataFitaFotoluminescente || '',
+                                demarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.demarcacaoAreaResgate || false,
+                                dataDemarcacaoAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataDemarcacaoAreaResgate || '',
+                                areaResgate: selectedCard.checklistAcessibilidadeEscadas?.areaResgate || false,
+                                dataAreaResgate: selectedCard.checklistAcessibilidadeEscadas?.dataAreaResgate || '',
                                 alarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.alarmeIntercomunicador || false,
                                 dataAlarmeIntercomunicador: selectedCard.checklistAcessibilidadeEscadas?.dataAlarmeIntercomunicador || '',
                                 observacoes: e.target.value
@@ -4126,7 +4164,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 checklistAcessibilidadePiscina: {
                                   desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
                                   dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
-                                  placaBraile: e.target.checked,
+                                  placaProfundidade: e.target.checked,
                                   dataPlacaProfundidade: selectedCard.checklistAcessibilidadePiscina?.dataPlacaProfundidade || '',
                                   cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
                                   dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
@@ -4152,7 +4190,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                                 desnivelPiso: selectedCard.checklistAcessibilidadePiscina?.desnivelPiso || false,
                                 dataDesnivelPiso: selectedCard.checklistAcessibilidadePiscina?.dataDesnivelPiso || '',
                                 placaProfundidade: selectedCard.checklistAcessibilidadePiscina?.placaProfundidade || false,
-                                dataPlacaBraile: e.target.value,
+                                dataPlacaProfundidade: e.target.value,
                                 cadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.cadeiraAcesso || false,
                                 dataCadeiraAcesso: selectedCard.checklistAcessibilidadePiscina?.dataCadeiraAcesso || '',
                                 observacoes: selectedCard.checklistAcessibilidadePiscina?.observacoes || ''
@@ -4719,6 +4757,22 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                     </p>
                   </div>
                 )}
+
+                {/* Seção de Fotos */}
+                <div className="bg-black border-2 border-gray-600 rounded-lg p-4">
+                  <h3 className="text-sm font-bold text-gray-300 mb-4">📸 Fotos do Card</h3>
+                  <KanbanPhotoUpload
+                    fotos={selectedCard.fotos || []}
+                    onFotosChange={(novasFotos) => {
+                      const updated = { ...selectedCard, fotos: novasFotos };
+                      setItems(prev => prev.map(item =>
+                        item.id === selectedCard.id ? updated : item
+                      ));
+                      setSelectedCard(updated);
+                    }}
+                    maxFotos={40}
+                  />
+                </div>
               </div>
 
               <div className="p-4 bg-gray-900 border-t border-gray-700 flex justify-end shrink-0">
@@ -4740,7 +4794,7 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                 <SelectValue placeholder="Selecione o status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="aguardando">Aguardando</SelectItem>
+                <SelectItem value="aguardando">Não recebido</SelectItem>
                 <SelectItem value="em_andamento">Em Andamento</SelectItem>
                 <SelectItem value="em_correcao">Em Correção</SelectItem>
                 <SelectItem value="finalizado">Finalizado</SelectItem>
