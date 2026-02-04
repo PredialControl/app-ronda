@@ -137,7 +137,7 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
                 value={novaSecao.titulo}
                 onChange={(e) => setNovaSecao({ ...novaSecao, titulo: e.target.value })}
                 placeholder="Ex: Observações, Recomendações, etc."
-                className="w-full"
+                className="w-full bg-white text-gray-900 placeholder:text-gray-500"
               />
             </div>
             <div>
@@ -149,7 +149,7 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
                 onChange={(e) => setNovaSecao({ ...novaSecao, conteudo: e.target.value })}
                 placeholder="Digite o conteúdo da seção..."
                 rows={4}
-                className="w-full"
+                className="w-full bg-white text-gray-900 placeholder:text-gray-500"
               />
             </div>
             <div className="flex gap-2 justify-end">
@@ -239,7 +239,7 @@ function EditarSecaoForm({
         <Input
           value={titulo}
           onChange={(e) => setTitulo(e.target.value)}
-          className="w-full"
+          className="w-full bg-white text-gray-900"
         />
       </div>
       <div>
@@ -250,7 +250,7 @@ function EditarSecaoForm({
           value={conteudo}
           onChange={(e) => setConteudo(e.target.value)}
           rows={4}
-          className="w-full"
+          className="w-full bg-white text-gray-900"
         />
       </div>
       <div className="flex gap-2 justify-end">
