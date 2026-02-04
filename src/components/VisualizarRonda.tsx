@@ -130,18 +130,18 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
         {mostrandoFormulario && (
           <div className="border-2 border-purple-300 rounded-lg p-4 bg-purple-50 space-y-3">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-black mb-1 block">
                 Título da Seção
               </label>
               <Input
                 value={novaSecao.titulo}
                 onChange={(e) => setNovaSecao({ ...novaSecao, titulo: e.target.value })}
                 placeholder="Ex: Observações, Recomendações, etc."
-                className="w-full bg-white text-gray-900 placeholder:text-gray-500"
+                className="w-full bg-white text-black placeholder:text-gray-600 border-gray-400"
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
+              <label className="text-sm font-medium text-black mb-1 block">
                 Conteúdo
               </label>
               <Textarea
@@ -149,7 +149,7 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
                 onChange={(e) => setNovaSecao({ ...novaSecao, conteudo: e.target.value })}
                 placeholder="Digite o conteúdo da seção..."
                 rows={4}
-                className="w-full bg-white text-gray-900 placeholder:text-gray-500"
+                className="w-full bg-white text-black placeholder:text-gray-600 border-gray-400"
               />
             </div>
             <div className="flex gap-2 justify-end">
@@ -233,24 +233,24 @@ function EditarSecaoForm({
   return (
     <div className="space-y-3">
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">
+        <label className="text-sm font-medium text-black mb-1 block">
           Título da Seção
         </label>
         <Input
           value={titulo}
           onChange={(e) => setTitulo(e.target.value)}
-          className="w-full bg-white text-gray-900"
+          className="w-full bg-white text-black border-gray-400"
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">
+        <label className="text-sm font-medium text-black mb-1 block">
           Conteúdo
         </label>
         <Textarea
           value={conteudo}
           onChange={(e) => setConteudo(e.target.value)}
           rows={4}
-          className="w-full bg-white text-gray-900"
+          className="w-full bg-white text-black border-gray-400"
         />
       </div>
       <div className="flex gap-2 justify-end">
