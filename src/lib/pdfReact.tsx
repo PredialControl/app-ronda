@@ -1,5 +1,5 @@
 import { Document, Page, View, Text, StyleSheet, Image as PDFImage, pdf, Svg, Path, Circle, Line, Polyline } from '@react-pdf/renderer';
-import { AreaTecnica, Ronda, Contrato, FotoRonda } from '@/types';
+import { AreaTecnica, Ronda, Contrato, FotoRonda, SecaoRonda } from '@/types';
 import { CM_TO_PT } from './pdfConfig';
 
 // Componente de Ícone para PDF
@@ -706,18 +706,35 @@ export const RelatorioPDF = ({ ronda, contrato, areas, headerImage }: { ronda: R
         {/* Cabeçalho Fixo */}
         <CustomHeader contrato={contrato} ronda={ronda} />
 
-        {/* Objetivo do Relatório */}
-        <View style={{ marginBottom: 20, marginTop: 10 }}>
-          <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#0f172a', marginBottom: 8 }}>
-            Objetivo do Relatório de Status de Equipamentos e Áreas Comuns
-          </Text>
-          <Text style={{ fontSize: 10, textAlign: 'justify', marginBottom: 6, lineHeight: 1.5 }}>
-            O presente relatório tem como finalidade apresentar de forma clara, técnica e organizada o status atual dos equipamentos e das áreas comuns do empreendimento. Seu intuito é fornecer uma visão consolidada das condições operacionais, de conservação e de segurança de cada sistema inspecionado, permitindo identificar pendências, riscos potenciais e necessidades de manutenção preventiva ou corretiva.
-          </Text>
-          <Text style={{ fontSize: 10, textAlign: 'justify', lineHeight: 1.5 }}>
-            Além de registrar as constatações verificadas durante a vistoria, este relatório busca auxiliar a gestão predial no planejamento das ações necessárias, apoiando a tomada de decisão e garantindo maior controle sobre o desempenho e a vida útil dos equipamentos. Dessa forma, o documento contribui para a manutenção da qualidade, segurança e funcionalidade das instalações, promovendo a continuidade das operações e o bem-estar dos usuários.
-          </Text>
-        </View>
+        {/* Seções Dinâmicas do Relatório */}
+        {(() => {
+          // Se não existem seções customizadas, mostrar o objetivo padrão
+          const secoes = ronda.secoes && ronda.secoes.length > 0
+            ? ronda.secoes.sort((a, b) => a.ordem - b.ordem)
+            : [{
+                id: 'objetivo-default',
+                ordem: 1,
+                titulo: 'Objetivo do Relatório de Status de Equipamentos e Áreas Comuns',
+                conteudo: 'O presente relatório tem como finalidade apresentar de forma clara, técnica e organizada o status atual dos equipamentos e das áreas comuns do empreendimento. Seu intuito é fornecer uma visão consolidada das condições operacionais, de conservação e de segurança de cada sistema inspecionado, permitindo identificar pendências, riscos potenciais e necessidades de manutenção preventiva ou corretiva.\n\nAlém de registrar as constatações verificadas durante a vistoria, este relatório busca auxiliar a gestão predial no planejamento das ações necessárias, apoiando a tomada de decisão e garantindo maior controle sobre o desempenho e a vida útil dos equipamentos. Dessa forma, o documento contribui para a manutenção da qualidade, segurança e funcionalidade das instalações, promovendo a continuidade das operações e o bem-estar dos usuários.'
+              }];
+
+          const numerosRomanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'];
+
+          return secoes.map((secao, index) => (
+            <View key={secao.id} style={{ marginBottom: 20, marginTop: index === 0 ? 10 : 0 }}>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#0f172a', marginBottom: 8 }}>
+                {numerosRomanos[secao.ordem - 1] || secao.ordem} - {secao.titulo}
+              </Text>
+              {secao.conteudo.split('\n').map((paragrafo, pIndex) => (
+                paragrafo.trim() && (
+                  <Text key={pIndex} style={{ fontSize: 10, textAlign: 'justify', marginBottom: 6, lineHeight: 1.5 }}>
+                    {paragrafo.trim()}
+                  </Text>
+                )
+              ))}
+            </View>
+          ));
+        })()}
 
         {/* Conteúdo: Áreas e Fotos */}
         <View style={styles.sectionTitle}>

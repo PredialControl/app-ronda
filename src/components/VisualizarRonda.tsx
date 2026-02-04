@@ -3,7 +3,9 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AreaTecnica, Ronda, Contrato } from '@/types';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { AreaTecnica, Ronda, Contrato, SecaoRonda } from '@/types';
 import { downloadRelatorioPDF } from '@/lib/pdfReact';
 import {
   ArrowLeft,
@@ -17,6 +19,8 @@ import {
   AlertCircle,
   Info,
   CheckCircle,
+  Save,
+  X,
 } from 'lucide-react';
 import { AreaTecnicaCard } from './AreaTecnicaCard';
 
@@ -37,6 +41,230 @@ interface VisualizarRondaProps {
   onEditarRonda: () => void;
   onExportarJSON: () => void;
   isPrintMode: boolean;
+}
+
+// Componente para gerenciar as seções do relatório
+function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
+  const numerosRomanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'];
+
+  const secoesPadrao: SecaoRonda[] = [{
+    id: 'objetivo-default',
+    ordem: 1,
+    titulo: 'Objetivo do Relatório de Status de Equipamentos e Áreas Comuns',
+    conteudo: 'O presente relatório tem como finalidade apresentar de forma clara, técnica e organizada o status atual dos equipamentos e das áreas comuns do empreendimento. Seu intuito é fornecer uma visão consolidada das condições operacionais, de conservação e de segurança de cada sistema inspecionado, permitindo identificar pendências, riscos potenciais e necessidades de manutenção preventiva ou corretiva.\n\nAlém de registrar as constatações verificadas durante a vistoria, este relatório busca auxiliar a gestão predial no planejamento das ações necessárias, apoiando a tomada de decisão e garantindo maior controle sobre o desempenho e a vida útil dos equipamentos. Dessa forma, o documento contribui para a manutenção da qualidade, segurança e funcionalidade das instalações, promovendo a continuidade das operações e o bem-estar dos usuários.'
+  }];
+
+  const [secoes, setSecoes] = useState<SecaoRonda[]>(ronda.secoes || secoesPadrao);
+  const [editandoSecao, setEditandoSecao] = useState<string | null>(null);
+  const [novaSecao, setNovaSecao] = useState({ titulo: '', conteudo: '' });
+  const [mostrandoFormulario, setMostrandoFormulario] = useState(false);
+
+  // Salvar seções no localStorage sempre que mudar
+  useEffect(() => {
+    const secoesParaSalvar = secoes.filter(s => s.id !== 'objetivo-default' || s.titulo !== secoesPadrao[0].titulo || s.conteudo !== secoesPadrao[0].conteudo);
+
+    const rondaAtualizada = {
+      ...ronda,
+      secoes: secoesParaSalvar.length > 0 ? secoesParaSalvar : undefined
+    };
+
+    // Buscar todas as rondas do localStorage
+    const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
+    const index = rondas.findIndex((r: Ronda) => r.id === ronda.id);
+
+    if (index !== -1) {
+      rondas[index] = rondaAtualizada;
+      localStorage.setItem('rondas', JSON.stringify(rondas));
+    }
+  }, [secoes, ronda]);
+
+  const adicionarSecao = () => {
+    if (!novaSecao.titulo.trim()) return;
+
+    const novaOrdem = secoes.length + 1;
+    const secao: SecaoRonda = {
+      id: `secao-${Date.now()}`,
+      ordem: novaOrdem,
+      titulo: novaSecao.titulo,
+      conteudo: novaSecao.conteudo
+    };
+
+    setSecoes([...secoes, secao]);
+    setNovaSecao({ titulo: '', conteudo: '' });
+    setMostrandoFormulario(false);
+  };
+
+  const editarSecao = (id: string, titulo: string, conteudo: string) => {
+    setSecoes(secoes.map(s =>
+      s.id === id ? { ...s, titulo, conteudo } : s
+    ));
+    setEditandoSecao(null);
+  };
+
+  const deletarSecao = (id: string) => {
+    const secoesAtualizadas = secoes.filter(s => s.id !== id);
+    // Reordenar
+    const secoesReordenadas = secoesAtualizadas.map((s, index) => ({
+      ...s,
+      ordem: index + 1
+    }));
+    setSecoes(secoesReordenadas);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5 text-purple-600" />
+            Seções do Relatório
+          </CardTitle>
+          <Button onClick={() => setMostrandoFormulario(!mostrandoFormulario)} className="bg-purple-600 hover:bg-purple-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Seção
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Formulário para nova seção */}
+        {mostrandoFormulario && (
+          <div className="border-2 border-purple-300 rounded-lg p-4 bg-purple-50 space-y-3">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Título da Seção
+              </label>
+              <Input
+                value={novaSecao.titulo}
+                onChange={(e) => setNovaSecao({ ...novaSecao, titulo: e.target.value })}
+                placeholder="Ex: Observações, Recomendações, etc."
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">
+                Conteúdo
+              </label>
+              <Textarea
+                value={novaSecao.conteudo}
+                onChange={(e) => setNovaSecao({ ...novaSecao, conteudo: e.target.value })}
+                placeholder="Digite o conteúdo da seção..."
+                rows={4}
+                className="w-full"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => {
+                setMostrandoFormulario(false);
+                setNovaSecao({ titulo: '', conteudo: '' });
+              }}>
+                <X className="w-4 h-4 mr-2" />
+                Cancelar
+              </Button>
+              <Button onClick={adicionarSecao} className="bg-purple-600 hover:bg-purple-700">
+                <Save className="w-4 h-4 mr-2" />
+                Salvar Seção
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Lista de seções */}
+        <div className="space-y-3">
+          {secoes.sort((a, b) => a.ordem - b.ordem).map((secao) => (
+            <div key={secao.id} className="border rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
+              {editandoSecao === secao.id ? (
+                <EditarSecaoForm
+                  secao={secao}
+                  onSalvar={(titulo, conteudo) => editarSecao(secao.id, titulo, conteudo)}
+                  onCancelar={() => setEditandoSecao(null)}
+                />
+              ) : (
+                <>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <h4 className="font-bold text-lg text-gray-800">
+                        {numerosRomanos[secao.ordem - 1] || secao.ordem} - {secao.titulo}
+                      </h4>
+                      <div className="mt-2 text-gray-700 whitespace-pre-wrap text-sm">
+                        {secao.conteudo}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <Button variant="ghost" size="sm" onClick={() => setEditandoSecao(secao.id)}>
+                        <Edit className="w-4 h-4 text-blue-600" />
+                      </Button>
+                      {secao.id !== 'objetivo-default' && (
+                        <Button variant="ghost" size="sm" onClick={() => deletarSecao(secao.id)}>
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {secoes.length === 0 && (
+          <div className="text-center py-8">
+            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">Nenhuma seção criada ainda.</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Componente auxiliar para editar seção
+function EditarSecaoForm({
+  secao,
+  onSalvar,
+  onCancelar
+}: {
+  secao: SecaoRonda;
+  onSalvar: (titulo: string, conteudo: string) => void;
+  onCancelar: () => void;
+}) {
+  const [titulo, setTitulo] = useState(secao.titulo);
+  const [conteudo, setConteudo] = useState(secao.conteudo);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="text-sm font-medium text-gray-700 mb-1 block">
+          Título da Seção
+        </label>
+        <Input
+          value={titulo}
+          onChange={(e) => setTitulo(e.target.value)}
+          className="w-full"
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium text-gray-700 mb-1 block">
+          Conteúdo
+        </label>
+        <Textarea
+          value={conteudo}
+          onChange={(e) => setConteudo(e.target.value)}
+          rows={4}
+          className="w-full"
+        />
+      </div>
+      <div className="flex gap-2 justify-end">
+        <Button variant="outline" onClick={onCancelar}>
+          <X className="w-4 h-4 mr-2" />
+          Cancelar
+        </Button>
+        <Button onClick={() => onSalvar(titulo, conteudo)} className="bg-blue-600 hover:bg-blue-700">
+          <Save className="w-4 h-4 mr-2" />
+          Salvar
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export function VisualizarRonda({
@@ -293,6 +521,9 @@ export function VisualizarRonda({
             )}
           </CardContent>
         </Card>
+
+        {/* Seções do Relatório */}
+        <SecoesRelatorio ronda={ronda} />
 
         {/* Áreas Técnicas */}
         <Card>

@@ -57,6 +57,13 @@ export interface UsuarioAutorizado {
   ultimoAcesso?: string;
 }
 
+export interface SecaoRonda {
+  id: string;
+  ordem: number; // 1 para I, 2 para II, etc.
+  titulo: string; // Ex: "Objetivo", "Observações", etc.
+  conteudo: string; // Texto da seção
+}
+
 export interface Ronda {
   id: string;
   nome: string;
@@ -69,6 +76,7 @@ export interface Ronda {
   outrosItensCorrigidos: OutroItemCorrigido[];
   observacoesGerais?: string;
   responsavel?: string;
+  secoes?: SecaoRonda[]; // Seções dinâmicas do relatório (I, II, III, etc.)
 }
 
 export interface FotoInfo {
