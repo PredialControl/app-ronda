@@ -61,11 +61,10 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
 
   // Salvar seções no localStorage sempre que mudar
   useEffect(() => {
-    const secoesParaSalvar = secoes.filter(s => s.id !== 'objetivo-default' || s.titulo !== secoesPadrao[0].titulo || s.conteudo !== secoesPadrao[0].conteudo);
-
+    // Salvar todas as seções, incluindo as editadas
     const rondaAtualizada = {
       ...ronda,
-      secoes: secoesParaSalvar.length > 0 ? secoesParaSalvar : undefined
+      secoes: secoes
     };
 
     // Buscar todas as rondas do localStorage
@@ -75,11 +74,15 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
     if (index !== -1) {
       rondas[index] = rondaAtualizada;
       localStorage.setItem('rondas', JSON.stringify(rondas));
+      console.log('✅ Seções salvas no localStorage:', secoes);
     }
-  }, [secoes, ronda]);
+  }, [secoes, ronda.id]);
 
   const adicionarSecao = () => {
-    if (!novaSecao.titulo.trim()) return;
+    if (!novaSecao.titulo.trim()) {
+      alert('Por favor, preencha o título da seção');
+      return;
+    }
 
     const novaOrdem = secoes.length + 1;
     const secao: SecaoRonda = {
@@ -89,9 +92,14 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
       conteudo: novaSecao.conteudo
     };
 
-    setSecoes([...secoes, secao]);
+    const novasSecoes = [...secoes, secao];
+    setSecoes(novasSecoes);
     setNovaSecao({ titulo: '', conteudo: '' });
     setMostrandoFormulario(false);
+
+    console.log('✅ Nova seção adicionada:', secao);
+    console.log('✅ Total de seções:', novasSecoes.length);
+    alert(`Seção "${secao.titulo}" adicionada com sucesso!`);
   };
 
   const editarSecao = (id: string, titulo: string, conteudo: string) => {
@@ -130,18 +138,19 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
         {mostrandoFormulario && (
           <div className="border-2 border-purple-300 rounded-lg p-4 bg-purple-50 space-y-3">
             <div>
-              <label className="text-sm font-medium text-black mb-1 block">
+              <label className="text-sm font-bold mb-1 block" style={{ color: '#000000' }}>
                 Título da Seção
               </label>
               <Input
                 value={novaSecao.titulo}
                 onChange={(e) => setNovaSecao({ ...novaSecao, titulo: e.target.value })}
                 placeholder="Ex: Observações, Recomendações, etc."
-                className="w-full bg-white text-black placeholder:text-gray-600 border-gray-400"
+                className="w-full border-2"
+                style={{ backgroundColor: '#ffffff', color: '#000000', borderColor: '#666666' }}
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-black mb-1 block">
+              <label className="text-sm font-bold mb-1 block" style={{ color: '#000000' }}>
                 Conteúdo
               </label>
               <Textarea
@@ -149,7 +158,8 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
                 onChange={(e) => setNovaSecao({ ...novaSecao, conteudo: e.target.value })}
                 placeholder="Digite o conteúdo da seção..."
                 rows={4}
-                className="w-full bg-white text-black placeholder:text-gray-600 border-gray-400"
+                className="w-full border-2"
+                style={{ backgroundColor: '#ffffff', color: '#000000', borderColor: '#666666' }}
               />
             </div>
             <div className="flex gap-2 justify-end">
@@ -233,24 +243,26 @@ function EditarSecaoForm({
   return (
     <div className="space-y-3">
       <div>
-        <label className="text-sm font-medium text-black mb-1 block">
+        <label className="text-sm font-bold mb-1 block" style={{ color: '#000000' }}>
           Título da Seção
         </label>
         <Input
           value={titulo}
           onChange={(e) => setTitulo(e.target.value)}
-          className="w-full bg-white text-black border-gray-400"
+          className="w-full border-2"
+          style={{ backgroundColor: '#ffffff', color: '#000000', borderColor: '#666666' }}
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-black mb-1 block">
+        <label className="text-sm font-bold mb-1 block" style={{ color: '#000000' }}>
           Conteúdo
         </label>
         <Textarea
           value={conteudo}
           onChange={(e) => setConteudo(e.target.value)}
           rows={4}
-          className="w-full bg-white text-black border-gray-400"
+          className="w-full border-2"
+          style={{ backgroundColor: '#ffffff', color: '#000000', borderColor: '#666666' }}
         />
       </div>
       <div className="flex gap-2 justify-end">
