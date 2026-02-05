@@ -779,26 +779,37 @@ export const rondaService = {
   async update(id: string, updates: Partial<Ronda>): Promise<Ronda> {
     try {
       console.log('🔄 Tentando atualizar ronda com ID:', id);
-      console.log('🔄 Updates:', updates);
+      console.log('🔄 Updates recebidos:', updates);
+      console.log('🔄 Seções a salvar:', updates.secoes);
+
+      const updateData: any = {};
+
+      if (updates.nome !== undefined) updateData.nome = updates.nome;
+      if (updates.contrato !== undefined) updateData.contrato = updates.contrato;
+      if (updates.data !== undefined) updateData.data = updates.data;
+      if (updates.hora !== undefined) updateData.hora = updates.hora;
+      if (updates.responsavel !== undefined) updateData.responsavel = updates.responsavel;
+      if (updates.observacoesGerais !== undefined) updateData.observacoes_gerais = updates.observacoesGerais;
+      if (updates.tipoVisita !== undefined) updateData.tipo_visita = updates.tipoVisita;
+      if (updates.secoes !== undefined) {
+        updateData.secoes = JSON.stringify(updates.secoes);
+        console.log('🔄 Seções stringificadas:', updateData.secoes);
+      }
+
+      console.log('🔄 Dados a enviar para Supabase:', updateData);
 
       const { data, error } = await supabase
         .from('rondas')
-        .update({
-          nome: updates.nome,
-          contrato: updates.contrato,
-          data: updates.data,
-          hora: updates.hora,
-          responsavel: updates.responsavel,
-          observacoes_gerais: updates.observacoesGerais,
-          tipo_visita: updates.tipoVisita,
-          secoes: updates.secoes ? JSON.stringify(updates.secoes) : null
-        })
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
 
       if (error) {
-        console.error('❌ Erro na query Supabase:', error);
+        console.error('❌ ERRO SUPABASE UPDATE:', error);
+        console.error('❌ Código do erro:', error.code);
+        console.error('❌ Mensagem:', error.message);
+        console.error('❌ Detalhes:', error.details);
         throw error;
       }
 
@@ -807,7 +818,9 @@ export const rondaService = {
         throw new Error('Nenhum dado retornado do update');
       }
 
-      console.log('✅ Ronda atualizada com sucesso:', data);
+      console.log('✅ Ronda atualizada com sucesso no Supabase!');
+      console.log('✅ Data retornada:', data);
+      console.log('✅ Seções na resposta:', data.secoes);
 
       return {
         id: data.id.toString(),

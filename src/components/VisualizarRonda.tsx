@@ -105,9 +105,16 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
 
     // SALVAR NO SUPABASE
     try {
+      console.log('🔍 Verificando tipo de ronda - ID:', ronda.id);
+      console.log('🔍 Começa com local-?', ronda.id.startsWith('local-'));
+
       if (!ronda.id.startsWith('local-')) {
         console.log('💾 Salvando seções no Supabase...');
-        await rondaService.update(ronda.id, { secoes: novasSecoes });
+        console.log('💾 Ronda ID:', ronda.id);
+        console.log('💾 Seções a salvar:', JSON.stringify(novasSecoes, null, 2));
+
+        const resultado = await rondaService.update(ronda.id, { secoes: novasSecoes });
+        console.log('✅ Resultado do Supabase:', resultado);
         console.log('✅ Seções salvas no Supabase!');
       } else {
         console.log('🏠 Ronda local - salvando no localStorage');
