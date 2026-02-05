@@ -42,7 +42,7 @@ export function OutroItemModal({
     foto: item?.foto || null,
     fotos: item?.fotos || [],
     observacoes: item?.observacoes || '',
-    responsavel: item?.responsavel || ''
+    responsavel: item?.responsavel || 'CONDOMÍNIO'
   });
 
   const [multiplePhotos, setMultiplePhotos] = useState<string[]>([]);
@@ -94,7 +94,7 @@ export function OutroItemModal({
         foto: null,
         fotos: [],
         observacoes: '',
-        responsavel: ''
+        responsavel: 'CONDOMÍNIO'
       });
       setMultiplePhotos([]);
     }
@@ -327,15 +327,31 @@ export function OutroItemModal({
 
           {/* Responsável */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Responsável
-            </label>
-            <Input
-              value={formData.responsavel || ''}
-              onChange={(e) => handleInputChange('responsavel', e.target.value)}
-              placeholder="Nome do responsável (opcional)"
-              className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
-            />
+            <label className="block text-sm font-medium mb-2 text-gray-300">Responsável *</label>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                onClick={() => handleInputChange('responsavel', 'CONDOMÍNIO')}
+                className={`h-12 ${
+                  formData.responsavel === 'CONDOMÍNIO'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-400'
+                    : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600'
+                }`}
+              >
+                🏢 CONDOMÍNIO
+              </Button>
+              <Button
+                type="button"
+                onClick={() => handleInputChange('responsavel', 'CONSTRUTORA')}
+                className={`h-12 ${
+                  formData.responsavel === 'CONSTRUTORA'
+                    ? 'bg-orange-600 hover:bg-orange-700 text-white border-2 border-orange-400'
+                    : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600'
+                }`}
+              >
+                🏗️ CONSTRUTORA
+              </Button>
+            </div>
           </div>
 
           {/* Seção de Fotos */}
