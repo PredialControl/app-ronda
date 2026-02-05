@@ -140,17 +140,22 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
         { condominio: 0, construtora: 0, outros: 0 }
       );
 
-    // Status da última visita: usar APENAS a última ronda inteira
+    // Status da última visita: usar APENAS a última ronda DO MÊS FILTRADO
     const statusEquipamentos = (() => {
-      console.log('🔍 DEBUG STATUS EQUIPAMENTOS - Total de rondas:', rondas.length);
-      const rondaMaisRecente = [...rondas]
+      console.log('🔍 DEBUG STATUS EQUIPAMENTOS - Rondas do mês filtrado:', rondasMes.length);
+      console.log('🔍 Mês selecionado:', selectedMonth);
+
+      const rondaMaisRecente = [...rondasMes]
         .sort((a, b) => b.data.localeCompare(a.data))[0];
-      console.log('🔍 Ronda mais recente:', rondaMaisRecente?.nome, 'Data:', rondaMaisRecente?.data);
+
+      console.log('🔍 Ronda mais recente DO MÊS:', rondaMaisRecente?.nome, 'Data:', rondaMaisRecente?.data);
       const areas = rondaMaisRecente?.areasTecnicas || [];
-      console.log('🔍 Áreas técnicas da última ronda:', areas.length);
+      console.log('🔍 Áreas técnicas da última ronda do mês:', areas.length);
+
       areas.forEach(at => {
         console.log('🔍 Área:', at.nome, 'Status:', at.status, 'Observações:', at.observacoes);
       });
+
       const resultado = areas.map((at) => ({
         id: at.id,
         nome: at.nome,
@@ -158,7 +163,8 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
         statusUltimaVisita: at.status || 'NÃO VISITADO',
         observacoes: at.observacoes || null
       }));
-      console.log('🔍 Status equipamentos resultado:', resultado);
+
+      console.log('🔍 Status equipamentos resultado (do mês filtrado):', resultado);
       return resultado;
     })();
 
