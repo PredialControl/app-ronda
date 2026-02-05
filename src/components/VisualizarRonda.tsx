@@ -479,7 +479,12 @@ export function VisualizarRonda({
             <Button
               onClick={async () => {
                 try {
-                  await downloadRelatorioPDF(ronda, contrato, areasTecnicas, headerImage);
+                  // Buscar a ronda atualizada do localStorage
+                  const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
+                  const rondaAtualizada = rondas.find((r: Ronda) => r.id === ronda.id) || ronda;
+
+                  console.log('📄 Gerando PDF com seções:', rondaAtualizada.secoes);
+                  await downloadRelatorioPDF(rondaAtualizada, contrato, areasTecnicas, headerImage);
                 } catch (e) {
                   console.error(e);
                   alert('Erro ao exportar PDF');

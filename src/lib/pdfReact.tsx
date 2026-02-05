@@ -708,6 +708,8 @@ export const RelatorioPDF = ({ ronda, contrato, areas, headerImage }: { ronda: R
 
         {/* Seções Dinâmicas do Relatório */}
         {(() => {
+          console.log('🔍 PDF - Seções da ronda:', ronda.secoes);
+
           // Se não existem seções customizadas, mostrar o objetivo padrão
           const secoes = ronda.secoes && ronda.secoes.length > 0
             ? ronda.secoes.sort((a, b) => a.ordem - b.ordem)
@@ -717,6 +719,8 @@ export const RelatorioPDF = ({ ronda, contrato, areas, headerImage }: { ronda: R
                 titulo: 'Objetivo do Relatório de Status de Equipamentos e Áreas Comuns',
                 conteudo: 'O presente relatório tem como finalidade apresentar de forma clara, técnica e organizada o status atual dos equipamentos e das áreas comuns do empreendimento. Seu intuito é fornecer uma visão consolidada das condições operacionais, de conservação e de segurança de cada sistema inspecionado, permitindo identificar pendências, riscos potenciais e necessidades de manutenção preventiva ou corretiva.\n\nAlém de registrar as constatações verificadas durante a vistoria, este relatório busca auxiliar a gestão predial no planejamento das ações necessárias, apoiando a tomada de decisão e garantindo maior controle sobre o desempenho e a vida útil dos equipamentos. Dessa forma, o documento contribui para a manutenção da qualidade, segurança e funcionalidade das instalações, promovendo a continuidade das operações e o bem-estar dos usuários.'
               }];
+
+          console.log('📋 PDF - Total de seções a renderizar:', secoes.length);
 
           const numerosRomanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'];
 
