@@ -810,8 +810,8 @@ export function VisualizarRonda({
               <CardContent>
                 <ul className="space-y-2">
                   {resumoExecutivo.itensCorrigidos.map((i, idx) => (
-                    <li key={idx} className="text-blue-700 flex items-start gap-2">
-                      <span className="text-blue-500 mt-1">•</span>
+                    <li key={idx} className="flex items-start gap-2" style={{ color: '#000000' }}>
+                      <span className="mt-1" style={{ color: '#000000' }}>•</span>
                       <span>{i}</span>
                     </li>
                   ))}
@@ -833,14 +833,14 @@ export function VisualizarRonda({
             {/* Equipamentos em Atenção / Manutenção */}
             {resumoExecutivo.equipamentosAtencao.length > 0 && (
               <div className="bg-orange-100 border-l-4 border-orange-500 p-4 rounded-r-lg">
-                <h3 className="font-bold text-orange-800 flex items-center gap-2 mb-3">
+                <h3 className="font-bold flex items-center gap-2 mb-3" style={{ color: '#000000' }}>
                   <AlertCircle className="w-5 h-5" />
                   ⚠️ Equipamentos em Atenção / Em Manutenção
                 </h3>
                 <ul className="space-y-2">
                   {resumoExecutivo.equipamentosAtencao.map((i, idx) => (
-                    <li key={idx} className="text-orange-700 flex items-start gap-2">
-                      <span className="text-orange-500 mt-1">•</span>
+                    <li key={idx} className="flex items-start gap-2" style={{ color: '#000000' }}>
+                      <span className="mt-1" style={{ color: '#000000' }}>•</span>
                       <span>{i}</span>
                     </li>
                   ))}
@@ -850,14 +850,14 @@ export function VisualizarRonda({
             {/* Equipamentos Status Normal */}
             {resumoExecutivo.equipamentosNormais.length > 0 && (
               <div className="bg-green-100 border-l-4 border-green-500 p-4 rounded-r-lg">
-                <h3 className="font-bold text-green-800 flex items-center gap-2 mb-3">
+                <h3 className="font-bold flex items-center gap-2 mb-3" style={{ color: '#000000' }}>
                   <CheckCircle className="w-5 h-5" />
                   ✅ Equipamentos Status Normal
                 </h3>
                 <ul className="space-y-2">
                   {resumoExecutivo.equipamentosNormais.map((i, idx) => (
-                    <li key={idx} className="text-green-700 flex items-start gap-2">
-                      <span className="text-green-500 mt-1">•</span>
+                    <li key={idx} className="flex items-start gap-2" style={{ color: '#000000' }}>
+                      <span className="mt-1" style={{ color: '#000000' }}>•</span>
                       <span>{i}</span>
                     </li>
                   ))}
@@ -867,14 +867,14 @@ export function VisualizarRonda({
             {/* Chamados Abertos */}
             {resumoExecutivo.chamadosAbertos.length > 0 && (
               <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded-r-lg">
-                <h3 className="font-bold text-yellow-800 flex items-center gap-2 mb-3">
+                <h3 className="font-bold flex items-center gap-2 mb-3" style={{ color: '#000000' }}>
                   <AlertTriangle className="w-5 h-5" />
                   🔧 Itens para Abertura de Chamado
                 </h3>
                 <ul className="space-y-2">
                   {resumoExecutivo.chamadosAbertos.map((i, idx) => (
-                    <li key={idx} className="text-yellow-700 flex items-start gap-2">
-                      <span className="text-yellow-500 mt-1">•</span>
+                    <li key={idx} className="flex items-start gap-2" style={{ color: '#000000' }}>
+                      <span className="mt-1" style={{ color: '#000000' }}>•</span>
                       <span>{i}</span>
                     </li>
                   ))}
