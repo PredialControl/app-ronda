@@ -548,12 +548,16 @@ export const rondaService = {
       // Carregar áreas técnicas separadamente
       let areasTecnicas: AreaTecnica[] = [];
       try {
+        console.log(`🔍 CARREGANDO ÁREAS TÉCNICAS para ronda ${ronda.id}`);
         const { data: areasData, error: areasError } = await supabase
           .from('areas_tecnicas')
           .select('*')
           .eq('ronda_id', ronda.id);
 
+        console.log(`🔍 Resposta do banco:`, { totalAreas: areasData?.length || 0, temErro: !!areasError });
+
         if (!areasError && areasData) {
+          console.log(`🔍 ${areasData.length} áreas brutas recebidas do banco`);
           areasTecnicas = areasData.filter((area: any) => area && area.id).map((area: any) => ({
             id: area.id?.toString() || '',
             nome: area.nome || '',
@@ -566,7 +570,10 @@ export const rondaService = {
             foto: area.foto || null,
             observacoes: area.observacoes || ''
           }));
-          console.log(`✅ ${areasTecnicas.length} áreas técnicas carregadas para ronda ${ronda.id}`);
+          console.log(`✅ ${areasTecnicas.length} áreas técnicas PROCESSADAS para ronda ${ronda.id}`);
+          console.log(`🔍 Detalhes das áreas:`, areasTecnicas.map(a => ({ nome: a.nome, status: a.status })));
+        } else {
+          console.log(`⚠️ Nenhuma área técnica encontrada para ronda ${ronda.id}`);
         }
       } catch (areaError) {
         console.warn('⚠️ Erro ao carregar áreas técnicas (continuando):', areaError);
