@@ -1663,13 +1663,9 @@ function App() {
                 {/* Mensagem de seleção */}
                 <div className="text-center py-12">
                   <h2 className="text-2xl font-semibold text-gray-900 mb-4">Selecione uma Ronda</h2>
-                  <p className="text-gray-900 text-lg mb-8">
-                    Clique em uma ronda na tabela acima para visualizar seus detalhes ou crie uma nova ronda.
+                  <p className="text-gray-900 text-lg">
+                    Clique em uma ronda na tabela acima para visualizar seus detalhes.
                   </p>
-                  <Button onClick={handleAddRonda} className="bg-green-600/80 hover:bg-green-600">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Criar Nova Ronda
-                  </Button>
                 </div>
               </>
             )}

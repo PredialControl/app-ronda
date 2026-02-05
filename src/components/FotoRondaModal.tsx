@@ -263,19 +263,31 @@ export function FotoRondaModal({
 
           {/* Responsável */}
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-300">Responsável *</label>
-            <Select
-              value={formData.responsavel}
-              onValueChange={(value) => handleInputChange('responsavel', value)}
-            >
-              <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
-                <SelectValue placeholder="Selecione o responsável" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-900 border-gray-700">
-                <SelectItem value="CONSTRUTORA" className="text-white hover:bg-gray-800">CONSTRUTORA</SelectItem>
-                <SelectItem value="CONDOMÍNIO" className="text-white hover:bg-gray-800">CONDOMÍNIO</SelectItem>
-              </SelectContent>
-            </Select>
+            <label className="block text-sm font-medium mb-2 text-gray-300">Responsável *</label>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                onClick={() => handleInputChange('responsavel', 'CONDOMÍNIO')}
+                className={`h-12 ${
+                  formData.responsavel === 'CONDOMÍNIO'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-400'
+                    : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600'
+                }`}
+              >
+                🏢 CONDOMÍNIO
+              </Button>
+              <Button
+                type="button"
+                onClick={() => handleInputChange('responsavel', 'CONSTRUTORA')}
+                className={`h-12 ${
+                  formData.responsavel === 'CONSTRUTORA'
+                    ? 'bg-orange-600 hover:bg-orange-700 text-white border-2 border-orange-400'
+                    : 'bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600'
+                }`}
+              >
+                🏗️ CONSTRUTORA
+              </Button>
+            </div>
           </div>
 
           {/* Botões */}
