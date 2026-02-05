@@ -625,17 +625,27 @@ function App() {
   useEffect(() => {
     if (contratoSelecionado && rondasDoContrato.length > 0) {
       console.log('🔄 Carregando dados completos das rondas do contrato:', contratoSelecionado.nome);
+      console.log('🔄 Total de rondas do contrato:', rondasDoContrato.length);
+      console.log('🔄 IDs das rondas:', rondasDoContrato.map(r => ({ id: r.id, nome: r.nome })));
 
       // Adicionar timeout para evitar carregamentos muito frequentes
       const timeoutId = setTimeout(() => {
+        const rondasValidas = rondasDoContrato.filter(ronda => ronda && ronda.id && ronda.id.trim() !== '');
+        console.log('🔄 Rondas válidas para carregar:', rondasValidas.length);
+
         Promise.all(
-          rondasDoContrato
-            .filter(ronda => ronda && ronda.id && ronda.id.trim() !== '') // Filtrar rondas com IDs válidos
-            .map(ronda =>
-              rondaService.loadCompleteRonda(ronda)
-            )
+          rondasValidas.map(ronda => {
+            console.log('🔄 Chamando loadCompleteRonda para:', ronda.id, ronda.nome);
+            return rondaService.loadCompleteRonda(ronda);
+          })
         ).then(rondasCompletas => {
           console.log('✅ Dados completos carregados:', rondasCompletas.length);
+          console.log('✅ Áreas técnicas por ronda:', rondasCompletas.map(r => ({
+            id: r.id,
+            nome: r.nome,
+            areasCount: r.areasTecnicas?.length || 0,
+            areas: r.areasTecnicas?.map(a => ({ nome: a.nome, status: a.status })) || []
+          })));
           setRondasCompletas(rondasCompletas);
         }).catch(error => {
           console.error('❌ Erro ao carregar dados completos:', error);
@@ -645,6 +655,10 @@ function App() {
 
       return () => clearTimeout(timeoutId);
     } else {
+      console.log('⚠️ Não carregando rondas completas:', {
+        temContrato: !!contratoSelecionado,
+        rondasCount: rondasDoContrato.length
+      });
       setRondasCompletas([]);
     }
   }, [contratoSelecionado?.nome, rondas.length]); // Corrigido: usar contratoSelecionado.nome e rondas.length
