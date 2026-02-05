@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { AreaTecnica, Ronda, Contrato, SecaoRonda } from '@/types';
 import { downloadRelatorioPDF } from '@/lib/pdfReact';
+import { rondaService } from '@/lib/supabaseService';
 import {
   ArrowLeft,
   FileText,
@@ -80,7 +81,7 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
     }
   }, [ronda.id]);
 
-  const adicionarSecao = () => {
+  const adicionarSecao = async () => {
     if (!novaSecao.titulo.trim()) {
       alert('Por favor, preencha o título da seção');
       return;
@@ -102,23 +103,31 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
     console.log('🔥 Total de seções (antes):', secoes.length);
     console.log('🔥 Total de seções (depois):', novasSecoes.length);
 
-    // SALVAR IMEDIATAMENTE no localStorage
-    const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
-    console.log('🔥 Total de rondas no localStorage:', rondas.length);
+    // SALVAR NO SUPABASE
+    try {
+      if (!ronda.id.startsWith('local-')) {
+        console.log('💾 Salvando seções no Supabase...');
+        await rondaService.update(ronda.id, { secoes: novasSecoes });
+        console.log('✅ Seções salvas no Supabase!');
+      } else {
+        console.log('🏠 Ronda local - salvando no localStorage');
+        // SALVAR IMEDIATAMENTE no localStorage para rondas locais
+        const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
+        const index = rondas.findIndex((r: Ronda) => r.id === ronda.id);
 
-    const index = rondas.findIndex((r: Ronda) => r.id === ronda.id);
-    console.log('🔥 Índice da ronda encontrada:', index);
-
-    if (index !== -1) {
-      rondas[index] = {
-        ...rondas[index],
-        secoes: novasSecoes
-      };
-      localStorage.setItem('rondas', JSON.stringify(rondas));
-      console.log('🔥 SALVO NO LOCALSTORAGE!');
-      console.log('🔥 Seções salvas:', novasSecoes);
-    } else {
-      console.error('❌ RONDA NÃO ENCONTRADA NO LOCALSTORAGE!');
+        if (index !== -1) {
+          rondas[index] = {
+            ...rondas[index],
+            secoes: novasSecoes
+          };
+          localStorage.setItem('rondas', JSON.stringify(rondas));
+          console.log('✅ Seções salvas no localStorage!');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erro ao salvar seções:', error);
+      alert('Erro ao salvar seção. Tente novamente.');
+      return;
     }
 
     setSecoes(novasSecoes);
@@ -128,7 +137,7 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
     alert(`Seção "${secao.titulo}" adicionada com sucesso!\n\nTotal de seções: ${novasSecoes.length}`);
   };
 
-  const editarSecao = (id: string, titulo: string, conteudo: string) => {
+  const editarSecao = async (id: string, titulo: string, conteudo: string) => {
     const secoesAtualizadas = secoes.map(s =>
       s.id === id ? { ...s, titulo, conteudo } : s
     );
@@ -137,24 +146,36 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
     console.log('✏️ Novo título:', titulo);
     console.log('✏️ Novo conteúdo:', conteudo);
 
-    // SALVAR IMEDIATAMENTE
-    const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
-    const index = rondas.findIndex((r: Ronda) => r.id === ronda.id);
+    // SALVAR NO SUPABASE OU LOCALSTORAGE
+    try {
+      if (!ronda.id.startsWith('local-')) {
+        console.log('💾 Salvando seções editadas no Supabase...');
+        await rondaService.update(ronda.id, { secoes: secoesAtualizadas });
+        console.log('✅ Seções editadas salvas no Supabase!');
+      } else {
+        const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
+        const index = rondas.findIndex((r: Ronda) => r.id === ronda.id);
 
-    if (index !== -1) {
-      rondas[index] = {
-        ...rondas[index],
-        secoes: secoesAtualizadas
-      };
-      localStorage.setItem('rondas', JSON.stringify(rondas));
-      console.log('✏️ EDITADO E SALVO NO LOCALSTORAGE!');
+        if (index !== -1) {
+          rondas[index] = {
+            ...rondas[index],
+            secoes: secoesAtualizadas
+          };
+          localStorage.setItem('rondas', JSON.stringify(rondas));
+          console.log('✏️ EDITADO E SALVO NO LOCALSTORAGE!');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erro ao salvar edição:', error);
+      alert('Erro ao salvar edição. Tente novamente.');
+      return;
     }
 
     setSecoes(secoesAtualizadas);
     setEditandoSecao(null);
   };
 
-  const deletarSecao = (id: string) => {
+  const deletarSecao = async (id: string) => {
     const secoesAtualizadas = secoes.filter(s => s.id !== id);
     // Reordenar
     const secoesReordenadas = secoesAtualizadas.map((s, index) => ({
@@ -164,17 +185,29 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
 
     console.log('🗑️ DELETANDO SEÇÃO:', id);
 
-    // SALVAR IMEDIATAMENTE
-    const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
-    const index = rondas.findIndex((r: Ronda) => r.id === ronda.id);
+    // SALVAR NO SUPABASE OU LOCALSTORAGE
+    try {
+      if (!ronda.id.startsWith('local-')) {
+        console.log('💾 Salvando seções após deletar no Supabase...');
+        await rondaService.update(ronda.id, { secoes: secoesReordenadas });
+        console.log('✅ Seções deletadas salvas no Supabase!');
+      } else {
+        const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
+        const index = rondas.findIndex((r: Ronda) => r.id === ronda.id);
 
-    if (index !== -1) {
-      rondas[index] = {
-        ...rondas[index],
-        secoes: secoesReordenadas
-      };
-      localStorage.setItem('rondas', JSON.stringify(rondas));
-      console.log('🗑️ DELETADO E SALVO NO LOCALSTORAGE!');
+        if (index !== -1) {
+          rondas[index] = {
+            ...rondas[index],
+            secoes: secoesReordenadas
+          };
+          localStorage.setItem('rondas', JSON.stringify(rondas));
+          console.log('🗑️ DELETADO E SALVO NO LOCALSTORAGE!');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erro ao salvar após deletar:', error);
+      alert('Erro ao deletar seção. Tente novamente.');
+      return;
     }
 
     setSecoes(secoesReordenadas);

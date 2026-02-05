@@ -695,6 +695,7 @@ export const rondaService = {
         tipoVisita: (data.tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || 'RONDA',
         responsavel: data.responsavel || '',
         observacoesGerais: data.observacoes_gerais || '',
+        secoes: data.secoes ? (typeof data.secoes === 'string' ? JSON.parse(data.secoes) : data.secoes) : undefined,
         areasTecnicas: [],
         fotosRonda: [],
         outrosItensCorrigidos: []
@@ -789,7 +790,8 @@ export const rondaService = {
           hora: updates.hora,
           responsavel: updates.responsavel,
           observacoes_gerais: updates.observacoesGerais,
-          tipo_visita: updates.tipoVisita
+          tipo_visita: updates.tipoVisita,
+          secoes: updates.secoes ? JSON.stringify(updates.secoes) : null
         })
         .eq('id', id)
         .select()
