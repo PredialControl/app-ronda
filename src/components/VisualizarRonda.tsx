@@ -68,32 +68,17 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
 
   // Atualizar seções quando a ronda mudar (ao voltar para a tela)
   useEffect(() => {
+    console.log('🔄 MONTANDO COMPONENTE - Ronda ID:', ronda.id);
     const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
     const rondaSalva = rondas.find((r: Ronda) => r.id === ronda.id);
-    if (rondaSalva?.secoes) {
+    console.log('🔄 Ronda encontrada no localStorage:', rondaSalva);
+    console.log('🔄 Seções na ronda salva:', rondaSalva?.secoes);
+
+    if (rondaSalva?.secoes && rondaSalva.secoes.length > 0) {
       console.log('🔄 Atualizando seções do localStorage:', rondaSalva.secoes);
       setSecoes(rondaSalva.secoes);
     }
   }, [ronda.id]);
-
-  // Salvar seções no localStorage sempre que mudar
-  useEffect(() => {
-    // Salvar todas as seções, incluindo as editadas
-    const rondaAtualizada = {
-      ...ronda,
-      secoes: secoes
-    };
-
-    // Buscar todas as rondas do localStorage
-    const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
-    const index = rondas.findIndex((r: Ronda) => r.id === ronda.id);
-
-    if (index !== -1) {
-      rondas[index] = rondaAtualizada;
-      localStorage.setItem('rondas', JSON.stringify(rondas));
-      console.log('✅ Seções salvas no localStorage:', secoes);
-    }
-  }, [secoes, ronda.id]);
 
   const adicionarSecao = () => {
     if (!novaSecao.titulo.trim()) {
@@ -110,19 +95,62 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
     };
 
     const novasSecoes = [...secoes, secao];
+
+    console.log('🔥 ADICIONANDO SEÇÃO');
+    console.log('🔥 Ronda ID:', ronda.id);
+    console.log('🔥 Nova seção:', secao);
+    console.log('🔥 Total de seções (antes):', secoes.length);
+    console.log('🔥 Total de seções (depois):', novasSecoes.length);
+
+    // SALVAR IMEDIATAMENTE no localStorage
+    const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
+    console.log('🔥 Total de rondas no localStorage:', rondas.length);
+
+    const index = rondas.findIndex((r: Ronda) => r.id === ronda.id);
+    console.log('🔥 Índice da ronda encontrada:', index);
+
+    if (index !== -1) {
+      rondas[index] = {
+        ...rondas[index],
+        secoes: novasSecoes
+      };
+      localStorage.setItem('rondas', JSON.stringify(rondas));
+      console.log('🔥 SALVO NO LOCALSTORAGE!');
+      console.log('🔥 Seções salvas:', novasSecoes);
+    } else {
+      console.error('❌ RONDA NÃO ENCONTRADA NO LOCALSTORAGE!');
+    }
+
     setSecoes(novasSecoes);
     setNovaSecao({ titulo: '', conteudo: '' });
     setMostrandoFormulario(false);
 
-    console.log('✅ Nova seção adicionada:', secao);
-    console.log('✅ Total de seções:', novasSecoes.length);
-    alert(`Seção "${secao.titulo}" adicionada com sucesso!`);
+    alert(`Seção "${secao.titulo}" adicionada com sucesso!\n\nTotal de seções: ${novasSecoes.length}`);
   };
 
   const editarSecao = (id: string, titulo: string, conteudo: string) => {
-    setSecoes(secoes.map(s =>
+    const secoesAtualizadas = secoes.map(s =>
       s.id === id ? { ...s, titulo, conteudo } : s
-    ));
+    );
+
+    console.log('✏️ EDITANDO SEÇÃO:', id);
+    console.log('✏️ Novo título:', titulo);
+    console.log('✏️ Novo conteúdo:', conteudo);
+
+    // SALVAR IMEDIATAMENTE
+    const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
+    const index = rondas.findIndex((r: Ronda) => r.id === ronda.id);
+
+    if (index !== -1) {
+      rondas[index] = {
+        ...rondas[index],
+        secoes: secoesAtualizadas
+      };
+      localStorage.setItem('rondas', JSON.stringify(rondas));
+      console.log('✏️ EDITADO E SALVO NO LOCALSTORAGE!');
+    }
+
+    setSecoes(secoesAtualizadas);
     setEditandoSecao(null);
   };
 
@@ -133,6 +161,22 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
       ...s,
       ordem: index + 1
     }));
+
+    console.log('🗑️ DELETANDO SEÇÃO:', id);
+
+    // SALVAR IMEDIATAMENTE
+    const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
+    const index = rondas.findIndex((r: Ronda) => r.id === ronda.id);
+
+    if (index !== -1) {
+      rondas[index] = {
+        ...rondas[index],
+        secoes: secoesReordenadas
+      };
+      localStorage.setItem('rondas', JSON.stringify(rondas));
+      console.log('🗑️ DELETADO E SALVO NO LOCALSTORAGE!');
+    }
+
     setSecoes(secoesReordenadas);
   };
 
