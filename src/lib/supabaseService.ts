@@ -260,8 +260,8 @@ export const rondaService = {
       // Tentar consulta simples primeiro (mais rápida)
       const { data, error } = await supabase
         .from('rondas')
-        .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais')
-        .order('data_criacao', { ascending: false });
+        .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais, tipo_visita, secoes')
+        .order('data_criacao', { ascending: false});
 
       if (error) {
         console.warn('⚠️ Erro no banco, usando rondas locais:', error.message);
@@ -290,6 +290,14 @@ export const rondaService = {
               tipoVisita: ((row as any).tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || 'RONDA',
               responsavel: row.responsavel || 'Responsável não informado',
               observacoesGerais: row.observacoes_gerais || '',
+              secoes: (() => {
+                const secoesRaw = (row as any).secoes;
+                console.log('📋 Seções raw do banco:', secoesRaw, 'tipo:', typeof secoesRaw);
+                if (!secoesRaw) return undefined;
+                const parsed = typeof secoesRaw === 'string' ? JSON.parse(secoesRaw) : secoesRaw;
+                console.log('📋 Seções parseadas:', parsed);
+                return parsed;
+              })(),
               areasTecnicas: [],
               fotosRonda: [],
               outrosItensCorrigidos: []
