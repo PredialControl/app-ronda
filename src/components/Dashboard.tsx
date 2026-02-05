@@ -51,6 +51,8 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
 
   // Calcular métricas do dashboard com base no mês selecionado
   const metricas = useMemo(() => {
+    console.log('🔄 RECALCULANDO MÉTRICAS - Mês selecionado:', selectedMonth);
+    console.log('🔄 Rondas do mês ANTES do cálculo:', rondasMes.length);
 
     // Itens por criticidade/atenção (ajuste simples baseado no campo pendencia)
     const fotosMes = rondasMes.flatMap(ronda => ronda.fotosRonda || []);
@@ -142,18 +144,38 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
 
     // Status da última visita: usar APENAS a última ronda DO MÊS FILTRADO
     const statusEquipamentos = (() => {
+      console.log('🔍 ===== CALCULANDO STATUS EQUIPAMENTOS =====');
       console.log('🔍 DEBUG STATUS EQUIPAMENTOS - Rondas do mês filtrado:', rondasMes.length);
       console.log('🔍 Mês selecionado:', selectedMonth);
+      console.log('🔍 TODAS as rondas do mês:', rondasMes.map(r => ({
+        id: r.id,
+        nome: r.nome,
+        data: r.data,
+        areasCount: r.areasTecnicas?.length || 0
+      })));
 
       const rondaMaisRecente = [...rondasMes]
         .sort((a, b) => b.data.localeCompare(a.data))[0];
 
-      console.log('🔍 Ronda mais recente DO MÊS:', rondaMaisRecente?.nome, 'Data:', rondaMaisRecente?.data);
+      console.log('🔍 Ronda mais recente DO MÊS:', {
+        id: rondaMaisRecente?.id,
+        nome: rondaMaisRecente?.nome,
+        data: rondaMaisRecente?.data,
+        temAreasTecnicas: !!rondaMaisRecente?.areasTecnicas,
+        quantidadeAreas: rondaMaisRecente?.areasTecnicas?.length || 0
+      });
+
       const areas = rondaMaisRecente?.areasTecnicas || [];
       console.log('🔍 Áreas técnicas da última ronda do mês:', areas.length);
+      console.log('🔍 Detalhes das áreas:', areas);
 
-      areas.forEach(at => {
-        console.log('🔍 Área:', at.nome, 'Status:', at.status, 'Observações:', at.observacoes);
+      areas.forEach((at, index) => {
+        console.log(`🔍 Área ${index + 1}:`, {
+          id: at.id,
+          nome: at.nome,
+          status: at.status,
+          observacoes: at.observacoes
+        });
       });
 
       const resultado = areas.map((at) => ({
@@ -164,11 +186,12 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
         observacoes: at.observacoes || null
       }));
 
-      console.log('🔍 Status equipamentos resultado (do mês filtrado):', resultado);
+      console.log('🔍 Status equipamentos RESULTADO FINAL (do mês filtrado):', resultado);
+      console.log('🔍 ===== FIM DO CÁLCULO =====');
       return resultado;
     })();
 
-    return {
+    const metricas = {
       totalRondasMes: rondasMes.length,
       itensCriticos: itensCriticos.length,
       itensAtencao: itensAtencao.length,
@@ -180,7 +203,15 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
       contagemResponsavel,
       chamadosLista
     };
-  }, [rondasMes, areasTecnicas]);
+
+    console.log('📊 MÉTRICAS FINAIS:', {
+      totalRondasMes: metricas.totalRondasMes,
+      statusEquipamentos: metricas.statusEquipamentos.length,
+      statusDetalhes: metricas.statusEquipamentos
+    });
+
+    return metricas;
+  }, [rondasMes, selectedMonth]);
 
   // Estado para itens relevantes do relatório (persistido no localStorage)
   const [reportItems, setReportItems] = useState('');
