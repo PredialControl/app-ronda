@@ -54,10 +54,27 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
     conteudo: 'O presente relatório tem como finalidade apresentar de forma clara, técnica e organizada o status atual dos equipamentos e das áreas comuns do empreendimento. Seu intuito é fornecer uma visão consolidada das condições operacionais, de conservação e de segurança de cada sistema inspecionado, permitindo identificar pendências, riscos potenciais e necessidades de manutenção preventiva ou corretiva.\n\nAlém de registrar as constatações verificadas durante a vistoria, este relatório busca auxiliar a gestão predial no planejamento das ações necessárias, apoiando a tomada de decisão e garantindo maior controle sobre o desempenho e a vida útil dos equipamentos. Dessa forma, o documento contribui para a manutenção da qualidade, segurança e funcionalidade das instalações, promovendo a continuidade das operações e o bem-estar dos usuários.'
   }];
 
-  const [secoes, setSecoes] = useState<SecaoRonda[]>(ronda.secoes || secoesPadrao);
+  const [secoes, setSecoes] = useState<SecaoRonda[]>(() => {
+    // Tentar carregar do localStorage primeiro
+    const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
+    const rondaSalva = rondas.find((r: Ronda) => r.id === ronda.id);
+    console.log('🔄 Carregando seções do localStorage:', rondaSalva?.secoes);
+    return rondaSalva?.secoes || ronda.secoes || secoesPadrao;
+  });
+
   const [editandoSecao, setEditandoSecao] = useState<string | null>(null);
   const [novaSecao, setNovaSecao] = useState({ titulo: '', conteudo: '' });
   const [mostrandoFormulario, setMostrandoFormulario] = useState(false);
+
+  // Atualizar seções quando a ronda mudar (ao voltar para a tela)
+  useEffect(() => {
+    const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
+    const rondaSalva = rondas.find((r: Ronda) => r.id === ronda.id);
+    if (rondaSalva?.secoes) {
+      console.log('🔄 Atualizando seções do localStorage:', rondaSalva.secoes);
+      setSecoes(rondaSalva.secoes);
+    }
+  }, [ronda.id]);
 
   // Salvar seções no localStorage sempre que mudar
   useEffect(() => {

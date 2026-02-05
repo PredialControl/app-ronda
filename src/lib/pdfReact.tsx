@@ -1036,6 +1036,8 @@ export async function preparePdfData(ronda: Ronda, areas: AreaTecnica[]) {
 export async function downloadRelatorioPDF(ronda: Ronda, contrato: Contrato, areas: AreaTecnica[], headerImage?: string | null) {
   try {
     console.log('🚀 Iniciando geração do PDF...');
+    console.log('📋 Ronda recebida - ID:', ronda.id);
+    console.log('📋 Seções na ronda:', ronda.secoes);
 
     // Normalizar imagens (essencial para evitar erros de CORS/Tainted Canvas)
     const { rondaNormalized, areasNormalized } = await preparePdfData(ronda, areas);
