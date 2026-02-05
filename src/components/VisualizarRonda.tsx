@@ -56,11 +56,8 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
   }];
 
   const [secoes, setSecoes] = useState<SecaoRonda[]>(() => {
-    // Tentar carregar do localStorage primeiro
-    const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
-    const rondaSalva = rondas.find((r: Ronda) => r.id === ronda.id);
-    console.log('🔄 Carregando seções do localStorage:', rondaSalva?.secoes);
-    return rondaSalva?.secoes || ronda.secoes || secoesPadrao;
+    console.log('🔄 INICIALIZANDO seções - ronda.secoes:', ronda.secoes);
+    return ronda.secoes || secoesPadrao;
   });
 
   const [editandoSecao, setEditandoSecao] = useState<string | null>(null);
@@ -69,17 +66,17 @@ function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
 
   // Atualizar seções quando a ronda mudar (ao voltar para a tela)
   useEffect(() => {
-    console.log('🔄 MONTANDO COMPONENTE - Ronda ID:', ronda.id);
-    const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
-    const rondaSalva = rondas.find((r: Ronda) => r.id === ronda.id);
-    console.log('🔄 Ronda encontrada no localStorage:', rondaSalva);
-    console.log('🔄 Seções na ronda salva:', rondaSalva?.secoes);
+    console.log('🔄 USEEFFECT DISPARADO - Ronda ID:', ronda.id);
+    console.log('🔄 Seções vindas dos props (ronda.secoes):', ronda.secoes);
 
-    if (rondaSalva?.secoes && rondaSalva.secoes.length > 0) {
-      console.log('🔄 Atualizando seções do localStorage:', rondaSalva.secoes);
-      setSecoes(rondaSalva.secoes);
+    if (ronda.secoes) {
+      console.log('🔄 ATUALIZANDO seções com dados dos props:', ronda.secoes);
+      setSecoes(ronda.secoes);
+    } else {
+      console.log('🔄 Sem seções nos props, usando padrão');
+      setSecoes(secoesPadrao);
     }
-  }, [ronda.id]);
+  }, [ronda.id, ronda.secoes]);
 
   const adicionarSecao = async () => {
     if (!novaSecao.titulo.trim()) {
