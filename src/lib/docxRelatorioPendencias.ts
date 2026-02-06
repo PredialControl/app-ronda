@@ -11,16 +11,38 @@ async function loadImage(url: string): Promise<ArrayBuffer> {
     return await response.arrayBuffer();
 }
 
-// Função para converter WebP/qualquer imagem para PNG
-async function convertImageToPNG(imageUrl: string): Promise<ArrayBuffer> {
+// Cache de conversões de imagem
+const imageCache = new Map<string, ArrayBuffer>();
+
+// Função para converter WebP/qualquer imagem para PNG com redimensionamento
+async function convertImageToPNG(imageUrl: string, maxWidth: number = 1200): Promise<ArrayBuffer> {
+    // Verificar cache
+    const cacheKey = `${imageUrl}_${maxWidth}`;
+    if (imageCache.has(cacheKey)) {
+        console.log(`[DOCX] ✓ Imagem em cache: ${imageUrl.substring(0, 50)}...`);
+        return imageCache.get(cacheKey)!;
+    }
+
+    console.log(`[DOCX] → Convertendo imagem: ${imageUrl.substring(0, 50)}...`);
+
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
 
         img.onload = () => {
             const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
+
+            // Redimensionar proporcionalmente se for muito grande
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+                height = (height / width) * maxWidth;
+                width = maxWidth;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
 
             const ctx = canvas.getContext('2d');
             if (!ctx) {
@@ -28,7 +50,7 @@ async function convertImageToPNG(imageUrl: string): Promise<ArrayBuffer> {
                 return;
             }
 
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, width, height);
 
             canvas.toBlob((blob) => {
                 if (!blob) {
@@ -36,11 +58,20 @@ async function convertImageToPNG(imageUrl: string): Promise<ArrayBuffer> {
                     return;
                 }
 
-                blob.arrayBuffer().then(resolve).catch(reject);
-            }, 'image/png');
+                blob.arrayBuffer().then((buffer) => {
+                    // Salvar no cache
+                    imageCache.set(cacheKey, buffer);
+                    console.log(`[DOCX] ✓ Imagem convertida (${width}x${height})`);
+                    resolve(buffer);
+                }).catch(reject);
+            }, 'image/png', 0.92); // Qualidade 92%
         };
 
-        img.onerror = () => reject(new Error('Erro ao carregar imagem'));
+        img.onerror = () => {
+            console.error(`[DOCX] ✗ Erro ao carregar: ${imageUrl.substring(0, 50)}...`);
+            reject(new Error('Erro ao carregar imagem'));
+        };
+
         img.src = imageUrl;
     });
 }
@@ -283,13 +314,20 @@ async function createFooter(): Promise<Footer> {
 }
 
 export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPendencias, contrato: Contrato) {
+    console.log('[DOCX] ========== INICIANDO GERAÇÃO DO RELATÓRIO ==========');
+    console.log(`[DOCX] Relatório: ${relatorio.titulo}`);
+
+    // Limpar cache anterior
+    imageCache.clear();
+
     // Seções do documento
     const sections: any[] = [];
 
     // SEÇÃO 1: Capa (se existir) - SEM cabeçalho e rodapé
     if (relatorio.capa_url) {
+        console.log('[DOCX] → Processando capa...');
         try {
-            const capaImage = await convertImageToPNG(relatorio.capa_url);
+            const capaImage = await convertImageToPNG(relatorio.capa_url, 1600);
 
             // Dimensões A4 ajustadas para não cortar
             // 21cm x 29.7cm em pixels (72 DPI padrão Word)
@@ -995,7 +1033,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
     // Foto da localidade (se disponível)
     if (relatorio.foto_localidade_url) {
         try {
-            const fotoLocalidade = await convertImageToPNG(relatorio.foto_localidade_url);
+            const fotoLocalidade = await convertImageToPNG(relatorio.foto_localidade_url, 1000);
             // Imagem sem texto acima
             children.push(
                 new Paragraph({
@@ -1222,9 +1260,17 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
     // Contador global de pendências
     let numeroPendenciaGlobal = 0;
 
-    // Para cada seção
-    console.log('Relatório completo:', JSON.stringify(relatorio, null, 2));
+    // Contar total de pendências
+    const totalPendencias = (relatorio.secoes || []).reduce((total, secao) => {
+        const pendenciasDiretas = (secao.pendencias || []).length;
+        const pendenciasSubsecoes = (secao.subsecoes || []).reduce((subTotal, sub) =>
+            subTotal + (sub.pendencias || []).length, 0);
+        return total + pendenciasDiretas + pendenciasSubsecoes;
+    }, 0);
 
+    console.log(`[DOCX] → Processando ${totalPendencias} pendências em ${(relatorio.secoes || []).length} seções...`);
+
+    // Para cada seção
     for (let secaoIndex = 0; secaoIndex < (relatorio.secoes || []).length; secaoIndex++) {
         const secao = relatorio.secoes![secaoIndex];
         const hasSubsections = (secao.subsecoes && secao.subsecoes.length > 0);
@@ -1257,6 +1303,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
         // Função interna para processar uma pendência e gerar sua tabela
         const processarPendencia = async (pendencia: any) => {
             numeroPendenciaGlobal++;
+            console.log(`[DOCX]   → Pendência ${numeroPendenciaGlobal}/${totalPendencias}: ${pendencia.descricao.substring(0, 50)}...`);
             const tableRows: TableRow[] = [];
 
             // ================= ROW 1: Número (rowspan 2) + Local =================
@@ -1326,7 +1373,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
             let photoParagraph: Paragraph;
             if (pendencia.foto_url) {
                 try {
-                    const imageBuffer = await convertImageToPNG(pendencia.foto_url);
+                    const imageBuffer = await convertImageToPNG(pendencia.foto_url, 800);
                     photoParagraph = new Paragraph({
                         children: [
                             new ImageRun({
@@ -1358,7 +1405,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
             let photoDepoisParagraph: Paragraph;
             if (pendencia.foto_depois_url) {
                 try {
-                    const imageDepoisBuffer = await convertImageToPNG(pendencia.foto_depois_url);
+                    const imageDepoisBuffer = await convertImageToPNG(pendencia.foto_depois_url, 800);
                     photoDepoisParagraph = new Paragraph({
                         children: [
                             new ImageRun({
@@ -1461,7 +1508,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                         // Foto 1
                         if (foto1) {
                             try {
-                                const imageData = await convertImageToPNG(foto1);
+                                const imageData = await convertImageToPNG(foto1, 800);
                                 cellChildren.push(
                                     new TableCell({
                                         children: [
@@ -1498,7 +1545,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                         // Foto 2
                         if (foto2) {
                             try {
-                                const imageData = await convertImageToPNG(foto2);
+                                const imageData = await convertImageToPNG(foto2, 800);
                                 cellChildren.push(
                                     new TableCell({
                                         children: [
@@ -1976,7 +2023,10 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
     });
 
     // Gerar e salvar
+    console.log('[DOCX] → Empacotando documento final...');
     const blob = await Packer.toBlob(doc);
     const fileName = `${relatorio.titulo.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.docx`;
+    console.log(`[DOCX] ✓ Documento gerado: ${fileName} (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
+    console.log('[DOCX] ========== GERAÇÃO CONCLUÍDA ==========');
     saveAs(blob, fileName);
 }
