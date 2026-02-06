@@ -11,6 +11,40 @@ async function loadImage(url: string): Promise<ArrayBuffer> {
     return await response.arrayBuffer();
 }
 
+// Função para converter WebP/qualquer imagem para PNG
+async function convertImageToPNG(imageUrl: string): Promise<ArrayBuffer> {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                reject(new Error('Não foi possível criar contexto do canvas'));
+                return;
+            }
+
+            ctx.drawImage(img, 0, 0);
+
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    reject(new Error('Erro ao converter imagem'));
+                    return;
+                }
+
+                blob.arrayBuffer().then(resolve).catch(reject);
+            }, 'image/png');
+        };
+
+        img.onerror = () => reject(new Error('Erro ao carregar imagem'));
+        img.src = imageUrl;
+    });
+}
+
 // Função para criar cabeçalho
 async function createHeader(relatorio: RelatorioPendencias, contrato: Contrato): Promise<Header> {
     // Tentar carregar logo
@@ -255,7 +289,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
     // SEÇÃO 1: Capa (se existir) - SEM cabeçalho e rodapé
     if (relatorio.capa_url) {
         try {
-            const capaImage = await loadImage(relatorio.capa_url);
+            const capaImage = await convertImageToPNG(relatorio.capa_url);
 
             // Dimensões A4 ajustadas para não cortar
             // 21cm x 29.7cm em pixels (72 DPI padrão Word)
@@ -279,7 +313,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                     new Paragraph({
                         children: [
                             new ImageRun({
-                                data: new Uint8Array(capaImage),
+                                data: capaImage,
                                 transformation: {
                                     width: a4WidthFull,
                                     height: a4HeightFull,
@@ -961,7 +995,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
     // Foto da localidade (se disponível)
     if (relatorio.foto_localidade_url) {
         try {
-            const fotoLocalidade = await loadImage(relatorio.foto_localidade_url);
+            const fotoLocalidade = await convertImageToPNG(relatorio.foto_localidade_url);
             // Imagem sem texto acima
             children.push(
                 new Paragraph({
@@ -1292,8 +1326,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
             let photoParagraph: Paragraph;
             if (pendencia.foto_url) {
                 try {
-                    const imageResponse = await fetch(pendencia.foto_url);
-                    const imageBuffer = await imageResponse.arrayBuffer();
+                    const imageBuffer = await convertImageToPNG(pendencia.foto_url);
                     photoParagraph = new Paragraph({
                         children: [
                             new ImageRun({
@@ -1306,6 +1339,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                         spacing: { before: 100, after: 100 },
                     });
                 } catch (e) {
+                    console.error('Erro ao converter foto ANTES:', e);
                     photoParagraph = new Paragraph({ children: [new TextRun({ text: '[Erro ao carregar imagem]', italics: true, color: 'FF0000' })] });
                 }
             } else {
@@ -1324,8 +1358,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
             let photoDepoisParagraph: Paragraph;
             if (pendencia.foto_depois_url) {
                 try {
-                    const imageDepoisResponse = await fetch(pendencia.foto_depois_url);
-                    const imageDepoisBuffer = await imageDepoisResponse.arrayBuffer();
+                    const imageDepoisBuffer = await convertImageToPNG(pendencia.foto_depois_url);
                     photoDepoisParagraph = new Paragraph({
                         children: [
                             new ImageRun({
@@ -1338,6 +1371,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                         spacing: { before: 100, after: 100 },
                     });
                 } catch (e) {
+                    console.error('Erro ao converter foto DEPOIS:', e);
                     photoDepoisParagraph = new Paragraph({ children: [new TextRun({ text: '[Erro ao carregar imagem depois]', italics: true, color: 'FF0000' })] });
                 }
             } else {
@@ -1427,7 +1461,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                         // Foto 1
                         if (foto1) {
                             try {
-                                const imageData = await fetch(foto1).then(r => r.arrayBuffer());
+                                const imageData = await convertImageToPNG(foto1);
                                 cellChildren.push(
                                     new TableCell({
                                         children: [
@@ -1457,14 +1491,14 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                                     })
                                 );
                             } catch (err) {
-                                console.error('Erro ao carregar foto de constatação:', err);
+                                console.error('Erro ao converter foto de constatação:', err);
                             }
                         }
 
                         // Foto 2
                         if (foto2) {
                             try {
-                                const imageData = await fetch(foto2).then(r => r.arrayBuffer());
+                                const imageData = await convertImageToPNG(foto2);
                                 cellChildren.push(
                                     new TableCell({
                                         children: [
@@ -1494,7 +1528,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
                                     })
                                 );
                             } catch (err) {
-                                console.error('Erro ao carregar foto de constatação:', err);
+                                console.error('Erro ao converter foto de constatação:', err);
                             }
                         }
 
