@@ -18,6 +18,7 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
     const [searchTerm, setSearchTerm] = useState('');
     const [showEditor, setShowEditor] = useState(false);
     const [editingRelatorio, setEditingRelatorio] = useState<RelatorioPendenciasType | null>(null);
+    const [isGeneratingDOCX, setIsGeneratingDOCX] = useState(false);
 
     useEffect(() => {
         if (contratoSelecionado) {
@@ -62,6 +63,7 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
 
     const handleExportDOCX = async (relatorio: RelatorioPendenciasType) => {
         try {
+            setIsGeneratingDOCX(true);
             const relatorioCompleto = await relatorioPendenciasService.getById(relatorio.id);
             if (!relatorioCompleto) {
                 throw new Error('Relatório não encontrado');
@@ -70,6 +72,8 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
         } catch (error) {
             console.error('Erro ao exportar DOCX:', error);
             alert('Erro ao gerar documento DOCX.');
+        } finally {
+            setIsGeneratingDOCX(false);
         }
     };
 
@@ -95,7 +99,30 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {/* Loading Overlay */}
+            {isGeneratingDOCX && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-8 shadow-2xl max-w-md w-full mx-4">
+                        <div className="flex flex-col items-center space-y-4">
+                            <div className="relative">
+                                <div className="w-20 h-20 border-4 border-gray-600 border-t-green-500 rounded-full animate-spin"></div>
+                                <FileDown className="w-10 h-10 text-green-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+                            </div>
+                            <div className="text-center">
+                                <h3 className="text-xl font-bold text-white mb-2">Gerando Relatório</h3>
+                                <p className="text-gray-400 text-sm">
+                                    Processando imagens e formatando documento...
+                                </p>
+                                <p className="text-gray-500 text-xs mt-2">
+                                    Isso pode levar alguns minutos dependendo do tamanho do relatório
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-lg shadow-lg p-6">
                 <div className="flex justify-between items-center">
