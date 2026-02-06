@@ -313,7 +313,11 @@ async function createFooter(): Promise<Footer> {
     });
 }
 
-export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPendencias, contrato: Contrato) {
+export async function generateRelatorioPendenciasDOCX(
+    relatorio: RelatorioPendencias,
+    contrato: Contrato,
+    onProgress?: (message: string, current: number, total: number) => void
+) {
     console.log('[DOCX] ========== INICIANDO GERAÇÃO DO RELATÓRIO ==========');
     console.log(`[DOCX] Relatório: ${relatorio.titulo}`);
 
@@ -326,6 +330,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
     // SEÇÃO 1: Capa (se existir) - SEM cabeçalho e rodapé
     if (relatorio.capa_url) {
         console.log('[DOCX] → Processando capa...');
+        onProgress?.('Processando capa do relatório...', 1, 100);
         try {
             const capaImage = await convertImageToPNG(relatorio.capa_url, 1600);
 
@@ -1269,6 +1274,7 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
     }, 0);
 
     console.log(`[DOCX] → Processando ${totalPendencias} pendências em ${(relatorio.secoes || []).length} seções...`);
+    onProgress?.('Montando estrutura do documento...', 5, 100);
 
     // Para cada seção
     for (let secaoIndex = 0; secaoIndex < (relatorio.secoes || []).length; secaoIndex++) {
@@ -1304,6 +1310,11 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
         const processarPendencia = async (pendencia: any) => {
             numeroPendenciaGlobal++;
             console.log(`[DOCX]   → Pendência ${numeroPendenciaGlobal}/${totalPendencias}: ${pendencia.descricao.substring(0, 50)}...`);
+
+            // Calcular progresso (10% a 90% para as pendências)
+            const progressoPendencias = 10 + Math.floor((numeroPendenciaGlobal / totalPendencias) * 80);
+            onProgress?.(`Processando pendência ${numeroPendenciaGlobal} de ${totalPendencias}...`, progressoPendencias, 100);
+
             const tableRows: TableRow[] = [];
 
             // ================= ROW 1: Número (rowspan 2) + Local =================
@@ -2024,9 +2035,11 @@ export async function generateRelatorioPendenciasDOCX(relatorio: RelatorioPenden
 
     // Gerar e salvar
     console.log('[DOCX] → Empacotando documento final...');
+    onProgress?.('Empacotando documento final...', 95, 100);
     const blob = await Packer.toBlob(doc);
     const fileName = `${relatorio.titulo.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.docx`;
     console.log(`[DOCX] ✓ Documento gerado: ${fileName} (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
     console.log('[DOCX] ========== GERAÇÃO CONCLUÍDA ==========');
+    onProgress?.('Download iniciado!', 100, 100);
     saveAs(blob, fileName);
 }

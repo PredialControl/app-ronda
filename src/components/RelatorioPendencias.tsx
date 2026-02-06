@@ -19,6 +19,8 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
     const [showEditor, setShowEditor] = useState(false);
     const [editingRelatorio, setEditingRelatorio] = useState<RelatorioPendenciasType | null>(null);
     const [isGeneratingDOCX, setIsGeneratingDOCX] = useState(false);
+    const [progressMessage, setProgressMessage] = useState('');
+    const [progressPercent, setProgressPercent] = useState(0);
 
     useEffect(() => {
         if (contratoSelecionado) {
@@ -64,16 +66,29 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
     const handleExportDOCX = async (relatorio: RelatorioPendenciasType) => {
         try {
             setIsGeneratingDOCX(true);
+            setProgressMessage('Carregando dados do relatório...');
+            setProgressPercent(0);
+
             const relatorioCompleto = await relatorioPendenciasService.getById(relatorio.id);
             if (!relatorioCompleto) {
                 throw new Error('Relatório não encontrado');
             }
-            await generateRelatorioPendenciasDOCX(relatorioCompleto, contratoSelecionado);
+
+            await generateRelatorioPendenciasDOCX(
+                relatorioCompleto,
+                contratoSelecionado,
+                (message, current, total) => {
+                    setProgressMessage(message);
+                    setProgressPercent(Math.floor((current / total) * 100));
+                }
+            );
         } catch (error) {
             console.error('Erro ao exportar DOCX:', error);
             alert('Erro ao gerar documento DOCX.');
         } finally {
             setIsGeneratingDOCX(false);
+            setProgressMessage('');
+            setProgressPercent(0);
         }
     };
 
@@ -104,17 +119,29 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
             {isGeneratingDOCX && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
                     <div className="bg-gray-800 border border-gray-700 rounded-lg p-8 shadow-2xl max-w-md w-full mx-4">
-                        <div className="flex flex-col items-center space-y-4">
+                        <div className="flex flex-col items-center space-y-6">
                             <div className="relative">
                                 <div className="w-20 h-20 border-4 border-gray-600 border-t-green-500 rounded-full animate-spin"></div>
                                 <FileDown className="w-10 h-10 text-green-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
                             </div>
-                            <div className="text-center">
+                            <div className="text-center w-full">
                                 <h3 className="text-xl font-bold text-white mb-2">Gerando Relatório</h3>
-                                <p className="text-gray-400 text-sm">
-                                    Processando imagens e formatando documento...
+                                <p className="text-gray-400 text-sm mb-4">
+                                    {progressMessage || 'Processando...'}
                                 </p>
-                                <p className="text-gray-500 text-xs mt-2">
+
+                                {/* Barra de progresso */}
+                                <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden mb-2">
+                                    <div
+                                        className="bg-gradient-to-r from-green-500 to-green-600 h-full transition-all duration-300 ease-out"
+                                        style={{ width: `${progressPercent}%` }}
+                                    ></div>
+                                </div>
+                                <p className="text-green-400 text-sm font-bold">
+                                    {progressPercent}%
+                                </p>
+
+                                <p className="text-gray-500 text-xs mt-4">
                                     Isso pode levar alguns minutos dependendo do tamanho do relatório
                                 </p>
                             </div>
