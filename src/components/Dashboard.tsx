@@ -37,16 +37,25 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
   const rondasMes = useMemo(() => {
     const [anoStr, mesStr] = selectedMonth.split('-');
     const anoSelecionado = parseInt(anoStr, 10);
-    const mesSelecionado = parseInt(mesStr, 10) - 1; // 0-based
+    const mesSelecionado = parseInt(mesStr, 10); // 1-based (Janeiro = 1)
 
-    return rondas.filter(ronda => {
-      const [anoRonda, mesRonda] = ronda.data.split('-').map(Number);
-      // Ajuste: mesRonda vem 1-12, mesSelecionado é 0-11
-      return (
-        (mesRonda - 1) === mesSelecionado &&
-        anoRonda === anoSelecionado
-      );
+    console.log('🔍 FILTRO RONDAS - selectedMonth:', selectedMonth);
+    console.log('🔍 FILTRO - Ano selecionado:', anoSelecionado, 'Mês selecionado:', mesSelecionado);
+    console.log('🔍 FILTRO - Total de rondas para filtrar:', rondas.length);
+
+    const resultado = rondas.filter(ronda => {
+      const [anoRonda, mesRonda, diaRonda] = ronda.data.split('-').map(Number);
+      console.log(`🔍 FILTRO - Comparando ronda "${ronda.nome}": data=${ronda.data}, ano=${anoRonda}, mês=${mesRonda}`);
+
+      const match = mesRonda === mesSelecionado && anoRonda === anoSelecionado;
+      console.log(`🔍 FILTRO - Match? ${match} (mesRonda=${mesRonda} === mesSelecionado=${mesSelecionado} && anoRonda=${anoRonda} === anoSelecionado=${anoSelecionado})`);
+
+      return match;
     });
+
+    console.log('🔍 FILTRO - Rondas filtradas:', resultado.length);
+    console.log('🔍 FILTRO - Rondas do mês:', resultado.map(r => ({nome: r.nome, data: r.data, areas: r.areasTecnicas?.length})));
+    return resultado;
   }, [rondas, selectedMonth]);
 
   // Calcular métricas do dashboard com base no mês selecionado
