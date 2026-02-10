@@ -28,6 +28,7 @@ import { debugSupabaseConnection, debugTableStructure } from '@/lib/debugSupabas
 import { syncService } from '@/lib/syncService';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { ColetaOffline } from '@/components/ColetaOffline';
+import { ColetaLite } from '@/components/ColetaLite';
 
 
 function App() {
@@ -55,7 +56,7 @@ function App() {
 
   const [currentView, setCurrentView] = useState<'contratos' | 'rondas'>('contratos');
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
-  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta'>('tabela');
+  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-lite'>('tabela');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
   const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
 
@@ -1411,6 +1412,16 @@ function App() {
     );
   }
 
+  // Tela de coleta lite (full-screen mobile)
+  if (viewMode === 'coleta-lite') {
+    return (
+      <ColetaLite onVoltar={() => {
+        setViewMode('tabela');
+        setCurrentView('contratos');
+      }} />
+    );
+  }
+
   return (
     <div className="min-h-screen">
       {/* Header com informações do usuário */}
@@ -1443,9 +1454,9 @@ function App() {
                 <span>{usuarioLogado?.cargo}</span>
               </div>
 
-              {/* Botão de coleta offline */}
+              {/* Botão de coleta lite */}
               <Button
-                onClick={() => setViewMode('coleta')}
+                onClick={() => setViewMode('coleta-lite')}
                 variant="outline"
                 size="sm"
                 className="text-green-400 border-green-500/30 hover:bg-green-500/10 hover:border-green-500/50 px-2 sm:px-3"
