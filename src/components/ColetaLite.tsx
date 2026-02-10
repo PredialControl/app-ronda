@@ -25,6 +25,9 @@ type Tela =
   | 'relatorio-secoes'
   | 'relatorio-pendencias'
   | 'editar-pendencia'
+  | 'novo-relatorio'
+  | 'nova-secao'
+  | 'nova-pendencia'
   | 'nova-ronda';
 
 interface ColetaLiteProps {
@@ -57,6 +60,20 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
   const [uploadingFotoDepois, setUploadingFotoDepois] = useState(false);
   const fotoRef = useRef<HTMLInputElement>(null);
   const fotoDepoisRef = useRef<HTMLInputElement>(null);
+
+  // Novo relatório
+  const [novoRelTitulo, setNovoRelTitulo] = useState('');
+
+  // Nova seção
+  const [novaSecaoTitulo, setNovaSecaoTitulo] = useState('');
+  const [novaSecaoSubtitulo, setNovaSecaoSubtitulo] = useState('');
+
+  // Nova pendência
+  const [novaPendLocal, setNovaPendLocal] = useState('');
+  const [novaPendDescricao, setNovaPendDescricao] = useState('');
+  const [novaPendFoto, setNovaPendFoto] = useState<File | null>(null);
+  const [novaPendFotoPreview, setNovaPendFotoPreview] = useState<string | null>(null);
+  const novaPendFotoRef = useRef<HTMLInputElement>(null);
 
   // Geração DOCX
   const [isGeneratingDOCX, setIsGeneratingDOCX] = useState(false);
@@ -184,6 +201,123 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     }
   };
 
+  // Criar novo relatório
+  const handleCriarRelatorio = async () => {
+    if (!contratoSelecionado || !novoRelTitulo.trim()) return;
+    setLoading(true);
+    try {
+      const novo = await relatorioPendenciasService.create({
+        contrato_id: contratoSelecionado.id,
+        titulo: novoRelTitulo.trim(),
+      } as any);
+      showMsg('Relatório criado!');
+      setNovoRelTitulo('');
+      // Recarregar e abrir o novo
+      await loadRelatorios(contratoSelecionado.id);
+      const relCompleto = await relatorioPendenciasService.getById(novo.id);
+      if (relCompleto) {
+        setRelatorioSelecionado(relCompleto);
+        setTela('relatorio-secoes');
+      } else {
+        setTela('relatorios-lista');
+      }
+    } catch (error) {
+      console.error('Erro ao criar relatório:', error);
+      showMsg('Erro ao criar relatório');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Criar nova seção
+  const handleCriarSecao = async () => {
+    if (!relatorioSelecionado || !novaSecaoTitulo.trim()) return;
+    setLoading(true);
+    try {
+      const ordemAtual = relatorioSelecionado.secoes?.length || 0;
+      await relatorioPendenciasService.createSecao({
+        relatorio_id: relatorioSelecionado.id,
+        ordem: ordemAtual,
+        titulo_principal: novaSecaoTitulo.trim(),
+        subtitulo: novaSecaoSubtitulo.trim() || undefined,
+      } as any);
+      showMsg('Seção criada!');
+      setNovaSecaoTitulo('');
+      setNovaSecaoSubtitulo('');
+      // Recarregar relatório
+      const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
+      if (relAtualizado) setRelatorioSelecionado(relAtualizado);
+      setTela('relatorio-secoes');
+    } catch (error) {
+      console.error('Erro ao criar seção:', error);
+      showMsg('Erro ao criar seção');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Criar nova pendência
+  const handleCriarPendencia = async () => {
+    if (!relatorioSelecionado || !secaoSelecionada) return;
+    if (!novaPendLocal.trim() && !novaPendDescricao.trim()) return;
+    setLoading(true);
+    try {
+      const pendenciasAtuais = subsecaoSelecionada
+        ? (subsecaoSelecionada.pendencias || [])
+        : (secaoSelecionada.pendencias || []);
+
+      const novaPend: any = {
+        secao_id: secaoSelecionada.id,
+        subsecao_id: subsecaoSelecionada?.id || null,
+        ordem: pendenciasAtuais.length,
+        local: novaPendLocal.trim(),
+        descricao: novaPendDescricao.trim(),
+        foto_url: null,
+        foto_depois_url: null,
+        status: 'PENDENTE',
+      };
+
+      const criada = await relatorioPendenciasService.createPendencia(novaPend);
+
+      // Se tem foto, faz upload
+      if (novaPendFoto && criada.id) {
+        const url = await relatorioPendenciasService.uploadFoto(
+          novaPendFoto,
+          relatorioSelecionado.id,
+          criada.id
+        );
+        await relatorioPendenciasService.updatePendencia(criada.id, { foto_url: url });
+      }
+
+      showMsg('Pendência criada!');
+      setNovaPendLocal('');
+      setNovaPendDescricao('');
+      setNovaPendFoto(null);
+      setNovaPendFotoPreview(null);
+
+      // Recarregar relatório
+      const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
+      if (relAtualizado) {
+        setRelatorioSelecionado(relAtualizado);
+        // Atualizar seção/subseção selecionada
+        const secAtualizada = relAtualizado.secoes?.find(s => s.id === secaoSelecionada.id);
+        if (secAtualizada) {
+          setSecaoSelecionada(secAtualizada);
+          if (subsecaoSelecionada) {
+            const subAtualizada = secAtualizada.subsecoes?.find(sub => sub.id === subsecaoSelecionada.id);
+            if (subAtualizada) setSubsecaoSelecionada(subAtualizada);
+          }
+        }
+      }
+      setTela('relatorio-pendencias');
+    } catch (error) {
+      console.error('Erro ao criar pendência:', error);
+      showMsg('Erro ao criar pendência');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Navegar para editar pendência
   const abrirEditarPendencia = (pendencia: RelatorioPendencia) => {
     setPendenciaSelecionada(pendencia);
@@ -207,14 +341,30 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
       case 'relatorios-lista':
         setTela('menu');
         break;
+      case 'novo-relatorio':
+        setNovoRelTitulo('');
+        setTela('relatorios-lista');
+        break;
       case 'relatorio-secoes':
         setRelatorioSelecionado(null);
         setTela('relatorios-lista');
+        break;
+      case 'nova-secao':
+        setNovaSecaoTitulo('');
+        setNovaSecaoSubtitulo('');
+        setTela('relatorio-secoes');
         break;
       case 'relatorio-pendencias':
         setSecaoSelecionada(null);
         setSubsecaoSelecionada(null);
         setTela('relatorio-secoes');
+        break;
+      case 'nova-pendencia':
+        setNovaPendLocal('');
+        setNovaPendDescricao('');
+        setNovaPendFoto(null);
+        setNovaPendFotoPreview(null);
+        setTela('relatorio-pendencias');
         break;
       case 'editar-pendencia':
         setPendenciaSelecionada(null);
@@ -392,6 +542,18 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
         {renderHeader('Relatórios de Pendências')}
 
         <div className="p-4">
+          {/* Botão novo relatório */}
+          <button
+            onClick={() => {
+              setNovoRelTitulo('');
+              setTela('novo-relatorio');
+            }}
+            className="w-full mb-4 bg-green-600 hover:bg-green-700 text-white rounded-lg p-3 flex items-center justify-center gap-2 font-medium text-sm active:scale-[0.98] transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Novo Relatório
+          </button>
+
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
@@ -487,6 +649,19 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
           >
             <Download className="w-4 h-4" />
             Baixar DOCX
+          </button>
+
+          {/* Botão nova seção */}
+          <button
+            onClick={() => {
+              setNovaSecaoTitulo('');
+              setNovaSecaoSubtitulo('');
+              setTela('nova-secao');
+            }}
+            className="w-full mb-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg p-3 flex items-center justify-center gap-2 font-medium text-sm active:scale-[0.98] transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Nova Seção
           </button>
 
           {secoes.length === 0 ? (
@@ -613,6 +788,21 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
         </div>
 
         <div className="p-4">
+          {/* Botão nova pendência */}
+          <button
+            onClick={() => {
+              setNovaPendLocal('');
+              setNovaPendDescricao('');
+              setNovaPendFoto(null);
+              setNovaPendFotoPreview(null);
+              setTela('nova-pendencia');
+            }}
+            className="w-full mb-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg p-3 flex items-center justify-center gap-2 font-medium text-sm active:scale-[0.98] transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            Nova Pendência
+          </button>
+
           {pendencias.length === 0 ? (
             <p className="text-center text-gray-500 py-8 text-sm">Nenhuma pendência nesta seção</p>
           ) : (
@@ -817,6 +1007,177 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
               <Save className="w-4 h-4" />
             )}
             Salvar Alterações
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================
+  // TELA: NOVO RELATÓRIO
+  // ============================================
+  if (tela === 'novo-relatorio') {
+    return (
+      <div className="min-h-screen bg-gray-900 flex flex-col">
+        {renderHeader('Novo Relatório')}
+
+        <div className="p-4 space-y-4">
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">Título do Relatório *</label>
+            <Input
+              value={novoRelTitulo}
+              onChange={(e) => setNovoRelTitulo(e.target.value)}
+              className="bg-gray-800 border-gray-700 text-white text-sm"
+              placeholder="Ex: Relatório de Pendências - Bloco A"
+              autoFocus
+            />
+          </div>
+
+          <p className="text-xs text-gray-500">
+            O relatório será criado para o contrato: <span className="text-gray-300">{contratoSelecionado?.nome}</span>
+          </p>
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gray-900 border-t border-gray-700">
+          <button
+            onClick={handleCriarRelatorio}
+            disabled={loading || !novoRelTitulo.trim()}
+            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg p-3 flex items-center justify-center gap-2 font-medium text-sm active:scale-[0.98] transition-all"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Criar Relatório
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================
+  // TELA: NOVA SEÇÃO
+  // ============================================
+  if (tela === 'nova-secao') {
+    const ordemAtual = relatorioSelecionado?.secoes?.length || 0;
+    const numeracao = `VIII.${ordemAtual + 1}`;
+
+    return (
+      <div className="min-h-screen bg-gray-900 flex flex-col">
+        {renderHeader('Nova Seção')}
+
+        <div className="p-4 space-y-4">
+          <p className="text-xs text-gray-500">Numeração automática: <span className="text-purple-400 font-mono">{numeracao}</span></p>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">Título Principal *</label>
+            <Input
+              value={novaSecaoTitulo}
+              onChange={(e) => setNovaSecaoTitulo(e.target.value)}
+              className="bg-gray-800 border-gray-700 text-white text-sm"
+              placeholder={`Ex: ${numeracao} – INSTALAÇÕES ELÉTRICAS`}
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">Subtítulo (opcional)</label>
+            <Input
+              value={novaSecaoSubtitulo}
+              onChange={(e) => setNovaSecaoSubtitulo(e.target.value)}
+              className="bg-gray-800 border-gray-700 text-white text-sm"
+              placeholder="Ex: Quadros elétricos e disjuntores"
+            />
+          </div>
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gray-900 border-t border-gray-700">
+          <button
+            onClick={handleCriarSecao}
+            disabled={loading || !novaSecaoTitulo.trim()}
+            className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg p-3 flex items-center justify-center gap-2 font-medium text-sm active:scale-[0.98] transition-all"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Criar Seção
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================
+  // TELA: NOVA PENDÊNCIA
+  // ============================================
+  if (tela === 'nova-pendencia') {
+    return (
+      <div className="min-h-screen bg-gray-900 flex flex-col">
+        {renderHeader('Nova Pendência')}
+
+        <div className="p-4 space-y-4 pb-24">
+          {/* Foto */}
+          <div>
+            <p className="text-xs text-gray-400 mb-1.5 font-medium">Foto (opcional)</p>
+            <div
+              onClick={() => novaPendFotoRef.current?.click()}
+              className="relative w-full aspect-video bg-gray-800 border border-gray-700 rounded-lg overflow-hidden cursor-pointer hover:border-blue-500/30 transition-all"
+            >
+              {novaPendFotoPreview ? (
+                <img src={novaPendFotoPreview} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
+                  <Camera className="w-10 h-10 mb-2" />
+                  <span className="text-sm">Tirar foto ou escolher</span>
+                </div>
+              )}
+            </div>
+            <input
+              ref={novaPendFotoRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setNovaPendFoto(file);
+                  setNovaPendFotoPreview(URL.createObjectURL(file));
+                }
+                e.target.value = '';
+              }}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">Local *</label>
+            <Input
+              value={novaPendLocal}
+              onChange={(e) => setNovaPendLocal(e.target.value)}
+              className="bg-gray-800 border-gray-700 text-white text-sm"
+              placeholder="Ex: Sala de máquinas, 2º andar..."
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">Descrição *</label>
+            <Textarea
+              value={novaPendDescricao}
+              onChange={(e) => setNovaPendDescricao(e.target.value)}
+              className="bg-gray-800 border-gray-700 text-white text-sm min-h-[100px]"
+              placeholder="Descreva a pendência encontrada..."
+            />
+          </div>
+
+          <p className="text-xs text-gray-500">
+            Seção: <span className="text-gray-300">{secaoSelecionada?.titulo_principal}</span>
+            {subsecaoSelecionada && <> / <span className="text-gray-300">{subsecaoSelecionada.titulo}</span></>}
+          </p>
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gray-900 border-t border-gray-700">
+          <button
+            onClick={handleCriarPendencia}
+            disabled={loading || (!novaPendLocal.trim() && !novaPendDescricao.trim())}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg p-3 flex items-center justify-center gap-2 font-medium text-sm active:scale-[0.98] transition-all"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Criar Pendência
           </button>
         </div>
       </div>
