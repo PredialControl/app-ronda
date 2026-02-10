@@ -890,7 +890,25 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
   if (tela === 'contratos') {
     return (
       <div className="min-h-screen bg-gray-900 flex flex-col">
-        {renderHeader('Coleta em Campo')}
+        {/* Header com boneco */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-[#1a3a2a] to-[#0f2318] border-b border-green-500/20 px-4 py-3 flex items-center gap-3">
+          <button onClick={onVoltar} className="text-gray-300 hover:text-white p-1">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <img src="/avatar-manutencionista.png" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-green-400 text-xs font-bold">Salve Salve Manutencionista</p>
+            <p className="text-white text-sm font-semibold">App Coleta MP</p>
+          </div>
+          {!isOnline && <WifiOff className="w-4 h-4 text-yellow-400 flex-shrink-0" />}
+          {syncing && <RefreshCw className="w-4 h-4 text-blue-400 animate-spin flex-shrink-0" />}
+          {offlineQueue.length > 0 && isOnline && !syncing && (
+            <button onClick={syncOfflineQueue} className="text-xs text-orange-400 bg-orange-500/20 px-2 py-1 rounded flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" />{offlineQueue.length}
+            </button>
+          )}
+          {mensagem && <span className="text-xs text-green-400 animate-pulse">{mensagem}</span>}
+        </div>
 
         {renderInstallBanner()}
 

@@ -1,7 +1,7 @@
 {
-  "name": "Portal de Visitas MP - Ronda",
-  "short_name": "MP Ronda",
-  "description": "Aplicativo para gerenciamento de rondas técnicas e pendências",
+  "name": "App Coleta MP - Salve Salve Manutencionista",
+  "short_name": "Coleta MP",
+  "description": "App de coleta em campo - Manutenção Predial",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1a2f2a",
@@ -9,6 +9,12 @@
   "orientation": "portrait",
   "icons": [
     {
+      "src": "/avatar-manutencionista.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "/icon-192.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
@@ -21,15 +27,9 @@
       "purpose": "any"
     },
     {
-      "src": "/icon-192.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icon-512.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
+      "src": "/avatar-manutencionista.png",
+      "sizes": "any",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ]
