@@ -2,8 +2,9 @@
  * ColetaLite - App leve de coleta em campo para celular
  * Fluxo: Selecionar Contrato -> Escolher Ação -> Executar
  * Tudo salva no Supabase (mesmo banco do app principal)
+ * Suporte offline: cache local + fila de pendências para sync
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,8 +16,79 @@ import { supabase } from '@/lib/supabase';
 import {
   ArrowLeft, Building2, FileText, AlertTriangle, Camera, Search,
   Check, X, Upload, Download, ChevronRight, Loader2, Image as ImageIcon,
-  Save, Trash2, Edit3, Plus, Smartphone
+  Save, Trash2, Edit3, Plus, Smartphone, WifiOff, RefreshCw
 } from 'lucide-react';
+
+// ============================================
+// CACHE LOCAL + OFFLINE QUEUE
+// ============================================
+const CACHE_PREFIX = 'coleta_cache_';
+const OFFLINE_QUEUE_KEY = 'coleta_offline_queue';
+
+interface OfflinePendencia {
+  id: string; // ID temporário local
+  secao_id: string;
+  subsecao_id: string | null;
+  ordem: number;
+  local: string;
+  descricao: string;
+  status: string;
+  foto_base64: string | null;
+  relatorio_id: string;
+  created_at: string;
+}
+
+function saveToCache(key: string, data: any) {
+  try {
+    localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch (e) {
+    console.warn('Cache save failed:', e);
+  }
+}
+
+function getFromCache<T>(key: string, maxAgeMs = 30 * 60 * 1000): T | null {
+  try {
+    const raw = localStorage.getItem(CACHE_PREFIX + key);
+    if (!raw) return null;
+    const { data, timestamp } = JSON.parse(raw);
+    if (Date.now() - timestamp > maxAgeMs) return null;
+    return data as T;
+  } catch {
+    return null;
+  }
+}
+
+function getOfflineQueue(): OfflinePendencia[] {
+  try {
+    const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveOfflineQueue(queue: OfflinePendencia[]) {
+  localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function base64ToFile(base64: string, filename: string): File {
+  const [header, data] = base64.split(',');
+  const mime = header.match(/:(.*?);/)?.[1] || 'image/jpeg';
+  const byteString = atob(data);
+  const ab = new ArrayBuffer(byteString.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+  return new File([ab], filename, { type: mime });
+}
 
 type Tela =
   | 'contratos'
@@ -159,21 +231,59 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     return sugestoes.filter(s => s.toLowerCase().includes(t));
   };
 
+  // Online status
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [offlineQueue, setOfflineQueue] = useState<OfflinePendencia[]>(getOfflineQueue());
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    const onOnline = () => setIsOnline(true);
+    const onOffline = () => setIsOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
+
+  // Auto-sync quando voltar online
+  useEffect(() => {
+    if (isOnline && offlineQueue.length > 0) {
+      syncOfflineQueue();
+    }
+  }, [isOnline]);
+
   // Geração DOCX
   const [isGeneratingDOCX, setIsGeneratingDOCX] = useState(false);
   const [progressMsg, setProgressMsg] = useState('');
   const [progressPercent, setProgressPercent] = useState(0);
 
-  // Carregar contratos
+  // Carregar contratos (com cache)
   useEffect(() => {
     loadContratos();
   }, []);
 
   const loadContratos = async () => {
+    // Tentar cache primeiro para carregamento instantâneo
+    const cached = getFromCache<Contrato[]>('contratos', 60 * 60 * 1000); // 1h
+    if (cached) {
+      setContratos(cached);
+      // Atualizar em background se online
+      if (navigator.onLine) {
+        contratoService.getAll().then(data => {
+          setContratos(data);
+          saveToCache('contratos', data);
+        }).catch(() => {});
+      }
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await contratoService.getAll();
       setContratos(data);
+      saveToCache('contratos', data);
     } catch (error) {
       console.error('Erro ao carregar contratos:', error);
       showMsg('Erro ao carregar contratos');
@@ -183,16 +293,101 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
   };
 
   const loadRelatorios = async (contratoId: string) => {
+    // Tentar cache primeiro
+    const cached = getFromCache<RelatorioPendencias[]>(`relatorios_${contratoId}`, 30 * 60 * 1000); // 30min
+    if (cached) {
+      setRelatorios(cached);
+      // Atualizar em background se online
+      if (navigator.onLine) {
+        relatorioPendenciasService.getAll(contratoId).then(data => {
+          setRelatorios(data);
+          saveToCache(`relatorios_${contratoId}`, data);
+        }).catch(() => {});
+      }
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await relatorioPendenciasService.getAll(contratoId);
       setRelatorios(data);
+      saveToCache(`relatorios_${contratoId}`, data);
     } catch (error) {
       console.error('Erro ao carregar relatórios:', error);
-      showMsg('Erro ao carregar relatórios');
+      // Tentar cache mais antigo em caso de erro
+      const oldCache = getFromCache<RelatorioPendencias[]>(`relatorios_${contratoId}`, 24 * 60 * 60 * 1000);
+      if (oldCache) {
+        setRelatorios(oldCache);
+        showMsg('Usando dados offline');
+      } else {
+        showMsg('Erro ao carregar relatórios');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  // Sincronizar fila offline
+  const syncOfflineQueue = async () => {
+    if (syncing || !navigator.onLine) return;
+    const queue = getOfflineQueue();
+    if (queue.length === 0) return;
+
+    setSyncing(true);
+    showMsg(`Sincronizando ${queue.length} pendência(s)...`);
+    const remaining: OfflinePendencia[] = [];
+
+    for (const item of queue) {
+      try {
+        const novaPend: any = {
+          secao_id: item.secao_id,
+          subsecao_id: item.subsecao_id,
+          ordem: item.ordem,
+          local: item.local,
+          descricao: item.descricao,
+          foto_url: null,
+          foto_depois_url: null,
+          status: item.status,
+        };
+
+        const criada = await relatorioPendenciasService.createPendencia(novaPend);
+
+        // Upload foto se tiver
+        if (item.foto_base64 && criada.id) {
+          const file = base64ToFile(item.foto_base64, `foto_${criada.id}.jpg`);
+          const url = await relatorioPendenciasService.uploadFoto(file, item.relatorio_id, criada.id);
+          await relatorioPendenciasService.updatePendencia(criada.id, { foto_url: url });
+        }
+      } catch (e) {
+        console.error('Erro ao sincronizar pendência offline:', e);
+        remaining.push(item);
+      }
+    }
+
+    saveOfflineQueue(remaining);
+    setOfflineQueue(remaining);
+
+    if (remaining.length === 0) {
+      showMsg('Tudo sincronizado!');
+    } else {
+      showMsg(`${remaining.length} pendência(s) ainda na fila`);
+    }
+
+    // Recarregar dados
+    if (relatorioSelecionado) {
+      try {
+        const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
+        if (relAtualizado) {
+          setRelatorioSelecionado(relAtualizado);
+          saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+        }
+      } catch {}
+    }
+    if (contratoSelecionado) {
+      loadRelatorios(contratoSelecionado.id);
+    }
+
+    setSyncing(false);
   };
 
   const showMsg = (msg: string) => {
@@ -208,27 +403,34 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     setUploading(true);
 
     try {
+      // Gerar nome único para evitar conflito de cache
+      const timestamp = Date.now();
       const url = await relatorioPendenciasService.uploadFoto(
         file,
         relatorioSelecionado.id,
-        pendenciaSelecionada.id
+        `${pendenciaSelecionada.id}-${tipo}-${timestamp}`
       );
 
-      const updateData: Partial<RelatorioPendencia> =
-        tipo === 'antes' ? { foto_url: url } : { foto_depois_url: url };
+      const campo = tipo === 'antes' ? 'foto_url' : 'foto_depois_url';
+      const updateData: Partial<RelatorioPendencia> = { [campo]: url };
 
       await relatorioPendenciasService.updatePendencia(pendenciaSelecionada.id, updateData);
 
-      // Atualizar estado local
-      setPendenciaSelecionada(prev => prev ? { ...prev, ...updateData } : null);
-      showMsg('Foto salva!');
+      // Atualizar estado local imediatamente
+      setPendenciaSelecionada(prev => prev ? { ...prev, [campo]: url } : null);
+      showMsg(`Foto ${tipo === 'antes' ? 'antes' : 'depois'} salva!`);
 
       // Recarregar relatório para atualizar dados
-      const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
-      if (relAtualizado) setRelatorioSelecionado(relAtualizado);
+      try {
+        const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
+        if (relAtualizado) {
+          setRelatorioSelecionado(relAtualizado);
+          saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+        }
+      } catch {}
     } catch (error) {
       console.error('Erro ao fazer upload:', error);
-      showMsg('Erro ao enviar foto');
+      showMsg(`Erro ao enviar foto ${tipo}`);
     } finally {
       setUploading(false);
     }
@@ -262,12 +464,13 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     }
   };
 
-  // Gerar DOCX simplificado
-  const handleGerarDOCX = async () => {
-    if (!relatorioSelecionado || !contratoSelecionado) return;
+  // Gerar DOCX simplificado - aceita relatório como parâmetro para evitar race condition
+  const handleGerarDOCX = async (relOverride?: RelatorioPendencias) => {
+    const rel = relOverride || relatorioSelecionado;
+    if (!rel || !contratoSelecionado) return;
     setIsGeneratingDOCX(true);
     try {
-      const relCompleto = await relatorioPendenciasService.getById(relatorioSelecionado.id);
+      const relCompleto = await relatorioPendenciasService.getById(rel.id);
       if (!relCompleto) throw new Error('Relatório não encontrado');
 
       await generateRelatorioPendenciasDOCX(relCompleto, contratoSelecionado, (msg, current, total) => {
@@ -340,16 +543,58 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     }
   };
 
-  // Criar nova pendência
+  // Criar nova pendência (online ou offline)
   const handleCriarPendencia = async () => {
     if (!relatorioSelecionado || !secaoSelecionada) return;
     if (!novaPendLocal.trim() && !novaPendDescricao.trim()) return;
     setLoading(true);
-    try {
-      const pendenciasAtuais = subsecaoSelecionada
-        ? (subsecaoSelecionada.pendencias || [])
-        : (secaoSelecionada.pendencias || []);
 
+    const pendenciasAtuais = subsecaoSelecionada
+      ? (subsecaoSelecionada.pendencias || [])
+      : (secaoSelecionada.pendencias || []);
+
+    // Se está offline, salvar na fila local
+    if (!navigator.onLine) {
+      try {
+        let fotoBase64: string | null = null;
+        if (novaPendFoto) {
+          fotoBase64 = await fileToBase64(novaPendFoto);
+        }
+
+        const offlineItem: OfflinePendencia = {
+          id: `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          secao_id: secaoSelecionada.id,
+          subsecao_id: subsecaoSelecionada?.id || null,
+          ordem: pendenciasAtuais.length + offlineQueue.filter(q => q.secao_id === secaoSelecionada.id).length,
+          local: novaPendLocal.trim(),
+          descricao: novaPendDescricao.trim(),
+          status: 'PENDENTE',
+          foto_base64: fotoBase64,
+          relatorio_id: relatorioSelecionado.id,
+          created_at: new Date().toISOString(),
+        };
+
+        const newQueue = [...offlineQueue, offlineItem];
+        saveOfflineQueue(newQueue);
+        setOfflineQueue(newQueue);
+
+        showMsg('Salvo offline! Sincroniza quando voltar o sinal.');
+        setNovaPendLocal('');
+        setNovaPendDescricao('');
+        setNovaPendFoto(null);
+        setNovaPendFotoPreview(null);
+        setTela('relatorio-pendencias');
+      } catch (error) {
+        console.error('Erro ao salvar offline:', error);
+        showMsg('Erro ao salvar');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Online - criar normalmente
+    try {
       const novaPend: any = {
         secao_id: secaoSelecionada.id,
         subsecao_id: subsecaoSelecionada?.id || null,
@@ -383,7 +628,7 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
       const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
       if (relAtualizado) {
         setRelatorioSelecionado(relAtualizado);
-        // Atualizar seção/subseção selecionada
+        saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
         const secAtualizada = relAtualizado.secoes?.find(s => s.id === secaoSelecionada.id);
         if (secAtualizada) {
           setSecaoSelecionada(secAtualizada);
@@ -483,6 +728,18 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
         <ArrowLeft className="w-5 h-5" />
       </button>
       <h1 className="text-base font-semibold text-white truncate flex-1">{titulo}</h1>
+      {!isOnline && (
+        <WifiOff className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+      )}
+      {syncing && (
+        <RefreshCw className="w-4 h-4 text-blue-400 animate-spin flex-shrink-0" />
+      )}
+      {offlineQueue.length > 0 && isOnline && !syncing && (
+        <button onClick={syncOfflineQueue} className="text-xs text-orange-400 bg-orange-500/20 px-2 py-1 rounded flex items-center gap-1">
+          <RefreshCw className="w-3 h-3" />
+          {offlineQueue.length}
+        </button>
+      )}
       {mensagem && (
         <span className="text-xs text-green-400 animate-pulse">{mensagem}</span>
       )}
@@ -711,11 +968,28 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
                   <button
                     key={rel.id}
                     onClick={async () => {
+                      // Tentar cache primeiro
+                      const cached = getFromCache<RelatorioPendencias>(`relatorio_${rel.id}`, 15 * 60 * 1000);
+                      if (cached) {
+                        setRelatorioSelecionado(cached);
+                        setTela('relatorio-secoes');
+                        // Atualizar em background
+                        if (navigator.onLine) {
+                          relatorioPendenciasService.getById(rel.id).then(r => {
+                            if (r) {
+                              setRelatorioSelecionado(r);
+                              saveToCache(`relatorio_${r.id}`, r);
+                            }
+                          }).catch(() => {});
+                        }
+                        return;
+                      }
                       setLoading(true);
                       try {
                         const relCompleto = await relatorioPendenciasService.getById(rel.id);
                         if (relCompleto) {
                           setRelatorioSelecionado(relCompleto);
+                          saveToCache(`relatorio_${relCompleto.id}`, relCompleto);
                           setTela('relatorio-secoes');
                         }
                       } catch (e) {
@@ -766,8 +1040,7 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setRelatorioSelecionado(rel);
-                            handleGerarDOCX();
+                            handleGerarDOCX(rel);
                           }}
                           className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded-lg flex items-center gap-1.5 active:scale-95 transition-all"
                         >
@@ -799,7 +1072,7 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
         <div className="p-4">
           {/* Botão baixar DOCX */}
           <button
-            onClick={handleGerarDOCX}
+            onClick={() => handleGerarDOCX()}
             className="w-full mb-4 bg-green-600 hover:bg-green-700 text-white rounded-lg p-3 flex items-center justify-center gap-2 font-medium text-sm active:scale-[0.98] transition-all"
           >
             <Download className="w-4 h-4" />
@@ -958,7 +1231,43 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
             Nova Pendência
           </button>
 
-          {pendencias.length === 0 ? (
+          {/* Indicador offline */}
+          {!isOnline && (
+            <div className="mb-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-3 flex items-center gap-2">
+              <WifiOff className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+              <p className="text-yellow-300 text-xs">Sem conexão. Pendências criadas serão sincronizadas depois.</p>
+            </div>
+          )}
+
+          {/* Pendências offline na fila */}
+          {offlineQueue.filter(q => q.secao_id === secaoSelecionada?.id && (!subsecaoSelecionada || q.subsecao_id === subsecaoSelecionada?.id)).length > 0 && (
+            <div className="mb-3 space-y-2">
+              {offlineQueue
+                .filter(q => q.secao_id === secaoSelecionada?.id && (!subsecaoSelecionada || q.subsecao_id === subsecaoSelecionada?.id))
+                .map((item, idx) => (
+                <div key={item.id} className="bg-gray-800 border border-orange-500/30 rounded-lg overflow-hidden opacity-80">
+                  <div className="flex">
+                    <div className="w-20 h-20 flex-shrink-0 bg-gray-700 flex items-center justify-center">
+                      {item.foto_base64 ? (
+                        <img src={item.foto_base64} className="w-full h-full object-cover" />
+                      ) : (
+                        <WifiOff className="w-5 h-5 text-orange-400" />
+                      )}
+                    </div>
+                    <div className="p-3 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-orange-400 bg-orange-500/20 px-1.5 py-0.5 rounded">offline</span>
+                        <p className="text-white text-sm font-medium truncate">{item.local}</p>
+                      </div>
+                      <p className="text-gray-400 text-xs line-clamp-2">{item.descricao}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {pendencias.length === 0 && offlineQueue.filter(q => q.secao_id === secaoSelecionada?.id).length === 0 ? (
             <p className="text-center text-gray-500 py-8 text-sm">Nenhuma pendência nesta seção</p>
           ) : (
             <div className="space-y-3">
@@ -969,8 +1278,12 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
                   className="w-full text-left bg-gray-800 border border-gray-700 rounded-lg overflow-hidden hover:border-purple-500/30 transition-all active:scale-[0.98]"
                 >
                   <div className="flex">
+                    {/* Número da pendência */}
+                    <div className="w-8 flex-shrink-0 flex items-center justify-center bg-gray-800 border-r border-gray-700">
+                      <span className="text-gray-400 text-xs font-bold">{idx + 1}</span>
+                    </div>
                     {/* Foto thumbnail */}
-                    <div className="w-20 h-20 flex-shrink-0 bg-gray-700">
+                    <div className="w-16 h-16 flex-shrink-0 bg-gray-700">
                       {pend.foto_url ? (
                         <img src={pend.foto_url} className="w-full h-full object-cover" />
                       ) : (
