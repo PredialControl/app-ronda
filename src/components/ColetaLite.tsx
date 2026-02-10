@@ -75,6 +75,37 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
   const [novaPendFotoPreview, setNovaPendFotoPreview] = useState<string | null>(null);
   const novaPendFotoRef = useRef<HTMLInputElement>(null);
 
+  // Autocomplete
+  const [showSugestoesLocal, setShowSugestoesLocal] = useState(false);
+  const [showSugestoesDescricao, setShowSugestoesDescricao] = useState(false);
+  const [showSugestoesEditLocal, setShowSugestoesEditLocal] = useState(false);
+  const [showSugestoesEditDescricao, setShowSugestoesEditDescricao] = useState(false);
+
+  // Extrair valores únicos de todas as pendências do relatório para autocomplete
+  const getAutocompleteSugestoes = (campo: 'local' | 'descricao') => {
+    if (!relatorioSelecionado?.secoes) return [];
+    const valores = new Set<string>();
+    relatorioSelecionado.secoes.forEach(secao => {
+      (secao.pendencias || []).forEach(p => {
+        const val = campo === 'local' ? p.local : p.descricao;
+        if (val && val.trim()) valores.add(val.trim());
+      });
+      (secao.subsecoes || []).forEach(sub => {
+        (sub.pendencias || []).forEach(p => {
+          const val = campo === 'local' ? p.local : p.descricao;
+          if (val && val.trim()) valores.add(val.trim());
+        });
+      });
+    });
+    return Array.from(valores).sort();
+  };
+
+  const filtrarSugestoes = (sugestoes: string[], termo: string) => {
+    if (!termo.trim()) return sugestoes;
+    const t = termo.toLowerCase();
+    return sugestoes.filter(s => s.toLowerCase().includes(t));
+  };
+
   // Geração DOCX
   const [isGeneratingDOCX, setIsGeneratingDOCX] = useState(false);
   const [progressMsg, setProgressMsg] = useState('');
@@ -615,9 +646,10 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
                             setRelatorioSelecionado(rel);
                             handleGerarDOCX();
                           }}
-                          className="p-2 bg-green-500/20 rounded-lg hover:bg-green-500/30"
+                          className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded-lg flex items-center gap-1.5 active:scale-95 transition-all"
                         >
-                          <Download className="w-4 h-4 text-green-400" />
+                          <Download className="w-4 h-4 text-white" />
+                          <span className="text-white text-xs font-medium">DOCX</span>
                         </button>
                       </div>
                     </div>
@@ -936,24 +968,78 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
           </div>
 
           {/* Campos de edição */}
-          <div>
+          <div className="relative">
             <label className="text-xs text-gray-400 mb-1 block">Local</label>
             <Input
               value={editLocal}
-              onChange={(e) => setEditLocal(e.target.value)}
+              onChange={(e) => {
+                setEditLocal(e.target.value);
+                setShowSugestoesEditLocal(true);
+              }}
+              onFocus={() => setShowSugestoesEditLocal(true)}
+              onBlur={() => setTimeout(() => setShowSugestoesEditLocal(false), 200)}
               className="bg-gray-800 border-gray-700 text-white text-sm"
               placeholder="Local da pendência"
             />
+            {showSugestoesEditLocal && (() => {
+              const sugestoes = filtrarSugestoes(getAutocompleteSugestoes('local'), editLocal);
+              if (sugestoes.length === 0) return null;
+              return (
+                <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded-lg max-h-40 overflow-y-auto shadow-lg">
+                  {sugestoes.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setEditLocal(s);
+                        setShowSugestoesEditLocal(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 border-b border-gray-700/50 last:border-0"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
-          <div>
+          <div className="relative">
             <label className="text-xs text-gray-400 mb-1 block">Descrição</label>
             <Textarea
               value={editDescricao}
-              onChange={(e) => setEditDescricao(e.target.value)}
+              onChange={(e) => {
+                setEditDescricao(e.target.value);
+                setShowSugestoesEditDescricao(true);
+              }}
+              onFocus={() => setShowSugestoesEditDescricao(true)}
+              onBlur={() => setTimeout(() => setShowSugestoesEditDescricao(false), 200)}
               className="bg-gray-800 border-gray-700 text-white text-sm min-h-[80px]"
               placeholder="Descrição da pendência"
             />
+            {showSugestoesEditDescricao && (() => {
+              const sugestoes = filtrarSugestoes(getAutocompleteSugestoes('descricao'), editDescricao);
+              if (sugestoes.length === 0) return null;
+              return (
+                <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded-lg max-h-40 overflow-y-auto shadow-lg">
+                  {sugestoes.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setEditDescricao(s);
+                        setShowSugestoesEditDescricao(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 border-b border-gray-700/50 last:border-0"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           <div>
@@ -1144,24 +1230,78 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
             />
           </div>
 
-          <div>
+          <div className="relative">
             <label className="text-xs text-gray-400 mb-1 block">Local *</label>
             <Input
               value={novaPendLocal}
-              onChange={(e) => setNovaPendLocal(e.target.value)}
+              onChange={(e) => {
+                setNovaPendLocal(e.target.value);
+                setShowSugestoesLocal(true);
+              }}
+              onFocus={() => setShowSugestoesLocal(true)}
+              onBlur={() => setTimeout(() => setShowSugestoesLocal(false), 200)}
               className="bg-gray-800 border-gray-700 text-white text-sm"
               placeholder="Ex: Sala de máquinas, 2º andar..."
             />
+            {showSugestoesLocal && (() => {
+              const sugestoes = filtrarSugestoes(getAutocompleteSugestoes('local'), novaPendLocal);
+              if (sugestoes.length === 0) return null;
+              return (
+                <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded-lg max-h-40 overflow-y-auto shadow-lg">
+                  {sugestoes.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setNovaPendLocal(s);
+                        setShowSugestoesLocal(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 border-b border-gray-700/50 last:border-0"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
-          <div>
+          <div className="relative">
             <label className="text-xs text-gray-400 mb-1 block">Descrição *</label>
             <Textarea
               value={novaPendDescricao}
-              onChange={(e) => setNovaPendDescricao(e.target.value)}
+              onChange={(e) => {
+                setNovaPendDescricao(e.target.value);
+                setShowSugestoesDescricao(true);
+              }}
+              onFocus={() => setShowSugestoesDescricao(true)}
+              onBlur={() => setTimeout(() => setShowSugestoesDescricao(false), 200)}
               className="bg-gray-800 border-gray-700 text-white text-sm min-h-[100px]"
               placeholder="Descreva a pendência encontrada..."
             />
+            {showSugestoesDescricao && (() => {
+              const sugestoes = filtrarSugestoes(getAutocompleteSugestoes('descricao'), novaPendDescricao);
+              if (sugestoes.length === 0) return null;
+              return (
+                <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-gray-800 border border-gray-600 rounded-lg max-h-40 overflow-y-auto shadow-lg">
+                  {sugestoes.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setNovaPendDescricao(s);
+                        setShowSugestoesDescricao(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 border-b border-gray-700/50 last:border-0"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           <p className="text-xs text-gray-500">
