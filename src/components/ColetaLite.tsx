@@ -1070,6 +1070,41 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
         {renderHeader(relatorioSelecionado?.titulo || 'Relatório')}
 
         <div className="p-4">
+          {/* Evolução de recebimento */}
+          {(() => {
+            let total = 0, recebidos = 0, naoFarao = 0;
+            relatorioSelecionado?.secoes?.forEach(sec => {
+              const contar = (p: any) => {
+                total++;
+                if (p.status === 'RECEBIDO') recebidos++;
+                else if (p.status === 'NAO_FARAO') naoFarao++;
+              };
+              (sec.pendencias || []).forEach(contar);
+              (sec.subsecoes || []).forEach((sub: any) => (sub.pendencias || []).forEach(contar));
+            });
+            if (total === 0) return null;
+            const pendentes = total - recebidos - naoFarao;
+            const pctRecebido = Math.round((recebidos / total) * 100);
+            const pctNaoFarao = Math.round((naoFarao / total) * 100);
+            return (
+              <div className="mb-4 bg-gray-800 border border-gray-700 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-gray-400 font-medium">Evolução de Recebimento</p>
+                  <p className="text-xs text-white font-bold">{pctRecebido}%</p>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-3 mb-2 overflow-hidden flex">
+                  {recebidos > 0 && <div className="bg-green-500 h-full transition-all" style={{ width: `${pctRecebido}%` }} />}
+                  {naoFarao > 0 && <div className="bg-red-500 h-full transition-all" style={{ width: `${pctNaoFarao}%` }} />}
+                </div>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /><span className="text-gray-300">{recebidos} recebido{recebidos !== 1 ? 's' : ''}</span></span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-yellow-500" /><span className="text-gray-300">{pendentes} pendente{pendentes !== 1 ? 's' : ''}</span></span>
+                  {naoFarao > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /><span className="text-gray-300">{naoFarao} não farão</span></span>}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Botão baixar DOCX */}
           <button
             onClick={() => handleGerarDOCX()}

@@ -1377,7 +1377,34 @@ export async function generateRelatorioPendenciasDOCX(
             ];
             tableRows.push(new TableRow({ children: row2Cells }));
 
-            // ================= ROW 3: Fotos =================
+            // ================= ROW 3: Status =================
+            const statusTexto = pendencia.status === 'RECEBIDO' ? 'RECEBIDO' :
+                               pendencia.status === 'NAO_FARAO' ? 'NÃO FARÃO' : 'PENDENTE';
+            const statusCor = pendencia.status === 'RECEBIDO' ? '22c55e' :
+                             pendencia.status === 'NAO_FARAO' ? 'ef4444' : 'eab308';
+            const statusChildren: any[] = [
+                new TextRun({ text: 'Status: ', bold: true, size: 24 }),
+                new TextRun({ text: statusTexto, bold: true, size: 24, color: statusCor }),
+            ];
+            if (pendencia.status === 'RECEBIDO' && pendencia.data_recebimento) {
+                const dataFormatada = new Date(pendencia.data_recebimento + 'T00:00:00').toLocaleDateString('pt-BR');
+                statusChildren.push(new TextRun({ text: `  (Recebido em ${dataFormatada})`, size: 22, color: '666666' }));
+            }
+            const row3StatusCells: TableCell[] = [
+                new TableCell({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    columnSpan: 3,
+                    children: [
+                        new Paragraph({
+                            children: statusChildren,
+                        }),
+                    ],
+                    margins: { top: 100, bottom: 100, left: 200, right: 200 },
+                })
+            ];
+            tableRows.push(new TableRow({ children: row3StatusCells }));
+
+            // ================= ROW 4: Fotos =================
             const row3Cells: TableCell[] = [];
 
             // Foto ANTES
