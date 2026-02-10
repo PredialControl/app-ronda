@@ -597,11 +597,20 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
           ) : (
             <div className="space-y-2">
               {relatorios.map((rel) => {
-                const totalPendencias = rel.secoes?.reduce((acc, sec) => {
-                  const diretas = sec.pendencias?.length || 0;
-                  const subs = (sec.subsecoes || []).reduce((a, sub) => a + (sub.pendencias?.length || 0), 0);
-                  return acc + diretas + subs;
-                }, 0) || 0;
+                // Contar pendências por status
+                let pendentes = 0, recebidos = 0, naoFarao = 0;
+                rel.secoes?.forEach(sec => {
+                  const contarPend = (p: RelatorioPendencia) => {
+                    if (p.status === 'RECEBIDO') recebidos++;
+                    else if (p.status === 'NAO_FARAO') naoFarao++;
+                    else pendentes++;
+                  };
+                  (sec.pendencias || []).forEach(contarPend);
+                  (sec.subsecoes || []).forEach(sub => {
+                    (sub.pendencias || []).forEach(contarPend);
+                  });
+                });
+                const totalPendencias = pendentes + recebidos + naoFarao;
 
                 return (
                   <button
@@ -635,7 +644,26 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
                         <p className="text-gray-400 text-xs">
                           {rel.secoes?.length || 0} seções • {totalPendencias} pendências
                         </p>
-                        <p className="text-gray-500 text-xs">
+                        {totalPendencias > 0 && (
+                          <div className="flex items-center gap-2 mt-1">
+                            {pendentes > 0 && (
+                              <span className="text-xs bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded">
+                                {pendentes} pendente{pendentes > 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {recebidos > 0 && (
+                              <span className="text-xs bg-green-500/20 text-green-300 px-1.5 py-0.5 rounded">
+                                {recebidos} recebido{recebidos > 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {naoFarao > 0 && (
+                              <span className="text-xs bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded">
+                                {naoFarao} não farão
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <p className="text-gray-500 text-xs mt-1">
                           {new Date(rel.created_at).toLocaleDateString('pt-BR')}
                         </p>
                       </div>
