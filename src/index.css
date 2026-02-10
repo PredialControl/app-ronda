@@ -618,3 +618,65 @@ label {
 .dark .bg-white\/30 {
   background-color: rgba(0, 0, 0, 0.7) !important;
 }
+
+/* Esconder scrollbar nas tabs */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ===== MOBILE RESPONSIVENESS ===== */
+@media (max-width: 640px) {
+  /* Tabelas - scroll horizontal */
+  table {
+    font-size: 0.75rem;
+  }
+
+  table th,
+  table td {
+    padding: 0.5rem 0.375rem !important;
+    white-space: nowrap;
+  }
+
+  /* Cards menores no mobile */
+  .card-dark {
+    padding: 0.75rem !important;
+  }
+
+  /* Modais full-screen no mobile */
+  [role="dialog"] > div {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0.5rem !important;
+    max-height: 95vh !important;
+    border-radius: 0.75rem !important;
+  }
+
+  /* Inputs maiores para toque */
+  input,
+  textarea,
+  select {
+    min-height: 2.5rem;
+    font-size: 16px !important; /* Evita zoom no iOS */
+  }
+
+  /* Botões com área de toque adequada */
+  button {
+    min-height: 2.25rem;
+  }
+
+  /* Badges menores */
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.125rem 0.375rem;
+  }
+
+  /* Scrollbar mais fina */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+}

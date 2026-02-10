@@ -322,25 +322,22 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       {/* Hero */}
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg">
-        <div className="relative p-6 sm:p-10 lg:p-12">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white drop-shadow-lg">Dashboard</h1>
-              <p className="mt-2 text-white/90">Visão geral do contrato <span className="font-semibold text-white">{contrato.nome}</span></p>
+        <div className="relative p-4 sm:p-10 lg:p-12">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white drop-shadow-lg">Dashboard</h1>
+              <p className="mt-1 sm:mt-2 text-white/90 text-sm sm:text-base truncate">{contrato.nome}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-white">
-                <Calendar className="w-5 h-5" />
-                <span className="text-sm font-medium">Mês:</span>
-              </div>
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               <input
                 type="month"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="rounded-md bg-white/20 text-white placeholder-white/60 backdrop-blur px-3 py-2 text-sm ring-1 ring-white/30 focus:outline-none focus:ring-2 focus:ring-white transition-all"
+                className="rounded-md bg-white/20 text-white placeholder-white/60 backdrop-blur px-2 sm:px-3 py-1.5 sm:py-2 text-sm ring-1 ring-white/30 focus:outline-none focus:ring-2 focus:ring-white transition-all"
               />
             </div>
           </div>
@@ -348,7 +345,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
       </div>
 
       {/* Cards de Métricas Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <GlowingCard className="border-l-4 border-l-blue-500" glowColor="from-blue-500/50 via-cyan-500/50 to-blue-500/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-700">Total de Visitas</CardTitle>
@@ -570,10 +567,10 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
       </GlowingCard>
       <GlowingCard className="border-l-4 border-l-indigo-500" glowColor="from-indigo-500/50 via-purple-500/50 to-indigo-500/50">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-gray-900">
-              <FileText className="w-5 h-5 text-indigo-600" />
-              Itens Relevantes para Relatório Mensal
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-gray-900 text-sm sm:text-base">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 flex-shrink-0" />
+              <span className="truncate">Itens Relevantes</span>
             </CardTitle>
             <Button
               variant="outline"

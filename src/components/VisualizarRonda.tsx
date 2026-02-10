@@ -534,16 +534,16 @@ export function VisualizarRonda({
     <>
       <div id="print-container" className="space-y-6 print-container">
         {/* Header actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button onClick={onVoltar} variant="outline" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar às Rondas
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <Button onClick={onVoltar} variant="outline" size="sm" className="px-2 sm:px-3 flex-shrink-0">
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline ml-2">Voltar</span>
             </Button>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-gray-900">{ronda.nome}</h1>
-                <Badge variant="outline" className={`
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{ronda.nome}</h1>
+                <Badge variant="outline" className={`flex-shrink-0 text-xs
                   ${(ronda.tipoVisita === 'REUNIAO') ? 'bg-green-100 text-green-800 border-green-200' :
                     (ronda.tipoVisita === 'OUTROS') ? 'bg-purple-100 text-purple-800 border-purple-200' :
                       'bg-blue-100 text-blue-800 border-blue-200'}
@@ -553,10 +553,10 @@ export function VisualizarRonda({
                       '🔍 Ronda'}
                 </Badge>
               </div>
-              <p className="text-gray-600">Contrato: {contrato.nome}</p>
+              <p className="text-gray-600 text-xs sm:text-sm truncate">{contrato.nome}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <input
               type="file"
               ref={headerInputRef}
@@ -570,9 +570,9 @@ export function VisualizarRonda({
                 reader.readAsDataURL(file);
               }}
             />
-            <Button onClick={onEditarRonda} variant="outline">
-              <Edit className="w-4 h-4 mr-2" />
-              Editar Ronda
+            <Button onClick={onEditarRonda} variant="outline" size="sm">
+              <Edit className="w-4 h-4" />
+              <span className="hidden sm:inline ml-2">Editar</span>
             </Button>
             <Button
               onClick={async () => {
@@ -589,9 +589,10 @@ export function VisualizarRonda({
                 }
               }}
               variant="outline"
+              size="sm"
             >
-              <FileText className="w-4 h-4 mr-2" />
-              Exportar PDF
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline ml-2">PDF</span>
             </Button>
           </div>
         </div>
@@ -605,10 +606,10 @@ export function VisualizarRonda({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               <div>
-                <div className="text-sm font-medium text-gray-500">Data</div>
-                <div className="text-lg font-semibold">
+                <div className="text-xs sm:text-sm font-medium text-gray-500">Data</div>
+                <div className="text-sm sm:text-lg font-semibold">
                   {ronda.data ? (() => {
                     const [ano, mes, dia] = ronda.data.split('-');
                     return `${dia}/${mes}/${ano}`;

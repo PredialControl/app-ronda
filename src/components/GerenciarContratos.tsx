@@ -88,20 +88,20 @@ export function GerenciarContratos({
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
-        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              Gerenciar Contratos
+        <div className="w-full mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-14 sm:h-16 gap-2">
+            <h1 className="text-base sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2 min-w-0 truncate">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+              <span className="truncate">Contratos</span>
             </h1>
-            <div className="flex gap-2">
-              <Button onClick={() => setIsGoogleScriptModalOpen(true)} variant="outline" className="text-gray-600 dark:text-gray-300">
-                <Settings className="w-4 h-4 mr-2" />
-                Configurar Email Google
+            <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
+              <Button onClick={() => setIsGoogleScriptModalOpen(true)} variant="outline" className="text-gray-600 dark:text-gray-300 px-2 sm:px-3" size="sm">
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline ml-2">Configurar Email</span>
               </Button>
-              <Button onClick={handleAddContrato} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600">
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Contrato
+              <Button onClick={handleAddContrato} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 px-2 sm:px-3" size="sm">
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline ml-2">Novo Contrato</span>
               </Button>
             </div>
           </div>
@@ -109,11 +109,11 @@ export function GerenciarContratos({
       </header>
 
       {/* Main Content */}
-      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Info Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Visão Geral dos Contratos</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3">Visão Geral</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 text-sm">
             <div className="text-center p-4 bg-blue-600 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
               <div className="text-3xl font-bold text-white mb-1">{contratos.length}</div>
               <div className="text-blue-100 font-medium">Total de Contratos</div>
@@ -140,7 +140,7 @@ export function GerenciarContratos({
         </div>
 
         {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

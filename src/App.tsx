@@ -1415,28 +1415,28 @@ function App() {
     <div className="min-h-screen">
       {/* Header com informações do usuário */}
       <header className="bg-[rgba(26,47,42,0.8)] backdrop-blur-lg border-b border-green-500/20 shadow-lg">
-        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
+        <div className="w-full mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
               {contratoSelecionado ? (
                 <Button
                   onClick={handleVoltarContratos}
                   variant="ghost"
                   size="sm"
-                  className="text-gray-300 hover:text-white hover:bg-white/10 mr-2"
+                  className="text-gray-300 hover:text-white hover:bg-white/10 px-2 sm:px-3"
                 >
-                  <ArrowLeft className="w-5 h-5 mr-2" />
-                  Voltar
+                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="hidden sm:inline ml-2">Voltar</span>
                 </Button>
               ) : (
-                <img src="/logo-mp.png" alt="MP Logo" className="w-8 h-8" />
+                <img src="/logo-mp.png" alt="MP Logo" className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0" />
               )}
-              <h1 className="text-xl font-semibold text-white">Portal de Visitas MP</h1>
+              <h1 className="text-sm sm:text-xl font-semibold text-white truncate">Portal de Visitas MP</h1>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Informações do usuário */}
-              <div className="flex items-center gap-2 text-sm text-gray-300">
+            <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+              {/* Informações do usuário - esconde detalhes no mobile */}
+              <div className="hidden md:flex items-center gap-2 text-sm text-gray-300">
                 <User className="w-4 h-4" />
                 <span>{usuarioLogado?.nome}</span>
                 <span className="text-gray-500">•</span>
@@ -1448,10 +1448,10 @@ function App() {
                 onClick={() => setViewMode('coleta')}
                 variant="outline"
                 size="sm"
-                className="text-green-400 border-green-500/30 hover:bg-green-500/10 hover:border-green-500/50"
+                className="text-green-400 border-green-500/30 hover:bg-green-500/10 hover:border-green-500/50 px-2 sm:px-3"
               >
-                <Smartphone className="w-4 h-4 mr-2" />
-                Coleta em Campo
+                <Smartphone className="w-4 h-4" />
+                <span className="hidden sm:inline ml-2">Coleta em Campo</span>
               </Button>
 
               {/* Botão de logout */}
@@ -1459,10 +1459,10 @@ function App() {
                 onClick={handleLogout}
                 variant="outline"
                 size="sm"
-                className="text-red-400 border-red-500/30 hover:bg-red-500/10 hover:border-red-500/50"
+                className="text-red-400 border-red-500/30 hover:bg-red-500/10 hover:border-red-500/50 px-2 sm:px-3"
               >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sair
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline ml-2">Sair</span>
               </Button>
             </div>
           </div>
@@ -1472,19 +1472,20 @@ function App() {
       {/* Contrato Info */}
       {contratoSelecionado && (
         <div className="bg-[rgba(16,185,129,0.1)] backdrop-blur-sm border-b border-green-500/30">
-          <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-green-400">{contratoSelecionado.nome}</h2>
-                <p className="text-gray-300">
-                  Síndico: {contratoSelecionado.sindico} |
-                  Endereço: {contratoSelecionado.endereco} |
-                  Periodicidade: {contratoSelecionado.periodicidade}
-                </p>
+          <div className="w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-xl font-semibold text-green-400 truncate">{contratoSelecionado.nome}</h2>
+                <div className="text-xs sm:text-sm text-gray-300 space-y-0.5 sm:space-y-0">
+                  <p className="truncate">Síndico: {contratoSelecionado.sindico}</p>
+                  <p className="truncate hidden sm:block">Endereço: {contratoSelecionado.endereco}</p>
+                  <p className="sm:hidden truncate">{contratoSelecionado.periodicidade}</p>
+                  <p className="hidden sm:block">Periodicidade: {contratoSelecionado.periodicidade}</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-blue-200/80">Total de Rondas: {rondasDoContrato.length}</p>
-                <p className="text-sm text-blue-200/80">Rondas Ativas: {rondasDoContrato.filter(r => r.data === new Date().toISOString().split('T')[0]).length}</p>
+              <div className="text-left sm:text-right flex sm:flex-col gap-3 sm:gap-0 flex-shrink-0">
+                <p className="text-xs sm:text-sm text-blue-200/80">Rondas: {rondasDoContrato.length}</p>
+                <p className="text-xs sm:text-sm text-blue-200/80">Hoje: {rondasDoContrato.filter(r => r.data === new Date().toISOString().split('T')[0]).length}</p>
               </div>
             </div>
           </div>
@@ -1492,7 +1493,7 @@ function App() {
       )}
 
       {/* Main Content */}
-      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {currentView === 'contratos' ? (
           <GerenciarContratos
             contratos={contratos}
@@ -1567,96 +1568,99 @@ function App() {
         ) : (
           <>
             {/* Tabs de Navegação */}
-            <div className="border-b border-gray-200/20 mb-6">
-              <nav className="-mb-px flex space-x-8">
+            <div className="border-b border-gray-200/20 mb-4 sm:mb-6">
+              <nav className="-mb-px flex overflow-x-auto scrollbar-hide gap-1 sm:gap-0 sm:space-x-8 pb-px">
                 <button
                   onClick={() => setViewMode('tabela')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'tabela'
+                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'tabela'
                     ? 'border-blue-400 text-blue-300'
                     : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                     }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Rondas Realizadas
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Rondas Realizadas</span>
+                    <span className="sm:hidden">Rondas</span>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setViewMode('dashboard')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'dashboard'
+                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'dashboard'
                     ? 'border-blue-400 text-blue-300'
                     : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                     }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4" />
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Dashboard
                   </div>
                 </button>
 
                 <button
                   onClick={() => setViewMode('kanban')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'kanban'
+                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'kanban'
                     ? 'border-blue-400 text-blue-300'
                     : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                     }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <Kanban className="w-4 h-4" />
-                    Kanban de Implantação
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <Kanban className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    Kanban
                   </div>
                 </button>
 
                 <button
                   onClick={() => setViewMode('laudos')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'laudos'
+                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'laudos'
                     ? 'border-blue-400 text-blue-300'
                     : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                     }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <FileCheck className="w-4 h-4" />
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <FileCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Laudos
                   </div>
                 </button>
 
                 <button
                   onClick={() => setViewMode('parecer')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'parecer'
+                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'parecer'
                     ? 'border-blue-400 text-blue-300'
                     : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                     }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Parecer Técnico
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    Parecer
                   </div>
                 </button>
 
                 <button
                   onClick={() => setViewMode('relatorios-pendencias')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'relatorios-pendencias'
+                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'relatorios-pendencias'
                     ? 'border-blue-400 text-blue-300'
                     : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                     }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <FileCheck className="w-4 h-4" />
-                    Relatórios de Pendências
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <FileCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Rel. Pendências</span>
+                    <span className="sm:hidden">Pendências</span>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setViewMode('itens-compilados')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${viewMode === 'itens-compilados'
+                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'itens-compilados'
                     ? 'border-blue-400 text-blue-300'
                     : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
                     }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <FileCheck className="w-4 h-4" />
-                    Evolução dos Recebimentos
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <FileCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline">Evolução dos Recebimentos</span>
+                    <span className="sm:hidden">Recebimentos</span>
                   </div>
                 </button>
               </nav>

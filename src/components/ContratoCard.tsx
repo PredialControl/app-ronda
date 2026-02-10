@@ -61,11 +61,11 @@ export function ContratoCard({
       className={`cursor-pointer transition-all duration-200 hover:shadow-md ${getCardStyle()}`}
       onClick={() => onSelect(contrato)}
     >
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-600" />
-            {contrato.nome}
+      <CardHeader className="pb-3 px-3 sm:px-6">
+        <div className="flex items-start justify-between gap-1">
+          <CardTitle className="text-sm sm:text-lg font-semibold text-gray-900 flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
+            <span className="truncate">{contrato.nome}</span>
           </CardTitle>
           <div className="flex gap-1">
             <Button
@@ -106,7 +106,7 @@ export function ContratoCard({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 sm:space-y-3 px-3 sm:px-6">
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <User className="w-4 h-4 text-gray-500" />
           <span className="font-medium">Síndico:</span>

@@ -92,33 +92,33 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
-              Contrato: {contrato.nome}
+      <CardHeader className="px-3 sm:px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 min-w-0">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
+              <span className="truncate">{contrato.nome}</span>
             </CardTitle>
 
             {/* Filtros de Mês/Ano */}
-            <div className="flex items-center gap-2 ml-4">
-              <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-200">
-                <Filter className="w-4 h-4 text-gray-500 ml-2" />
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="flex items-center gap-1 sm:gap-2 bg-gray-50 p-1 rounded-lg border border-gray-200">
+                <Filter className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 ml-1 sm:ml-2" />
                 <Select value={mesSelecionado.toString()} onValueChange={(v) => setMesSelecionado(parseInt(v))}>
-                  <SelectTrigger className="w-[140px] h-8 border-0 bg-transparent focus:ring-0">
+                  <SelectTrigger className="w-[100px] sm:w-[140px] h-8 border-0 bg-transparent focus:ring-0 text-xs sm:text-sm">
                     <SelectValue placeholder="Mês" />
                   </SelectTrigger>
                   <SelectContent>
-                    {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].map((mes, index) => (
+                    {['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'].map((mes, index) => (
                       <SelectItem key={index} value={index.toString()}>{mes}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
-                <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                <div className="w-px h-4 bg-gray-300"></div>
 
                 <Select value={anoSelecionado.toString()} onValueChange={(v) => setAnoSelecionado(parseInt(v))}>
-                  <SelectTrigger className="w-[100px] h-8 border-0 bg-transparent focus:ring-0">
+                  <SelectTrigger className="w-[80px] sm:w-[100px] h-8 border-0 bg-transparent focus:ring-0 text-xs sm:text-sm">
                     <SelectValue placeholder="Ano" />
                   </SelectTrigger>
                   <SelectContent>
@@ -131,14 +131,14 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Button onClick={onVoltarContratos} variant="outline" className="text-gray-600 border-gray-300 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-800">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar aos Contratos
+          <div className="flex gap-2 flex-shrink-0">
+            <Button onClick={onVoltarContratos} variant="outline" size="sm" className="text-gray-600 border-gray-300 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-800 px-2 sm:px-3">
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline ml-2">Voltar</span>
             </Button>
-            <Button onClick={onNovaRonda} className="bg-green-600 hover:bg-green-700">
-              <FileText className="w-4 h-4 mr-2" />
-              Nova Ronda
+            <Button onClick={onNovaRonda} size="sm" className="bg-green-600 hover:bg-green-700 px-2 sm:px-3">
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline ml-2">Nova Ronda</span>
             </Button>
           </div>
         </div>
@@ -146,10 +146,10 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
 
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="px-2 sm:px-6">
         {/* Conteúdo das Rondas */}
         <>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
@@ -339,8 +339,8 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
           </div>
 
           {/* Resumo das Rondas */}
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <div className="grid grid-cols-6 gap-4 text-center">
+          <div className="mt-4 sm:mt-6 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4 text-center">
               <div>
                 <div className="text-2xl font-bold text-blue-600">
                   {rondas.length}

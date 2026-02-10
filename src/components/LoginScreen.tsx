@@ -42,9 +42,9 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4 relative">
-      {/* Avatar do Manutencionista - Canto Inferior Esquerdo */}
-      <div className="fixed bottom-0 left-0 z-10 pointer-events-none flex flex-col items-center">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Avatar do Manutencionista - Escondido no mobile */}
+      <div className="fixed bottom-0 left-0 z-10 pointer-events-none flex-col items-center hidden lg:flex">
         <div className="text-center mb-2 ml-8">
           <div className="text-blue-400 font-bold text-xl drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>
             SALVE! SALVE!
@@ -63,12 +63,12 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
       <div className="w-full max-w-md">
         {/* Logo e Título */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4 shadow-lg">
-            <Building2 className="w-8 h-8 text-white" />
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-blue-600 rounded-full mb-3 sm:mb-4 shadow-lg">
+            <Building2 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Portal de Visitas Manutenção Predial</h1>
-          <p className="text-gray-300">Sistema de Gestão de Rondas Técnicas</p>
+          <h1 className="text-xl sm:text-3xl font-bold text-white mb-2">Portal de Visitas Manutenção Predial</h1>
+          <p className="text-gray-300 text-sm sm:text-base">Sistema de Gestão de Rondas Técnicas</p>
         </div>
 
         {/* Card de Login */}
@@ -161,13 +161,13 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             </form>
 
             {/* Informações de Acesso */}
-            <div className="mt-6 pt-4 border-t border-white/20">
+            <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-white/20">
               <div className="text-center">
                 <p className="text-xs text-gray-300 mb-2">Usuários Autorizados:</p>
                 <div className="space-y-1 text-xs text-gray-300">
-                  <div className="font-medium text-blue-400">• Ricardo (ricardo@manutencaopredial.net.br) - Admin</div>
-                  <div>• Gessica (gessica@manutencaopredial.net.br)</div>
-                  <div>• Felipe (felipe@manutencaopredial.net.br)</div>
+                  <div className="font-medium text-blue-400">• Ricardo - Admin</div>
+                  <div>• Gessica</div>
+                  <div>• Felipe</div>
                 </div>
                 <p className="text-xs text-gray-300 mt-2">
                   Senha padrão: <span className="font-mono bg-white/20 px-1 rounded text-white">manutencao2024</span>
