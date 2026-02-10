@@ -15,7 +15,7 @@ import { supabase } from '@/lib/supabase';
 import {
   ArrowLeft, Building2, FileText, AlertTriangle, Camera, Search,
   Check, X, Upload, Download, ChevronRight, Loader2, Image as ImageIcon,
-  Save, Trash2, Edit3, Plus
+  Save, Trash2, Edit3, Plus, Smartphone
 } from 'lucide-react';
 
 type Tela =
@@ -74,6 +74,59 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
   const [novaPendFoto, setNovaPendFoto] = useState<File | null>(null);
   const [novaPendFotoPreview, setNovaPendFotoPreview] = useState<string | null>(null);
   const novaPendFotoRef = useRef<HTMLInputElement>(null);
+
+  // PWA Install prompt
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  useEffect(() => {
+    // Verificar se já está instalado como PWA
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      || (window.navigator as any).standalone === true;
+
+    if (isStandalone) return; // Já está instalado
+
+    // Verificar se o usuário já dispensou o banner
+    const dismissed = localStorage.getItem('pwa-install-dismissed');
+    if (dismissed) {
+      const dismissedDate = new Date(dismissed);
+      const now = new Date();
+      // Mostrar novamente depois de 7 dias
+      if (now.getTime() - dismissedDate.getTime() < 7 * 24 * 60 * 60 * 1000) return;
+    }
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBanner(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+
+    // Para iOS que não tem beforeinstallprompt, mostrar instrução manual
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS && !isStandalone) {
+      setShowInstallBanner(true);
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setShowInstallBanner(false);
+      }
+      setDeferredPrompt(null);
+    }
+  };
+
+  const dismissInstallBanner = () => {
+    setShowInstallBanner(false);
+    localStorage.setItem('pwa-install-dismissed', new Date().toISOString());
+  };
 
   // Autocomplete
   const [showSugestoesLocal, setShowSugestoesLocal] = useState(false);
@@ -459,10 +512,52 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
   // ============================================
   // TELA 1: SELECIONAR CONTRATO
   // ============================================
+  // Banner de instalação PWA
+  const renderInstallBanner = () => {
+    if (!showInstallBanner) return null;
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+    return (
+      <div className="mx-4 mt-3 mb-1 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-4 shadow-lg relative">
+        <button
+          onClick={dismissInstallBanner}
+          className="absolute top-2 right-2 text-white/60 hover:text-white p-1"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+            <Smartphone className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-bold text-sm">Instalar o App</p>
+            <p className="text-blue-100 text-xs">
+              {isIOS
+                ? 'Toque em "Compartilhar" e depois "Adicionar à Tela Inicial"'
+                : 'Adicione à tela inicial para acesso rápido'
+              }
+            </p>
+          </div>
+        </div>
+        {!isIOS && deferredPrompt && (
+          <button
+            onClick={handleInstallApp}
+            className="w-full mt-3 bg-white text-blue-700 font-bold text-sm rounded-lg py-2.5 active:scale-[0.98] transition-all"
+          >
+            Instalar Agora
+          </button>
+        )}
+      </div>
+    );
+  };
+
   if (tela === 'contratos') {
     return (
       <div className="min-h-screen bg-gray-900 flex flex-col">
         {renderHeader('Coleta em Campo')}
+
+        {renderInstallBanner()}
 
         <div className="p-4">
           <div className="relative mb-4">
