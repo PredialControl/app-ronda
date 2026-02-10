@@ -6,6 +6,7 @@ import { Ronda, Contrato, AreaTecnica } from '@/types';
 import { BarChart3, AlertTriangle, Calendar, Wrench, XCircle, User, FileText, Trash2, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { supabase } from '@/lib/supabase';
 
 interface DashboardProps {
   contrato: Contrato;
@@ -222,62 +223,101 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
     return metricas;
   }, [rondasMes, selectedMonth]);
 
-  // Estado para itens relevantes do relatório (persistido no localStorage)
-  const [reportItems, setReportItems] = useState('');
-
-  // Estado para lista de itens relevantes (formato tabela)
+  // Estado para lista de itens relevantes (agora do Supabase)
   const [reportItemsList, setReportItemsList] = useState<Array<{ id: string; descricao: string; data: string }>>([]);
   const [novoItem, setNovoItem] = useState('');
+  const [loadingItems, setLoadingItems] = useState(false);
 
-  // Carregar itens relevantes ao mudar mês ou contrato
+  // Carregar itens relevantes do Supabase ao mudar mês ou contrato
   useEffect(() => {
-    const key = `dashboard_report_items_${contrato.id}_${selectedMonth}`;
-    const saved = localStorage.getItem(key);
-    setReportItems(saved || '');
-
-    // Carregar lista de itens
-    const keyList = `dashboard_report_items_list_${contrato.id}_${selectedMonth}`;
-    const savedList = localStorage.getItem(keyList);
-    if (savedList) {
+    const carregarItensRelevantes = async () => {
+      setLoadingItems(true);
       try {
-        setReportItemsList(JSON.parse(savedList));
-      } catch {
-        setReportItemsList([]);
+        const { data, error } = await supabase
+          .from('itens_relevantes_relatorio')
+          .select('*')
+          .eq('contrato_id', contrato.id)
+          .eq('mes', selectedMonth)
+          .order('data', { ascending: false });
+
+        if (error) {
+          console.error('❌ Erro ao carregar itens relevantes:', error);
+          return;
+        }
+
+        if (data) {
+          setReportItemsList(data.map(item => ({
+            id: item.id,
+            descricao: item.descricao,
+            data: item.data
+          })));
+        }
+      } catch (err) {
+        console.error('❌ Erro ao carregar itens relevantes:', err);
+      } finally {
+        setLoadingItems(false);
       }
-    } else {
-      setReportItemsList([]);
-    }
+    };
+
+    carregarItensRelevantes();
   }, [contrato.id, selectedMonth]);
 
-  // Salvar itens relevantes ao digitar (com debounce simples via useEffect)
-  useEffect(() => {
-    const key = `dashboard_report_items_${contrato.id}_${selectedMonth}`;
-    localStorage.setItem(key, reportItems);
-  }, [reportItems, contrato.id, selectedMonth]);
+  // Função para adicionar novo item (salvando no Supabase)
+  const handleAddItem = async () => {
+    if (!novoItem.trim()) return;
 
-  // Salvar lista de itens
-  useEffect(() => {
-    const keyList = `dashboard_report_items_list_${contrato.id}_${selectedMonth}`;
-    localStorage.setItem(keyList, JSON.stringify(reportItemsList));
-  }, [reportItemsList, contrato.id, selectedMonth]);
+    try {
+      const { data, error } = await supabase
+        .from('itens_relevantes_relatorio')
+        .insert({
+          contrato_id: contrato.id,
+          mes: selectedMonth,
+          descricao: novoItem.trim(),
+          data: new Date().toISOString().split('T')[0]
+        })
+        .select()
+        .single();
 
-  // Função para adicionar novo item
-  const handleAddItem = () => {
-    if (novoItem.trim()) {
-      const newItem = {
-        id: crypto.randomUUID(),
-        descricao: novoItem.trim(),
-        data: new Date().toISOString().split('T')[0]
-      };
-      setReportItemsList(prev => [...prev, newItem]);
-      setNovoItem('');
+      if (error) {
+        console.error('❌ Erro ao adicionar item:', error);
+        alert('Erro ao adicionar item. Verifique o console.');
+        return;
+      }
+
+      if (data) {
+        setReportItemsList(prev => [...prev, {
+          id: data.id,
+          descricao: data.descricao,
+          data: data.data
+        }]);
+        setNovoItem('');
+      }
+    } catch (err) {
+      console.error('❌ Erro ao adicionar item:', err);
+      alert('Erro ao adicionar item. Verifique o console.');
     }
   };
 
-  // Função para remover item
-  const handleRemoveItem = (id: string) => {
-    if (confirm('Tem certeza que deseja remover este item?')) {
+  // Função para remover item (deletando do Supabase)
+  const handleRemoveItem = async (id: string) => {
+    if (!confirm('Tem certeza que deseja remover este item?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('itens_relevantes_relatorio')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('❌ Erro ao remover item:', error);
+        alert('Erro ao remover item. Verifique o console.');
+        return;
+      }
+
       setReportItemsList(prev => prev.filter(item => item.id !== id));
+    } catch (err) {
+      console.error('❌ Erro ao remover item:', err);
+      alert('Erro ao remover item. Verifique o console.');
     }
   };
 
@@ -538,9 +578,26 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
+              onClick={async () => {
                 if (confirm('⚠️ Tem certeza que deseja limpar todos os itens relevantes?\n\nEsta ação não pode ser desfeita!')) {
-                  setReportItemsList([]);
+                  try {
+                    const { error } = await supabase
+                      .from('itens_relevantes_relatorio')
+                      .delete()
+                      .eq('contrato_id', contrato.id)
+                      .eq('mes', selectedMonth);
+
+                    if (error) {
+                      console.error('❌ Erro ao limpar itens:', error);
+                      alert('Erro ao limpar itens. Verifique o console.');
+                      return;
+                    }
+
+                    setReportItemsList([]);
+                  } catch (err) {
+                    console.error('❌ Erro ao limpar itens:', err);
+                    alert('Erro ao limpar itens. Verifique o console.');
+                  }
                 }
               }}
               className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
@@ -575,7 +632,12 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
           </div>
 
           {/* Tabela de itens */}
-          {reportItemsList.length > 0 ? (
+          {loadingItems ? (
+            <div className="text-center py-8 text-gray-500">
+              <div className="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+              <p className="text-sm">Carregando itens...</p>
+            </div>
+          ) : reportItemsList.length > 0 ? (
             <div className="border rounded-md overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">

@@ -19,12 +19,15 @@ import { Dashboard } from '@/components/Dashboard';
 import { LoginScreen } from '@/components/LoginScreen';
 import { AreaTecnica, Ronda, Contrato, FotoRonda, OutroItemCorrigido, UsuarioAutorizado } from '@/types';
 import { AREAS_TECNICAS_PREDEFINIDAS } from '@/data/areasTecnicas';
-import { FileText, Building2, BarChart3, LogOut, User, Kanban, FileCheck, ArrowLeft } from 'lucide-react';
+import { FileText, Building2, BarChart3, LogOut, User, Kanban, FileCheck, ArrowLeft, Smartphone } from 'lucide-react';
 
 import { contratoService, rondaService, areaTecnicaService, fotoRondaService, outroItemService } from '@/lib/supabaseService';
 import { supabase } from '@/lib/supabase';
 import { authService } from '@/lib/auth';
 import { debugSupabaseConnection, debugTableStructure } from '@/lib/debugSupabase';
+import { syncService } from '@/lib/syncService';
+import { OfflineIndicator } from '@/components/OfflineIndicator';
+import { ColetaOffline } from '@/components/ColetaOffline';
 
 
 function App() {
@@ -52,7 +55,7 @@ function App() {
 
   const [currentView, setCurrentView] = useState<'contratos' | 'rondas'>('contratos');
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
-  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados'>('tabela');
+  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta'>('tabela');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
   const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
 
@@ -85,6 +88,11 @@ function App() {
       setRondaSelecionada(null);
     }
   }, [contratos]); // Adicionar contratos como dependência
+
+  // Iniciar sincronização automática offline
+  useEffect(() => {
+    syncService.startAutoSync();
+  }, []);
 
   useEffect(() => {
     // FORÇAR tema escuro com JavaScript
@@ -1393,6 +1401,16 @@ function App() {
     );
   }
 
+  // Tela de coleta offline (full-screen mobile)
+  if (viewMode === 'coleta') {
+    return (
+      <ColetaOffline onVoltar={() => {
+        setViewMode('tabela');
+        setCurrentView('contratos');
+      }} />
+    );
+  }
+
   return (
     <div className="min-h-screen">
       {/* Header com informações do usuário */}
@@ -1424,6 +1442,17 @@ function App() {
                 <span className="text-gray-500">•</span>
                 <span>{usuarioLogado?.cargo}</span>
               </div>
+
+              {/* Botão de coleta offline */}
+              <Button
+                onClick={() => setViewMode('coleta')}
+                variant="outline"
+                size="sm"
+                className="text-green-400 border-green-500/30 hover:bg-green-500/10 hover:border-green-500/50"
+              >
+                <Smartphone className="w-4 h-4 mr-2" />
+                Coleta em Campo
+              </Button>
 
               {/* Botão de logout */}
               <Button
@@ -1926,6 +1955,8 @@ function App() {
         }}
       />
 
+      {/* Indicador de status offline */}
+      <OfflineIndicator />
     </div >
   );
 }

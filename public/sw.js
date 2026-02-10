@@ -1,90 +1,124 @@
-const CACHE_NAME = 'app-ronda-v5';
+const CACHE_NAME = 'app-ronda-v6';
+const STATIC_CACHE = 'app-ronda-static-v6';
+
 const urlsToCache = [
   '/',
-  // Não cachear index.html para evitar servir HTML antigo com assets antigos
   '/manifest.json'
 ];
+
+// Assets estáticos para cachear (extensões)
+const STATIC_EXTENSIONS = ['.js', '.css', '.png', '.jpg', '.jpeg', '.svg', '.ico', '.woff', '.woff2', '.ttf'];
 
 // Instalar service worker
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('🔄 Cache aberto:', CACHE_NAME);
-        // Usar add() em vez de addAll() para evitar falhas em lote
+        console.log('[SW] Cache aberto:', CACHE_NAME);
         return Promise.all(
-          urlsToCache.map(url => 
+          urlsToCache.map(url =>
             cache.add(url).catch(err => {
-              console.warn('⚠️ Falha ao fazer cache de:', url, err);
-              return null; // Continua mesmo se falhar
+              console.warn('[SW] Falha ao cachear:', url, err);
+              return null;
             })
           )
         );
       })
       .catch(error => {
-        console.error('❌ Erro ao instalar Service Worker:', error);
+        console.error('[SW] Erro ao instalar:', error);
       })
   );
-  // Ativar nova SW imediatamente
   self.skipWaiting();
 });
 
 // Interceptar requisições
 self.addEventListener('fetch', (event) => {
-  // Navegações: estratégia network-first para sempre obter index.html novo
+  const url = new URL(event.request.url);
+
+  // Navegações: network-first (HTML)
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/index.html'))
+      fetch(event.request)
+        .then(response => {
+          // Cachear o HTML para uso offline
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match('/index.html').then(r => r || caches.match('/')))
     );
     return;
   }
 
-  // Não interceptar requisições de dados (API, fotos, etc.)
-  if (event.request.url.includes('/api/') || 
-      event.request.url.includes('supabase') ||
+  // Não interceptar APIs/dados dinâmicos
+  if (event.request.url.includes('supabase') ||
+      event.request.url.includes('/api/') ||
       event.request.url.includes('data:image') ||
       event.request.url.includes('blob:')) {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Retorna do cache se disponível
-        if (response) {
+  // Assets estáticos: cache-first com atualização em background
+  const isStaticAsset = STATIC_EXTENSIONS.some(ext => url.pathname.endsWith(ext));
+  if (isStaticAsset) {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        // Buscar da rede em background para atualizar cache
+        const networkFetch = fetch(event.request).then(response => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(STATIC_CACHE).then(cache => cache.put(event.request, clone));
+          }
           return response;
-        }
-        // Senão, busca da rede
-        return fetch(event.request).catch(error => {
-          console.warn('⚠️ Falha na requisição:', event.request.url, error);
-          // Retorna uma resposta padrão em caso de falha
-          return new Response('Falha na requisição', { status: 500 });
-        });
+        }).catch(() => null);
+
+        // Se tem cache, retornar imediatamente
+        if (cached) return cached;
+        // Se não tem cache, esperar rede
+        return networkFetch.then(r => r || new Response('Recurso indisponível offline', { status: 503 }));
       })
-      .catch(error => {
-        console.error('❌ Erro no Service Worker:', error);
-        // Em caso de erro, tenta buscar da rede
-        return fetch(event.request).catch(() => {
-          return new Response('Erro no Service Worker', { status: 500 });
+    );
+    return;
+  }
+
+  // Outras requisições: network-first com fallback para cache
+  event.respondWith(
+    fetch(event.request)
+      .then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request).then(cached => {
+          return cached || new Response('Recurso indisponível offline', { status: 503 });
         });
       })
   );
 });
 
-// Atualizar cache quando nova versão
+// Limpar caches antigos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('🧹 Removendo cache antigo:', cacheName);
+          if (cacheName !== CACHE_NAME && cacheName !== STATIC_CACHE) {
+            console.log('[SW] Removendo cache antigo:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     })
   );
-  // Assumir controle imediatamente
   self.clients.claim();
+});
+
+// Listener para mensagens do app (forçar sync, etc.)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
