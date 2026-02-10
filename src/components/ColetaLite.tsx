@@ -609,6 +609,13 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
       if (relAtualizado) {
         setRelatorioSelecionado(relAtualizado);
         saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+        // Ir direto para pendências da seção criada
+        const secaoCriada = relAtualizado.secoes?.find(s => s.id === secao.id);
+        if (secaoCriada) {
+          setSecaoSelecionada(secaoCriada);
+          setTela('relatorio-pendencias');
+          return;
+        }
       }
       setTela('relatorio-secoes');
     } catch (error) {
@@ -1726,23 +1733,13 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
           <p className="text-xs text-gray-500">Numeração automática: <span className="text-purple-400 font-mono">{numeracao}</span></p>
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">Título Principal *</label>
+            <label className="text-xs text-gray-400 mb-1 block">Título da Seção *</label>
             <Input
               value={novaSecaoTitulo}
               onChange={(e) => setNovaSecaoTitulo(e.target.value)}
               className="bg-gray-800 border-gray-700 text-white text-sm"
               placeholder={`Ex: ${numeracao} – INSTALAÇÕES ELÉTRICAS`}
               autoFocus
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-400 mb-1 block">Subtítulo (opcional)</label>
-            <Input
-              value={novaSecaoSubtitulo}
-              onChange={(e) => setNovaSecaoSubtitulo(e.target.value)}
-              className="bg-gray-800 border-gray-700 text-white text-sm"
-              placeholder="Ex: Quadros elétricos e disjuntores"
             />
           </div>
 
