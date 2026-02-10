@@ -139,6 +139,8 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
   // Nova seção
   const [novaSecaoTitulo, setNovaSecaoTitulo] = useState('');
   const [novaSecaoSubtitulo, setNovaSecaoSubtitulo] = useState('');
+  const [novaSecaoTemSubsecoes, setNovaSecaoTemSubsecoes] = useState(false);
+  const [novaSubsecoes, setNovaSubsecoes] = useState<Array<{ titulo: string; tipo: 'MANUAL' | 'CONSTATACAO' }>>([]);
 
   // Nova pendência
   const [novaPendLocal, setNovaPendLocal] = useState('');
@@ -367,6 +369,24 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     saveOfflineQueue(remaining);
     setOfflineQueue(remaining);
 
+    // Sync fotos offline também
+    try {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('foto_offline_'));
+      for (const key of keys) {
+        try {
+          const fotoData = JSON.parse(localStorage.getItem(key) || '');
+          if (fotoData.base64 && fotoData.pendenciaId && fotoData.relatorioId) {
+            const file = base64ToFile(fotoData.base64, `foto_${fotoData.pendenciaId}.jpg`);
+            const url = await relatorioPendenciasService.uploadFoto(file, fotoData.relatorioId, `${fotoData.pendenciaId}-sync-${Date.now()}`);
+            await relatorioPendenciasService.updatePendencia(fotoData.pendenciaId, { [fotoData.campo]: url });
+            localStorage.removeItem(key);
+          }
+        } catch (e) {
+          console.error('Erro ao sync foto offline:', e);
+        }
+      }
+    } catch {}
+
     if (remaining.length === 0) {
       showMsg('Tudo sincronizado!');
     } else {
@@ -395,15 +415,39 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     setTimeout(() => setMensagem(null), 3000);
   };
 
-  // Upload de foto
+  // Upload de foto (com fallback offline)
   const handleUploadFoto = async (file: File, tipo: 'antes' | 'depois') => {
     if (!pendenciaSelecionada || !relatorioSelecionado) return;
 
     const setUploading = tipo === 'antes' ? setUploadingFoto : setUploadingFotoDepois;
     setUploading(true);
+    const campo = tipo === 'antes' ? 'foto_url' : 'foto_depois_url';
+
+    // Se offline, salvar foto em base64 no localStorage para sync depois
+    if (!navigator.onLine) {
+      try {
+        const base64 = await fileToBase64(file);
+        // Salvar preview local
+        setPendenciaSelecionada(prev => prev ? { ...prev, [campo]: base64 } : null);
+        // Salvar na fila offline para upload depois
+        const fotoOfflineKey = `foto_offline_${pendenciaSelecionada.id}_${tipo}`;
+        localStorage.setItem(fotoOfflineKey, JSON.stringify({
+          pendenciaId: pendenciaSelecionada.id,
+          relatorioId: relatorioSelecionado.id,
+          campo,
+          base64,
+        }));
+        showMsg(`Foto ${tipo} salva offline!`);
+      } catch (e) {
+        console.error('Erro ao salvar foto offline:', e);
+        showMsg('Erro ao salvar foto');
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
 
     try {
-      // Gerar nome único para evitar conflito de cache
       const timestamp = Date.now();
       const url = await relatorioPendenciasService.uploadFoto(
         file,
@@ -411,16 +455,12 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
         `${pendenciaSelecionada.id}-${tipo}-${timestamp}`
       );
 
-      const campo = tipo === 'antes' ? 'foto_url' : 'foto_depois_url';
       const updateData: Partial<RelatorioPendencia> = { [campo]: url };
-
       await relatorioPendenciasService.updatePendencia(pendenciaSelecionada.id, updateData);
 
-      // Atualizar estado local imediatamente
       setPendenciaSelecionada(prev => prev ? { ...prev, [campo]: url } : null);
       showMsg(`Foto ${tipo === 'antes' ? 'antes' : 'depois'} salva!`);
 
-      // Recarregar relatório para atualizar dados
       try {
         const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
         if (relAtualizado) {
@@ -430,7 +470,21 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
       } catch {}
     } catch (error) {
       console.error('Erro ao fazer upload:', error);
-      showMsg(`Erro ao enviar foto ${tipo}`);
+      // Fallback: salvar offline se o upload falhou
+      try {
+        const base64 = await fileToBase64(file);
+        setPendenciaSelecionada(prev => prev ? { ...prev, [campo]: base64 } : null);
+        const fotoOfflineKey = `foto_offline_${pendenciaSelecionada.id}_${tipo}`;
+        localStorage.setItem(fotoOfflineKey, JSON.stringify({
+          pendenciaId: pendenciaSelecionada.id,
+          relatorioId: relatorioSelecionado.id,
+          campo,
+          base64,
+        }));
+        showMsg(`Foto ${tipo} salva offline (sem sinal)`);
+      } catch {
+        showMsg(`Erro ao enviar foto ${tipo}`);
+      }
     } finally {
       setUploading(false);
     }
@@ -522,18 +576,40 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     setLoading(true);
     try {
       const ordemAtual = relatorioSelecionado.secoes?.length || 0;
-      await relatorioPendenciasService.createSecao({
+      const secao = await relatorioPendenciasService.createSecao({
         relatorio_id: relatorioSelecionado.id,
         ordem: ordemAtual,
         titulo_principal: novaSecaoTitulo.trim(),
         subtitulo: novaSecaoSubtitulo.trim() || undefined,
+        tem_subsecoes: novaSecaoTemSubsecoes,
       } as any);
+
+      // Criar subseções se houver
+      if (novaSecaoTemSubsecoes && novaSubsecoes.length > 0) {
+        for (let i = 0; i < novaSubsecoes.length; i++) {
+          const sub = novaSubsecoes[i];
+          if (!sub.titulo.trim()) continue;
+          await relatorioPendenciasService.createSubsecao({
+            secao_id: secao.id,
+            ordem: i,
+            titulo: sub.titulo.trim(),
+            tipo: sub.tipo,
+            fotos_constatacao: sub.tipo === 'CONSTATACAO' ? [] : undefined,
+          } as any);
+        }
+      }
+
       showMsg('Seção criada!');
       setNovaSecaoTitulo('');
       setNovaSecaoSubtitulo('');
+      setNovaSecaoTemSubsecoes(false);
+      setNovaSubsecoes([]);
       // Recarregar relatório
       const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
-      if (relAtualizado) setRelatorioSelecionado(relAtualizado);
+      if (relAtualizado) {
+        setRelatorioSelecionado(relAtualizado);
+        saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+      }
       setTela('relatorio-secoes');
     } catch (error) {
       console.error('Erro ao criar seção:', error);
@@ -681,6 +757,8 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
       case 'nova-secao':
         setNovaSecaoTitulo('');
         setNovaSecaoSubtitulo('');
+        setNovaSecaoTemSubsecoes(false);
+        setNovaSubsecoes([]);
         setTela('relatorio-secoes');
         break;
       case 'relatorio-pendencias':
@@ -1523,7 +1601,13 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
               ].map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => setEditStatus(opt.value)}
+                  onClick={() => {
+                    setEditStatus(opt.value);
+                    // Preencher data de recebimento automaticamente com hoje
+                    if (opt.value === 'RECEBIDO' && !editDataRecebimento) {
+                      setEditDataRecebimento(new Date().toISOString().split('T')[0]);
+                    }
+                  }}
                   className={`p-2.5 rounded-lg text-xs font-medium transition-all ${
                     editStatus === opt.value
                       ? opt.color === 'yellow' ? 'bg-yellow-500/30 text-yellow-300 border border-yellow-500/50'
@@ -1620,7 +1704,7 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
       <div className="min-h-screen bg-gray-900 flex flex-col">
         {renderHeader('Nova Seção')}
 
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 pb-24">
           <p className="text-xs text-gray-500">Numeração automática: <span className="text-purple-400 font-mono">{numeracao}</span></p>
 
           <div>
@@ -1643,6 +1727,89 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
               placeholder="Ex: Quadros elétricos e disjuntores"
             />
           </div>
+
+          {/* Toggle subseções */}
+          <div className="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-lg p-3">
+            <div>
+              <p className="text-white text-sm font-medium">Tem subseções?</p>
+              <p className="text-gray-400 text-xs">Ex: A - Pendências, B - Constatação</p>
+            </div>
+            <button
+              onClick={() => {
+                const novo = !novaSecaoTemSubsecoes;
+                setNovaSecaoTemSubsecoes(novo);
+                if (novo && novaSubsecoes.length === 0) {
+                  setNovaSubsecoes([{ titulo: '', tipo: 'MANUAL' }]);
+                }
+              }}
+              className={`w-12 h-6 rounded-full transition-all ${novaSecaoTemSubsecoes ? 'bg-purple-600' : 'bg-gray-600'}`}
+            >
+              <div className={`w-5 h-5 bg-white rounded-full transition-transform ${novaSecaoTemSubsecoes ? 'translate-x-6' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+
+          {/* Lista de subseções */}
+          {novaSecaoTemSubsecoes && (
+            <div className="space-y-3">
+              <p className="text-xs text-gray-400 font-medium">Subseções:</p>
+              {novaSubsecoes.map((sub, idx) => {
+                const letra = String.fromCharCode(65 + idx);
+                return (
+                  <div key={idx} className="bg-gray-800 border border-gray-700 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-purple-400 font-bold text-sm">{letra}.</span>
+                      <Input
+                        value={sub.titulo}
+                        onChange={(e) => {
+                          const updated = [...novaSubsecoes];
+                          updated[idx] = { ...updated[idx], titulo: e.target.value };
+                          setNovaSubsecoes(updated);
+                        }}
+                        className="bg-gray-700 border-gray-600 text-white text-sm flex-1"
+                        placeholder={`Título da subseção ${letra}`}
+                      />
+                      {novaSubsecoes.length > 1 && (
+                        <button
+                          onClick={() => setNovaSubsecoes(novaSubsecoes.filter((_, i) => i !== idx))}
+                          className="p-1 text-red-400 hover:text-red-300"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          const updated = [...novaSubsecoes];
+                          updated[idx] = { ...updated[idx], tipo: 'MANUAL' };
+                          setNovaSubsecoes(updated);
+                        }}
+                        className={`flex-1 py-1.5 rounded text-xs font-medium ${sub.tipo === 'MANUAL' ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50' : 'bg-gray-700 text-gray-400 border border-gray-600'}`}
+                      >
+                        Pendências
+                      </button>
+                      <button
+                        onClick={() => {
+                          const updated = [...novaSubsecoes];
+                          updated[idx] = { ...updated[idx], tipo: 'CONSTATACAO' };
+                          setNovaSubsecoes(updated);
+                        }}
+                        className={`flex-1 py-1.5 rounded text-xs font-medium ${sub.tipo === 'CONSTATACAO' ? 'bg-blue-500/30 text-blue-300 border border-blue-500/50' : 'bg-gray-700 text-gray-400 border border-gray-600'}`}
+                      >
+                        Constatação
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              <button
+                onClick={() => setNovaSubsecoes([...novaSubsecoes, { titulo: '', tipo: 'MANUAL' }])}
+                className="w-full border border-dashed border-gray-600 rounded-lg p-2 text-gray-400 text-xs hover:border-purple-500/30 hover:text-purple-400 transition-all"
+              >
+                + Adicionar subseção
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-gray-900 border-t border-gray-700">
