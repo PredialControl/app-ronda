@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, VerticalAlign, AlignmentType, ImageRun, PageBreak, Header, Footer, PageNumber, BorderStyle } from 'docx';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, VerticalAlign, AlignmentType, ImageRun, PageBreak, Header, Footer, PageNumber, BorderStyle, HeightRule, TableLayoutType } from 'docx';
 import { saveAs } from 'file-saver';
 import { RelatorioPendencias, Contrato } from '@/types';
 
@@ -1307,78 +1307,104 @@ export async function generateRelatorioPendenciasDOCX(
         }
 
         // Função interna para processar uma pendência e gerar sua tabela
+        // Mesmas dimensões do cabeçalho para largura uniforme
+        const pageWidthTwips = 11906; // A4
+        const docMarginLeftTwips = cmToTwip(3.0);
+        const pendTableMargin = cmToTwip(0.5);
+        const pendTableWidth = pageWidthTwips - (pendTableMargin * 2);
+        const pendTableIndent = -(docMarginLeftTwips - pendTableMargin);
+
+        // Larguras das colunas em twips
+        const colNumWidth = cmToTwip(1.5);
+        const colRestWidth = pendTableWidth - colNumWidth;
+
+        // Fotos proporção 4:3, ocupando bem a célula
+        const fotoWidth = 350;
+        const fotoHeight = 263;
+
         const processarPendencia = async (pendencia: any) => {
             numeroPendenciaGlobal++;
             console.log(`[DOCX]   → Pendência ${numeroPendenciaGlobal}/${totalPendencias}: ${pendencia.descricao.substring(0, 50)}...`);
 
-            // Calcular progresso (10% a 90% para as pendências)
             const progressoPendencias = 10 + Math.floor((numeroPendenciaGlobal / totalPendencias) * 80);
             onProgress?.(`Processando pendência ${numeroPendenciaGlobal} de ${totalPendencias}...`, progressoPendencias, 100);
 
             const tableRows: TableRow[] = [];
+            const borderStyle = { style: BorderStyle.SINGLE, size: 1, color: '999999' };
+            const cellBorders = { top: borderStyle, bottom: borderStyle, left: borderStyle, right: borderStyle };
 
             // ================= ROW 1: Número (rowspan 2) + Local =================
-            const row1Cells: TableCell[] = [
-                new TableCell({
-                    width: { size: 8, type: WidthType.PERCENTAGE },
-                    rowSpan: 2,
-                    verticalAlign: VerticalAlign.CENTER,
-                    children: [
-                        new Paragraph({
-                            children: [
-                                new TextRun({
-                                    text: numeroPendenciaGlobal.toString(),
-                                    bold: true,
-                                    size: 40,
-                                }),
-                            ],
-                            alignment: AlignmentType.CENTER,
-                        }),
-                    ],
-                    margins: { top: 250, bottom: 250, left: 150, right: 150 },
-                }),
-                new TableCell({
-                    width: { size: 92, type: WidthType.PERCENTAGE },
-                    columnSpan: 2,
-                    children: [
-                        new Paragraph({
-                            children: [
-                                new TextRun({ text: 'Local: ', bold: true, size: 24 }),
-                                new TextRun({
-                                    text: pendencia.local.replace(/^([IVX]+\.\d+[A-Z]?|[IVX]+|\d+)\s*[-–]\s*/, ''),
-                                    size: 24,
-                                }),
-                            ],
-                        }),
-                    ],
-                    margins: { top: 150, bottom: 100, left: 200, right: 200 },
-                })
-            ];
-            tableRows.push(new TableRow({ children: row1Cells }));
+            tableRows.push(new TableRow({
+                height: { value: cmToTwip(0.6), rule: HeightRule.ATLEAST },
+                children: [
+                    new TableCell({
+                        width: { size: colNumWidth, type: WidthType.DXA },
+                        rowSpan: 2,
+                        verticalAlign: VerticalAlign.CENTER,
+                        borders: cellBorders,
+                        children: [
+                            new Paragraph({
+                                children: [
+                                    new TextRun({
+                                        text: numeroPendenciaGlobal.toString(),
+                                        bold: true,
+                                        size: 44,
+                                    }),
+                                ],
+                                alignment: AlignmentType.CENTER,
+                            }),
+                        ],
+                        margins: { top: 40, bottom: 40, left: 50, right: 50 },
+                    }),
+                    new TableCell({
+                        width: { size: colRestWidth, type: WidthType.DXA },
+                        columnSpan: 2,
+                        verticalAlign: VerticalAlign.CENTER,
+                        borders: cellBorders,
+                        children: [
+                            new Paragraph({
+                                children: [
+                                    new TextRun({ text: 'Local: ', bold: true, size: 24 }),
+                                    new TextRun({
+                                        text: pendencia.local.replace(/^([IVX]+\.\d+[A-Z]?|[IVX]+|\d+)\s*[-–]\s*/, ''),
+                                        size: 24,
+                                    }),
+                                ],
+                            }),
+                        ],
+                        margins: { top: 40, bottom: 40, left: 150, right: 150 },
+                    }),
+                ],
+            }));
 
             // ================= ROW 2: Pendência =================
-            const row2Cells: TableCell[] = [
-                new TableCell({
-                    width: { size: 92, type: WidthType.PERCENTAGE },
-                    columnSpan: 2,
-                    children: [
-                        new Paragraph({
-                            children: [
-                                new TextRun({ text: 'Pendência: ', bold: true, size: 24 }),
-                                new TextRun({
-                                    text: pendencia.descricao.replace(/^([IVX]+\.\d+[A-Z]?|[IVX]+|\d+)\s*[-–]\s*/, ''),
-                                    size: 24,
-                                }),
-                            ],
-                        }),
-                    ],
-                    margins: { top: 100, bottom: 150, left: 200, right: 200 },
-                })
-            ];
-            tableRows.push(new TableRow({ children: row2Cells }));
+            tableRows.push(new TableRow({
+                height: { value: cmToTwip(0.6), rule: HeightRule.ATLEAST },
+                children: [
+                    new TableCell({
+                        width: { size: colRestWidth, type: WidthType.DXA },
+                        columnSpan: 2,
+                        verticalAlign: VerticalAlign.CENTER,
+                        borders: cellBorders,
+                        children: [
+                            new Paragraph({
+                                children: [
+                                    new TextRun({ text: 'Pendência: ', bold: true, size: 24 }),
+                                    new TextRun({
+                                        text: pendencia.descricao.replace(/^([IVX]+\.\d+[A-Z]?|[IVX]+|\d+)\s*[-–]\s*/, ''),
+                                        size: 24,
+                                    }),
+                                ],
+                            }),
+                        ],
+                        margins: { top: 40, bottom: 40, left: 150, right: 150 },
+                    }),
+                ],
+            }));
 
             // ================= ROW 3: Fotos =================
             const row3Cells: TableCell[] = [];
+            const halfWidth = Math.floor(colRestWidth / 2);
 
             // Foto ANTES
             let photoParagraph: Paragraph;
@@ -1389,12 +1415,12 @@ export async function generateRelatorioPendenciasDOCX(
                         children: [
                             new ImageRun({
                                 data: imageBuffer,
-                                transformation: { width: 280, height: 210 },
+                                transformation: { width: fotoWidth, height: fotoHeight },
                                 type: "png",
                             }),
                         ],
-                        alignment: AlignmentType.LEFT,
-                        spacing: { before: 100, after: 100 },
+                        alignment: AlignmentType.CENTER,
+                        spacing: { before: 50, after: 50 },
                     });
                 } catch (e) {
                     console.error('Erro ao converter foto ANTES:', e);
@@ -1405,11 +1431,12 @@ export async function generateRelatorioPendenciasDOCX(
             }
 
             row3Cells.push(new TableCell({
-                width: { size: 54, type: WidthType.PERCENTAGE },
+                width: { size: colNumWidth + halfWidth, type: WidthType.DXA },
                 columnSpan: 2,
                 children: [photoParagraph],
-                verticalAlign: VerticalAlign.TOP,
-                margins: { top: 150, bottom: 150, left: 100, right: 100 },
+                verticalAlign: VerticalAlign.CENTER,
+                borders: cellBorders,
+                margins: { top: 80, bottom: 80, left: 80, right: 80 },
             }));
 
             // Foto DEPOIS
@@ -1421,12 +1448,12 @@ export async function generateRelatorioPendenciasDOCX(
                         children: [
                             new ImageRun({
                                 data: imageDepoisBuffer,
-                                transformation: { width: 280, height: 210 },
+                                transformation: { width: fotoWidth, height: fotoHeight },
                                 type: "png",
                             }),
                         ],
-                        alignment: AlignmentType.LEFT,
-                        spacing: { before: 100, after: 100 },
+                        alignment: AlignmentType.CENTER,
+                        spacing: { before: 50, after: 50 },
                     });
                 } catch (e) {
                     console.error('Erro ao converter foto DEPOIS:', e);
@@ -1437,21 +1464,23 @@ export async function generateRelatorioPendenciasDOCX(
             }
 
             row3Cells.push(new TableCell({
-                width: { size: 46, type: WidthType.PERCENTAGE },
+                width: { size: colRestWidth - halfWidth, type: WidthType.DXA },
                 children: [photoDepoisParagraph],
-                verticalAlign: VerticalAlign.TOP,
-                margins: { top: 150, bottom: 150, left: 100, right: 100 },
+                verticalAlign: VerticalAlign.CENTER,
+                borders: cellBorders,
+                margins: { top: 80, bottom: 80, left: 80, right: 80 },
             }));
 
             tableRows.push(new TableRow({ children: row3Cells }));
 
             children.push(new Table({
-                width: { size: 100, type: WidthType.PERCENTAGE },
+                width: { size: pendTableWidth, type: WidthType.DXA },
+                layout: TableLayoutType.FIXED,
                 rows: tableRows,
-                margins: { top: 100, bottom: 100, left: 100, right: 100 },
+                indent: { size: pendTableIndent, type: WidthType.DXA },
             }));
 
-            children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+            children.push(new Paragraph({ text: '', spacing: { after: 150 } }));
         };
 
         // 1. Processar pendências DIRETAS da seção primeiro
