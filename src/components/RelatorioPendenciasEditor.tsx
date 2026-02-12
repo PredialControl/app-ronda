@@ -980,13 +980,19 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
 
                     if (pendencia.file) {
                         fotoUrl = await relatorioPendenciasService.uploadFoto(pendencia.file, relatorioId, pendencia.tempId);
-                    } else if (!pendencia.preview && !pendencia.foto_url) {
+                    } else if (pendencia.preview || pendencia.foto_url) {
+                        // Manter URL existente do banco
+                        fotoUrl = pendencia.foto_url || null;
+                    } else {
                         fotoUrl = null;
                     }
 
                     if (pendencia.fileDepois) {
                         fotoDepoisUrl = await relatorioPendenciasService.uploadFoto(pendencia.fileDepois, relatorioId, `${pendencia.tempId}-depois`);
-                    } else if (!pendencia.previewDepois && !pendencia.foto_depois_url) {
+                    } else if (pendencia.previewDepois || pendencia.foto_depois_url) {
+                        // Manter URL existente do banco
+                        fotoDepoisUrl = pendencia.foto_depois_url || null;
+                    } else {
                         fotoDepoisUrl = null;
                     }
 
@@ -1054,13 +1060,19 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
 
                             if (pendencia.file) {
                                 fotoUrl = await relatorioPendenciasService.uploadFoto(pendencia.file, relatorioId, pendencia.tempId);
-                            } else if (!pendencia.preview && !pendencia.foto_url) {
+                            } else if (pendencia.preview || pendencia.foto_url) {
+                                // Manter URL existente do banco
+                                fotoUrl = pendencia.foto_url || null;
+                            } else {
                                 fotoUrl = null;
                             }
 
                             if (pendencia.fileDepois) {
                                 fotoDepoisUrl = await relatorioPendenciasService.uploadFoto(pendencia.fileDepois, relatorioId, `${pendencia.tempId}-depois`);
-                            } else if (!pendencia.previewDepois && !pendencia.foto_depois_url) {
+                            } else if (pendencia.previewDepois || pendencia.foto_depois_url) {
+                                // Manter URL existente do banco
+                                fotoDepoisUrl = pendencia.foto_depois_url || null;
+                            } else {
                                 fotoDepoisUrl = null;
                             }
 

@@ -8,7 +8,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Contrato, RelatorioPendencias, RelatorioPendencia } from '@/types';
+import { Contrato, RelatorioPendencias, RelatorioPendencia, UsuarioAutorizado } from '@/types';
 import { contratoService } from '@/lib/supabaseService';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 import { generateRelatorioPendenciasDOCX } from '@/lib/docxRelatorioPendencias';
@@ -16,7 +16,7 @@ import { supabase } from '@/lib/supabase';
 import {
   ArrowLeft, Building2, FileText, AlertTriangle, Camera, Search,
   Check, X, Upload, Download, ChevronRight, Loader2, Image as ImageIcon,
-  Save, Trash2, Edit3, Plus, Smartphone, WifiOff, RefreshCw
+  Save, Trash2, Edit3, Plus, Smartphone, WifiOff, RefreshCw, Settings, LogOut, User
 } from 'lucide-react';
 
 // ============================================
@@ -71,13 +71,33 @@ function saveOfflineQueue(queue: OfflinePendencia[]) {
   localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
 }
 
-function fileToBase64(file: File): Promise<string> {
+// Comprimir imagem antes de converter para base64 (máx 800px, qualidade 0.6)
+function compressImage(file: File, maxSize = 800, quality = 0.6): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > maxSize || h > maxSize) {
+        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+        else { w = Math.round(w * maxSize / h); h = maxSize; }
+      }
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = reject;
+    img.src = url;
   });
+}
+
+function fileToBase64(file: File): Promise<string> {
+  // Comprimir para evitar estouro de storage
+  return compressImage(file, 800, 0.6);
 }
 
 function base64ToFile(base64: string, filename: string): File {
@@ -88,6 +108,56 @@ function base64ToFile(base64: string, filename: string): File {
   const ia = new Uint8Array(ab);
   for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
   return new File([ab], filename, { type: mime });
+}
+
+// ============================================
+// IndexedDB para fotos offline (localStorage é pequeno demais)
+// ============================================
+const IDB_NAME = 'coleta_offline_db';
+const IDB_STORE = 'fotos_offline';
+
+function openOfflineDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE, { keyPath: 'key' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveOfflineFoto(key: string, data: any): Promise<void> {
+  const db = await openOfflineDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put({ key, ...data });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getOfflineFotos(): Promise<any[]> {
+  const db = await openOfflineDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deleteOfflineFoto(key: string): Promise<void> {
+  const db = await openOfflineDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 type Tela =
@@ -104,9 +174,11 @@ type Tela =
 
 interface ColetaLiteProps {
   onVoltar: () => void;
+  onLogout?: () => void;
+  usuario?: UsuarioAutorizado | null;
 }
 
-export function ColetaLite({ onVoltar }: ColetaLiteProps) {
+export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   const [tela, setTela] = useState<Tela>('contratos');
   const [loading, setLoading] = useState(false);
   const [mensagem, setMensagem] = useState<string | null>(null);
@@ -151,55 +223,44 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
 
   // PWA Install prompt
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
+  // Capturar beforeinstallprompt (evento é capturado globalmente no index.html)
   useEffect(() => {
-    // Verificar se já está instalado como PWA
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-      || (window.navigator as any).standalone === true;
-
-    if (isStandalone) return; // Já está instalado
-
-    // Verificar se o usuário já dispensou o banner
-    const dismissed = localStorage.getItem('pwa-install-dismissed');
-    if (dismissed) {
-      const dismissedDate = new Date(dismissed);
-      const now = new Date();
-      // Mostrar novamente depois de 7 dias
-      if (now.getTime() - dismissedDate.getTime() < 7 * 24 * 60 * 60 * 1000) return;
-    }
-
+    // Handler para capturar se disparar enquanto componente está montado
     const handler = (e: Event) => {
       e.preventDefault();
+      (window as any).__pwaInstallPrompt = e;
       setDeferredPrompt(e);
-      setShowInstallBanner(true);
+      console.log('✅ beforeinstallprompt capturado no React!');
     };
 
     window.addEventListener('beforeinstallprompt', handler);
 
-    // Para iOS que não tem beforeinstallprompt, mostrar instrução manual
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (isIOS && !isStandalone) {
-      setShowInstallBanner(true);
+    // Recuperar prompt já capturado pelo index.html (antes do React montar)
+    if ((window as any).__pwaInstallPrompt) {
+      setDeferredPrompt((window as any).__pwaInstallPrompt);
+      console.log('✅ Recuperou prompt do index.html');
     }
 
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   const handleInstallApp = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setShowInstallBanner(false);
+    const prompt = deferredPrompt || (window as any).__pwaInstallPrompt;
+    if (prompt) {
+      try {
+        prompt.prompt();
+        const { outcome } = await prompt.userChoice;
+        if (outcome === 'accepted') {
+          setShowSettings(false);
+        }
+      } catch (e) {
+        console.error('Erro ao mostrar prompt de instalação:', e);
       }
       setDeferredPrompt(null);
+      (window as any).__pwaInstallPrompt = null;
     }
-  };
-
-  const dismissInstallBanner = () => {
-    setShowInstallBanner(false);
-    localStorage.setItem('pwa-install-dismissed', new Date().toISOString());
   };
 
   // Autocomplete
@@ -354,11 +415,30 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
 
         const criada = await relatorioPendenciasService.createPendencia(novaPend);
 
-        // Upload foto se tiver
+        // Upload foto se tiver (buscar do IndexedDB pela referência)
         if (item.foto_base64 && criada.id) {
-          const file = base64ToFile(item.foto_base64, `foto_${criada.id}.jpg`);
-          const url = await relatorioPendenciasService.uploadFoto(file, item.relatorio_id, criada.id);
-          await relatorioPendenciasService.updatePendencia(criada.id, { foto_url: url });
+          try {
+            // foto_base64 agora pode ser referência ao IndexedDB ou base64 direto (legado)
+            let base64Data = item.foto_base64;
+            if (item.foto_base64.startsWith('pendencia_foto_')) {
+              // É referência ao IndexedDB
+              const fotos = await getOfflineFotos();
+              const fotoEntry = fotos.find(f => f.key === item.foto_base64);
+              if (fotoEntry?.base64) {
+                base64Data = fotoEntry.base64;
+                await deleteOfflineFoto(item.foto_base64);
+              } else {
+                base64Data = '';
+              }
+            }
+            if (base64Data && base64Data.startsWith('data:')) {
+              const file = base64ToFile(base64Data, `foto_${criada.id}.jpg`);
+              const url = await relatorioPendenciasService.uploadFoto(file, item.relatorio_id, criada.id);
+              await relatorioPendenciasService.updatePendencia(criada.id, { foto_url: url });
+            }
+          } catch (fotoErr) {
+            console.error('Erro upload foto da pendência:', fotoErr);
+          }
         }
       } catch (e) {
         console.error('Erro ao sincronizar pendência offline:', e);
@@ -369,20 +449,42 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     saveOfflineQueue(remaining);
     setOfflineQueue(remaining);
 
-    // Sync fotos offline também
+    // Sync fotos offline do IndexedDB
     try {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('foto_offline_'));
-      for (const key of keys) {
+      const offlineFotos = await getOfflineFotos();
+      for (const foto of offlineFotos) {
+        try {
+          if (foto.base64 && foto.pendenciaId && foto.relatorioId) {
+            const file = base64ToFile(foto.base64, `foto_${foto.pendenciaId}.jpg`);
+            const url = await relatorioPendenciasService.uploadFoto(file, foto.relatorioId, `${foto.pendenciaId}-sync-${Date.now()}`);
+            try {
+              await relatorioPendenciasService.updatePendencia(foto.pendenciaId, { [foto.campo]: url });
+            } catch (updateErr) {
+              console.error('Erro ao atualizar pendencia com foto (upload OK):', updateErr);
+            }
+            // Sempre remover do IndexedDB apos upload para evitar duplicatas
+            await deleteOfflineFoto(foto.key);
+          }
+        } catch (e) {
+          console.error('Erro ao sync foto offline:', e);
+        }
+      }
+    } catch {}
+
+    // Limpar fotos antigas do localStorage (migração)
+    try {
+      const oldKeys = Object.keys(localStorage).filter(k => k.startsWith('foto_offline_'));
+      for (const key of oldKeys) {
         try {
           const fotoData = JSON.parse(localStorage.getItem(key) || '');
           if (fotoData.base64 && fotoData.pendenciaId && fotoData.relatorioId) {
             const file = base64ToFile(fotoData.base64, `foto_${fotoData.pendenciaId}.jpg`);
             const url = await relatorioPendenciasService.uploadFoto(file, fotoData.relatorioId, `${fotoData.pendenciaId}-sync-${Date.now()}`);
             await relatorioPendenciasService.updatePendencia(fotoData.pendenciaId, { [fotoData.campo]: url });
-            localStorage.removeItem(key);
           }
+          localStorage.removeItem(key);
         } catch (e) {
-          console.error('Erro ao sync foto offline:', e);
+          console.error('Erro ao sync foto localStorage antigo:', e);
         }
       }
     } catch {}
@@ -415,7 +517,7 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     setTimeout(() => setMensagem(null), 3000);
   };
 
-  // Upload de foto (com fallback offline)
+  // Upload de foto (com fallback offline via IndexedDB)
   const handleUploadFoto = async (file: File, tipo: 'antes' | 'depois') => {
     if (!pendenciaSelecionada || !relatorioSelecionado) return;
 
@@ -423,44 +525,55 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     setUploading(true);
     const campo = tipo === 'antes' ? 'foto_url' : 'foto_depois_url';
 
-    // Se offline, salvar foto em base64 no localStorage para sync depois
+    // Comprimir foto primeiro (funciona offline também)
+    let base64: string;
+    try {
+      base64 = await compressImage(file, 800, 0.6);
+    } catch (e) {
+      console.error('Erro ao comprimir foto:', e);
+      showMsg('Erro ao processar foto');
+      setUploading(false);
+      return;
+    }
+
+    // Mostrar preview imediatamente
+    setPendenciaSelecionada(prev => prev ? { ...prev, [campo]: base64 } : null);
+
+    // Se offline, salvar no IndexedDB para sync depois
     if (!navigator.onLine) {
       try {
-        const base64 = await fileToBase64(file);
-        // Salvar preview local
-        setPendenciaSelecionada(prev => prev ? { ...prev, [campo]: base64 } : null);
-        // Salvar na fila offline para upload depois
-        const fotoOfflineKey = `foto_offline_${pendenciaSelecionada.id}_${tipo}`;
-        localStorage.setItem(fotoOfflineKey, JSON.stringify({
+        const fotoKey = `foto_${pendenciaSelecionada.id}_${tipo}_${Date.now()}`;
+        await saveOfflineFoto(fotoKey, {
           pendenciaId: pendenciaSelecionada.id,
           relatorioId: relatorioSelecionado.id,
           campo,
           base64,
-        }));
+        });
         showMsg(`Foto ${tipo} salva offline!`);
       } catch (e) {
         console.error('Erro ao salvar foto offline:', e);
-        showMsg('Erro ao salvar foto');
+        showMsg('Erro ao salvar foto offline');
       } finally {
         setUploading(false);
       }
       return;
     }
 
+    // Online: upload direto
     try {
       const timestamp = Date.now();
+      const fotoFile = base64ToFile(base64, `foto_${tipo}_${timestamp}.jpg`);
       const url = await relatorioPendenciasService.uploadFoto(
-        file,
+        fotoFile,
         relatorioSelecionado.id,
         `${pendenciaSelecionada.id}-${tipo}-${timestamp}`
       );
 
-      const updateData: Partial<RelatorioPendencia> = { [campo]: url };
-      await relatorioPendenciasService.updatePendencia(pendenciaSelecionada.id, updateData);
-
+      await relatorioPendenciasService.updatePendencia(pendenciaSelecionada.id, { [campo]: url });
       setPendenciaSelecionada(prev => prev ? { ...prev, [campo]: url } : null);
-      showMsg(`Foto ${tipo === 'antes' ? 'antes' : 'depois'} salva!`);
+      showMsg(`Foto ${tipo} salva!`);
 
+      // Atualizar cache em background
       try {
         const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
         if (relAtualizado) {
@@ -470,17 +583,15 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
       } catch {}
     } catch (error) {
       console.error('Erro ao fazer upload:', error);
-      // Fallback: salvar offline se o upload falhou
+      // Fallback: salvar no IndexedDB
       try {
-        const base64 = await fileToBase64(file);
-        setPendenciaSelecionada(prev => prev ? { ...prev, [campo]: base64 } : null);
-        const fotoOfflineKey = `foto_offline_${pendenciaSelecionada.id}_${tipo}`;
-        localStorage.setItem(fotoOfflineKey, JSON.stringify({
+        const fotoKey = `foto_${pendenciaSelecionada.id}_${tipo}_${Date.now()}`;
+        await saveOfflineFoto(fotoKey, {
           pendenciaId: pendenciaSelecionada.id,
           relatorioId: relatorioSelecionado.id,
           campo,
           base64,
-        }));
+        });
         showMsg(`Foto ${tipo} salva offline (sem sinal)`);
       } catch {
         showMsg(`Erro ao enviar foto ${tipo}`);
@@ -490,29 +601,87 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     }
   };
 
+  // Excluir foto (antes ou depois)
+  const handleDeleteFoto = async (tipo: 'antes' | 'depois') => {
+    if (!pendenciaSelecionada || !relatorioSelecionado) return;
+    const campo = tipo === 'antes' ? 'foto_url' : 'foto_depois_url';
+
+    // Limpar preview imediatamente
+    setPendenciaSelecionada(prev => prev ? { ...prev, [campo]: null } : null);
+
+    // Se online, salvar no banco
+    if (navigator.onLine) {
+      try {
+        await relatorioPendenciasService.updatePendencia(pendenciaSelecionada.id, { [campo]: null });
+        showMsg(`Foto ${tipo} removida!`);
+        // Atualizar cache
+        try {
+          const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
+          if (relAtualizado) {
+            setRelatorioSelecionado(relAtualizado);
+            saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+          }
+        } catch {}
+      } catch (error) {
+        console.error('Erro ao remover foto:', error);
+        showMsg('Erro ao remover foto');
+      }
+    } else {
+      showMsg(`Foto ${tipo} removida (sync quando online)`);
+    }
+  };
+
   // Salvar edição da pendência
   const handleSalvarPendencia = async () => {
     if (!pendenciaSelecionada) return;
     setLoading(true);
     try {
-      await relatorioPendenciasService.updatePendencia(pendenciaSelecionada.id, {
+      const dadosUpdate: any = {
         local: editLocal,
         descricao: editDescricao,
         status: editStatus,
-        data_recebimento: editDataRecebimento || undefined,
-      });
-      showMsg('Pendência salva!');
+      };
+      if (editDataRecebimento) {
+        dadosUpdate.data_recebimento = editDataRecebimento;
+      }
+      console.log('📝 Salvando pendência:', pendenciaSelecionada.id, dadosUpdate);
+      const resultado = await relatorioPendenciasService.updatePendencia(pendenciaSelecionada.id, dadosUpdate);
+      console.log('✅ Resultado update:', resultado);
+
+      // Sincronizar com tabela evolucao_recebimentos (usada pela aba Evolução no PC)
+      try {
+        const secao = secaoSelecionada;
+        const rel = relatorioSelecionado;
+        if (rel) {
+          const situacaoMap: Record<string, string> = { 'RECEBIDO': 'RECEBIDO', 'NAO_FARAO': 'NAO_FARA', 'PENDENTE': 'PENDENTE' };
+          await supabase.from('evolucao_recebimentos').upsert({
+            pendencia_id: pendenciaSelecionada.id,
+            relatorio_id: rel.id,
+            contrato_id: contratoSelecionado?.id,
+            situacao: situacaoMap[editStatus] || 'PENDENTE',
+            data_recebido: editDataRecebimento || null,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'pendencia_id' });
+        }
+      } catch (e) {
+        console.warn('Aviso: não sincronizou evolucao_recebimentos:', e);
+      }
+
+      showMsg(`Salvo! Status: ${editStatus}`);
 
       // Recarregar relatório
       if (relatorioSelecionado) {
         const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
-        if (relAtualizado) setRelatorioSelecionado(relAtualizado);
+        if (relAtualizado) {
+          setRelatorioSelecionado(relAtualizado);
+          saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+        }
       }
 
       setTela('relatorio-pendencias');
-    } catch (error) {
-      console.error('Erro ao salvar pendência:', error);
-      showMsg('Erro ao salvar');
+    } catch (error: any) {
+      console.error('❌ Erro ao salvar pendência:', error);
+      showMsg(`Erro: ${error?.message || 'Falha ao salvar'}`);
     } finally {
       setLoading(false);
     }
@@ -526,6 +695,18 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     try {
       const relCompleto = await relatorioPendenciasService.getById(rel.id);
       if (!relCompleto) throw new Error('Relatório não encontrado');
+
+      // Debug: verificar dados das pendências
+      relCompleto.secoes?.forEach(sec => {
+        (sec.pendencias || []).forEach(p => {
+          console.log(`[DOCX DEBUG] Pendência "${p.local}" - status: ${p.status}, foto_depois: ${p.foto_depois_url ? 'SIM' : 'NÃO'}, data_receb: ${p.data_recebimento}`);
+        });
+        (sec.subsecoes || []).forEach((sub: any) => {
+          (sub.pendencias || []).forEach((p: any) => {
+            console.log(`[DOCX DEBUG] Sub "${sub.titulo}" - Pendência "${p.local}" - status: ${p.status}, foto_depois: ${p.foto_depois_url ? 'SIM' : 'NÃO'}`);
+          });
+        });
+      });
 
       await generateRelatorioPendenciasDOCX(relCompleto, contratoSelecionado, (msg, current, total) => {
         setProgressMsg(msg);
@@ -580,7 +761,7 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
         relatorio_id: relatorioSelecionado.id,
         ordem: ordemAtual,
         titulo_principal: novaSecaoTitulo.trim(),
-        subtitulo: novaSecaoSubtitulo.trim() || undefined,
+        subtitulo: novaSecaoSubtitulo.trim() || '',
         tem_subsecoes: novaSecaoTemSubsecoes,
       } as any);
 
@@ -626,7 +807,7 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
     }
   };
 
-  // Criar nova pendência (online ou offline)
+  // Criar nova pendência (offline-first para velocidade)
   const handleCriarPendencia = async () => {
     if (!relatorioSelecionado || !secaoSelecionada) return;
     if (!novaPendLocal.trim() && !novaPendDescricao.trim()) return;
@@ -636,97 +817,131 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
       ? (subsecaoSelecionada.pendencias || [])
       : (secaoSelecionada.pendencias || []);
 
-    // Se está offline, salvar na fila local
-    if (!navigator.onLine) {
-      try {
-        let fotoBase64: string | null = null;
-        if (novaPendFoto) {
-          fotoBase64 = await fileToBase64(novaPendFoto);
-        }
-
-        const offlineItem: OfflinePendencia = {
-          id: `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          secao_id: secaoSelecionada.id,
-          subsecao_id: subsecaoSelecionada?.id || null,
-          ordem: pendenciasAtuais.length + offlineQueue.filter(q => q.secao_id === secaoSelecionada.id).length,
-          local: novaPendLocal.trim(),
-          descricao: novaPendDescricao.trim(),
-          status: 'PENDENTE',
-          foto_base64: fotoBase64,
-          relatorio_id: relatorioSelecionado.id,
-          created_at: new Date().toISOString(),
-        };
-
-        const newQueue = [...offlineQueue, offlineItem];
-        saveOfflineQueue(newQueue);
-        setOfflineQueue(newQueue);
-
-        showMsg('Salvo offline! Sincroniza quando voltar o sinal.');
-        setNovaPendLocal('');
-        setNovaPendDescricao('');
-        setNovaPendFoto(null);
-        setNovaPendFotoPreview(null);
-        setTela('relatorio-pendencias');
-      } catch (error) {
-        console.error('Erro ao salvar offline:', error);
-        showMsg('Erro ao salvar');
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    // Online - criar normalmente
     try {
-      const novaPend: any = {
+      const itemId = `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Se tem foto, salvar no IndexedDB (não no localStorage para evitar estouro)
+      let fotoRef: string | null = null;
+      if (novaPendFoto) {
+        try {
+          const base64 = await compressImage(novaPendFoto, 800, 0.6);
+          fotoRef = `pendencia_foto_${itemId}`;
+          await saveOfflineFoto(fotoRef, {
+            pendenciaId: itemId,
+            relatorioId: relatorioSelecionado.id,
+            campo: 'foto_url',
+            base64,
+          });
+        } catch (e) {
+          console.error('Erro ao salvar foto offline:', e);
+        }
+      }
+
+      const offlineItem: OfflinePendencia = {
+        id: itemId,
         secao_id: secaoSelecionada.id,
         subsecao_id: subsecaoSelecionada?.id || null,
-        ordem: pendenciasAtuais.length,
+        ordem: pendenciasAtuais.length + offlineQueue.filter(q => q.secao_id === secaoSelecionada.id).length,
         local: novaPendLocal.trim(),
         descricao: novaPendDescricao.trim(),
-        foto_url: null,
-        foto_depois_url: null,
         status: 'PENDENTE',
+        foto_base64: fotoRef, // Agora é referência ao IndexedDB, não o base64 inteiro
+        relatorio_id: relatorioSelecionado.id,
+        created_at: new Date().toISOString(),
       };
 
-      const criada = await relatorioPendenciasService.createPendencia(novaPend);
+      // Salvar na fila local imediatamente (instantâneo)
+      const newQueue = [...offlineQueue, offlineItem];
+      saveOfflineQueue(newQueue);
+      setOfflineQueue(newQueue);
 
-      // Se tem foto, faz upload
-      if (novaPendFoto && criada.id) {
-        const url = await relatorioPendenciasService.uploadFoto(
-          novaPendFoto,
-          relatorioSelecionado.id,
-          criada.id
-        );
-        await relatorioPendenciasService.updatePendencia(criada.id, { foto_url: url });
-      }
-
-      showMsg('Pendência criada!');
+      // Limpar campos e ficar na mesma tela para criar outra
+      showMsg('Pendência salva!');
       setNovaPendLocal('');
       setNovaPendDescricao('');
       setNovaPendFoto(null);
       setNovaPendFotoPreview(null);
+      setLoading(false);
 
-      // Recarregar relatório
-      const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
-      if (relAtualizado) {
-        setRelatorioSelecionado(relAtualizado);
-        saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
-        const secAtualizada = relAtualizado.secoes?.find(s => s.id === secaoSelecionada.id);
-        if (secAtualizada) {
-          setSecaoSelecionada(secAtualizada);
-          if (subsecaoSelecionada) {
-            const subAtualizada = secAtualizada.subsecoes?.find(sub => sub.id === subsecaoSelecionada.id);
-            if (subAtualizada) setSubsecaoSelecionada(subAtualizada);
+      // Se online, sincronizar em background (sem bloquear UI)
+      if (navigator.onLine) {
+        syncOfflineInBackground(newQueue);
+      }
+    } catch (error) {
+      console.error('Erro ao salvar pendência:', error);
+      showMsg('Erro ao salvar');
+      setLoading(false);
+    }
+  };
+
+  // Sincronizar fila offline em background (não bloqueia UI)
+  const syncOfflineInBackground = async (queue: OfflinePendencia[]) => {
+    try {
+      const remaining: OfflinePendencia[] = [];
+      for (const item of queue) {
+        try {
+          const novaPend: any = {
+            secao_id: item.secao_id,
+            subsecao_id: item.subsecao_id,
+            ordem: item.ordem,
+            local: item.local,
+            descricao: item.descricao,
+            foto_url: null,
+            foto_depois_url: null,
+            status: item.status,
+          };
+
+          const criada = await relatorioPendenciasService.createPendencia(novaPend);
+
+          if (item.foto_base64 && criada.id) {
+            try {
+              let base64Data = item.foto_base64;
+              if (item.foto_base64.startsWith('pendencia_foto_')) {
+                const fotos = await getOfflineFotos();
+                const fotoEntry = fotos.find(f => f.key === item.foto_base64);
+                if (fotoEntry?.base64) {
+                  base64Data = fotoEntry.base64;
+                  await deleteOfflineFoto(item.foto_base64);
+                } else {
+                  base64Data = '';
+                }
+              }
+              if (base64Data && base64Data.startsWith('data:')) {
+                const foto = base64ToFile(base64Data, `foto_${criada.id}.jpg`);
+                const url = await relatorioPendenciasService.uploadFoto(foto, item.relatorio_id, criada.id);
+                await relatorioPendenciasService.updatePendencia(criada.id, { foto_url: url });
+              }
+            } catch (fotoErr) {
+              console.error('Erro upload foto background:', fotoErr);
+            }
+          }
+        } catch {
+          remaining.push(item);
+        }
+      }
+
+      // Atualizar fila com itens que falharam
+      saveOfflineQueue(remaining);
+      setOfflineQueue(remaining);
+
+      // Atualizar dados em cache silenciosamente
+      if (relatorioSelecionado) {
+        const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
+        if (relAtualizado) {
+          setRelatorioSelecionado(relAtualizado);
+          saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+          const secAtualizada = relAtualizado.secoes?.find(s => s.id === secaoSelecionada?.id);
+          if (secAtualizada) {
+            setSecaoSelecionada(secAtualizada);
+            if (subsecaoSelecionada) {
+              const subAtualizada = secAtualizada.subsecoes?.find(sub => sub.id === subsecaoSelecionada.id);
+              if (subAtualizada) setSubsecaoSelecionada(subAtualizada);
+            }
           }
         }
       }
-      setTela('relatorio-pendencias');
     } catch (error) {
-      console.error('Erro ao criar pendência:', error);
-      showMsg('Erro ao criar pendência');
-    } finally {
-      setLoading(false);
+      console.error('Erro na sync background:', error);
     }
   };
 
@@ -854,42 +1069,106 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
   // ============================================
   // TELA 1: SELECIONAR CONTRATO
   // ============================================
-  // Banner de instalação PWA
-  const renderInstallBanner = () => {
-    if (!showInstallBanner) return null;
+  // Modal de configurações
+  const renderSettingsModal = () => {
+    if (!showSettings) return null;
 
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      || (window.navigator as any).standalone === true;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
     return (
-      <div className="mx-4 mt-3 mb-1 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-4 shadow-lg relative">
-        <button
-          onClick={dismissInstallBanner}
-          className="absolute top-2 right-2 text-white/60 hover:text-white p-1"
+      <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowSettings(false)}>
+        <div className="absolute inset-0 bg-black/60" />
+        <div
+          className="relative w-full max-w-md bg-gray-800 rounded-t-2xl p-5 pb-8 animate-in slide-in-from-bottom"
+          onClick={(e) => e.stopPropagation()}
         >
-          <X className="w-4 h-4" />
-        </button>
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-            <Smartphone className="w-6 h-6 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white font-bold text-sm">Instalar o App</p>
-            <p className="text-blue-100 text-xs">
-              {isIOS
-                ? 'Toque em "Compartilhar" e depois "Adicionar à Tela Inicial"'
-                : 'Adicione à tela inicial para acesso rápido'
-              }
-            </p>
-          </div>
+          {/* Handle bar */}
+          <div className="w-10 h-1 bg-gray-600 rounded-full mx-auto mb-5" />
+
+          {/* User info */}
+          {usuario && (
+            <div className="flex items-center gap-3 mb-5 bg-gray-700/50 rounded-xl p-3">
+              <div className="w-10 h-10 rounded-full bg-green-600/30 flex items-center justify-center flex-shrink-0">
+                <User className="w-5 h-5 text-green-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-semibold text-sm truncate">{usuario.nome}</p>
+                <p className="text-gray-400 text-xs truncate">{usuario.email}</p>
+                <p className="text-gray-500 text-xs">{usuario.cargo}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Install app option */}
+          {!isStandalone && (
+            <div className="mb-3">
+              <button
+                onClick={async () => {
+                  // Tentar prompt nativo primeiro
+                  const prompt = deferredPrompt || (window as any).__pwaInstallPrompt;
+                  if (prompt) {
+                    handleInstallApp();
+                    return;
+                  }
+                  // Fallback: tentar via getInstalledRelatedApps + re-trigger
+                  try {
+                    if ('serviceWorker' in navigator) {
+                      const reg = await navigator.serviceWorker.getRegistration();
+                      if (reg) await reg.update();
+                    }
+                    // Aguardar um pouco pelo evento
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    const newPrompt = (window as any).__pwaInstallPrompt;
+                    if (newPrompt) {
+                      newPrompt.prompt();
+                      await newPrompt.userChoice;
+                      (window as any).__pwaInstallPrompt = null;
+                      setDeferredPrompt(null);
+                      setShowSettings(false);
+                      return;
+                    }
+                  } catch {}
+                  // Se nada funcionou, mostrar instrução
+                  if (isIOS) {
+                    alert('Para instalar:\n\n1. Toque no botao Compartilhar (icone de seta pra cima) no Safari\n\n2. Toque em "Adicionar a Tela Inicial"');
+                  } else {
+                    alert('Para instalar:\n\n1. Toque no menu do navegador (3 pontinhos no canto superior)\n\n2. Toque em "Instalar aplicativo" ou "Adicionar a tela inicial"\n\nSe nao aparecer, tente fechar e abrir o navegador.');
+                  }
+                }}
+                className="w-full flex items-center gap-3 p-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] transition-all"
+              >
+                <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <Download className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-white font-bold text-base">Baixar App</p>
+                  <p className="text-blue-100 text-xs">Instalar na tela inicial</p>
+                </div>
+              </button>
+            </div>
+          )}
+
+          {/* Logout */}
+          {onLogout && (
+            <button
+              onClick={() => {
+                setShowSettings(false);
+                onLogout();
+              }}
+              className="w-full flex items-center gap-3 p-3 rounded-xl bg-red-600/20 hover:bg-red-600/30 active:scale-[0.98] transition-all"
+            >
+              <div className="w-9 h-9 rounded-lg bg-red-600/30 flex items-center justify-center flex-shrink-0">
+                <LogOut className="w-5 h-5 text-red-400" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-white font-medium text-sm">Sair do App</p>
+                <p className="text-red-300 text-xs">Encerrar sessão</p>
+              </div>
+            </button>
+          )}
         </div>
-        {!isIOS && deferredPrompt && (
-          <button
-            onClick={handleInstallApp}
-            className="w-full mt-3 bg-white text-blue-700 font-bold text-sm rounded-lg py-2.5 active:scale-[0.98] transition-all"
-          >
-            Instalar Agora
-          </button>
-        )}
       </div>
     );
   };
@@ -915,9 +1194,12 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
             </button>
           )}
           {mensagem && <span className="text-xs text-green-400 animate-pulse">{mensagem}</span>}
+          <button onClick={() => setShowSettings(true)} className="text-gray-300 hover:text-white p-1 flex-shrink-0">
+            <Settings className="w-5 h-5" />
+          </button>
         </div>
 
-        {renderInstallBanner()}
+        {renderSettingsModal()}
 
         <div className="p-4">
           <div className="relative mb-4">
@@ -1473,14 +1755,26 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
             {/* Foto Antes */}
             <div>
               <p className="text-xs text-gray-400 mb-1.5 font-medium">Foto Antes</p>
-              <div
-                onClick={() => fotoRef.current?.click()}
-                className="relative aspect-square bg-gray-800 border border-gray-700 rounded-lg overflow-hidden cursor-pointer hover:border-blue-500/30 transition-all"
-              >
+              <div className="relative aspect-square bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
                 {pendenciaSelecionada.foto_url ? (
-                  <img src={pendenciaSelecionada.foto_url} className="w-full h-full object-cover" />
+                  <>
+                    <img
+                      src={pendenciaSelecionada.foto_url}
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => fotoRef.current?.click()}
+                    />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteFoto('antes'); }}
+                      className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
+                  <div
+                    onClick={() => fotoRef.current?.click()}
+                    className="w-full h-full flex flex-col items-center justify-center text-gray-500 cursor-pointer"
+                  >
                     <Camera className="w-8 h-8 mb-1" />
                     <span className="text-xs">Tirar foto</span>
                   </div>
@@ -1508,14 +1802,26 @@ export function ColetaLite({ onVoltar }: ColetaLiteProps) {
             {/* Foto Depois */}
             <div>
               <p className="text-xs text-gray-400 mb-1.5 font-medium">Foto Depois</p>
-              <div
-                onClick={() => fotoDepoisRef.current?.click()}
-                className="relative aspect-square bg-gray-800 border border-gray-700 rounded-lg overflow-hidden cursor-pointer hover:border-green-500/30 transition-all"
-              >
+              <div className="relative aspect-square bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
                 {pendenciaSelecionada.foto_depois_url ? (
-                  <img src={pendenciaSelecionada.foto_depois_url} className="w-full h-full object-cover" />
+                  <>
+                    <img
+                      src={pendenciaSelecionada.foto_depois_url}
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => fotoDepoisRef.current?.click()}
+                    />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteFoto('depois'); }}
+                      className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
+                  <div
+                    onClick={() => fotoDepoisRef.current?.click()}
+                    className="w-full h-full flex flex-col items-center justify-center text-gray-500 cursor-pointer"
+                  >
                     <Camera className="w-8 h-8 mb-1" />
                     <span className="text-xs">Foto depois</span>
                   </div>
