@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,6 +72,13 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const [secoes, setSecoes] = useState<SecaoLocal[]>([]);
     const [isSaving, setIsSaving] = useState(false);
 
+    // Rastrear IDs originais do banco para detectar deleções
+    const originalIdsRef = useRef<{
+        secaoIds: string[];
+        subsecaoIds: string[];
+        pendenciaIds: string[];
+    }>({ secaoIds: [], subsecaoIds: [], pendenciaIds: [] });
+
     // Captura de voz
     const voice = useVoiceCapture();
     const [secaoAtivaParaVoz, setSecaoAtivaParaVoz] = useState<string | null>(null);
@@ -114,6 +121,20 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 })),
             }));
             setSecoes(secoesLocal);
+
+            // Salvar IDs originais para detectar deleções ao salvar
+            const secaoIds: string[] = [];
+            const subsecaoIds: string[] = [];
+            const pendenciaIds: string[] = [];
+            relatorio.secoes.forEach(s => {
+                if (s.id) secaoIds.push(s.id);
+                (s.pendencias || []).forEach(p => { if (p.id) pendenciaIds.push(p.id); });
+                (s.subsecoes || []).forEach(sub => {
+                    if (sub.id) subsecaoIds.push(sub.id);
+                    (sub.pendencias || []).forEach(p => { if (p.id) pendenciaIds.push(p.id); });
+                });
+            });
+            originalIdsRef.current = { secaoIds, subsecaoIds, pendenciaIds };
         }
     }, [relatorio]);
 
@@ -423,6 +444,57 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'previewDepois', URL.createObjectURL(file));
             handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'data_recebimento', dataRecebimento);
             handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'status', 'RECEBIDO');
+        }
+    };
+
+    // Excluir foto e salvar direto no banco (sem precisar salvar relatório)
+    const handleDeleteFotoImediato = async (
+        secaoTempId: string,
+        pendenciaTempId: string,
+        tipo: 'antes' | 'depois',
+        subsecaoTempId?: string
+    ) => {
+        const campo = tipo === 'antes' ? 'foto_url' : 'foto_depois_url';
+        const previewCampo = tipo === 'antes' ? 'preview' : 'previewDepois';
+        const fileCampo = tipo === 'antes' ? 'file' : 'fileDepois';
+
+        // Encontrar a pendência para pegar o ID do banco
+        let pendenciaId: string | undefined;
+        for (const s of secoes) {
+            if (s.tempId === secaoTempId) {
+                if (subsecaoTempId) {
+                    for (const sub of (s.subsecoes || [])) {
+                        if (sub.tempId === subsecaoTempId) {
+                            const p = sub.pendencias.find(p => p.tempId === pendenciaTempId);
+                            if (p) pendenciaId = p.id;
+                        }
+                    }
+                } else {
+                    const p = s.pendencias.find(p => p.tempId === pendenciaTempId);
+                    if (p) pendenciaId = p.id;
+                }
+            }
+        }
+
+        // Atualizar state local imediatamente
+        if (subsecaoTempId) {
+            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, previewCampo as keyof PendenciaLocal, null);
+            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, fileCampo as keyof PendenciaLocal, undefined);
+            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, campo as keyof PendenciaLocal, null);
+        } else {
+            handleUpdatePendencia(secaoTempId, pendenciaTempId, previewCampo as keyof PendenciaLocal, null);
+            handleUpdatePendencia(secaoTempId, pendenciaTempId, fileCampo as keyof PendenciaLocal, undefined);
+            handleUpdatePendencia(secaoTempId, pendenciaTempId, campo as keyof PendenciaLocal, null);
+        }
+
+        // Salvar no banco imediatamente (se a pendência já existe no banco)
+        if (pendenciaId) {
+            try {
+                await relatorioPendenciasService.updatePendencia(pendenciaId, { [campo]: null });
+                console.log(`✅ Foto ${tipo} removida do banco para pendência ${pendenciaId}`);
+            } catch (err) {
+                console.error('Erro ao remover foto do banco:', err);
+            }
         }
     };
 
@@ -811,6 +883,41 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 });
             }
 
+            // Deletar do banco pendências, subseções e seções que foram removidas
+            const currentPendenciaIds: string[] = [];
+            const currentSubsecaoIds: string[] = [];
+            const currentSecaoIds: string[] = [];
+            for (const s of secoes) {
+                if (s.id) currentSecaoIds.push(s.id);
+                for (const p of s.pendencias) { if (p.id) currentPendenciaIds.push(p.id); }
+                for (const sub of (s.subsecoes || [])) {
+                    if (sub.id) currentSubsecaoIds.push(sub.id);
+                    for (const p of sub.pendencias) { if (p.id) currentPendenciaIds.push(p.id); }
+                }
+            }
+
+            // Deletar pendências removidas
+            for (const id of originalIdsRef.current.pendenciaIds) {
+                if (!currentPendenciaIds.includes(id)) {
+                    console.log(`🗑️ Deletando pendência ${id} do banco`);
+                    await relatorioPendenciasService.deletePendencia(id);
+                }
+            }
+            // Deletar subseções removidas
+            for (const id of originalIdsRef.current.subsecaoIds) {
+                if (!currentSubsecaoIds.includes(id)) {
+                    console.log(`🗑️ Deletando subseção ${id} do banco`);
+                    await relatorioPendenciasService.deleteSubsecao(id);
+                }
+            }
+            // Deletar seções removidas
+            for (const id of originalIdsRef.current.secaoIds) {
+                if (!currentSecaoIds.includes(id)) {
+                    console.log(`🗑️ Deletando seção ${id} do banco`);
+                    await relatorioPendenciasService.deleteSecao(id);
+                }
+            }
+
             // Save secoes and pendencias
             for (const secao of secoes) {
                 let secaoId = secao.id;
@@ -1036,6 +1143,21 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         }),
                     }));
                     setSecoes(secoesAtualizadas);
+
+                    // Atualizar IDs originais com os novos dados do banco
+                    const newSecaoIds: string[] = [];
+                    const newSubsecaoIds: string[] = [];
+                    const newPendenciaIds: string[] = [];
+                    relatorioAtualizado.secoes.forEach(s => {
+                        if (s.id) newSecaoIds.push(s.id);
+                        (s.pendencias || []).forEach(p => { if (p.id) newPendenciaIds.push(p.id); });
+                        (s.subsecoes || []).forEach(sub => {
+                            if (sub.id) newSubsecaoIds.push(sub.id);
+                            (sub.pendencias || []).forEach(p => { if (p.id) newPendenciaIds.push(p.id); });
+                        });
+                    });
+                    originalIdsRef.current = { secaoIds: newSecaoIds, subsecaoIds: newSubsecaoIds, pendenciaIds: newPendenciaIds };
+
                     console.log('✅ Interface atualizada com dados do banco!');
                     console.log('📊 SEÇÕES FINAIS:', secoesAtualizadas);
                 }
@@ -1497,17 +1619,13 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                 <ImageIcon className="w-3.5 h-3.5" />
                                                                             </Button>
                                                                             <Button
-                                                                                onClick={() => {
-                                                                                    handleUpdatePendencia(secao.tempId, pendencia.tempId, 'preview', null);
-                                                                                    handleUpdatePendencia(secao.tempId, pendencia.tempId, 'file', undefined);
-                                                                                    handleUpdatePendencia(secao.tempId, pendencia.tempId, 'foto_url', null);
-                                                                                }}
+                                                                                onClick={() => handleDeleteFotoImediato(secao.tempId, pendencia.tempId, 'antes')}
                                                                                 variant="secondary"
                                                                                 size="sm"
-                                                                                className="h-7 w-7 p-0 bg-red-600 text-white shadow-xl hover:bg-red-500"
-                                                                                title="Remover foto"
+                                                                                className="h-8 w-8 p-0 bg-red-600 text-white shadow-xl hover:bg-red-500 border-2 border-red-400"
+                                                                                title="Remover foto antes"
                                                                             >
-                                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                                <Trash2 className="w-4 h-4" />
                                                                             </Button>
                                                                         </div>
                                                                     </div>
@@ -1575,17 +1693,13 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                 <ImageIcon className="w-3.5 h-3.5" />
                                                                             </Button>
                                                                             <Button
-                                                                                onClick={() => {
-                                                                                    handleUpdatePendencia(secao.tempId, pendencia.tempId, 'previewDepois', null);
-                                                                                    handleUpdatePendencia(secao.tempId, pendencia.tempId, 'fileDepois', undefined);
-                                                                                    handleUpdatePendencia(secao.tempId, pendencia.tempId, 'foto_depois_url', null);
-                                                                                }}
+                                                                                onClick={() => handleDeleteFotoImediato(secao.tempId, pendencia.tempId, 'depois')}
                                                                                 variant="secondary"
                                                                                 size="sm"
-                                                                                className="h-7 w-7 p-0 bg-red-600 text-white shadow-xl hover:bg-red-500"
-                                                                                title="Remover foto"
+                                                                                className="h-8 w-8 p-0 bg-red-600 text-white shadow-xl hover:bg-red-500 border-2 border-red-400"
+                                                                                title="Remover foto depois"
                                                                             >
-                                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                                <Trash2 className="w-4 h-4" />
                                                                             </Button>
                                                                         </div>
                                                                     </div>
@@ -1851,13 +1965,13 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                                         <Edit3 className="w-3.5 h-3.5" />
                                                                                                     </Button>
                                                                                                     <Button
-                                                                                                        onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'preview', undefined)}
+                                                                                                        onClick={() => handleDeleteFotoImediato(secao.tempId, pend.tempId, 'antes', subsecao.tempId)}
                                                                                                         variant="secondary"
                                                                                                         size="sm"
-                                                                                                        className="h-6 w-6 p-0 bg-red-600/80 hover:bg-red-600 text-white"
-                                                                                                        title="Remover foto"
+                                                                                                        className="h-8 w-8 p-0 bg-red-600 hover:bg-red-500 text-white border-2 border-red-400"
+                                                                                                        title="Remover foto antes"
                                                                                                     >
-                                                                                                        <X className="w-4 h-4" />
+                                                                                                        <Trash2 className="w-4 h-4" />
                                                                                                     </Button>
                                                                                                 </div>
                                                                                             </div>
@@ -1892,13 +2006,13 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                                         <Edit3 className="w-3.5 h-3.5" />
                                                                                                     </Button>
                                                                                                     <Button
-                                                                                                        onClick={() => handleUpdatePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId, 'previewDepois', undefined)}
+                                                                                                        onClick={() => handleDeleteFotoImediato(secao.tempId, pend.tempId, 'depois', subsecao.tempId)}
                                                                                                         variant="secondary"
                                                                                                         size="sm"
-                                                                                                        className="h-6 w-6 p-0 bg-red-600/80 hover:bg-red-600 text-white"
-                                                                                                        title="Remover foto"
+                                                                                                        className="h-8 w-8 p-0 bg-red-600 hover:bg-red-500 text-white border-2 border-red-400"
+                                                                                                        title="Remover foto depois"
                                                                                                     >
-                                                                                                        <X className="w-4 h-4" />
+                                                                                                        <Trash2 className="w-4 h-4" />
                                                                                                     </Button>
                                                                                                 </div>
                                                                                             </div>
