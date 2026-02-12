@@ -150,7 +150,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             // Adicionar pendência com texto literal
             if (subsecaoAtivaParaVoz) {
                 // Adicionar em subseção
-                setSecoes(secoes.map(s => {
+                setSecoes(prev => prev.map(s => {
                     if (s.tempId === secaoAtivaParaVoz) {
                         return {
                             ...s,
@@ -174,7 +174,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 }));
             } else {
                 // Adicionar em seção
-                setSecoes(secoes.map(s => {
+                setSecoes(prev => prev.map(s => {
                     if (s.tempId === secaoAtivaParaVoz) {
                         const newPendencia: PendenciaLocal = {
                             tempId: `pend-${Date.now()}`,
@@ -236,16 +236,16 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     };
 
     const handleUpdateSecao = (tempId: string, field: keyof SecaoLocal, value: any) => {
-        setSecoes(secoes.map(s => s.tempId === tempId ? ({ ...s, [field]: value } as SecaoLocal) : s));
+        setSecoes(prev => prev.map(s => s.tempId === tempId ? ({ ...s, [field]: value } as SecaoLocal) : s));
     };
 
     const handleDeleteSecao = (tempId: string) => {
-        setSecoes(secoes.filter(s => s.tempId !== tempId).map((s, idx) => ({ ...s, ordem: idx })));
+        setSecoes(prev => prev.filter(s => s.tempId !== tempId).map((s, idx) => ({ ...s, ordem: idx })));
     };
 
     // ==================== FUNÇÕES PARA SUBSEÇÕES ====================
     const handleAddSubsecao = (secaoTempId: string, tipo: 'MANUAL' | 'CONSTATACAO' = 'MANUAL') => {
-        setSecoes(secoes.map(s => {
+        setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
                 const ordem = (s.subsecoes || []).length;
                 const letra = String.fromCharCode(65 + ordem); // A, B, C...
@@ -267,7 +267,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     };
 
     const handleUpdateSubsecao = (secaoTempId: string, subsecaoTempId: string, field: keyof SubsecaoLocal, value: any) => {
-        setSecoes(secoes.map(s => {
+        setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
                 return {
                     ...s,
@@ -281,7 +281,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     };
 
     const handleDeleteSubsecao = (secaoTempId: string, subsecaoTempId: string) => {
-        setSecoes(secoes.map(s => {
+        setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
                 return {
                     ...s,
@@ -298,7 +298,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         const files = Array.from(e.target.files || []);
         if (files.length === 0) return;
 
-        setSecoes(secoes.map(s => {
+        setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
                 return {
                     ...s,
@@ -322,7 +322,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     };
 
     const handleRemoveFotoConstatacao = (secaoTempId: string, subsecaoTempId: string, index: number) => {
-        setSecoes(secoes.map(s => {
+        setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
                 return {
                     ...s,
@@ -354,7 +354,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     };
 
     const handleAddPendenciaSubsecao = (secaoTempId: string, subsecaoTempId: string) => {
-        setSecoes(secoes.map(s => {
+        setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
                 return {
                     ...s,
@@ -379,7 +379,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     };
 
     const handleUpdatePendenciaSubsecao = (secaoTempId: string, subsecaoTempId: string, pendenciaTempId: string, field: keyof PendenciaLocal, value: any) => {
-        setSecoes(secoes.map(s => {
+        setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
                 return {
                     ...s,
@@ -401,7 +401,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     };
 
     const handleDeletePendenciaSubsecao = (secaoTempId: string, subsecaoTempId: string, pendenciaTempId: string) => {
-        setSecoes(secoes.map(s => {
+        setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
                 return {
                     ...s,
@@ -476,16 +476,32 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             }
         }
 
-        // Atualizar state local imediatamente
-        if (subsecaoTempId) {
-            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, previewCampo as keyof PendenciaLocal, null);
-            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, fileCampo as keyof PendenciaLocal, undefined);
-            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, campo as keyof PendenciaLocal, null);
-        } else {
-            handleUpdatePendencia(secaoTempId, pendenciaTempId, previewCampo as keyof PendenciaLocal, null);
-            handleUpdatePendencia(secaoTempId, pendenciaTempId, fileCampo as keyof PendenciaLocal, undefined);
-            handleUpdatePendencia(secaoTempId, pendenciaTempId, campo as keyof PendenciaLocal, null);
-        }
+        // Atualizar state local imediatamente (todos os campos de uma vez)
+        setSecoes(prev => prev.map(s => {
+            if (s.tempId !== secaoTempId) return s;
+            if (subsecaoTempId) {
+                return {
+                    ...s,
+                    subsecoes: (s.subsecoes || []).map(sub => {
+                        if (sub.tempId !== subsecaoTempId) return sub;
+                        return {
+                            ...sub,
+                            pendencias: sub.pendencias.map(p => {
+                                if (p.tempId !== pendenciaTempId) return p;
+                                return { ...p, [previewCampo]: null, [fileCampo]: undefined, [campo]: null };
+                            }),
+                        };
+                    }),
+                };
+            }
+            return {
+                ...s,
+                pendencias: s.pendencias.map(p => {
+                    if (p.tempId !== pendenciaTempId) return p;
+                    return { ...p, [previewCampo]: null, [fileCampo]: undefined, [campo]: null };
+                }),
+            };
+        }));
 
         // Salvar no banco imediatamente (se a pendência já existe no banco)
         if (pendenciaId) {
@@ -501,7 +517,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     // ==================== FIM FUNÇÕES PARA SUBSEÇÕES ====================
 
     const handleAddPendencia = (secaoTempId: string) => {
-        setSecoes(secoes.map(s => {
+        setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
                 const newPendencia: PendenciaLocal = {
                     tempId: `pend-${Date.now()}`,
@@ -520,20 +536,13 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const handleUpdatePendencia = (secaoTempId: string, pendenciaTempId: string, field: keyof PendenciaLocal, value: any) => {
         console.log(`🔧 handleUpdatePendencia - campo: ${field}, valor:`, value);
 
-        setSecoes(secoes.map(s => {
+        setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
                 return {
                     ...s,
                     pendencias: s.pendencias.map(p => {
                         if (p.tempId === pendenciaTempId) {
-                            const updated = { ...p, [field]: value };
-                            console.log(`   ✅ Pendência atualizada:`, {
-                                tempId: updated.tempId,
-                                fileDepois: updated.fileDepois?.name || 'n/a',
-                                previewDepois: updated.previewDepois || 'n/a',
-                                foto_depois_url: updated.foto_depois_url || 'n/a',
-                            });
-                            return updated;
+                            return { ...p, [field]: value };
                         }
                         return p;
                     }),
@@ -544,7 +553,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     };
 
     const handleDeletePendencia = (secaoTempId: string, pendenciaTempId: string) => {
-        setSecoes(secoes.map(s => {
+        setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
                 return {
                     ...s,
@@ -574,7 +583,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             }
 
             const blobUrl = URL.createObjectURL(file);
-            setSecoes(secoes.map(s => {
+            setSecoes(prev => prev.map(s => {
                 if (s.tempId === secaoTempId) {
                     return {
                         ...s,
@@ -640,7 +649,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
 
         // Se for constatação
         if (isConstatacao && subsecaoTempId !== undefined && constatacaoIndex !== undefined) {
-            setSecoes(secoes.map(s => {
+            setSecoes(prev => prev.map(s => {
                 if (s.tempId === secaoTempId) {
                     return {
                         ...s,
@@ -666,7 +675,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             }));
         } else if (subsecaoTempId) {
             // Atualizar imagem em subseção (pendências)
-            setSecoes(secoes.map(s => {
+            setSecoes(prev => prev.map(s => {
                 if (s.tempId === secaoTempId) {
                     return {
                         ...s,
@@ -694,7 +703,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             }));
         } else {
             // Atualizar imagem em seção
-            setSecoes(secoes.map(s => {
+            setSecoes(prev => prev.map(s => {
                 if (s.tempId === secaoTempId) {
                     return {
                         ...s,
@@ -735,7 +744,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             preview: URL.createObjectURL(file),
         }));
 
-        setSecoes(secoes.map(s => {
+        setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
                 return { ...s, pendencias: [...s.pendencias, ...newPendencias] };
             }
@@ -764,7 +773,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             preview: URL.createObjectURL(file),
         }));
 
-        setSecoes(secoes.map(s => {
+        setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
                 return {
                     ...s,
