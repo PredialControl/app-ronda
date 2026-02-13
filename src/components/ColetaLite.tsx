@@ -250,6 +250,43 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   const novaPendFotoRef = useRef<HTMLInputElement>(null);
   const novaPendFotoGaleriaRef = useRef<HTMLInputElement>(null);
 
+  // Mapa de fotos offline: pendenciaId -> { foto_url?: base64, foto_depois_url?: base64 }
+  const [offlineFotosMap, setOfflineFotosMap] = useState<Record<string, { foto_url?: string; foto_depois_url?: string }>>({});
+
+  // Carregar fotos offline do IndexedDB
+  const loadOfflineFotos = useCallback(async () => {
+    try {
+      const fotos = await getOfflineFotos();
+      const map: Record<string, { foto_url?: string; foto_depois_url?: string }> = {};
+      for (const foto of fotos) {
+        if (foto.pendenciaId && foto.base64) {
+          const campo = foto.campo || 'foto_url';
+          if (!map[foto.pendenciaId]) map[foto.pendenciaId] = {};
+          if (campo === 'foto_depois_url') {
+            map[foto.pendenciaId].foto_depois_url = foto.base64;
+          } else {
+            map[foto.pendenciaId].foto_url = foto.base64;
+          }
+        }
+      }
+      // Também carregar fotos de itens offline (pendencia_foto_xxx)
+      for (const foto of fotos) {
+        if (foto.key?.startsWith('pendencia_foto_') && foto.base64 && foto.pendenciaId) {
+          if (!map[foto.pendenciaId]) map[foto.pendenciaId] = {};
+          map[foto.pendenciaId].foto_url = foto.base64;
+        }
+      }
+      setOfflineFotosMap(map);
+    } catch (e) {
+      console.warn('Erro ao carregar fotos offline:', e);
+    }
+  }, []);
+
+  // Recarregar fotos offline ao trocar de tela ou relatório
+  useEffect(() => {
+    loadOfflineFotos();
+  }, [tela, relatorioSelecionado]);
+
   // PWA Install prompt
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -587,6 +624,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
 
     // Se offline, parar aqui (sync vai enviar depois)
     if (!navigator.onLine) {
+      loadOfflineFotos();
       showMsg(`Foto ${tipo} salva offline!`);
       setUploading(false);
       return;
@@ -613,8 +651,9 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
 
       setPendenciaSelecionada(prev => prev ? { ...prev, [campo]: url } : null);
 
-      // Upload + DB confirmados => remover do IndexedDB
+      // Upload + DB confirmados => remover do IndexedDB e do mapa
       try { await deleteOfflineFoto(fotoKey); } catch {}
+      loadOfflineFotos();
 
       showMsg(`Foto ${tipo} salva!`);
 
@@ -629,6 +668,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
     } catch (error) {
       console.error('Erro ao fazer upload:', error);
       // Foto já está segura no IndexedDB, sync vai enviar depois
+      loadOfflineFotos();
       showMsg(`Foto salva localmente! Envia quando tiver sinal.`);
     } finally {
       setUploading(false);
@@ -939,6 +979,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       setNovaPendFoto(null);
       setNovaPendFotoPreview(null);
       setLoading(false);
+      loadOfflineFotos();
 
       // Se online, sincronizar em background (sem bloquear UI)
       if (navigator.onLine) {
@@ -1029,7 +1070,16 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
 
   // Navegar para editar pendência
   const abrirEditarPendencia = (pendencia: RelatorioPendencia) => {
-    setPendenciaSelecionada(pendencia);
+    // Injetar fotos offline se a pendência não tem URL do Supabase
+    const offlineFoto = offlineFotosMap[pendencia.id];
+    const pendComFoto = { ...pendencia };
+    if (!pendComFoto.foto_url && offlineFoto?.foto_url) {
+      pendComFoto.foto_url = offlineFoto.foto_url;
+    }
+    if (!pendComFoto.foto_depois_url && offlineFoto?.foto_depois_url) {
+      pendComFoto.foto_depois_url = offlineFoto.foto_depois_url;
+    }
+    setPendenciaSelecionada(pendComFoto);
     setEditLocal(pendencia.local || '');
     setEditDescricao(pendencia.descricao || '');
     setEditStatus(pendencia.status || 'PENDENTE');
@@ -1750,8 +1800,8 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                 <div key={item.id} className="bg-gray-800 border border-orange-500/30 rounded-lg overflow-hidden opacity-80">
                   <div className="flex">
                     <div className="w-20 h-20 flex-shrink-0 bg-gray-700 flex items-center justify-center">
-                      {item.foto_base64 ? (
-                        <img src={item.foto_base64} className="w-full h-full object-cover" />
+                      {(offlineFotosMap[item.id]?.foto_url || (item.foto_base64 && item.foto_base64.startsWith('data:'))) ? (
+                        <img src={offlineFotosMap[item.id]?.foto_url || item.foto_base64!} className="w-full h-full object-cover" />
                       ) : (
                         <WifiOff className="w-5 h-5 text-orange-400" />
                       )}
@@ -1786,8 +1836,8 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                     </div>
                     {/* Foto thumbnail */}
                     <div className="w-16 h-16 flex-shrink-0 bg-gray-700">
-                      {pend.foto_url ? (
-                        <img src={pend.foto_url} className="w-full h-full object-cover" />
+                      {(pend.foto_url || offlineFotosMap[pend.id]?.foto_url) ? (
+                        <img src={pend.foto_url || offlineFotosMap[pend.id]?.foto_url} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <ImageIcon className="w-5 h-5 text-gray-500" />
