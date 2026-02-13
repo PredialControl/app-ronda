@@ -425,8 +425,29 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const handleFotoChangeSubsecao = (secaoTempId: string, subsecaoTempId: string, pendenciaTempId: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'file', file);
-            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'preview', URL.createObjectURL(file));
+            const blobUrl = URL.createObjectURL(file);
+            setSecoes(prev => prev.map(s => {
+                if (s.tempId === secaoTempId) {
+                    return {
+                        ...s,
+                        subsecoes: (s.subsecoes || []).map(sub => {
+                            if (sub.tempId === subsecaoTempId) {
+                                return {
+                                    ...sub,
+                                    pendencias: sub.pendencias.map(p => {
+                                        if (p.tempId === pendenciaTempId) {
+                                            return { ...p, file, preview: blobUrl };
+                                        }
+                                        return p;
+                                    }),
+                                };
+                            }
+                            return sub;
+                        }),
+                    };
+                }
+                return s;
+            }));
         }
     };
 
@@ -440,10 +461,35 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 return;
             }
 
-            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'fileDepois', file);
-            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'previewDepois', URL.createObjectURL(file));
-            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'data_recebimento', dataRecebimento);
-            handleUpdatePendenciaSubsecao(secaoTempId, subsecaoTempId, pendenciaTempId, 'status', 'RECEBIDO');
+            const blobUrl = URL.createObjectURL(file);
+            setSecoes(prev => prev.map(s => {
+                if (s.tempId === secaoTempId) {
+                    return {
+                        ...s,
+                        subsecoes: (s.subsecoes || []).map(sub => {
+                            if (sub.tempId === subsecaoTempId) {
+                                return {
+                                    ...sub,
+                                    pendencias: sub.pendencias.map(p => {
+                                        if (p.tempId === pendenciaTempId) {
+                                            return {
+                                                ...p,
+                                                fileDepois: file,
+                                                previewDepois: blobUrl,
+                                                data_recebimento: dataRecebimento,
+                                                status: 'RECEBIDO' as const,
+                                            };
+                                        }
+                                        return p;
+                                    }),
+                                };
+                            }
+                            return sub;
+                        }),
+                    };
+                }
+                return s;
+            }));
         }
     };
 
@@ -567,8 +613,21 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const handleFotoChange = (secaoTempId: string, pendenciaTempId: string, e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            handleUpdatePendencia(secaoTempId, pendenciaTempId, 'file', file);
-            handleUpdatePendencia(secaoTempId, pendenciaTempId, 'preview', URL.createObjectURL(file));
+            const blobUrl = URL.createObjectURL(file);
+            setSecoes(prev => prev.map(s => {
+                if (s.tempId === secaoTempId) {
+                    return {
+                        ...s,
+                        pendencias: s.pendencias.map(p => {
+                            if (p.tempId === pendenciaTempId) {
+                                return { ...p, file, preview: blobUrl };
+                            }
+                            return p;
+                        }),
+                    };
+                }
+                return s;
+            }));
         }
     };
 
@@ -965,6 +1024,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             ordem: secao.ordem,
                         });
                         secaoId = newSecao.id;
+                        secao.id = newSecao.id;
                     } catch (err: any) {
                         // Se der erro de coluna não encontrada, tentar sem tem_subsecoes
                         if (err?.code === 'PGRST204') {
@@ -1018,10 +1078,12 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                     if (pendencia.id) {
                         await relatorioPendenciasService.updatePendencia(pendencia.id, pendenciaData);
                     } else {
-                        await relatorioPendenciasService.createPendencia({
+                        const novaPend = await relatorioPendenciasService.createPendencia({
                             secao_id: secaoId,
                             ...pendenciaData,
                         });
+                        // Atualizar ID no state para evitar duplicação se o save falhar e for retentado
+                        pendencia.id = novaPend.id;
                     }
                 }
 
@@ -1059,6 +1121,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 descricao_constatacao: subsecao.tipo === 'CONSTATACAO' ? subsecao.descricao_constatacao : undefined,
                             });
                             subsecaoId = newSubsecao.id;
+                            subsecao.id = newSubsecao.id;
                         }
 
                         // Salvar pendências da subseção (só para tipo MANUAL)
@@ -1099,10 +1162,12 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             if (pendencia.id) {
                                 await relatorioPendenciasService.updatePendencia(pendencia.id, pendenciaData);
                             } else {
-                                await relatorioPendenciasService.createPendencia({
+                                const novaPend = await relatorioPendenciasService.createPendencia({
                                     secao_id: secaoId,
                                     ...pendenciaData,
                                 });
+                                // Atualizar ID no state para evitar duplicação se o save falhar e for retentado
+                                pendencia.id = novaPend.id;
                             }
                         }
                         }

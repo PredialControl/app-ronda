@@ -203,7 +203,9 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   const [uploadingFoto, setUploadingFoto] = useState(false);
   const [uploadingFotoDepois, setUploadingFotoDepois] = useState(false);
   const fotoRef = useRef<HTMLInputElement>(null);
+  const fotoGaleriaRef = useRef<HTMLInputElement>(null);
   const fotoDepoisRef = useRef<HTMLInputElement>(null);
+  const fotoDepoisGaleriaRef = useRef<HTMLInputElement>(null);
 
   // Novo relatório
   const [novoRelTitulo, setNovoRelTitulo] = useState('');
@@ -220,6 +222,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   const [novaPendFoto, setNovaPendFoto] = useState<File | null>(null);
   const [novaPendFotoPreview, setNovaPendFotoPreview] = useState<string | null>(null);
   const novaPendFotoRef = useRef<HTMLInputElement>(null);
+  const novaPendFotoGaleriaRef = useRef<HTMLInputElement>(null);
 
   // PWA Install prompt
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -1769,6 +1772,12 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); fotoGaleriaRef.current?.click(); }}
+                      className="absolute bottom-1.5 right-1.5 w-7 h-7 rounded-full bg-gray-700 text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" />
+                    </button>
                   </>
                 ) : (
                   <div
@@ -1777,6 +1786,12 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                   >
                     <Camera className="w-8 h-8 mb-1" />
                     <span className="text-xs">Tirar foto</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); fotoGaleriaRef.current?.click(); }}
+                      className="mt-2 flex items-center gap-1 text-[10px] text-gray-500 bg-gray-800 border border-gray-600 rounded px-2 py-0.5"
+                    >
+                      <ImageIcon className="w-3 h-3" /> Galeria
+                    </button>
                   </div>
                 )}
                 {uploadingFoto && (
@@ -1790,6 +1805,17 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                 type="file"
                 accept="image/*"
                 capture="environment"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleUploadFoto(file, 'antes');
+                  e.target.value = '';
+                }}
+              />
+              <input
+                ref={fotoGaleriaRef}
+                type="file"
+                accept="image/*"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -1816,6 +1842,12 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); fotoDepoisGaleriaRef.current?.click(); }}
+                      className="absolute bottom-1.5 right-1.5 w-7 h-7 rounded-full bg-gray-700 text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" />
+                    </button>
                   </>
                 ) : (
                   <div
@@ -1824,6 +1856,12 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                   >
                     <Camera className="w-8 h-8 mb-1" />
                     <span className="text-xs">Foto depois</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); fotoDepoisGaleriaRef.current?.click(); }}
+                      className="mt-2 flex items-center gap-1 text-[10px] text-gray-500 bg-gray-800 border border-gray-600 rounded px-2 py-0.5"
+                    >
+                      <ImageIcon className="w-3 h-3" /> Galeria
+                    </button>
                   </div>
                 )}
                 {uploadingFotoDepois && (
@@ -1837,6 +1875,17 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                 type="file"
                 accept="image/*"
                 capture="environment"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleUploadFoto(file, 'depois');
+                  e.target.value = '';
+                }}
+              />
+              <input
+                ref={fotoDepoisGaleriaRef}
+                type="file"
+                accept="image/*"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -2164,11 +2213,25 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
               className="relative w-full aspect-video bg-gray-800 border border-gray-700 rounded-lg overflow-hidden cursor-pointer hover:border-blue-500/30 transition-all"
             >
               {novaPendFotoPreview ? (
-                <img src={novaPendFotoPreview} className="w-full h-full object-cover" />
+                <>
+                  <img src={novaPendFotoPreview} className="w-full h-full object-cover" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); novaPendFotoGaleriaRef.current?.click(); }}
+                    className="absolute bottom-1.5 right-1.5 w-7 h-7 rounded-full bg-gray-700 text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5" />
+                  </button>
+                </>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
                   <Camera className="w-10 h-10 mb-2" />
-                  <span className="text-sm">Tirar foto ou escolher</span>
+                  <span className="text-sm">Tirar foto</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); novaPendFotoGaleriaRef.current?.click(); }}
+                    className="mt-2 flex items-center gap-1 text-[10px] text-gray-500 bg-gray-800 border border-gray-600 rounded px-2 py-0.5"
+                  >
+                    <ImageIcon className="w-3 h-3" /> Galeria
+                  </button>
                 </div>
               )}
             </div>
@@ -2177,6 +2240,20 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
               type="file"
               accept="image/*"
               capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setNovaPendFoto(file);
+                  setNovaPendFotoPreview(URL.createObjectURL(file));
+                }
+                e.target.value = '';
+              }}
+            />
+            <input
+              ref={novaPendFotoGaleriaRef}
+              type="file"
+              accept="image/*"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
