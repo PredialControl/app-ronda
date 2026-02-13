@@ -110,6 +110,21 @@ function base64ToFile(base64: string, filename: string): File {
   return new File([ab], filename, { type: mime });
 }
 
+// Salvar foto na galeria/downloads do celular
+function saveToGallery(base64: string, filename: string) {
+  try {
+    const a = document.createElement('a');
+    a.href = base64;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 200);
+  } catch (e) {
+    console.warn('Erro ao salvar na galeria:', e);
+  }
+}
+
 // ============================================
 // IndexedDB para fotos offline (localStorage é pequeno demais)
 // ============================================
@@ -520,7 +535,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
     setTimeout(() => setMensagem(null), 3000);
   };
 
-  // Upload de foto (com fallback offline via IndexedDB)
+  // Upload de foto (SEMPRE salva no IndexedDB primeiro, depois tenta upload)
   const handleUploadFoto = async (file: File, tipo: 'antes' | 'depois') => {
     if (!pendenciaSelecionada || !relatorioSelecionado) return;
 
@@ -542,38 +557,45 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
     // Mostrar preview imediatamente
     setPendenciaSelecionada(prev => prev ? { ...prev, [campo]: base64 } : null);
 
-    // Se offline, salvar no IndexedDB para sync depois
+    // Salvar na galeria do celular
+    const ts = Date.now();
+    saveToGallery(base64, `ronda_${tipo}_${ts}.jpg`);
+
+    // SEMPRE salvar no IndexedDB primeiro (proteção contra perda de sinal)
+    const fotoKey = `foto_${pendenciaSelecionada.id}_${tipo}_${ts}`;
+    try {
+      await saveOfflineFoto(fotoKey, {
+        pendenciaId: pendenciaSelecionada.id,
+        relatorioId: relatorioSelecionado.id,
+        campo,
+        base64,
+      });
+    } catch (e) {
+      console.error('Erro ao salvar foto no IndexedDB:', e);
+    }
+
+    // Se offline, parar aqui (sync vai enviar depois)
     if (!navigator.onLine) {
-      try {
-        const fotoKey = `foto_${pendenciaSelecionada.id}_${tipo}_${Date.now()}`;
-        await saveOfflineFoto(fotoKey, {
-          pendenciaId: pendenciaSelecionada.id,
-          relatorioId: relatorioSelecionado.id,
-          campo,
-          base64,
-        });
-        showMsg(`Foto ${tipo} salva offline!`);
-      } catch (e) {
-        console.error('Erro ao salvar foto offline:', e);
-        showMsg('Erro ao salvar foto offline');
-      } finally {
-        setUploading(false);
-      }
+      showMsg(`Foto ${tipo} salva offline!`);
+      setUploading(false);
       return;
     }
 
-    // Online: upload direto
+    // Online: tentar upload
     try {
-      const timestamp = Date.now();
-      const fotoFile = base64ToFile(base64, `foto_${tipo}_${timestamp}.jpg`);
+      const fotoFile = base64ToFile(base64, `foto_${tipo}_${ts}.jpg`);
       const url = await relatorioPendenciasService.uploadFoto(
         fotoFile,
         relatorioSelecionado.id,
-        `${pendenciaSelecionada.id}-${tipo}-${timestamp}`
+        `${pendenciaSelecionada.id}-${tipo}-${ts}`
       );
 
       await relatorioPendenciasService.updatePendencia(pendenciaSelecionada.id, { [campo]: url });
       setPendenciaSelecionada(prev => prev ? { ...prev, [campo]: url } : null);
+
+      // Upload + DB confirmados => remover do IndexedDB
+      try { await deleteOfflineFoto(fotoKey); } catch {}
+
       showMsg(`Foto ${tipo} salva!`);
 
       // Atualizar cache em background
@@ -586,19 +608,8 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       } catch {}
     } catch (error) {
       console.error('Erro ao fazer upload:', error);
-      // Fallback: salvar no IndexedDB
-      try {
-        const fotoKey = `foto_${pendenciaSelecionada.id}_${tipo}_${Date.now()}`;
-        await saveOfflineFoto(fotoKey, {
-          pendenciaId: pendenciaSelecionada.id,
-          relatorioId: relatorioSelecionado.id,
-          campo,
-          base64,
-        });
-        showMsg(`Foto ${tipo} salva offline (sem sinal)`);
-      } catch {
-        showMsg(`Erro ao enviar foto ${tipo}`);
-      }
+      // Foto já está no IndexedDB, sync vai enviar depois
+      showMsg(`Foto ${tipo} salva offline (sem sinal)`);
     } finally {
       setUploading(false);
     }
@@ -2241,11 +2252,15 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
               accept="image/*"
               capture="environment"
               className="hidden"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (file) {
                   setNovaPendFoto(file);
                   setNovaPendFotoPreview(URL.createObjectURL(file));
+                  try {
+                    const b64 = await compressImage(file, 800, 0.6);
+                    saveToGallery(b64, `ronda_nova_${Date.now()}.jpg`);
+                  } catch {}
                 }
                 e.target.value = '';
               }}
@@ -2255,11 +2270,15 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => {
+              onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (file) {
                   setNovaPendFoto(file);
                   setNovaPendFotoPreview(URL.createObjectURL(file));
+                  try {
+                    const b64 = await compressImage(file, 800, 0.6);
+                    saveToGallery(b64, `ronda_nova_${Date.now()}.jpg`);
+                  } catch {}
                 }
                 e.target.value = '';
               }}
