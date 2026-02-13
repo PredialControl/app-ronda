@@ -456,126 +456,155 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
     }
   };
 
-  // Sincronizar fila offline
+  // Sincronizar fila offline (com lock para evitar duplicação)
+  const syncLockRef = useRef(false);
   const syncOfflineQueue = async () => {
-    if (syncing || !navigator.onLine) return;
-    const queue = getOfflineQueue();
-    if (queue.length === 0) return;
+    if (syncLockRef.current || !navigator.onLine) return;
+    syncLockRef.current = true;
 
-    setSyncing(true);
-    showMsg(`Sincronizando ${queue.length} pendência(s)...`);
-    const remaining: OfflinePendencia[] = [];
-
-    for (const item of queue) {
-      try {
-        const novaPend: any = {
-          secao_id: item.secao_id,
-          subsecao_id: item.subsecao_id,
-          ordem: item.ordem,
-          local: item.local,
-          descricao: item.descricao,
-          foto_url: null,
-          foto_depois_url: null,
-          status: item.status,
-        };
-
-        const criada = await relatorioPendenciasService.createPendencia(novaPend);
-
-        // Upload foto se tiver (buscar do IndexedDB pela referência)
-        if (item.foto_base64 && criada.id) {
-          try {
-            // foto_base64 agora pode ser referência ao IndexedDB ou base64 direto (legado)
-            let base64Data = item.foto_base64;
-            if (item.foto_base64.startsWith('pendencia_foto_')) {
-              // É referência ao IndexedDB
-              const fotos = await getOfflineFotos();
-              const fotoEntry = fotos.find(f => f.key === item.foto_base64);
-              if (fotoEntry?.base64) {
-                base64Data = fotoEntry.base64;
-                await deleteOfflineFoto(item.foto_base64);
-              } else {
-                base64Data = '';
-              }
-            }
-            if (base64Data && base64Data.startsWith('data:')) {
-              const file = base64ToFile(base64Data, `foto_${criada.id}.jpg`);
-              const url = await relatorioPendenciasService.uploadFoto(file, item.relatorio_id, criada.id);
-              await relatorioPendenciasService.updatePendencia(criada.id, { foto_url: url });
-            }
-          } catch (fotoErr) {
-            console.error('Erro upload foto da pendência:', fotoErr);
-          }
-        }
-      } catch (e) {
-        console.error('Erro ao sincronizar pendência offline:', e);
-        remaining.push(item);
-      }
-    }
-
-    saveOfflineQueue(remaining);
-    setOfflineQueue(remaining);
-
-    // Sync fotos offline do IndexedDB
     try {
-      const offlineFotos = await getOfflineFotos();
-      for (const foto of offlineFotos) {
+      // Ler fila FRESCA do localStorage (evita processar itens já removidos)
+      const queue = getOfflineQueue();
+      if (queue.length === 0) {
+        setOfflineQueue([]);
+        // Mesmo sem fila, sync fotos órfãs do IndexedDB
+        await syncOrphanFotos();
+        syncLockRef.current = false;
+        return;
+      }
+
+      setSyncing(true);
+      showMsg(`Sincronizando ${queue.length} pendência(s)...`);
+      const remaining: OfflinePendencia[] = [];
+
+      for (const item of queue) {
         try {
-          if (foto.base64 && foto.pendenciaId && foto.relatorioId) {
-            const file = base64ToFile(foto.base64, `foto_${foto.pendenciaId}.jpg`);
-            const url = await relatorioPendenciasService.uploadFoto(file, foto.relatorioId, `${foto.pendenciaId}-sync-${Date.now()}`);
+          const novaPend: any = {
+            secao_id: item.secao_id,
+            subsecao_id: item.subsecao_id,
+            ordem: item.ordem,
+            local: item.local,
+            descricao: item.descricao,
+            foto_url: null,
+            foto_depois_url: null,
+            status: item.status,
+          };
+
+          const criada = await relatorioPendenciasService.createPendencia(novaPend);
+
+          // Upload foto se tiver
+          if (item.foto_base64 && criada.id) {
             try {
-              await relatorioPendenciasService.updatePendencia(foto.pendenciaId, { [foto.campo]: url });
-            } catch (updateErr) {
-              console.error('Erro ao atualizar pendencia com foto (upload OK):', updateErr);
+              let base64Data = item.foto_base64;
+              let fotoKeyToDelete: string | null = null;
+              if (item.foto_base64.startsWith('pendencia_foto_')) {
+                const fotos = await getOfflineFotos();
+                const fotoEntry = fotos.find(f => f.key === item.foto_base64);
+                if (fotoEntry?.base64) {
+                  base64Data = fotoEntry.base64;
+                  fotoKeyToDelete = item.foto_base64;
+                } else {
+                  base64Data = '';
+                }
+              }
+              if (base64Data && base64Data.startsWith('data:')) {
+                const file = base64ToFile(base64Data, `foto_${criada.id}.jpg`);
+                const url = await relatorioPendenciasService.uploadFoto(file, item.relatorio_id, criada.id);
+                await relatorioPendenciasService.updatePendencia(criada.id, { foto_url: url });
+                // Só deletar APÓS upload+DB confirmados
+                if (fotoKeyToDelete) await deleteOfflineFoto(fotoKeyToDelete);
+              }
+            } catch (fotoErr) {
+              console.error('Erro upload foto da pendência:', fotoErr);
             }
-            // Sempre remover do IndexedDB apos upload para evitar duplicatas
-            await deleteOfflineFoto(foto.key);
           }
+
+          // Item processado com sucesso - salvar fila atualizada IMEDIATAMENTE
+          // (evita reprocessar se o próximo item falhar)
+          const currentQueue = getOfflineQueue().filter(q => q.id !== item.id);
+          saveOfflineQueue(currentQueue);
         } catch (e) {
-          console.error('Erro ao sync foto offline:', e);
+          console.error('Erro ao sincronizar pendência offline:', e);
+          remaining.push(item);
         }
       }
-    } catch {}
 
-    // Limpar fotos antigas do localStorage (migração)
-    try {
-      const oldKeys = Object.keys(localStorage).filter(k => k.startsWith('foto_offline_'));
-      for (const key of oldKeys) {
-        try {
-          const fotoData = JSON.parse(localStorage.getItem(key) || '');
-          if (fotoData.base64 && fotoData.pendenciaId && fotoData.relatorioId) {
-            const file = base64ToFile(fotoData.base64, `foto_${fotoData.pendenciaId}.jpg`);
-            const url = await relatorioPendenciasService.uploadFoto(file, fotoData.relatorioId, `${fotoData.pendenciaId}-sync-${Date.now()}`);
-            await relatorioPendenciasService.updatePendencia(fotoData.pendenciaId, { [fotoData.campo]: url });
-          }
-          localStorage.removeItem(key);
+      // Atualizar state com itens que falharam
+      const finalQueue = getOfflineQueue();
+      setOfflineQueue(finalQueue);
+
+      // Sync fotos órfãs do IndexedDB (de uploads que falharam)
+      await syncOrphanFotos();
+
+      // Limpar fotos antigas do localStorage (migração)
+      try {
+        const oldKeys = Object.keys(localStorage).filter(k => k.startsWith('foto_offline_'));
+        for (const key of oldKeys) {
+          try {
+            const fotoData = JSON.parse(localStorage.getItem(key) || '');
+            if (fotoData.base64 && fotoData.pendenciaId && fotoData.relatorioId) {
+              const file = base64ToFile(fotoData.base64, `foto_${fotoData.pendenciaId}.jpg`);
+              const url = await relatorioPendenciasService.uploadFoto(file, fotoData.relatorioId, `${fotoData.pendenciaId}-sync-${Date.now()}`);
+              await relatorioPendenciasService.updatePendencia(fotoData.pendenciaId, { [fotoData.campo]: url });
+            }
+            localStorage.removeItem(key);
         } catch (e) {
           console.error('Erro ao sync foto localStorage antigo:', e);
         }
       }
     } catch {}
 
-    if (remaining.length === 0) {
-      showMsg('Tudo sincronizado!');
-    } else {
-      showMsg(`${remaining.length} pendência(s) ainda na fila`);
-    }
+      const queueLeft = getOfflineQueue();
+      if (queueLeft.length === 0) {
+        showMsg('Tudo sincronizado!');
+      } else {
+        showMsg(`${queueLeft.length} pendência(s) ainda na fila`);
+      }
 
-    // Recarregar dados
-    if (relatorioSelecionado) {
-      try {
-        const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
-        if (relAtualizado) {
-          setRelatorioSelecionado(relAtualizado);
-          saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+      // Recarregar dados
+      if (relatorioSelecionado) {
+        try {
+          const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
+          if (relAtualizado) {
+            setRelatorioSelecionado(relAtualizado);
+            saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+          }
+        } catch {}
+      }
+      if (contratoSelecionado) {
+        loadRelatorios(contratoSelecionado.id);
+      }
+
+      loadOfflineFotos();
+      setSyncing(false);
+    } finally {
+      syncLockRef.current = false;
+    }
+  };
+
+  // Sync fotos órfãs do IndexedDB (fotos de uploads que falharam, não de pendências offline)
+  const syncOrphanFotos = async () => {
+    try {
+      const offlineFotos = await getOfflineFotos();
+      // Filtrar: só fotos que NÃO são de pendências offline (pendencia_foto_xxx)
+      // Fotos de handleUploadFoto têm key tipo "foto_{pendenciaId}_{tipo}_{timestamp}"
+      const fotosParaSync = offlineFotos.filter(f =>
+        f.base64 && f.pendenciaId && f.relatorioId &&
+        !f.key?.startsWith('pendencia_foto_') &&
+        !f.pendenciaId.startsWith('offline_')
+      );
+      for (const foto of fotosParaSync) {
+        try {
+          const file = base64ToFile(foto.base64, `foto_${foto.pendenciaId}.jpg`);
+          const url = await relatorioPendenciasService.uploadFoto(file, foto.relatorioId, `${foto.pendenciaId}-sync-${Date.now()}`);
+          await relatorioPendenciasService.updatePendencia(foto.pendenciaId, { [foto.campo]: url });
+          // Só deletar APÓS confirmar upload+DB
+          await deleteOfflineFoto(foto.key);
+        } catch (e) {
+          console.error('Erro ao sync foto offline:', e);
         }
-      } catch {}
-    }
-    if (contratoSelecionado) {
-      loadRelatorios(contratoSelecionado.id);
-    }
-
-    setSyncing(false);
+      }
+    } catch {}
   };
 
   const showMsg = (msg: string) => {
@@ -992,80 +1021,10 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
     }
   };
 
-  // Sincronizar fila offline em background (não bloqueia UI)
-  const syncOfflineInBackground = async (queue: OfflinePendencia[]) => {
-    try {
-      const remaining: OfflinePendencia[] = [];
-      for (const item of queue) {
-        try {
-          const novaPend: any = {
-            secao_id: item.secao_id,
-            subsecao_id: item.subsecao_id,
-            ordem: item.ordem,
-            local: item.local,
-            descricao: item.descricao,
-            foto_url: null,
-            foto_depois_url: null,
-            status: item.status,
-          };
-
-          const criada = await relatorioPendenciasService.createPendencia(novaPend);
-
-          if (item.foto_base64 && criada.id) {
-            try {
-              let base64Data = item.foto_base64;
-              let fotoKeyToDelete: string | null = null;
-              if (item.foto_base64.startsWith('pendencia_foto_')) {
-                const fotos = await getOfflineFotos();
-                const fotoEntry = fotos.find(f => f.key === item.foto_base64);
-                if (fotoEntry?.base64) {
-                  base64Data = fotoEntry.base64;
-                  fotoKeyToDelete = item.foto_base64;
-                } else {
-                  base64Data = '';
-                }
-              }
-              if (base64Data && base64Data.startsWith('data:')) {
-                const foto = base64ToFile(base64Data, `foto_${criada.id}.jpg`);
-                const url = await relatorioPendenciasService.uploadFoto(foto, item.relatorio_id, criada.id);
-                await relatorioPendenciasService.updatePendencia(criada.id, { foto_url: url });
-                // Só deletar do IndexedDB APÓS upload + DB confirmados
-                if (fotoKeyToDelete) {
-                  await deleteOfflineFoto(fotoKeyToDelete);
-                }
-              }
-            } catch (fotoErr) {
-              console.error('Erro upload foto background:', fotoErr);
-            }
-          }
-        } catch {
-          remaining.push(item);
-        }
-      }
-
-      // Atualizar fila com itens que falharam
-      saveOfflineQueue(remaining);
-      setOfflineQueue(remaining);
-
-      // Atualizar dados em cache silenciosamente
-      if (relatorioSelecionado) {
-        const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
-        if (relAtualizado) {
-          setRelatorioSelecionado(relAtualizado);
-          saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
-          const secAtualizada = relAtualizado.secoes?.find(s => s.id === secaoSelecionada?.id);
-          if (secAtualizada) {
-            setSecaoSelecionada(secAtualizada);
-            if (subsecaoSelecionada) {
-              const subAtualizada = secAtualizada.subsecoes?.find(sub => sub.id === subsecaoSelecionada.id);
-              if (subAtualizada) setSubsecaoSelecionada(subAtualizada);
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Erro na sync background:', error);
-    }
+  // Sincronizar fila offline em background - usa a mesma função (com lock)
+  const syncOfflineInBackground = async (_queue: OfflinePendencia[]) => {
+    // Reutiliza syncOfflineQueue que já tem lock para evitar duplicação
+    await syncOfflineQueue();
   };
 
   // Navegar para editar pendência

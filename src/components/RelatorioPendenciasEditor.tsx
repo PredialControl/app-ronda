@@ -4,11 +4,74 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Mic, MicOff, Edit3 } from 'lucide-react';
+import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Mic, MicOff, Edit3, RefreshCw } from 'lucide-react';
 import { Contrato, RelatorioPendencias as RelatorioPendenciasType } from '@/types';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 import { useVoiceCapture } from '@/hooks/useVoiceCapture';
 import { ImageEditor } from '@/components/ImageEditor';
+
+// ============================================
+// IndexedDB para sync de fotos offline do celular
+// ============================================
+const IDB_NAME = 'coleta_offline_db';
+const IDB_STORE = 'fotos_offline';
+
+function openOfflineDB(): Promise<IDBDatabase> {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(IDB_STORE)) {
+                db.createObjectStore(IDB_STORE, { keyPath: 'key' });
+            }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function getOfflineFotos(): Promise<any[]> {
+    const db = await openOfflineDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const req = tx.objectStore(IDB_STORE).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function deleteOfflineFoto(key: string): Promise<void> {
+    const db = await openOfflineDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).delete(key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+function base64ToFileSync(base64: string, filename: string): File {
+    const [header, data] = base64.split(',');
+    const mime = header.match(/:(.*?);/)?.[1] || 'image/jpeg';
+    const byteString = atob(data);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+    return new File([ab], filename, { type: mime });
+}
+
+function getOfflineQueue(): any[] {
+    try {
+        const raw = localStorage.getItem('coleta_offline_queue');
+        return raw ? JSON.parse(raw) : [];
+    } catch {
+        return [];
+    }
+}
+
+function saveOfflineQueue(queue: any[]) {
+    localStorage.setItem('coleta_offline_queue', JSON.stringify(queue));
+}
 
 interface RelatorioPendenciasEditorProps {
     contrato: Contrato;
@@ -83,6 +146,162 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const voice = useVoiceCapture();
     const [secaoAtivaParaVoz, setSecaoAtivaParaVoz] = useState<string | null>(null);
     const [subsecaoAtivaParaVoz, setSubsecaoAtivaParaVoz] = useState<string | null>(null);
+
+    // Sync offline
+    const [syncingOffline, setSyncingOffline] = useState(false);
+    const [offlinePendingCount, setOfflinePendingCount] = useState(0);
+
+    // Verificar se tem itens offline ao montar e periodicamente
+    useEffect(() => {
+        const checkOffline = async () => {
+            try {
+                const queue = getOfflineQueue();
+                const fotos = await getOfflineFotos();
+                const fotosOrfas = fotos.filter(f =>
+                    f.base64 && f.pendenciaId && f.relatorioId &&
+                    !f.pendenciaId.startsWith('offline_')
+                );
+                setOfflinePendingCount(queue.length + fotosOrfas.length);
+            } catch {
+                setOfflinePendingCount(0);
+            }
+        };
+        checkOffline();
+        const interval = setInterval(checkOffline, 10000); // Checar a cada 10s
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleSyncOffline = async () => {
+        if (syncingOffline) return;
+        setSyncingOffline(true);
+        try {
+            // 1. Sync pendências da fila offline
+            const queue = getOfflineQueue();
+            for (const item of queue) {
+                try {
+                    const novaPend: any = {
+                        secao_id: item.secao_id,
+                        subsecao_id: item.subsecao_id,
+                        ordem: item.ordem,
+                        local: item.local,
+                        descricao: item.descricao,
+                        foto_url: null,
+                        foto_depois_url: null,
+                        status: item.status,
+                    };
+                    const criada = await relatorioPendenciasService.createPendencia(novaPend);
+
+                    if (item.foto_base64 && criada.id) {
+                        try {
+                            let base64Data = item.foto_base64;
+                            let fotoKeyToDelete: string | null = null;
+                            if (item.foto_base64.startsWith('pendencia_foto_')) {
+                                const fotos = await getOfflineFotos();
+                                const fotoEntry = fotos.find((f: any) => f.key === item.foto_base64);
+                                if (fotoEntry?.base64) {
+                                    base64Data = fotoEntry.base64;
+                                    fotoKeyToDelete = item.foto_base64;
+                                } else {
+                                    base64Data = '';
+                                }
+                            }
+                            if (base64Data && base64Data.startsWith('data:')) {
+                                const file = base64ToFileSync(base64Data, `foto_${criada.id}.jpg`);
+                                const url = await relatorioPendenciasService.uploadFoto(file, item.relatorio_id, criada.id);
+                                await relatorioPendenciasService.updatePendencia(criada.id, { foto_url: url });
+                                if (fotoKeyToDelete) await deleteOfflineFoto(fotoKeyToDelete);
+                            }
+                        } catch (e) {
+                            console.error('Erro upload foto sync PC:', e);
+                        }
+                    }
+
+                    // Remover da fila IMEDIATAMENTE após sucesso
+                    const currentQueue = getOfflineQueue().filter((q: any) => q.id !== item.id);
+                    saveOfflineQueue(currentQueue);
+                } catch (e) {
+                    console.error('Erro sync pendência PC:', e);
+                }
+            }
+
+            // 2. Sync fotos órfãs do IndexedDB
+            const fotos = await getOfflineFotos();
+            const fotosOrfas = fotos.filter((f: any) =>
+                f.base64 && f.pendenciaId && f.relatorioId &&
+                !f.key?.startsWith('pendencia_foto_') &&
+                !f.pendenciaId.startsWith('offline_')
+            );
+            for (const foto of fotosOrfas) {
+                try {
+                    const file = base64ToFileSync(foto.base64, `foto_${foto.pendenciaId}.jpg`);
+                    const url = await relatorioPendenciasService.uploadFoto(file, foto.relatorioId, `${foto.pendenciaId}-sync-${Date.now()}`);
+                    await relatorioPendenciasService.updatePendencia(foto.pendenciaId, { [foto.campo]: url });
+                    await deleteOfflineFoto(foto.key);
+                } catch (e) {
+                    console.error('Erro sync foto PC:', e);
+                }
+            }
+
+            // Atualizar contagem
+            const remainingQueue = getOfflineQueue();
+            const remainingFotos = await getOfflineFotos();
+            setOfflinePendingCount(remainingQueue.length + remainingFotos.filter((f: any) =>
+                f.base64 && f.pendenciaId && !f.pendenciaId.startsWith('offline_')
+            ).length);
+
+            // Recarregar relatório
+            if (relatorio?.id) {
+                const relAtualizado = await relatorioPendenciasService.getById(relatorio.id);
+                if (relAtualizado) {
+                    // Recarregar seções
+                    const secoesCarregadas = (relAtualizado.secoes || []).map((secao: any, i: number) => ({
+                        id: secao.id,
+                        tempId: secao.id || `temp_sec_${i}`,
+                        ordem: secao.ordem ?? i,
+                        titulo_principal: secao.titulo_principal || '',
+                        subtitulo: secao.subtitulo || '',
+                        tem_subsecoes: secao.tem_subsecoes || false,
+                        subsecoes: (secao.subsecoes || []).map((sub: any, j: number) => ({
+                            id: sub.id,
+                            tempId: sub.id || `temp_sub_${j}`,
+                            ordem: sub.ordem ?? j,
+                            titulo: sub.titulo || '',
+                            tipo: sub.tipo || 'MANUAL',
+                            fotos_constatacao: sub.fotos_constatacao || [],
+                            descricao_constatacao: sub.descricao_constatacao || '',
+                            pendencias: (sub.pendencias || []).map((p: any, k: number) => ({
+                                id: p.id,
+                                tempId: p.id || `temp_pend_${k}`,
+                                ordem: p.ordem ?? k,
+                                local: p.local || '',
+                                descricao: p.descricao || '',
+                                foto_url: p.foto_url,
+                                foto_depois_url: p.foto_depois_url,
+                                status: p.status || 'PENDENTE',
+                                data_recebimento: p.data_recebimento || '',
+                            })),
+                        })),
+                        pendencias: (secao.pendencias || []).map((p: any, k: number) => ({
+                            id: p.id,
+                            tempId: p.id || `temp_pend_${k}`,
+                            ordem: p.ordem ?? k,
+                            local: p.local || '',
+                            descricao: p.descricao || '',
+                            foto_url: p.foto_url,
+                            foto_depois_url: p.foto_depois_url,
+                            status: p.status || 'PENDENTE',
+                            data_recebimento: p.data_recebimento || '',
+                        })),
+                    }));
+                    setSecoes(secoesCarregadas);
+                }
+            }
+        } catch (e) {
+            console.error('Erro geral sync PC:', e);
+        } finally {
+            setSyncingOffline(false);
+        }
+    };
 
     // Editor de imagem
     const [editingImage, setEditingImage] = useState<{
@@ -2133,6 +2352,20 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             <Plus className="w-6 h-6 mr-2" />
                             Adicionar Nova Seção
                         </Button>
+
+                        {offlinePendingCount > 0 && (
+                            <Button
+                                onClick={handleSyncOffline}
+                                className="w-full py-5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-base shadow-lg"
+                                disabled={syncingOffline}
+                            >
+                                <RefreshCw className={`w-5 h-5 mr-2 ${syncingOffline ? 'animate-spin' : ''}`} />
+                                {syncingOffline
+                                    ? 'Sincronizando...'
+                                    : `Sincronizar Tudo (${offlinePendingCount} pendente${offlinePendingCount > 1 ? 's' : ''})`
+                                }
+                            </Button>
+                        )}
 
                         <div className="flex flex-col sm:flex-row gap-3">
                             <Button
