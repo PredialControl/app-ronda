@@ -592,16 +592,25 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       return;
     }
 
-    // Online: tentar upload
+    // Online: tentar upload com timeout de 15s (sinal fraco trava sem timeout)
     try {
       const fotoFile = base64ToFile(base64, `foto_${tipo}_${ts}.jpg`);
-      const url = await relatorioPendenciasService.uploadFoto(
+      const uploadPromise = relatorioPendenciasService.uploadFoto(
         fotoFile,
         relatorioSelecionado.id,
         `${pendenciaSelecionada.id}-${tipo}-${ts}`
       );
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Upload timeout (15s)')), 15000)
+      );
+      const url = await Promise.race([uploadPromise, timeoutPromise]);
 
-      await relatorioPendenciasService.updatePendencia(pendenciaSelecionada.id, { [campo]: url });
+      const updatePromise = relatorioPendenciasService.updatePendencia(pendenciaSelecionada.id, { [campo]: url });
+      const updateTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('DB update timeout (10s)')), 10000)
+      );
+      await Promise.race([updatePromise, updateTimeout]);
+
       setPendenciaSelecionada(prev => prev ? { ...prev, [campo]: url } : null);
 
       // Upload + DB confirmados => remover do IndexedDB
@@ -619,8 +628,8 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       } catch {}
     } catch (error) {
       console.error('Erro ao fazer upload:', error);
-      // Foto já está no IndexedDB, sync vai enviar depois
-      showMsg(`Foto ${tipo} salva offline (sem sinal)`);
+      // Foto já está segura no IndexedDB, sync vai enviar depois
+      showMsg(`Foto salva localmente! Envia quando tiver sinal.`);
     } finally {
       setUploading(false);
     }
@@ -670,7 +679,13 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         dadosUpdate.data_recebimento = editDataRecebimento;
       }
       console.log('📝 Salvando pendência:', pendenciaSelecionada.id, dadosUpdate);
-      const resultado = await relatorioPendenciasService.updatePendencia(pendenciaSelecionada.id, dadosUpdate);
+
+      // Timeout para não travar com sinal fraco
+      const savePromise = relatorioPendenciasService.updatePendencia(pendenciaSelecionada.id, dadosUpdate);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Save timeout')), 10000)
+      );
+      const resultado = await Promise.race([savePromise, timeoutPromise]);
       console.log('✅ Resultado update:', resultado);
 
       // Sincronizar com tabela evolucao_recebimentos (usada pela aba Evolução no PC)
@@ -694,12 +709,49 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
 
       showMsg(`Salvo! Status: ${editStatus}`);
 
-      // Recarregar relatório
+      // Recarregar relatório (preservando fotos que estão em base64 local/IndexedDB)
       if (relatorioSelecionado) {
-        const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
-        if (relAtualizado) {
-          setRelatorioSelecionado(relAtualizado);
-          saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+        try {
+          const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
+          if (relAtualizado) {
+            // Se a pendência atual tem foto em base64 (ainda não subiu pro Supabase),
+            // preservar no relatório recarregado para não perder o preview
+            if (pendenciaSelecionada) {
+              const fotoAntes = pendenciaSelecionada.foto_url;
+              const fotoDepois = pendenciaSelecionada.foto_depois_url;
+              if (fotoAntes?.startsWith('data:') || fotoDepois?.startsWith('data:')) {
+                relAtualizado.secoes?.forEach(sec => {
+                  (sec.pendencias || []).forEach(p => {
+                    if (p.id === pendenciaSelecionada.id) {
+                      if (fotoAntes?.startsWith('data:') && !p.foto_url) p.foto_url = fotoAntes;
+                      if (fotoDepois?.startsWith('data:') && !p.foto_depois_url) p.foto_depois_url = fotoDepois;
+                    }
+                  });
+                  (sec.subsecoes || []).forEach(sub => {
+                    (sub.pendencias || []).forEach((p: any) => {
+                      if (p.id === pendenciaSelecionada.id) {
+                        if (fotoAntes?.startsWith('data:') && !p.foto_url) p.foto_url = fotoAntes;
+                        if (fotoDepois?.startsWith('data:') && !p.foto_depois_url) p.foto_depois_url = fotoDepois;
+                      }
+                    });
+                  });
+                });
+              }
+            }
+            setRelatorioSelecionado(relAtualizado);
+            saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+            // Atualizar seção/subseção selecionada
+            const secAtualizada = relAtualizado.secoes?.find(s => s.id === secaoSelecionada?.id);
+            if (secAtualizada) {
+              setSecaoSelecionada(secAtualizada);
+              if (subsecaoSelecionada) {
+                const subAtualizada = secAtualizada.subsecoes?.find(sub => sub.id === subsecaoSelecionada.id);
+                if (subAtualizada) setSubsecaoSelecionada(subAtualizada);
+              }
+            }
+          }
+        } catch {
+          // Se falhar reload (offline), tudo bem - dados locais já estão certos
         }
       }
 
@@ -921,12 +973,13 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           if (item.foto_base64 && criada.id) {
             try {
               let base64Data = item.foto_base64;
+              let fotoKeyToDelete: string | null = null;
               if (item.foto_base64.startsWith('pendencia_foto_')) {
                 const fotos = await getOfflineFotos();
                 const fotoEntry = fotos.find(f => f.key === item.foto_base64);
                 if (fotoEntry?.base64) {
                   base64Data = fotoEntry.base64;
-                  await deleteOfflineFoto(item.foto_base64);
+                  fotoKeyToDelete = item.foto_base64;
                 } else {
                   base64Data = '';
                 }
@@ -935,6 +988,10 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                 const foto = base64ToFile(base64Data, `foto_${criada.id}.jpg`);
                 const url = await relatorioPendenciasService.uploadFoto(foto, item.relatorio_id, criada.id);
                 await relatorioPendenciasService.updatePendencia(criada.id, { foto_url: url });
+                // Só deletar do IndexedDB APÓS upload + DB confirmados
+                if (fotoKeyToDelete) {
+                  await deleteOfflineFoto(fotoKeyToDelete);
+                }
               }
             } catch (fotoErr) {
               console.error('Erro upload foto background:', fotoErr);
