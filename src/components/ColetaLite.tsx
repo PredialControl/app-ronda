@@ -110,16 +110,27 @@ function base64ToFile(base64: string, filename: string): File {
   return new File([ab], filename, { type: mime });
 }
 
-// Salvar foto na galeria/downloads do celular
+// Salvar foto na galeria/downloads do celular (usa Blob para evitar erro de fetch em mobile)
 function saveToGallery(base64: string, filename: string) {
   try {
+    const [header, data] = base64.split(',');
+    const mime = header.match(/:(.*?);/)?.[1] || 'image/jpeg';
+    const byteString = atob(data);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+    const blob = new Blob([ab], { type: mime });
+    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = base64;
+    a.href = blobUrl;
     a.download = filename;
     a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    setTimeout(() => document.body.removeChild(a), 200);
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    }, 300);
   } catch (e) {
     console.warn('Erro ao salvar na galeria:', e);
   }
