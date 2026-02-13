@@ -1581,6 +1581,23 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
             );
           })()}
 
+          {/* Botão GRANDE de sincronizar quando volta online */}
+          {isOnline && offlineQueue.length > 0 && !syncing && (
+            <button
+              onClick={syncOfflineQueue}
+              className="w-full mb-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg p-4 flex items-center justify-center gap-3 font-bold text-base active:scale-[0.98] transition-all shadow-lg"
+            >
+              <RefreshCw className="w-5 h-5" />
+              Sincronizar Tudo ({offlineQueue.length} pendente{offlineQueue.length > 1 ? 's' : ''})
+            </button>
+          )}
+          {syncing && (
+            <div className="w-full mb-3 bg-orange-600/80 text-white rounded-lg p-4 flex items-center justify-center gap-3 font-bold text-base">
+              <RefreshCw className="w-5 h-5 animate-spin" />
+              Sincronizando...
+            </div>
+          )}
+
           {/* Botão baixar DOCX */}
           <button
             onClick={() => handleGerarDOCX()}
@@ -1747,6 +1764,23 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
             <div className="mb-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-3 flex items-center gap-2">
               <WifiOff className="w-4 h-4 text-yellow-400 flex-shrink-0" />
               <p className="text-yellow-300 text-xs">Sem conexão. Pendências criadas serão sincronizadas depois.</p>
+            </div>
+          )}
+
+          {/* Botão GRANDE de sincronizar quando volta online */}
+          {isOnline && offlineQueue.length > 0 && !syncing && (
+            <button
+              onClick={syncOfflineQueue}
+              className="w-full mb-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg p-4 flex items-center justify-center gap-3 font-bold text-base active:scale-[0.98] transition-all shadow-lg"
+            >
+              <RefreshCw className="w-5 h-5" />
+              Sincronizar Tudo ({offlineQueue.length} pendente{offlineQueue.length > 1 ? 's' : ''})
+            </button>
+          )}
+          {syncing && (
+            <div className="w-full mb-3 bg-orange-600/80 text-white rounded-lg p-4 flex items-center justify-center gap-3 font-bold text-base">
+              <RefreshCw className="w-5 h-5 animate-spin" />
+              Sincronizando...
             </div>
           )}
 
