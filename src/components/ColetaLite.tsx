@@ -477,11 +477,18 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
     try {
       // Ler fila FRESCA do localStorage (evita processar itens já removidos)
       const queue = getOfflineQueue();
-      if (queue.length === 0) {
+
+      // Verificar se há QUALQUER coisa para sincronizar
+      let temFotosOrfas = false;
+      try {
+        const fotos = await getOfflineFotos();
+        temFotosOrfas = fotos.some(f => f.base64 && f.pendenciaId && !f.key?.startsWith('pendencia_foto_'));
+      } catch {}
+      const temRelOffline = relatorios.some(r => r.id?.startsWith('offline_rel_'));
+      const temSecaoOffline = relatorioSelecionado?.secoes?.some(s => s.id?.startsWith('offline_sec_')) || false;
+
+      if (queue.length === 0 && !temFotosOrfas && !temRelOffline && !temSecaoOffline) {
         setOfflineQueue([]);
-        // Mesmo sem fila, sync fotos órfãs do IndexedDB
-        await syncOrphanFotos();
-        syncLockRef.current = false;
         return;
       }
 
@@ -489,7 +496,9 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
 
       // 0. Sincronizar relatórios offline primeiro
       const relIdMap: Record<string, string> = {}; // offline_rel_xxx -> real_id
-      for (const rel of relatorios.filter(r => r.id?.startsWith('offline_rel_'))) {
+      // Ler relatorios do state atual (pode conter offline)
+      const relatoriosAtuais = [...relatorios];
+      for (const rel of relatoriosAtuais.filter(r => r.id?.startsWith('offline_rel_'))) {
         try {
           const novo = await relatorioPendenciasService.create({
             contrato_id: (rel as any).contrato_id || contratoSelecionado?.id,
@@ -519,11 +528,18 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       // 1. Sincronizar seções offline (para obter IDs reais)
       const secaoIdMap: Record<string, string> = {}; // offline_sec_xxx -> real_id
       const subIdMap: Record<string, string> = {}; // offline_sub_xxx -> real_id
-      // Usar o relatório atualizado (pode ter mudado de offline → real)
-      const relAtual = relatorioSelecionado;
-      const relRealId = relAtual?.id && relIdMap[relAtual.id] ? relIdMap[relAtual.id] : relAtual?.id;
-      if (relAtual) {
-        const secoesOffline = (relAtual.secoes || []).filter(s => s.id?.startsWith('offline_sec_'));
+      // Pegar relatório do cache (pode ter sido atualizado no passo 0)
+      let relParaSync = relatorioSelecionado;
+      if (relParaSync?.id && relIdMap[relParaSync.id]) {
+        // Relatório mudou de offline para real, buscar do banco
+        try {
+          const relReal = await relatorioPendenciasService.getById(relIdMap[relParaSync.id]);
+          if (relReal) relParaSync = relReal;
+        } catch {}
+      }
+      const relRealId = relParaSync?.id && relIdMap[relParaSync.id] ? relIdMap[relParaSync.id] : relParaSync?.id;
+      if (relParaSync) {
+        const secoesOffline = (relParaSync.secoes || []).filter(s => s.id?.startsWith('offline_sec_'));
         for (const secLocal of secoesOffline) {
           try {
             const secao = await relatorioPendenciasService.createSecao({
@@ -628,7 +644,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       setOfflineQueue(getOfflineQueue());
 
       // Sync fotos órfãs do IndexedDB (de uploads que falharam)
-      await syncOrphanFotos();
+      await syncOrphanFotos(relIdMap);
 
       // Limpar fotos antigas do localStorage (migração)
       try {
@@ -656,17 +672,33 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       }
 
       // Recarregar dados
-      if (relatorioSelecionado) {
+      const relIdParaReload = relRealId || relatorioSelecionado?.id;
+      if (relIdParaReload && !relIdParaReload.startsWith('offline_')) {
         try {
-          const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
+          const relAtualizado = await relatorioPendenciasService.getById(relIdParaReload);
           if (relAtualizado) {
             setRelatorioSelecionado(relAtualizado);
             saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+            // Atualizar seção/subseção selecionada com dados frescos
+            if (secaoSelecionada) {
+              const secFresca = relAtualizado.secoes?.find(s =>
+                s.id === secaoSelecionada.id || s.id === secaoIdMap[secaoSelecionada.id]
+              );
+              if (secFresca) {
+                setSecaoSelecionada(secFresca);
+                if (subsecaoSelecionada) {
+                  const subFresca = secFresca.subsecoes?.find(sub =>
+                    sub.id === subsecaoSelecionada.id || sub.id === subIdMap[subsecaoSelecionada.id]
+                  );
+                  if (subFresca) setSubsecaoSelecionada(subFresca);
+                }
+              }
+            }
           }
         } catch {}
       }
       if (contratoSelecionado) {
-        loadRelatorios(contratoSelecionado.id);
+        try { await loadRelatorios(contratoSelecionado.id); } catch {}
       }
 
       loadOfflineFotos();
@@ -677,7 +709,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   };
 
   // Sync fotos órfãs do IndexedDB (fotos de uploads que falharam, não de pendências offline)
-  const syncOrphanFotos = async () => {
+  const syncOrphanFotos = async (relIdMap: Record<string, string> = {}) => {
     try {
       const offlineFotos = await getOfflineFotos();
       // Filtrar: só fotos que NÃO são de pendências offline (pendencia_foto_xxx)
@@ -689,8 +721,11 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       );
       for (const foto of fotosParaSync) {
         try {
+          // Mapear relatorioId offline para real se necessário
+          const realRelId = relIdMap[foto.relatorioId] || foto.relatorioId;
+          if (realRelId.startsWith('offline_')) continue; // Relatório ainda não sincronizado
           const file = base64ToFile(foto.base64, `foto_${foto.pendenciaId}.jpg`);
-          const url = await relatorioPendenciasService.uploadFoto(file, foto.relatorioId, `${foto.pendenciaId}-sync-${Date.now()}`);
+          const url = await relatorioPendenciasService.uploadFoto(file, realRelId, `${foto.pendenciaId}-sync-${Date.now()}`);
           await relatorioPendenciasService.updatePendencia(foto.pendenciaId, { [foto.campo]: url });
           // Só deletar APÓS confirmar upload+DB
           await deleteOfflineFoto(foto.key);
