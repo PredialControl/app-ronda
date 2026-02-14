@@ -221,6 +221,18 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   const [subsecaoSelecionada, setSubsecaoSelecionada] = useState<any>(null);
   const [pendenciaSelecionada, setPendenciaSelecionada] = useState<RelatorioPendencia | null>(null);
 
+  // Refs para sync (evita stale closures nos useEffects de auto-sync)
+  const relatoriosRef = useRef(relatorios);
+  relatoriosRef.current = relatorios;
+  const relatorioSelecionadoRef = useRef(relatorioSelecionado);
+  relatorioSelecionadoRef.current = relatorioSelecionado;
+  const secaoSelecionadaRef = useRef(secaoSelecionada);
+  secaoSelecionadaRef.current = secaoSelecionada;
+  const subsecaoSelecionadaRef = useRef(subsecaoSelecionada);
+  subsecaoSelecionadaRef.current = subsecaoSelecionada;
+  const contratoSelecionadoRef = useRef(contratoSelecionado);
+  contratoSelecionadoRef.current = contratoSelecionado;
+
   // Edição de pendência
   const [editLocal, setEditLocal] = useState('');
   const [editDescricao, setEditDescricao] = useState('');
@@ -471,12 +483,24 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   // Sincronizar fila offline (com lock para evitar duplicação)
   const syncLockRef = useRef(false);
   const syncOfflineQueue = async () => {
-    if (syncLockRef.current || !navigator.onLine) return;
+    if (syncLockRef.current || !navigator.onLine) {
+      console.log('[SYNC] Bloqueado - lock:', syncLockRef.current, 'online:', navigator.onLine);
+      return;
+    }
     syncLockRef.current = true;
+    console.log('[SYNC] Iniciando sincronização...');
 
     try {
       // Ler fila FRESCA do localStorage (evita processar itens já removidos)
       const queue = getOfflineQueue();
+      console.log('[SYNC] Fila:', queue.length, 'itens');
+
+      // Ler refs para ter valores frescos (evita stale closures)
+      const currentRelatorios = relatoriosRef.current;
+      const currentRelSelecionado = relatorioSelecionadoRef.current;
+      const currentContrato = contratoSelecionadoRef.current;
+      const currentSecao = secaoSelecionadaRef.current;
+      const currentSubsecao = subsecaoSelecionadaRef.current;
 
       // Verificar se há QUALQUER coisa para sincronizar
       let temFotosOrfas = false;
@@ -484,10 +508,14 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         const fotos = await getOfflineFotos();
         temFotosOrfas = fotos.some(f => f.base64 && f.pendenciaId && !f.key?.startsWith('pendencia_foto_'));
       } catch {}
-      const temRelOffline = relatorios.some(r => r.id?.startsWith('offline_rel_'));
-      const temSecaoOffline = relatorioSelecionado?.secoes?.some(s => s.id?.startsWith('offline_sec_')) || false;
+      const temRelOffline = currentRelatorios.some(r => r.id?.startsWith('offline_rel_'));
+      const temSecaoOffline = currentRelSelecionado?.secoes?.some(s => s.id?.startsWith('offline_sec_')) || false;
+
+      console.log('[SYNC] temFotosOrfas:', temFotosOrfas, 'temRelOffline:', temRelOffline, 'temSecaoOffline:', temSecaoOffline);
+      console.log('[SYNC] relSelecionado:', currentRelSelecionado?.id, 'contrato:', currentContrato?.id);
 
       if (queue.length === 0 && !temFotosOrfas && !temRelOffline && !temSecaoOffline) {
+        console.log('[SYNC] Nada para sincronizar, saindo.');
         setOfflineQueue([]);
         return;
       }
@@ -496,17 +524,17 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
 
       // 0. Sincronizar relatórios offline primeiro
       const relIdMap: Record<string, string> = {}; // offline_rel_xxx -> real_id
-      // Ler relatorios do state atual (pode conter offline)
-      const relatoriosAtuais = [...relatorios];
+      // Ler relatorios do ref (valores frescos)
+      const relatoriosAtuais = [...currentRelatorios];
       for (const rel of relatoriosAtuais.filter(r => r.id?.startsWith('offline_rel_'))) {
         try {
           const novo = await relatorioPendenciasService.create({
-            contrato_id: (rel as any).contrato_id || contratoSelecionado?.id,
+            contrato_id: (rel as any).contrato_id || currentContrato?.id,
             titulo: rel.titulo,
           } as any);
           relIdMap[rel.id] = novo.id;
           // Se é o relatório selecionado, atualizar
-          if (relatorioSelecionado?.id === rel.id) {
+          if (currentRelSelecionado?.id === rel.id) {
             const relCompleto = await relatorioPendenciasService.getById(novo.id);
             if (relCompleto) {
               setRelatorioSelecionado(relCompleto);
@@ -520,16 +548,16 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       // Atualizar lista de relatórios
       if (Object.keys(relIdMap).length > 0) {
         setRelatorios(prev => prev.filter(r => !r.id?.startsWith('offline_rel_')));
-        if (contratoSelecionado) {
-          try { await loadRelatorios(contratoSelecionado.id); } catch {}
+        if (currentContrato) {
+          try { await loadRelatorios(currentContrato.id); } catch {}
         }
       }
 
       // 1. Sincronizar seções offline (para obter IDs reais)
       const secaoIdMap: Record<string, string> = {}; // offline_sec_xxx -> real_id
       const subIdMap: Record<string, string> = {}; // offline_sub_xxx -> real_id
-      // Pegar relatório do cache (pode ter sido atualizado no passo 0)
-      let relParaSync = relatorioSelecionado;
+      // Pegar relatório fresco do ref (pode ter sido atualizado no passo 0)
+      let relParaSync = relatorioSelecionadoRef.current;
       if (relParaSync?.id && relIdMap[relParaSync.id]) {
         // Relatório mudou de offline para real, buscar do banco
         try {
@@ -584,8 +612,11 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           const realSecaoId = secaoIdMap[item.secao_id] || item.secao_id;
           const realSubId = item.subsecao_id ? (subIdMap[item.subsecao_id] || item.subsecao_id) : null;
 
+          console.log('[SYNC] Processando pendência:', item.id, 'relId:', realRelId, 'secaoId:', realSecaoId, 'subId:', realSubId);
+
           // Se seção ou relatório ainda é offline (sync falhou), manter na fila
           if (realSecaoId.startsWith('offline_') || realRelId.startsWith('offline_')) {
+            console.log('[SYNC] IDs ainda offline, mantendo na fila');
             remaining.push(item);
             continue;
           }
@@ -602,6 +633,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           };
 
           const criada = await relatorioPendenciasService.createPendencia(novaPend);
+          console.log('[SYNC] Pendência criada no banco:', criada.id);
 
           // Upload foto se tiver
           if (item.foto_base64 && criada.id) {
@@ -671,8 +703,8 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         showMsg(`${queueLeft.length} pendência(s) ainda na fila`);
       }
 
-      // Recarregar dados
-      const relIdParaReload = relRealId || relatorioSelecionado?.id;
+      // Recarregar dados (usar refs para valores frescos)
+      const relIdParaReload = relRealId || relatorioSelecionadoRef.current?.id;
       if (relIdParaReload && !relIdParaReload.startsWith('offline_')) {
         try {
           const relAtualizado = await relatorioPendenciasService.getById(relIdParaReload);
@@ -680,15 +712,17 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
             setRelatorioSelecionado(relAtualizado);
             saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
             // Atualizar seção/subseção selecionada com dados frescos
-            if (secaoSelecionada) {
+            const secAtual = secaoSelecionadaRef.current;
+            if (secAtual) {
               const secFresca = relAtualizado.secoes?.find(s =>
-                s.id === secaoSelecionada.id || s.id === secaoIdMap[secaoSelecionada.id]
+                s.id === secAtual.id || s.id === secaoIdMap[secAtual.id]
               );
               if (secFresca) {
                 setSecaoSelecionada(secFresca);
-                if (subsecaoSelecionada) {
+                const subAtual = subsecaoSelecionadaRef.current;
+                if (subAtual) {
                   const subFresca = secFresca.subsecoes?.find(sub =>
-                    sub.id === subsecaoSelecionada.id || sub.id === subIdMap[subsecaoSelecionada.id]
+                    sub.id === subAtual.id || sub.id === subIdMap[subAtual.id]
                   );
                   if (subFresca) setSubsecaoSelecionada(subFresca);
                 }
@@ -697,8 +731,9 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           }
         } catch {}
       }
-      if (contratoSelecionado) {
-        try { await loadRelatorios(contratoSelecionado.id); } catch {}
+      const contratoAtual = contratoSelecionadoRef.current;
+      if (contratoAtual) {
+        try { await loadRelatorios(contratoAtual.id); } catch {}
       }
 
       loadOfflineFotos();
