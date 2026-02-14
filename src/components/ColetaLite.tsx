@@ -78,9 +78,10 @@ function getFromCache<T>(key: string, maxAgeMs = 30 * 60 * 1000): T | null {
 function getOfflineQueue(): OfflinePendencia[] {
   try {
     // Limpeza única das pendências travadas de versões anteriores
-    if (!localStorage.getItem('offline_queue_cleaned_v2')) {
+    if (!localStorage.getItem('offline_queue_cleaned_v3')) {
       localStorage.removeItem(OFFLINE_QUEUE_KEY);
-      localStorage.setItem('offline_queue_cleaned_v2', '1');
+      localStorage.removeItem(OFFLINE_SECOES_KEY);
+      localStorage.setItem('offline_queue_cleaned_v3', '1');
       return [];
     }
     const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
