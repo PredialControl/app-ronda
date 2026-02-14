@@ -1519,6 +1519,21 @@ export async function generateRelatorioPendenciasDOCX(
 
                 // Se for tipo CONSTATAÇÃO, renderizar grid de fotos 2x3 (6 por bloco)
                 if (subsecao.tipo === 'CONSTATACAO') {
+                    // Observação ANTES das fotos
+                    if (subsecao.descricao_constatacao) {
+                        children.push(
+                            new Paragraph({
+                                children: [
+                                    new TextRun({
+                                        text: subsecao.descricao_constatacao,
+                                        size: 22,
+                                    }),
+                                ],
+                                spacing: { before: 100, after: 200 },
+                            })
+                        );
+                    }
+
                     // Grid de fotos: 2 por linha, 3 linhas = 6 por bloco
                     // Mesmo tamanho das fotos de pendência (350x263), coladas sem espaço
                     const fotos = subsecao.fotos_constatacao || [];
@@ -1611,20 +1626,6 @@ export async function generateRelatorioPendenciasDOCX(
                         }
                     }
 
-                    // Observação DEPOIS das fotos
-                    if (subsecao.descricao_constatacao) {
-                        children.push(
-                            new Paragraph({
-                                children: [
-                                    new TextRun({
-                                        text: subsecao.descricao_constatacao,
-                                        size: 22,
-                                    }),
-                                ],
-                                spacing: { before: 200, after: 200 },
-                            })
-                        );
-                    }
                 } else {
                     // Tipo MANUAL: processar pendências normalmente
                     let subCount = 0;

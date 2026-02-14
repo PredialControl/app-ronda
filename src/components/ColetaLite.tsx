@@ -2322,6 +2322,18 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           </div>
 
           <div className="p-4 space-y-4">
+            {/* Observação (em cima das fotos) */}
+            <div>
+              <label className="text-gray-400 text-xs font-medium mb-1 block">Observação</label>
+              <textarea
+                value={subsecaoSelecionada.descricao_constatacao || ''}
+                onChange={(e) => handleSalvarObservacao(e.target.value)}
+                placeholder="Ex: O gerador foi testado e está em funcionamento..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white text-sm resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"
+                rows={3}
+              />
+            </div>
+
             {/* Botões: Câmera e Galeria */}
             <div className="flex gap-2">
               <button
@@ -2362,18 +2374,6 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
             {fotosConst.length === 0 && (
               <p className="text-center text-gray-500 py-8 text-sm">Nenhuma foto adicionada</p>
             )}
-
-            {/* Observação */}
-            <div>
-              <label className="text-gray-400 text-xs font-medium mb-1 block">Observação</label>
-              <textarea
-                value={subsecaoSelecionada.descricao_constatacao || ''}
-                onChange={(e) => handleSalvarObservacao(e.target.value)}
-                placeholder="Ex: O gerador foi testado e está em funcionamento..."
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white text-sm resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"
-                rows={4}
-              />
-            </div>
           </div>
         </div>
       );
