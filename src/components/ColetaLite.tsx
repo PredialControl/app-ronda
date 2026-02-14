@@ -376,12 +376,24 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
     };
   }, []);
 
-  // Auto-sync quando voltar online
+  // Auto-sync quando voltar online ou app ficar visível
   useEffect(() => {
-    if (isOnline && offlineQueue.length > 0) {
+    if (isOnline) {
+      // Sempre tentar sync ao voltar online (lê fila fresca do localStorage)
       syncOfflineQueue();
     }
   }, [isOnline]);
+
+  // Sync quando app volta ao foco (tab visível / desbloqueio de tela)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        syncOfflineQueue();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   // Geração DOCX
   const [isGeneratingDOCX, setIsGeneratingDOCX] = useState(false);
@@ -529,9 +541,8 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         }
       }
 
-      // Atualizar state com itens que falharam
-      const finalQueue = getOfflineQueue();
-      setOfflineQueue(finalQueue);
+      // Atualizar state com o que realmente sobrou no localStorage
+      setOfflineQueue(getOfflineQueue());
 
       // Sync fotos órfãs do IndexedDB (de uploads que falharam)
       await syncOrphanFotos();
@@ -996,8 +1007,9 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         created_at: new Date().toISOString(),
       };
 
-      // Salvar na fila local imediatamente (instantâneo)
-      const newQueue = [...offlineQueue, offlineItem];
+      // Salvar na fila local imediatamente (ler do localStorage para evitar stale state)
+      const currentQueue = getOfflineQueue();
+      const newQueue = [...currentQueue, offlineItem];
       saveOfflineQueue(newQueue);
       setOfflineQueue(newQueue);
 
@@ -1021,9 +1033,23 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
     }
   };
 
-  // Sincronizar fila offline em background - usa a mesma função (com lock)
+  // Sincronizar fila offline em background - com retry se lock estiver ativo
   const syncOfflineInBackground = async (_queue: OfflinePendencia[]) => {
-    // Reutiliza syncOfflineQueue que já tem lock para evitar duplicação
+    // Se sync já está rodando, agendar retry para quando terminar
+    if (syncLockRef.current) {
+      const waitForUnlock = () => {
+        const interval = setInterval(() => {
+          if (!syncLockRef.current) {
+            clearInterval(interval);
+            syncOfflineQueue();
+          }
+        }, 1000);
+        // Timeout máximo de 30s
+        setTimeout(() => clearInterval(interval), 30000);
+      };
+      waitForUnlock();
+      return;
+    }
     await syncOfflineQueue();
   };
 
@@ -1125,11 +1151,10 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       {syncing && (
         <RefreshCw className="w-4 h-4 text-blue-400 animate-spin flex-shrink-0" />
       )}
-      {offlineQueue.length > 0 && isOnline && !syncing && (
-        <button onClick={syncOfflineQueue} className="text-xs text-orange-400 bg-orange-500/20 px-2 py-1 rounded flex items-center gap-1">
-          <RefreshCw className="w-3 h-3" />
+      {offlineQueue.length > 0 && !syncing && (
+        <span className="text-xs text-orange-400 bg-orange-500/20 px-1.5 py-0.5 rounded">
           {offlineQueue.length}
-        </button>
+        </span>
       )}
       {mensagem && (
         <span className="text-xs text-green-400 animate-pulse">{mensagem}</span>
@@ -1279,10 +1304,10 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           </div>
           {!isOnline && <WifiOff className="w-4 h-4 text-yellow-400 flex-shrink-0" />}
           {syncing && <RefreshCw className="w-4 h-4 text-blue-400 animate-spin flex-shrink-0" />}
-          {offlineQueue.length > 0 && isOnline && !syncing && (
-            <button onClick={syncOfflineQueue} className="text-xs text-orange-400 bg-orange-500/20 px-2 py-1 rounded flex items-center gap-1">
-              <RefreshCw className="w-3 h-3" />{offlineQueue.length}
-            </button>
+          {offlineQueue.length > 0 && !syncing && (
+            <span className="text-xs text-orange-400 bg-orange-500/20 px-1.5 py-0.5 rounded">
+              {offlineQueue.length}
+            </span>
           )}
           {mensagem && <span className="text-xs text-green-400 animate-pulse">{mensagem}</span>}
           <button onClick={() => setShowSettings(true)} className="text-gray-300 hover:text-white p-1 flex-shrink-0">
@@ -1581,19 +1606,10 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
             );
           })()}
 
-          {/* Botão GRANDE de sincronizar quando volta online */}
-          {isOnline && offlineQueue.length > 0 && !syncing && (
-            <button
-              onClick={syncOfflineQueue}
-              className="w-full mb-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg p-4 flex items-center justify-center gap-3 font-bold text-base active:scale-[0.98] transition-all shadow-lg"
-            >
-              <RefreshCw className="w-5 h-5" />
-              Sincronizar Tudo ({offlineQueue.length} pendente{offlineQueue.length > 1 ? 's' : ''})
-            </button>
-          )}
+          {/* Indicador de sincronização em andamento */}
           {syncing && (
-            <div className="w-full mb-3 bg-orange-600/80 text-white rounded-lg p-4 flex items-center justify-center gap-3 font-bold text-base">
-              <RefreshCw className="w-5 h-5 animate-spin" />
+            <div className="w-full mb-3 bg-orange-600/80 text-white rounded-lg p-3 flex items-center justify-center gap-2 text-sm font-medium">
+              <RefreshCw className="w-4 h-4 animate-spin" />
               Sincronizando...
             </div>
           )}
@@ -1767,19 +1783,10 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
             </div>
           )}
 
-          {/* Botão GRANDE de sincronizar quando volta online */}
-          {isOnline && offlineQueue.length > 0 && !syncing && (
-            <button
-              onClick={syncOfflineQueue}
-              className="w-full mb-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg p-4 flex items-center justify-center gap-3 font-bold text-base active:scale-[0.98] transition-all shadow-lg"
-            >
-              <RefreshCw className="w-5 h-5" />
-              Sincronizar Tudo ({offlineQueue.length} pendente{offlineQueue.length > 1 ? 's' : ''})
-            </button>
-          )}
+          {/* Indicador de sincronização */}
           {syncing && (
-            <div className="w-full mb-3 bg-orange-600/80 text-white rounded-lg p-4 flex items-center justify-center gap-3 font-bold text-base">
-              <RefreshCw className="w-5 h-5 animate-spin" />
+            <div className="w-full mb-3 bg-orange-600/80 text-white rounded-lg p-3 flex items-center justify-center gap-2 text-sm font-medium">
+              <RefreshCw className="w-4 h-4 animate-spin" />
               Sincronizando...
             </div>
           )}
@@ -2327,6 +2334,20 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         {renderHeader('Nova Pendência')}
 
         <div className="p-4 space-y-4 pb-24">
+          {/* Indicadores */}
+          {syncing && (
+            <div className="bg-orange-600/80 text-white rounded-lg p-3 flex items-center justify-center gap-2 text-sm font-medium">
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              Sincronizando...
+            </div>
+          )}
+          {!isOnline && (
+            <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-3 flex items-center gap-2">
+              <WifiOff className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+              <p className="text-yellow-300 text-xs">Sem conexão. Será sincronizado quando voltar.</p>
+            </div>
+          )}
+
           {/* Foto */}
           <div>
             <p className="text-xs text-gray-400 mb-1.5 font-medium">Foto (opcional)</p>
