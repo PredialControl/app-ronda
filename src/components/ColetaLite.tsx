@@ -292,6 +292,10 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   const [novaSecaoTemSubsecoes, setNovaSecaoTemSubsecoes] = useState(false);
   const [novaSubsecoes, setNovaSubsecoes] = useState<Array<{ titulo: string; tipo: 'MANUAL' | 'CONSTATACAO' }>>([]);
 
+  // Nova subseção (para adicionar a seção existente)
+  const [novaSubTitulo, setNovaSubTitulo] = useState('');
+  const [novaSubTipo, setNovaSubTipo] = useState<'MANUAL' | 'CONSTATACAO'>('MANUAL');
+
   // Nova pendência
   const [novaPendLocal, setNovaPendLocal] = useState('');
   const [novaPendDescricao, setNovaPendDescricao] = useState('');
@@ -1255,18 +1259,17 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   };
 
   // Adicionar subseção a seção existente
-  const handleAddSubsecao = async (tipo: 'MANUAL' | 'CONSTATACAO') => {
-    if (!secaoSelecionada || !relatorioSelecionado) return;
+  const handleAddSubsecao = async (titulo: string, tipo: 'MANUAL' | 'CONSTATACAO') => {
+    if (!secaoSelecionada || !relatorioSelecionado || !titulo.trim()) return;
     setLoading(true);
 
     const ordem = (secaoSelecionada.subsecoes || []).length;
-    const letra = String.fromCharCode(65 + ordem);
     const offlineSubId = `offline_sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     const subLocal: any = {
       id: offlineSubId,
       ordem,
-      titulo: tipo === 'CONSTATACAO' ? `${letra} - CONSTATAÇÃO` : `${letra} - `,
+      titulo: titulo.trim(),
       tipo,
       pendencias: [],
       fotos_constatacao: tipo === 'CONSTATACAO' ? [] : undefined,
@@ -1300,7 +1303,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         const subCriada = await relatorioPendenciasService.createSubsecao({
           secao_id: secaoSelecionada.id,
           ordem,
-          titulo: subLocal.titulo,
+          titulo: titulo.trim(),
           tipo,
           fotos_constatacao: tipo === 'CONSTATACAO' ? [] : undefined,
           descricao_constatacao: tipo === 'CONSTATACAO' ? '' : undefined,
@@ -2088,23 +2091,43 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
               );
             })}
 
-            {/* Botões para adicionar subseção */}
-            <div className="flex gap-2 mt-3">
+            {/* Adicionar nova subseção */}
+            <div className="mt-4 bg-gray-800 border border-gray-700 rounded-lg p-3 space-y-3">
+              <p className="text-gray-400 text-xs font-medium">Nova subseção</p>
+              <input
+                value={novaSubTitulo}
+                onChange={(e) => setNovaSubTitulo(e.target.value)}
+                placeholder="Nome da subseção..."
+                className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setNovaSubTipo('MANUAL')}
+                  className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+                    novaSubTipo === 'MANUAL' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-400'
+                  }`}
+                >
+                  Pendências
+                </button>
+                <button
+                  onClick={() => setNovaSubTipo('CONSTATACAO')}
+                  className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${
+                    novaSubTipo === 'CONSTATACAO' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-400'
+                  }`}
+                >
+                  Constatação
+                </button>
+              </div>
               <button
-                onClick={() => handleAddSubsecao('MANUAL')}
-                disabled={loading}
-                className="flex-1 bg-purple-600/80 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg p-3 flex items-center justify-center gap-2 text-xs font-medium active:scale-[0.98] transition-all"
+                onClick={() => {
+                  handleAddSubsecao(novaSubTitulo, novaSubTipo);
+                  setNovaSubTitulo('');
+                }}
+                disabled={loading || !novaSubTitulo.trim()}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg p-2.5 flex items-center justify-center gap-2 text-sm font-medium active:scale-[0.98] transition-all"
               >
-                <Plus className="w-3 h-3" />
-                + Pendências
-              </button>
-              <button
-                onClick={() => handleAddSubsecao('CONSTATACAO')}
-                disabled={loading}
-                className="flex-1 bg-amber-600/80 hover:bg-amber-700 disabled:bg-gray-600 text-white rounded-lg p-3 flex items-center justify-center gap-2 text-xs font-medium active:scale-[0.98] transition-all"
-              >
-                <Plus className="w-3 h-3" />
-                + Constatação
+                <Plus className="w-4 h-4" />
+                Criar Subseção
               </button>
             </div>
           </div>
