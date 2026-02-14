@@ -1517,110 +1517,88 @@ export async function generateRelatorioPendenciasDOCX(
                     })
                 );
 
-                // Se for tipo CONSTATAÇÃO, renderizar grid de fotos
+                // Se for tipo CONSTATAÇÃO, renderizar grid de fotos 2x3 (6 por bloco)
                 if (subsecao.tipo === 'CONSTATACAO') {
-                    // Descrição (se houver)
-                    if (subsecao.descricao_constatacao) {
-                        children.push(
-                            new Paragraph({
-                                children: [
-                                    new TextRun({
-                                        text: subsecao.descricao_constatacao,
-                                        size: 22,
-                                    }),
-                                ],
-                                spacing: { after: 200 },
-                            })
-                        );
-                    }
-
-                    // Grid de fotos 2x2
+                    // Grid de fotos: 2 por linha, 3 linhas = 6 por bloco
+                    // Mesmo tamanho das fotos de pendência (350x263), coladas sem espaço
                     const fotos = subsecao.fotos_constatacao || [];
-                    for (let i = 0; i < fotos.length; i += 2) {
-                        const foto1 = fotos[i];
-                        const foto2 = fotos[i + 1];
+                    const fotoWidth = 350;
+                    const fotoHeight = 263;
 
+                    // Processar em blocos de 6 (3 linhas x 2 colunas)
+                    for (let bloco = 0; bloco < fotos.length; bloco += 6) {
+                        const fotosBloco = fotos.slice(bloco, bloco + 6);
                         const tableRows: any[] = [];
 
-                        // Primeira linha com fotos
-                        const cellChildren: any[] = [];
+                        // Processar em pares (linhas)
+                        for (let i = 0; i < fotosBloco.length; i += 2) {
+                            const cells: any[] = [];
 
-                        // Foto 1
-                        if (foto1) {
-                            try {
-                                const imageData = await convertImageToPNG(foto1, 800);
-                                cellChildren.push(
+                            // Foto esquerda
+                            if (fotosBloco[i]) {
+                                try {
+                                    const imageData = await convertImageToPNG(fotosBloco[i], 800);
+                                    cells.push(
+                                        new TableCell({
+                                            children: [
+                                                new Paragraph({
+                                                    children: [
+                                                        new ImageRun({
+                                                            data: imageData,
+                                                            transformation: { width: fotoWidth, height: fotoHeight },
+                                                            type: "png",
+                                                        }),
+                                                    ],
+                                                    spacing: { before: 0, after: 0 },
+                                                }),
+                                            ],
+                                            width: { size: 50, type: WidthType.PERCENTAGE },
+                                            margins: { top: 0, bottom: 0, left: 0, right: 0 },
+                                        })
+                                    );
+                                } catch (err) {
+                                    console.error('Erro ao converter foto de constatação:', err);
+                                }
+                            }
+
+                            // Foto direita
+                            if (fotosBloco[i + 1]) {
+                                try {
+                                    const imageData = await convertImageToPNG(fotosBloco[i + 1], 800);
+                                    cells.push(
+                                        new TableCell({
+                                            children: [
+                                                new Paragraph({
+                                                    children: [
+                                                        new ImageRun({
+                                                            data: imageData,
+                                                            transformation: { width: fotoWidth, height: fotoHeight },
+                                                            type: "png",
+                                                        }),
+                                                    ],
+                                                    spacing: { before: 0, after: 0 },
+                                                }),
+                                            ],
+                                            width: { size: 50, type: WidthType.PERCENTAGE },
+                                            margins: { top: 0, bottom: 0, left: 0, right: 0 },
+                                        })
+                                    );
+                                } catch (err) {
+                                    console.error('Erro ao converter foto de constatação:', err);
+                                }
+                            } else if (cells.length === 1) {
+                                // Célula vazia para manter layout
+                                cells.push(
                                     new TableCell({
-                                        children: [
-                                            new Paragraph({
-                                                children: [
-                                                    new ImageRun({
-                                                        data: imageData,
-                                                        transformation: { width: 250, height: 190 },
-                                                        type: "png",
-                                                    }),
-                                                ],
-                                                alignment: AlignmentType.CENTER,
-                                            }),
-                                            new Paragraph({
-                                                children: [
-                                                    new TextRun({
-                                                        text: `Foto ${i + 1}`,
-                                                        size: 20,
-                                                        bold: true,
-                                                    }),
-                                                ],
-                                                alignment: AlignmentType.CENTER,
-                                                spacing: { before: 100 },
-                                            }),
-                                        ],
+                                        children: [new Paragraph({ text: '' })],
                                         width: { size: 50, type: WidthType.PERCENTAGE },
                                     })
                                 );
-                            } catch (err) {
-                                console.error('Erro ao converter foto de constatação:', err);
                             }
-                        }
 
-                        // Foto 2
-                        if (foto2) {
-                            try {
-                                const imageData = await convertImageToPNG(foto2, 800);
-                                cellChildren.push(
-                                    new TableCell({
-                                        children: [
-                                            new Paragraph({
-                                                children: [
-                                                    new ImageRun({
-                                                        data: imageData,
-                                                        transformation: { width: 250, height: 190 },
-                                                        type: "png",
-                                                    }),
-                                                ],
-                                                alignment: AlignmentType.CENTER,
-                                            }),
-                                            new Paragraph({
-                                                children: [
-                                                    new TextRun({
-                                                        text: `Foto ${i + 2}`,
-                                                        size: 20,
-                                                        bold: true,
-                                                    }),
-                                                ],
-                                                alignment: AlignmentType.CENTER,
-                                                spacing: { before: 100 },
-                                            }),
-                                        ],
-                                        width: { size: 50, type: WidthType.PERCENTAGE },
-                                    })
-                                );
-                            } catch (err) {
-                                console.error('Erro ao converter foto de constatação:', err);
+                            if (cells.length > 0) {
+                                tableRows.push(new TableRow({ children: cells }));
                             }
-                        }
-
-                        if (cellChildren.length > 0) {
-                            tableRows.push(new TableRow({ children: cellChildren }));
                         }
 
                         if (tableRows.length > 0) {
@@ -1630,8 +1608,22 @@ export async function generateRelatorioPendenciasDOCX(
                                     width: { size: 100, type: WidthType.PERCENTAGE },
                                 })
                             );
-                            children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
                         }
+                    }
+
+                    // Observação DEPOIS das fotos
+                    if (subsecao.descricao_constatacao) {
+                        children.push(
+                            new Paragraph({
+                                children: [
+                                    new TextRun({
+                                        text: subsecao.descricao_constatacao,
+                                        size: 22,
+                                    }),
+                                ],
+                                spacing: { before: 200, after: 200 },
+                            })
+                        );
                     }
                 } else {
                     // Tipo MANUAL: processar pendências normalmente

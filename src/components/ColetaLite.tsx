@@ -268,6 +268,9 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   const contratoSelecionadoRef = useRef(contratoSelecionado);
   contratoSelecionadoRef.current = contratoSelecionado;
 
+  // Ref para fotos de constatação
+  const constatacaoFotoRef = useRef<HTMLInputElement>(null);
+
   // Edição de pendência
   const [editLocal, setEditLocal] = useState('');
   const [editDescricao, setEditDescricao] = useState('');
@@ -1251,6 +1254,74 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
     }
   };
 
+  // Adicionar subseção a seção existente
+  const handleAddSubsecao = async (tipo: 'MANUAL' | 'CONSTATACAO') => {
+    if (!secaoSelecionada || !relatorioSelecionado) return;
+    setLoading(true);
+
+    const ordem = (secaoSelecionada.subsecoes || []).length;
+    const letra = String.fromCharCode(65 + ordem);
+    const offlineSubId = `offline_sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    const subLocal: any = {
+      id: offlineSubId,
+      ordem,
+      titulo: tipo === 'CONSTATACAO' ? `${letra} - CONSTATAÇÃO` : `${letra} - `,
+      tipo,
+      pendencias: [],
+      fotos_constatacao: tipo === 'CONSTATACAO' ? [] : undefined,
+      descricao_constatacao: tipo === 'CONSTATACAO' ? '' : undefined,
+    };
+
+    // Atualizar seção local
+    const secAtualizada = {
+      ...secaoSelecionada,
+      tem_subsecoes: true,
+      subsecoes: [...(secaoSelecionada.subsecoes || []), subLocal],
+    };
+    setSecaoSelecionada(secAtualizada);
+
+    // Atualizar no relatório
+    const relAtualizado = {
+      ...relatorioSelecionado,
+      secoes: (relatorioSelecionado.secoes || []).map((s: any) =>
+        s.id === secaoSelecionada.id ? secAtualizada : s
+      ),
+    };
+    setRelatorioSelecionado(relAtualizado as any);
+    saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+
+    showMsg('Subseção criada!');
+    setLoading(false);
+
+    // Se online e seção tem ID real, criar no banco
+    if (navigator.onLine && !secaoSelecionada.id.startsWith('offline_')) {
+      try {
+        const subCriada = await relatorioPendenciasService.createSubsecao({
+          secao_id: secaoSelecionada.id,
+          ordem,
+          titulo: subLocal.titulo,
+          tipo,
+          fotos_constatacao: tipo === 'CONSTATACAO' ? [] : undefined,
+          descricao_constatacao: tipo === 'CONSTATACAO' ? '' : undefined,
+        } as any);
+
+        // Atualizar ID real
+        const relReload = await relatorioPendenciasService.getById(relatorioSelecionado.id);
+        if (relReload) {
+          setRelatorioSelecionado(relReload);
+          saveToCache(`relatorio_${relReload.id}`, relReload);
+          const secFresca = relReload.secoes?.find((s: any) => s.id === secaoSelecionada.id);
+          if (secFresca) {
+            setSecaoSelecionada(secFresca);
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao criar subseção no banco:', e);
+      }
+    }
+  };
+
   // Criar nova pendência (offline-first para velocidade)
   const handleCriarPendencia = async () => {
     if (!relatorioSelecionado || !secaoSelecionada) return;
@@ -2016,6 +2087,201 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                 </button>
               );
             })}
+
+            {/* Botões para adicionar subseção */}
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => handleAddSubsecao('MANUAL')}
+                disabled={loading}
+                className="flex-1 bg-purple-600/80 hover:bg-purple-700 disabled:bg-gray-600 text-white rounded-lg p-3 flex items-center justify-center gap-2 text-xs font-medium active:scale-[0.98] transition-all"
+              >
+                <Plus className="w-3 h-3" />
+                + Pendências
+              </button>
+              <button
+                onClick={() => handleAddSubsecao('CONSTATACAO')}
+                disabled={loading}
+                className="flex-1 bg-amber-600/80 hover:bg-amber-700 disabled:bg-gray-600 text-white rounded-lg p-3 flex items-center justify-center gap-2 text-xs font-medium active:scale-[0.98] transition-all"
+              >
+                <Plus className="w-3 h-3" />
+                + Constatação
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Se subseção CONSTATACAO, mostrar tela de fotos + observação
+    if (subsecaoSelecionada?.tipo === 'CONSTATACAO') {
+      const fotosConst = subsecaoSelecionada.fotos_constatacao || [];
+      const handleFotoConstatacao = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length || !relatorioSelecionado) return;
+        setLoading(true);
+
+        const novasUrls: string[] = [];
+        for (const file of files) {
+          try {
+            if (navigator.onLine && !relatorioSelecionado.id.startsWith('offline_') && !subsecaoSelecionada.id.startsWith('offline_')) {
+              const url = await relatorioPendenciasService.uploadFoto(file, relatorioSelecionado.id, `constatacao-${subsecaoSelecionada.id}-${Date.now()}`);
+              novasUrls.push(url);
+            } else {
+              const base64 = await compressImage(file, 800, 0.6);
+              novasUrls.push(base64);
+            }
+          } catch (err) {
+            console.error('Erro upload foto constatação:', err);
+          }
+        }
+
+        const fotosAtualizadas = [...fotosConst, ...novasUrls];
+        // Atualizar no banco se online
+        if (navigator.onLine && !subsecaoSelecionada.id.startsWith('offline_')) {
+          try {
+            await relatorioPendenciasService.updateSubsecao(subsecaoSelecionada.id, { fotos_constatacao: fotosAtualizadas });
+          } catch (err) {
+            console.error('Erro ao salvar fotos constatação:', err);
+          }
+        }
+
+        // Atualizar state local
+        const subAtualizada = { ...subsecaoSelecionada, fotos_constatacao: fotosAtualizadas };
+        setSubsecaoSelecionada(subAtualizada);
+        const secAtualizada = {
+          ...secaoSelecionada,
+          subsecoes: (secaoSelecionada.subsecoes || []).map((s: any) =>
+            s.id === subsecaoSelecionada.id ? subAtualizada : s
+          ),
+        };
+        setSecaoSelecionada(secAtualizada);
+        const relAtualizado = {
+          ...relatorioSelecionado,
+          secoes: (relatorioSelecionado.secoes || []).map((s: any) =>
+            s.id === secaoSelecionada.id ? secAtualizada : s
+          ),
+        };
+        setRelatorioSelecionado(relAtualizado as any);
+        saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+        setLoading(false);
+        e.target.value = '';
+      };
+
+      const handleRemoverFotoConst = async (idx: number) => {
+        const fotosAtualizadas = fotosConst.filter((_: any, i: number) => i !== idx);
+        if (navigator.onLine && !subsecaoSelecionada.id.startsWith('offline_')) {
+          try {
+            await relatorioPendenciasService.updateSubsecao(subsecaoSelecionada.id, { fotos_constatacao: fotosAtualizadas });
+          } catch (err) {
+            console.error('Erro ao remover foto constatação:', err);
+          }
+        }
+        const subAtualizada = { ...subsecaoSelecionada, fotos_constatacao: fotosAtualizadas };
+        setSubsecaoSelecionada(subAtualizada);
+        const secAtualizada = {
+          ...secaoSelecionada,
+          subsecoes: (secaoSelecionada.subsecoes || []).map((s: any) =>
+            s.id === subsecaoSelecionada.id ? subAtualizada : s
+          ),
+        };
+        setSecaoSelecionada(secAtualizada);
+        const relAtualizado = {
+          ...relatorioSelecionado,
+          secoes: (relatorioSelecionado.secoes || []).map((s: any) =>
+            s.id === secaoSelecionada.id ? secAtualizada : s
+          ),
+        };
+        setRelatorioSelecionado(relAtualizado as any);
+        saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+      };
+
+      const handleSalvarObservacao = async (texto: string) => {
+        if (navigator.onLine && !subsecaoSelecionada.id.startsWith('offline_')) {
+          try {
+            await relatorioPendenciasService.updateSubsecao(subsecaoSelecionada.id, { descricao_constatacao: texto });
+          } catch (err) {
+            console.error('Erro ao salvar observação:', err);
+          }
+        }
+        const subAtualizada = { ...subsecaoSelecionada, descricao_constatacao: texto };
+        setSubsecaoSelecionada(subAtualizada);
+        const secAtualizada = {
+          ...secaoSelecionada,
+          subsecoes: (secaoSelecionada.subsecoes || []).map((s: any) =>
+            s.id === subsecaoSelecionada.id ? subAtualizada : s
+          ),
+        };
+        setSecaoSelecionada(secAtualizada);
+        const relAtualizado = {
+          ...relatorioSelecionado,
+          secoes: (relatorioSelecionado.secoes || []).map((s: any) =>
+            s.id === secaoSelecionada.id ? secAtualizada : s
+          ),
+        };
+        setRelatorioSelecionado(relAtualizado as any);
+        saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+      };
+
+      return (
+        <div className="min-h-screen bg-gray-900 flex flex-col">
+          <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center gap-3">
+            <button onClick={() => setSubsecaoSelecionada(null)} className="text-gray-300 hover:text-white p-1">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-base font-semibold text-white truncate flex-1">{subsecaoSelecionada.titulo}</h1>
+          </div>
+
+          <div className="p-4 space-y-4">
+            {/* Botão adicionar fotos */}
+            <input
+              ref={constatacaoFotoRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleFotoConstatacao}
+            />
+            <button
+              onClick={() => constatacaoFotoRef.current?.click()}
+              disabled={loading}
+              className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-gray-600 text-white rounded-lg p-3 flex items-center justify-center gap-2 font-medium text-sm active:scale-[0.98] transition-all"
+            >
+              <Camera className="w-4 h-4" />
+              Adicionar Fotos ({fotosConst.length})
+            </button>
+
+            {/* Grid de fotos */}
+            {fotosConst.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {fotosConst.map((foto: string, idx: number) => (
+                  <div key={idx} className="relative aspect-[4/3] bg-gray-800 rounded-lg overflow-hidden">
+                    <img src={foto} className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => handleRemoverFotoConst(idx)}
+                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {fotosConst.length === 0 && (
+              <p className="text-center text-gray-500 py-8 text-sm">Nenhuma foto adicionada</p>
+            )}
+
+            {/* Observação */}
+            <div>
+              <label className="text-gray-400 text-xs font-medium mb-1 block">Observação</label>
+              <textarea
+                value={subsecaoSelecionada.descricao_constatacao || ''}
+                onChange={(e) => handleSalvarObservacao(e.target.value)}
+                placeholder="Ex: O gerador foi testado e está em funcionamento..."
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white text-sm resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"
+                rows={4}
+              />
+            </div>
           </div>
         </div>
       );
