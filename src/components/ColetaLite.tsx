@@ -486,14 +486,64 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       }
 
       setSyncing(true);
+
+      // 1. Primeiro sincronizar seções offline (para obter IDs reais)
+      const secaoIdMap: Record<string, string> = {}; // offline_sec_xxx -> real_id
+      const subIdMap: Record<string, string> = {}; // offline_sub_xxx -> real_id
+      if (relatorioSelecionado) {
+        const secoesOffline = (relatorioSelecionado.secoes || []).filter(s => s.id?.startsWith('offline_sec_'));
+        for (const secLocal of secoesOffline) {
+          try {
+            const secao = await relatorioPendenciasService.createSecao({
+              relatorio_id: relatorioSelecionado.id,
+              ordem: secLocal.ordem ?? 0,
+              titulo_principal: secLocal.titulo_principal || '',
+              subtitulo: secLocal.subtitulo || '',
+              tem_subsecoes: secLocal.tem_subsecoes || false,
+            } as any);
+            secaoIdMap[secLocal.id] = secao.id;
+
+            // Criar subseções
+            if (secLocal.tem_subsecoes && secLocal.subsecoes) {
+              for (const subLocal of secLocal.subsecoes) {
+                try {
+                  const subCriada = await relatorioPendenciasService.createSubsecao({
+                    secao_id: secao.id,
+                    ordem: subLocal.ordem ?? 0,
+                    titulo: subLocal.titulo || '',
+                    tipo: subLocal.tipo || 'MANUAL',
+                    fotos_constatacao: subLocal.fotos_constatacao || [],
+                  } as any);
+                  subIdMap[subLocal.id] = subCriada.id;
+                } catch (e) {
+                  console.error('Erro sync subseção offline:', e);
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Erro sync seção offline:', e);
+          }
+        }
+      }
+
       showMsg(`Sincronizando ${queue.length} pendência(s)...`);
       const remaining: OfflinePendencia[] = [];
 
       for (const item of queue) {
         try {
+          // Substituir IDs offline por IDs reais do banco
+          const realSecaoId = secaoIdMap[item.secao_id] || item.secao_id;
+          const realSubId = item.subsecao_id ? (subIdMap[item.subsecao_id] || item.subsecao_id) : null;
+
+          // Se seção ainda é offline (sync falhou), manter na fila
+          if (realSecaoId.startsWith('offline_')) {
+            remaining.push(item);
+            continue;
+          }
+
           const novaPend: any = {
-            secao_id: item.secao_id,
-            subsecao_id: item.subsecao_id,
+            secao_id: realSecaoId,
+            subsecao_id: realSubId,
             ordem: item.ordem,
             local: item.local,
             descricao: item.descricao,
@@ -908,59 +958,101 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
     }
   };
 
-  // Criar nova seção
+  // Criar nova seção (offline-first)
   const handleCriarSecao = async () => {
     if (!relatorioSelecionado || !novaSecaoTitulo.trim()) return;
     setLoading(true);
-    try {
-      const ordemAtual = relatorioSelecionado.secoes?.length || 0;
-      const secao = await relatorioPendenciasService.createSecao({
-        relatorio_id: relatorioSelecionado.id,
-        ordem: ordemAtual,
-        titulo_principal: novaSecaoTitulo.trim(),
-        subtitulo: novaSecaoSubtitulo.trim() || '',
-        tem_subsecoes: novaSecaoTemSubsecoes,
-      } as any);
 
-      // Criar subseções se houver
-      if (novaSecaoTemSubsecoes && novaSubsecoes.length > 0) {
-        for (let i = 0; i < novaSubsecoes.length; i++) {
-          const sub = novaSubsecoes[i];
-          if (!sub.titulo.trim()) continue;
-          await relatorioPendenciasService.createSubsecao({
-            secao_id: secao.id,
-            ordem: i,
-            titulo: sub.titulo.trim(),
-            tipo: sub.tipo,
-            fotos_constatacao: sub.tipo === 'CONSTATACAO' ? [] : undefined,
-          } as any);
-        }
-      }
+    const ordemAtual = relatorioSelecionado.secoes?.length || 0;
+    const offlineSecaoId = `offline_sec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      showMsg('Seção criada!');
-      setNovaSecaoTitulo('');
-      setNovaSecaoSubtitulo('');
-      setNovaSecaoTemSubsecoes(false);
-      setNovaSubsecoes([]);
-      // Recarregar relatório
-      const relAtualizado = await relatorioPendenciasService.getById(relatorioSelecionado.id);
-      if (relAtualizado) {
-        setRelatorioSelecionado(relAtualizado);
-        saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
-        // Ir direto para pendências da seção criada
-        const secaoCriada = relAtualizado.secoes?.find(s => s.id === secao.id);
-        if (secaoCriada) {
-          setSecaoSelecionada(secaoCriada);
-          setTela('relatorio-pendencias');
-          return;
+    // Criar subseções locais
+    const subsLocal = novaSecaoTemSubsecoes
+      ? novaSubsecoes.filter(s => s.titulo.trim()).map((sub, i) => ({
+          id: `offline_sub_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 5)}`,
+          ordem: i,
+          titulo: sub.titulo.trim(),
+          tipo: sub.tipo,
+          pendencias: [],
+          fotos_constatacao: sub.tipo === 'CONSTATACAO' ? [] : undefined,
+        }))
+      : [];
+
+    // Criar seção local imediatamente (para navegar)
+    const secaoLocal: any = {
+      id: offlineSecaoId,
+      ordem: ordemAtual,
+      titulo_principal: novaSecaoTitulo.trim(),
+      subtitulo: novaSecaoSubtitulo.trim() || '',
+      tem_subsecoes: novaSecaoTemSubsecoes,
+      subsecoes: subsLocal,
+      pendencias: [],
+    };
+
+    // Adicionar ao relatório local
+    const relAtualizado = {
+      ...relatorioSelecionado,
+      secoes: [...(relatorioSelecionado.secoes || []), secaoLocal],
+    };
+    setRelatorioSelecionado(relAtualizado as any);
+    saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+
+    showMsg('Seção criada!');
+    setNovaSecaoTitulo('');
+    setNovaSecaoSubtitulo('');
+    setNovaSecaoTemSubsecoes(false);
+    setNovaSubsecoes([]);
+    setLoading(false);
+
+    // Navegar para a seção criada
+    setSecaoSelecionada(secaoLocal);
+    setTela('relatorio-pendencias');
+
+    // Se online, sincronizar em background
+    if (navigator.onLine) {
+      try {
+        const secao = await relatorioPendenciasService.createSecao({
+          relatorio_id: relatorioSelecionado.id,
+          ordem: ordemAtual,
+          titulo_principal: novaSecaoTitulo.trim(),
+          subtitulo: novaSecaoSubtitulo.trim() || '',
+          tem_subsecoes: novaSecaoTemSubsecoes,
+        } as any);
+
+        // Criar subseções no banco
+        const subIdsMap: Record<string, string> = {};
+        if (novaSecaoTemSubsecoes) {
+          for (let i = 0; i < subsLocal.length; i++) {
+            const sub = subsLocal[i];
+            try {
+              const subCriada = await relatorioPendenciasService.createSubsecao({
+                secao_id: secao.id,
+                ordem: sub.ordem,
+                titulo: sub.titulo,
+                tipo: sub.tipo,
+                fotos_constatacao: sub.fotos_constatacao,
+              } as any);
+              subIdsMap[sub.id] = subCriada.id;
+            } catch (e) {
+              console.error('Erro ao criar subseção:', e);
+            }
+          }
         }
+
+        // Atualizar IDs locais com IDs reais do banco
+        const relReload = await relatorioPendenciasService.getById(relatorioSelecionado.id);
+        if (relReload) {
+          setRelatorioSelecionado(relReload);
+          saveToCache(`relatorio_${relReload.id}`, relReload);
+          const secReal = relReload.secoes?.find(s => s.id === secao.id);
+          if (secReal) {
+            setSecaoSelecionada(secReal);
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao sync seção (mantida local):', e);
+        // Seção fica local, será sincronizada no próximo sync
       }
-      setTela('relatorio-secoes');
-    } catch (error) {
-      console.error('Erro ao criar seção:', error);
-      showMsg('Erro ao criar seção');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -1151,10 +1243,11 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       {syncing && (
         <RefreshCw className="w-4 h-4 text-blue-400 animate-spin flex-shrink-0" />
       )}
-      {offlineQueue.length > 0 && !syncing && (
-        <span className="text-xs text-orange-400 bg-orange-500/20 px-1.5 py-0.5 rounded">
+      {offlineQueue.length > 0 && isOnline && !syncing && (
+        <button onClick={syncOfflineQueue} className="text-xs text-orange-400 bg-orange-500/20 px-2 py-1 rounded flex items-center gap-1 active:scale-90 transition-transform">
+          <RefreshCw className="w-3 h-3" />
           {offlineQueue.length}
-        </span>
+        </button>
       )}
       {mensagem && (
         <span className="text-xs text-green-400 animate-pulse">{mensagem}</span>
@@ -1304,10 +1397,11 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           </div>
           {!isOnline && <WifiOff className="w-4 h-4 text-yellow-400 flex-shrink-0" />}
           {syncing && <RefreshCw className="w-4 h-4 text-blue-400 animate-spin flex-shrink-0" />}
-          {offlineQueue.length > 0 && !syncing && (
-            <span className="text-xs text-orange-400 bg-orange-500/20 px-1.5 py-0.5 rounded">
+          {offlineQueue.length > 0 && isOnline && !syncing && (
+            <button onClick={syncOfflineQueue} className="text-xs text-orange-400 bg-orange-500/20 px-2 py-1 rounded flex items-center gap-1 active:scale-90 transition-transform">
+              <RefreshCw className="w-3 h-3" />
               {offlineQueue.length}
-            </span>
+            </button>
           )}
           {mensagem && <span className="text-xs text-green-400 animate-pulse">{mensagem}</span>}
           <button onClick={() => setShowSettings(true)} className="text-gray-300 hover:text-white p-1 flex-shrink-0">
