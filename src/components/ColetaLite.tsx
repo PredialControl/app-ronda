@@ -296,6 +296,11 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   const [novaSubTitulo, setNovaSubTitulo] = useState('');
   const [novaSubTipo, setNovaSubTipo] = useState<'MANUAL' | 'CONSTATACAO'>('MANUAL');
 
+  // Modo câmera constatação
+  const [constCameraMode, setConstCameraMode] = useState(false);
+  const [constPreview, setConstPreview] = useState<string | null>(null);
+  const constCameraRef = useRef<HTMLInputElement>(null);
+
   // Nova pendência
   const [novaPendLocal, setNovaPendLocal] = useState('');
   const [novaPendDescricao, setNovaPendDescricao] = useState('');
@@ -2138,28 +2143,9 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
     // Se subseção CONSTATACAO, mostrar tela de fotos + observação
     if (subsecaoSelecionada?.tipo === 'CONSTATACAO') {
       const fotosConst = subsecaoSelecionada.fotos_constatacao || [];
-      const handleFotoConstatacao = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
-        if (!files.length || !relatorioSelecionado) return;
-        setLoading(true);
 
-        const novasUrls: string[] = [];
-        for (const file of files) {
-          try {
-            if (navigator.onLine && !relatorioSelecionado.id.startsWith('offline_') && !subsecaoSelecionada.id.startsWith('offline_')) {
-              const url = await relatorioPendenciasService.uploadFoto(file, relatorioSelecionado.id, `constatacao-${subsecaoSelecionada.id}-${Date.now()}`);
-              novasUrls.push(url);
-            } else {
-              const base64 = await compressImage(file, 800, 0.6);
-              novasUrls.push(base64);
-            }
-          } catch (err) {
-            console.error('Erro upload foto constatação:', err);
-          }
-        }
-
-        const fotosAtualizadas = [...fotosConst, ...novasUrls];
-        // Atualizar no banco se online
+      // Helper para atualizar fotos no state e banco
+      const atualizarFotosConst = async (fotosAtualizadas: string[]) => {
         if (navigator.onLine && !subsecaoSelecionada.id.startsWith('offline_')) {
           try {
             await relatorioPendenciasService.updateSubsecao(subsecaoSelecionada.id, { fotos_constatacao: fotosAtualizadas });
@@ -2167,8 +2153,6 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
             console.error('Erro ao salvar fotos constatação:', err);
           }
         }
-
-        // Atualizar state local
         const subAtualizada = { ...subsecaoSelecionada, fotos_constatacao: fotosAtualizadas };
         setSubsecaoSelecionada(subAtualizada);
         const secAtualizada = {
@@ -2186,36 +2170,43 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         };
         setRelatorioSelecionado(relAtualizado as any);
         saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
-        setLoading(false);
+      };
+
+      // Câmera: capturou foto -> mostra preview
+      const handleCameraCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+          const base64 = await compressImage(file, 800, 0.6);
+          setConstPreview(base64);
+        } catch (err) {
+          console.error('Erro ao comprimir foto:', err);
+        }
         e.target.value = '';
       };
 
-      const handleRemoverFotoConst = async (idx: number) => {
-        const fotosAtualizadas = fotosConst.filter((_: any, i: number) => i !== idx);
-        if (navigator.onLine && !subsecaoSelecionada.id.startsWith('offline_')) {
+      // Confirmar foto do preview -> salva e volta pra câmera
+      const handleConfirmarFoto = async () => {
+        if (!constPreview || !relatorioSelecionado) return;
+        setLoading(true);
+
+        let urlFinal = constPreview;
+        // Se online, fazer upload
+        if (navigator.onLine && !relatorioSelecionado.id.startsWith('offline_') && !subsecaoSelecionada.id.startsWith('offline_')) {
           try {
-            await relatorioPendenciasService.updateSubsecao(subsecaoSelecionada.id, { fotos_constatacao: fotosAtualizadas });
+            const file = base64ToFile(constPreview, `constatacao_${Date.now()}.jpg`);
+            urlFinal = await relatorioPendenciasService.uploadFoto(file, relatorioSelecionado.id, `constatacao-${subsecaoSelecionada.id}-${Date.now()}`);
           } catch (err) {
-            console.error('Erro ao remover foto constatação:', err);
+            console.error('Erro upload:', err);
           }
         }
-        const subAtualizada = { ...subsecaoSelecionada, fotos_constatacao: fotosAtualizadas };
-        setSubsecaoSelecionada(subAtualizada);
-        const secAtualizada = {
-          ...secaoSelecionada,
-          subsecoes: (secaoSelecionada.subsecoes || []).map((s: any) =>
-            s.id === subsecaoSelecionada.id ? subAtualizada : s
-          ),
-        };
-        setSecaoSelecionada(secAtualizada);
-        const relAtualizado = {
-          ...relatorioSelecionado,
-          secoes: (relatorioSelecionado.secoes || []).map((s: any) =>
-            s.id === secaoSelecionada.id ? secAtualizada : s
-          ),
-        };
-        setRelatorioSelecionado(relAtualizado as any);
-        saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+
+        await atualizarFotosConst([...fotosConst, urlFinal]);
+        setConstPreview(null);
+        setLoading(false);
+
+        // Abrir câmera de novo automaticamente
+        setTimeout(() => constCameraRef.current?.click(), 300);
       };
 
       const handleSalvarObservacao = async (texto: string) => {
@@ -2245,33 +2236,111 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
       };
 
+      // Input de câmera oculto (capture = abre câmera direto no celular)
+      const cameraInput = (
+        <input
+          ref={constCameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleCameraCapture}
+        />
+      );
+
+      // Tela de preview da foto tirada
+      if (constPreview) {
+        return (
+          <div className="fixed inset-0 bg-black z-50 flex flex-col">
+            <img src={constPreview} className="flex-1 object-contain" />
+            <div className="p-4 flex gap-3">
+              <button
+                onClick={() => {
+                  setConstPreview(null);
+                  // Abrir câmera de novo (descartou a foto)
+                  setTimeout(() => constCameraRef.current?.click(), 300);
+                }}
+                className="flex-1 bg-red-600 text-white rounded-lg p-4 text-sm font-medium active:scale-95 transition-all"
+              >
+                <X className="w-5 h-5 mx-auto mb-1" />
+                Tirar Outra
+              </button>
+              <button
+                onClick={handleConfirmarFoto}
+                disabled={loading}
+                className="flex-1 bg-green-600 text-white rounded-lg p-4 text-sm font-medium active:scale-95 transition-all"
+              >
+                <Check className="w-5 h-5 mx-auto mb-1" />
+                {loading ? 'Salvando...' : 'OK'}
+              </button>
+            </div>
+            {cameraInput}
+          </div>
+        );
+      }
+
+      // Tela principal da constatação
       return (
         <div className="min-h-screen bg-gray-900 flex flex-col">
+          {cameraInput}
+          {/* Input para galeria (múltiplo, sem capture) */}
+          <input
+            ref={constatacaoFotoRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={async (e) => {
+              const files = Array.from(e.target.files || []);
+              if (!files.length || !relatorioSelecionado) return;
+              setLoading(true);
+              const novasUrls: string[] = [];
+              for (const file of files) {
+                try {
+                  if (navigator.onLine && !relatorioSelecionado.id.startsWith('offline_') && !subsecaoSelecionada.id.startsWith('offline_')) {
+                    const url = await relatorioPendenciasService.uploadFoto(file, relatorioSelecionado.id, `constatacao-${subsecaoSelecionada.id}-${Date.now()}`);
+                    novasUrls.push(url);
+                  } else {
+                    const base64 = await compressImage(file, 800, 0.6);
+                    novasUrls.push(base64);
+                  }
+                } catch (err) {
+                  console.error('Erro upload foto constatação:', err);
+                }
+              }
+              await atualizarFotosConst([...fotosConst, ...novasUrls]);
+              setLoading(false);
+              e.target.value = '';
+            }}
+          />
+
           <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center gap-3">
-            <button onClick={() => setSubsecaoSelecionada(null)} className="text-gray-300 hover:text-white p-1">
+            <button onClick={() => { setSubsecaoSelecionada(null); setConstCameraMode(false); setConstPreview(null); }} className="text-gray-300 hover:text-white p-1">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="text-base font-semibold text-white truncate flex-1">{subsecaoSelecionada.titulo}</h1>
           </div>
 
           <div className="p-4 space-y-4">
-            {/* Botão adicionar fotos */}
-            <input
-              ref={constatacaoFotoRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handleFotoConstatacao}
-            />
-            <button
-              onClick={() => constatacaoFotoRef.current?.click()}
-              disabled={loading}
-              className="w-full bg-amber-600 hover:bg-amber-700 disabled:bg-gray-600 text-white rounded-lg p-3 flex items-center justify-center gap-2 font-medium text-sm active:scale-[0.98] transition-all"
-            >
-              <Camera className="w-4 h-4" />
-              Adicionar Fotos ({fotosConst.length})
-            </button>
+            {/* Botões: Câmera e Galeria */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => constCameraRef.current?.click()}
+                disabled={loading}
+                className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-600 text-white rounded-lg p-3 flex items-center justify-center gap-2 font-medium text-sm active:scale-[0.98] transition-all"
+              >
+                <Camera className="w-4 h-4" />
+                Tirar Foto
+              </button>
+              <button
+                onClick={() => constatacaoFotoRef.current?.click()}
+                disabled={loading}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg p-3 flex items-center justify-center gap-2 font-medium text-sm active:scale-[0.98] transition-all"
+              >
+                <ImageIcon className="w-4 h-4" />
+                Galeria ({fotosConst.length})
+              </button>
+            </div>
 
             {/* Grid de fotos */}
             {fotosConst.length > 0 && (
@@ -2280,7 +2349,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                   <div key={idx} className="relative aspect-[4/3] bg-gray-800 rounded-lg overflow-hidden">
                     <img src={foto} className="w-full h-full object-cover" />
                     <button
-                      onClick={() => handleRemoverFotoConst(idx)}
+                      onClick={() => atualizarFotosConst(fotosConst.filter((_: any, i: number) => i !== idx))}
                       className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
                     >
                       ✕
