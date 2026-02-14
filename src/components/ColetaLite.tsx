@@ -61,7 +61,19 @@ function getFromCache<T>(key: string, maxAgeMs = 30 * 60 * 1000): T | null {
 function getOfflineQueue(): OfflinePendencia[] {
   try {
     const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const queue: OfflinePendencia[] = JSON.parse(raw);
+    // Auto-limpar itens com mais de 2 horas (travados por erro)
+    const MAX_AGE = 2 * 60 * 60 * 1000;
+    const now = Date.now();
+    const filtered = queue.filter(item => {
+      if (!item.created_at) return false;
+      return now - new Date(item.created_at).getTime() < MAX_AGE;
+    });
+    if (filtered.length !== queue.length) {
+      localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(filtered));
+    }
+    return filtered;
   } catch {
     return [];
   }
@@ -405,6 +417,19 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
+  // Polling periódico: tenta sync a cada 30s se tem itens na fila
+  // (resolve dados móveis onde o evento 'online' nem sempre dispara)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const queue = getOfflineQueue();
+      if (queue.length > 0 && navigator.onLine) {
+        setOfflineQueue(queue); // Atualizar state (pode ter limpado itens velhos)
+        syncOfflineQueue();
+      }
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Geração DOCX
