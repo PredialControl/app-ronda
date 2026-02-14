@@ -487,15 +487,47 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
 
       setSyncing(true);
 
-      // 1. Primeiro sincronizar seções offline (para obter IDs reais)
+      // 0. Sincronizar relatórios offline primeiro
+      const relIdMap: Record<string, string> = {}; // offline_rel_xxx -> real_id
+      for (const rel of relatorios.filter(r => r.id?.startsWith('offline_rel_'))) {
+        try {
+          const novo = await relatorioPendenciasService.create({
+            contrato_id: (rel as any).contrato_id || contratoSelecionado?.id,
+            titulo: rel.titulo,
+          } as any);
+          relIdMap[rel.id] = novo.id;
+          // Se é o relatório selecionado, atualizar
+          if (relatorioSelecionado?.id === rel.id) {
+            const relCompleto = await relatorioPendenciasService.getById(novo.id);
+            if (relCompleto) {
+              setRelatorioSelecionado(relCompleto);
+              saveToCache(`relatorio_${relCompleto.id}`, relCompleto);
+            }
+          }
+        } catch (e) {
+          console.error('Erro sync relatório offline:', e);
+        }
+      }
+      // Atualizar lista de relatórios
+      if (Object.keys(relIdMap).length > 0) {
+        setRelatorios(prev => prev.filter(r => !r.id?.startsWith('offline_rel_')));
+        if (contratoSelecionado) {
+          try { await loadRelatorios(contratoSelecionado.id); } catch {}
+        }
+      }
+
+      // 1. Sincronizar seções offline (para obter IDs reais)
       const secaoIdMap: Record<string, string> = {}; // offline_sec_xxx -> real_id
       const subIdMap: Record<string, string> = {}; // offline_sub_xxx -> real_id
-      if (relatorioSelecionado) {
-        const secoesOffline = (relatorioSelecionado.secoes || []).filter(s => s.id?.startsWith('offline_sec_'));
+      // Usar o relatório atualizado (pode ter mudado de offline → real)
+      const relAtual = relatorioSelecionado;
+      const relRealId = relAtual?.id && relIdMap[relAtual.id] ? relIdMap[relAtual.id] : relAtual?.id;
+      if (relAtual) {
+        const secoesOffline = (relAtual.secoes || []).filter(s => s.id?.startsWith('offline_sec_'));
         for (const secLocal of secoesOffline) {
           try {
             const secao = await relatorioPendenciasService.createSecao({
-              relatorio_id: relatorioSelecionado.id,
+              relatorio_id: relRealId!,
               ordem: secLocal.ordem ?? 0,
               titulo_principal: secLocal.titulo_principal || '',
               subtitulo: secLocal.subtitulo || '',
@@ -532,11 +564,12 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       for (const item of queue) {
         try {
           // Substituir IDs offline por IDs reais do banco
+          const realRelId = relIdMap[item.relatorio_id] || item.relatorio_id;
           const realSecaoId = secaoIdMap[item.secao_id] || item.secao_id;
           const realSubId = item.subsecao_id ? (subIdMap[item.subsecao_id] || item.subsecao_id) : null;
 
-          // Se seção ainda é offline (sync falhou), manter na fila
-          if (realSecaoId.startsWith('offline_')) {
+          // Se seção ou relatório ainda é offline (sync falhou), manter na fila
+          if (realSecaoId.startsWith('offline_') || realRelId.startsWith('offline_')) {
             remaining.push(item);
             continue;
           }
@@ -571,7 +604,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
               }
               if (base64Data && base64Data.startsWith('data:')) {
                 const file = base64ToFile(base64Data, `foto_${criada.id}.jpg`);
-                const url = await relatorioPendenciasService.uploadFoto(file, item.relatorio_id, criada.id);
+                const url = await relatorioPendenciasService.uploadFoto(file, realRelId, criada.id);
                 await relatorioPendenciasService.updatePendencia(criada.id, { foto_url: url });
                 // Só deletar APÓS upload+DB confirmados
                 if (fotoKeyToDelete) await deleteOfflineFoto(fotoKeyToDelete);
@@ -934,27 +967,45 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   const handleCriarRelatorio = async () => {
     if (!contratoSelecionado || !novoRelTitulo.trim()) return;
     setLoading(true);
-    try {
-      const novo = await relatorioPendenciasService.create({
-        contrato_id: contratoSelecionado.id,
-        titulo: novoRelTitulo.trim(),
-      } as any);
-      showMsg('Relatório criado!');
-      setNovoRelTitulo('');
-      // Recarregar e abrir o novo
-      await loadRelatorios(contratoSelecionado.id);
-      const relCompleto = await relatorioPendenciasService.getById(novo.id);
-      if (relCompleto) {
-        setRelatorioSelecionado(relCompleto);
-        setTela('relatorio-secoes');
-      } else {
-        setTela('relatorios-lista');
+
+    const offlineRelId = `offline_rel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const titulo = novoRelTitulo.trim();
+
+    // Criar localmente primeiro (offline-first)
+    const relLocal: any = {
+      id: offlineRelId,
+      contrato_id: contratoSelecionado.id,
+      titulo,
+      secoes: [],
+      created_at: new Date().toISOString(),
+    };
+
+    // Adicionar à lista local
+    setRelatorios(prev => [...prev, relLocal]);
+    setRelatorioSelecionado(relLocal);
+    saveToCache(`relatorio_${offlineRelId}`, relLocal);
+    showMsg('Relatório criado!');
+    setNovoRelTitulo('');
+    setLoading(false);
+    setTela('relatorio-secoes');
+
+    // Se online, sincronizar em background
+    if (navigator.onLine) {
+      try {
+        const novo = await relatorioPendenciasService.create({
+          contrato_id: contratoSelecionado.id,
+          titulo,
+        } as any);
+        const relCompleto = await relatorioPendenciasService.getById(novo.id);
+        if (relCompleto) {
+          setRelatorioSelecionado(relCompleto);
+          saveToCache(`relatorio_${relCompleto.id}`, relCompleto);
+          // Atualizar lista substituindo o local pelo real
+          setRelatorios(prev => prev.map(r => r.id === offlineRelId ? relCompleto : r));
+        }
+      } catch (e) {
+        console.error('Erro ao sync relatório (mantido local):', e);
       }
-    } catch (error) {
-      console.error('Erro ao criar relatório:', error);
-      showMsg('Erro ao criar relatório');
-    } finally {
-      setLoading(false);
     }
   };
 
