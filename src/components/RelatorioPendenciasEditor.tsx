@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Mic, MicOff, Edit3, RefreshCw } from 'lucide-react';
+import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Mic, MicOff, Edit3, RefreshCw, ArrowUp, ArrowDown, MoveRight, FolderInput } from 'lucide-react';
 import { Contrato, RelatorioPendencias as RelatorioPendenciasType } from '@/types';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 import { useVoiceCapture } from '@/hooks/useVoiceCapture';
@@ -826,6 +826,178 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 };
             }
             return s;
+        }));
+    };
+
+    // ============================================
+    // Reordenar pendências (cima/baixo)
+    // ============================================
+    const handleMovePendenciaUp = (secaoTempId: string, pendenciaTempId: string) => {
+        setSecoes(prev => prev.map(s => {
+            if (s.tempId !== secaoTempId) return s;
+            const idx = s.pendencias.findIndex(p => p.tempId === pendenciaTempId);
+            if (idx <= 0) return s;
+            const arr = [...s.pendencias];
+            [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+            return { ...s, pendencias: arr.map((p, i) => ({ ...p, ordem: i })) };
+        }));
+    };
+
+    const handleMovePendenciaDown = (secaoTempId: string, pendenciaTempId: string) => {
+        setSecoes(prev => prev.map(s => {
+            if (s.tempId !== secaoTempId) return s;
+            const idx = s.pendencias.findIndex(p => p.tempId === pendenciaTempId);
+            if (idx < 0 || idx >= s.pendencias.length - 1) return s;
+            const arr = [...s.pendencias];
+            [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+            return { ...s, pendencias: arr.map((p, i) => ({ ...p, ordem: i })) };
+        }));
+    };
+
+    const handleMovePendenciaSubUp = (secaoTempId: string, subsecaoTempId: string, pendenciaTempId: string) => {
+        setSecoes(prev => prev.map(s => {
+            if (s.tempId !== secaoTempId) return s;
+            return {
+                ...s,
+                subsecoes: (s.subsecoes || []).map(sub => {
+                    if (sub.tempId !== subsecaoTempId) return sub;
+                    const idx = sub.pendencias.findIndex(p => p.tempId === pendenciaTempId);
+                    if (idx <= 0) return sub;
+                    const arr = [...sub.pendencias];
+                    [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+                    return { ...sub, pendencias: arr.map((p, i) => ({ ...p, ordem: i })) };
+                }),
+            };
+        }));
+    };
+
+    const handleMovePendenciaSubDown = (secaoTempId: string, subsecaoTempId: string, pendenciaTempId: string) => {
+        setSecoes(prev => prev.map(s => {
+            if (s.tempId !== secaoTempId) return s;
+            return {
+                ...s,
+                subsecoes: (s.subsecoes || []).map(sub => {
+                    if (sub.tempId !== subsecaoTempId) return sub;
+                    const idx = sub.pendencias.findIndex(p => p.tempId === pendenciaTempId);
+                    if (idx < 0 || idx >= sub.pendencias.length - 1) return sub;
+                    const arr = [...sub.pendencias];
+                    [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+                    return { ...sub, pendencias: arr.map((p, i) => ({ ...p, ordem: i })) };
+                }),
+            };
+        }));
+    };
+
+    // ============================================
+    // Reordenar seções (cima/baixo)
+    // ============================================
+    const handleMoveSecaoUp = (secaoTempId: string) => {
+        setSecoes(prev => {
+            const idx = prev.findIndex(s => s.tempId === secaoTempId);
+            if (idx <= 0) return prev;
+            const arr = [...prev];
+            [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+            return arr.map((s, i) => ({ ...s, ordem: i }));
+        });
+    };
+
+    const handleMoveSecaoDown = (secaoTempId: string) => {
+        setSecoes(prev => {
+            const idx = prev.findIndex(s => s.tempId === secaoTempId);
+            if (idx < 0 || idx >= prev.length - 1) return prev;
+            const arr = [...prev];
+            [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+            return arr.map((s, i) => ({ ...s, ordem: i }));
+        });
+    };
+
+    // ============================================
+    // Mover pendência entre seções/subseções
+    // ============================================
+    const [pendenciaParaMover, setPendenciaParaMover] = useState<{
+        secaoTempId: string;
+        subsecaoTempId?: string;
+        pendenciaTempId: string;
+        pendenciaLabel: string;
+    } | null>(null);
+
+    const handleMoverPendencia = (destinoSecaoTempId: string, destinoSubTempId?: string) => {
+        if (!pendenciaParaMover) return;
+        const { secaoTempId: origemSecao, subsecaoTempId: origemSub, pendenciaTempId } = pendenciaParaMover;
+
+        setSecoes(prev => {
+            let pendencia: PendenciaLocal | null = null;
+
+            // 1. Extrair pendência da origem
+            const semPendencia = prev.map(s => {
+                if (s.tempId !== origemSecao) return s;
+                if (origemSub) {
+                    return {
+                        ...s,
+                        subsecoes: (s.subsecoes || []).map(sub => {
+                            if (sub.tempId !== origemSub) return sub;
+                            const found = sub.pendencias.find(p => p.tempId === pendenciaTempId);
+                            if (found) pendencia = { ...found };
+                            return {
+                                ...sub,
+                                pendencias: sub.pendencias.filter(p => p.tempId !== pendenciaTempId).map((p, i) => ({ ...p, ordem: i })),
+                            };
+                        }),
+                    };
+                } else {
+                    const found = s.pendencias.find(p => p.tempId === pendenciaTempId);
+                    if (found) pendencia = { ...found };
+                    return {
+                        ...s,
+                        pendencias: s.pendencias.filter(p => p.tempId !== pendenciaTempId).map((p, i) => ({ ...p, ordem: i })),
+                    };
+                }
+            });
+
+            if (!pendencia) return prev;
+
+            // 2. Inserir pendência no destino
+            return semPendencia.map(s => {
+                if (s.tempId !== destinoSecaoTempId) return s;
+                if (destinoSubTempId) {
+                    return {
+                        ...s,
+                        subsecoes: (s.subsecoes || []).map(sub => {
+                            if (sub.tempId !== destinoSubTempId) return sub;
+                            const novaPend = { ...pendencia!, ordem: sub.pendencias.length };
+                            return { ...sub, pendencias: [...sub.pendencias, novaPend] };
+                        }),
+                    };
+                } else {
+                    const novaPend = { ...pendencia!, ordem: s.pendencias.length };
+                    return { ...s, pendencias: [...s.pendencias, novaPend] };
+                }
+            });
+        });
+
+        setPendenciaParaMover(null);
+    };
+
+    // ============================================
+    // Converter seção sem subseções para ter subseções
+    // ============================================
+    const handleConverterParaSubsecoes = (secaoTempId: string) => {
+        setSecoes(prev => prev.map(s => {
+            if (s.tempId !== secaoTempId) return s;
+            // Criar subseção com as pendências existentes
+            const novaSubsecao: SubsecaoLocal = {
+                tempId: `sub-${Date.now()}`,
+                ordem: 0,
+                titulo: s.subtitulo || s.titulo_principal || 'Subseção A',
+                tipo: 'MANUAL',
+                pendencias: s.pendencias.map((p, i) => ({ ...p, ordem: i })),
+            };
+            return {
+                ...s,
+                tem_subsecoes: true,
+                subsecoes: [novaSubsecao],
+                pendencias: [], // Limpar da seção (agora estão na subseção)
+            };
         }));
     };
 
@@ -1725,22 +1897,53 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 ) : (() => {
                     let globalPendenciaCounter = 0;
 
-                    return secoes.map((secao) => (
+                    return secoes.map((secao, secaoIdx) => (
                         <Card key={secao.tempId} className="bg-gray-800 border-gray-700">
                             <CardHeader>
                                 <div className="flex justify-between items-center">
                                     <CardTitle className="text-white flex items-center gap-2">
-                                        <GripVertical className="w-5 h-5 text-gray-500" />
+                                        <div className="flex flex-col">
+                                            <button
+                                                onClick={() => handleMoveSecaoUp(secao.tempId)}
+                                                disabled={secaoIdx === 0}
+                                                className="text-gray-400 hover:text-white disabled:text-gray-700 p-0.5"
+                                                title="Mover seção para cima"
+                                            >
+                                                <ArrowUp className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleMoveSecaoDown(secao.tempId)}
+                                                disabled={secaoIdx === secoes.length - 1}
+                                                className="text-gray-400 hover:text-white disabled:text-gray-700 p-0.5"
+                                                title="Mover seção para baixo"
+                                            >
+                                                <ArrowDown className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                         Seção VIII.{secao.ordem + 1}
                                     </CardTitle>
-                                    <Button
-                                        onClick={() => handleDeleteSecao(secao.tempId)}
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-red-400 hover:text-red-300"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
+                                    <div className="flex gap-2">
+                                        {!secao.tem_subsecoes && secao.pendencias.length > 0 && (
+                                            <Button
+                                                onClick={() => handleConverterParaSubsecoes(secao.tempId)}
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-indigo-400 border-indigo-600 hover:bg-indigo-900/30"
+                                                title="Converter pendências em subseção"
+                                            >
+                                                <FolderInput className="w-4 h-4 mr-1" />
+                                                Criar Subseção
+                                            </Button>
+                                        )}
+                                        <Button
+                                            onClick={() => handleDeleteSecao(secao.tempId)}
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-red-400 hover:text-red-300"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -1823,23 +2026,54 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                     <div key={pendencia.tempId} className="bg-gray-900 border border-gray-600 rounded-sm overflow-hidden mb-4 shadow-sm">
                                                         {/* Row 1: Número e Campos de Texto */}
                                                         <div className="flex border-b border-gray-600 min-h-[5rem]">
-                                                            {/* Coluna do Número */}
-                                                            <div className="w-[8%] min-w-[3.5rem] bg-indigo-900/30 flex items-center justify-center border-r border-gray-600">
-                                                                <span className="text-3xl font-bold text-white">
+                                                            {/* Coluna do Número + Setas */}
+                                                            <div className="w-[8%] min-w-[3.5rem] bg-indigo-900/30 flex flex-col items-center justify-center border-r border-gray-600 gap-0.5 py-1">
+                                                                <button
+                                                                    onClick={() => handleMovePendenciaUp(secao.tempId, pendencia.tempId)}
+                                                                    disabled={pIdx === 0}
+                                                                    className="text-gray-400 hover:text-white disabled:text-gray-700 p-0.5"
+                                                                    title="Mover para cima"
+                                                                >
+                                                                    <ArrowUp className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <span className="text-2xl font-bold text-white leading-none">
                                                                     {globalPendenciaCounter}
                                                                 </span>
+                                                                <button
+                                                                    onClick={() => handleMovePendenciaDown(secao.tempId, pendencia.tempId)}
+                                                                    disabled={pIdx === secao.pendencias.length - 1}
+                                                                    className="text-gray-400 hover:text-white disabled:text-gray-700 p-0.5"
+                                                                    title="Mover para baixo"
+                                                                >
+                                                                    <ArrowDown className="w-3.5 h-3.5" />
+                                                                </button>
                                                             </div>
 
                                                             {/* Coluna dos Campos */}
                                                             <div className="flex-1 p-3 space-y-2 relative">
-                                                                <Button
-                                                                    onClick={() => handleDeletePendencia(secao.tempId, pendencia.tempId)}
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="absolute top-1 right-1 text-red-500 hover:text-red-400 h-6 w-6 p-0 z-10"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </Button>
+                                                                <div className="absolute top-1 right-1 flex gap-1 z-10">
+                                                                    <Button
+                                                                        onClick={() => setPendenciaParaMover({
+                                                                            secaoTempId: secao.tempId,
+                                                                            pendenciaTempId: pendencia.tempId,
+                                                                            pendenciaLabel: `#${globalPendenciaCounter} ${pendencia.local || pendencia.descricao || ''}`.trim().slice(0, 40),
+                                                                        })}
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="text-blue-400 hover:text-blue-300 h-6 w-6 p-0"
+                                                                        title="Mover para outra seção"
+                                                                    >
+                                                                        <MoveRight className="w-4 h-4" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        onClick={() => handleDeletePendencia(secao.tempId, pendencia.tempId)}
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="text-red-500 hover:text-red-400 h-6 w-6 p-0"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </Button>
+                                                                </div>
 
                                                                 <div className="flex items-center gap-2">
                                                                     <Label className="text-gray-300 font-bold whitespace-nowrap w-20 text-right">Local:</Label>
@@ -2209,18 +2443,52 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                         return (
                                                                             <div key={pend.tempId} className="bg-gray-900 border border-gray-700 rounded-sm overflow-hidden shadow-sm">
                                                                                 <div className="flex min-h-[4rem] border-b border-gray-700">
-                                                                                    <div className="w-[8%] min-w-[3rem] bg-indigo-900/20 flex items-center justify-center border-r border-gray-700 font-bold text-lg text-indigo-300">
-                                                                                        {globalPendenciaCounter}
+                                                                                    <div className="w-[8%] min-w-[3rem] bg-indigo-900/20 flex flex-col items-center justify-center border-r border-gray-700 gap-0.5 py-1">
+                                                                                        <button
+                                                                                            onClick={() => handleMovePendenciaSubUp(secao.tempId, subsecao.tempId, pend.tempId)}
+                                                                                            disabled={pIdx === 0}
+                                                                                            className="text-gray-400 hover:text-white disabled:text-gray-700 p-0.5"
+                                                                                            title="Mover para cima"
+                                                                                        >
+                                                                                            <ArrowUp className="w-3 h-3" />
+                                                                                        </button>
+                                                                                        <span className="font-bold text-lg text-indigo-300 leading-none">
+                                                                                            {globalPendenciaCounter}
+                                                                                        </span>
+                                                                                        <button
+                                                                                            onClick={() => handleMovePendenciaSubDown(secao.tempId, subsecao.tempId, pend.tempId)}
+                                                                                            disabled={pIdx === subsecao.pendencias.length - 1}
+                                                                                            className="text-gray-400 hover:text-white disabled:text-gray-700 p-0.5"
+                                                                                            title="Mover para baixo"
+                                                                                        >
+                                                                                            <ArrowDown className="w-3 h-3" />
+                                                                                        </button>
                                                                                     </div>
                                                                                     <div className="flex-1 p-2 space-y-2 relative">
-                                                                                        <Button
-                                                                                            onClick={() => handleDeletePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId)}
-                                                                                            variant="ghost"
-                                                                                            size="sm"
-                                                                                            className="absolute top-1 right-1 text-red-500 h-5 w-5 p-0"
-                                                                                        >
-                                                                                            <X className="w-3.5 h-3.5" />
-                                                                                        </Button>
+                                                                                        <div className="absolute top-1 right-1 flex gap-1 z-10">
+                                                                                            <Button
+                                                                                                onClick={() => setPendenciaParaMover({
+                                                                                                    secaoTempId: secao.tempId,
+                                                                                                    subsecaoTempId: subsecao.tempId,
+                                                                                                    pendenciaTempId: pend.tempId,
+                                                                                                    pendenciaLabel: `#${globalPendenciaCounter} ${pend.local || pend.descricao || ''}`.trim().slice(0, 40),
+                                                                                                })}
+                                                                                                variant="ghost"
+                                                                                                size="sm"
+                                                                                                className="text-blue-400 hover:text-blue-300 h-5 w-5 p-0"
+                                                                                                title="Mover para outra seção"
+                                                                                            >
+                                                                                                <MoveRight className="w-3.5 h-3.5" />
+                                                                                            </Button>
+                                                                                            <Button
+                                                                                                onClick={() => handleDeletePendenciaSubsecao(secao.tempId, subsecao.tempId, pend.tempId)}
+                                                                                                variant="ghost"
+                                                                                                size="sm"
+                                                                                                className="text-red-500 h-5 w-5 p-0"
+                                                                                            >
+                                                                                                <X className="w-3.5 h-3.5" />
+                                                                                            </Button>
+                                                                                        </div>
                                                                                         <div className="flex items-center gap-2">
                                                                                             <Label className="text-gray-400 text-[10px] font-bold uppercase w-12 text-right">Local:</Label>
                                                                                             <Input
@@ -2397,6 +2665,76 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                     onSave={handleSaveEditedImage}
                     onCancel={() => setEditingImage(null)}
                 />
+            )}
+
+            {/* Modal Mover Pendência para outra seção/subseção */}
+            {pendenciaParaMover && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setPendenciaParaMover(null)}>
+                    <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-white font-semibold text-lg">Mover Pendência</h3>
+                            <button onClick={() => setPendenciaParaMover(null)} className="text-gray-400 hover:text-white">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <p className="text-gray-400 text-sm mb-4">
+                            Movendo: <span className="text-white font-medium">{pendenciaParaMover.pendenciaLabel}</span>
+                        </p>
+                        <p className="text-gray-500 text-xs mb-3">Selecione o destino:</p>
+                        <div className="space-y-2">
+                            {secoes.map(secao => {
+                                const isOrigem = secao.tempId === pendenciaParaMover.secaoTempId && !pendenciaParaMover.subsecaoTempId;
+                                return (
+                                    <div key={secao.tempId}>
+                                        {/* Seção como destino (se não tem subseções ou se pendências diretas são permitidas) */}
+                                        {!secao.tem_subsecoes && (
+                                            <button
+                                                onClick={() => handleMoverPendencia(secao.tempId)}
+                                                disabled={isOrigem}
+                                                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-all ${
+                                                    isOrigem
+                                                        ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                                        : 'bg-gray-700/50 text-white hover:bg-indigo-900/40 hover:border-indigo-500 border border-transparent'
+                                                }`}
+                                            >
+                                                <span className="font-medium">VIII.{secao.ordem + 1}</span> - {secao.titulo_principal || 'Sem título'}
+                                                {isOrigem && <span className="text-xs ml-2 text-gray-500">(atual)</span>}
+                                            </button>
+                                        )}
+                                        {/* Seção com subseções */}
+                                        {secao.tem_subsecoes && (
+                                            <div>
+                                                <p className="text-gray-400 text-xs font-semibold px-3 py-1.5 bg-gray-900/50 rounded-t-md">
+                                                    VIII.{secao.ordem + 1} - {secao.titulo_principal || 'Sem título'}
+                                                </p>
+                                                <div className="pl-4 space-y-1 py-1">
+                                                    {(secao.subsecoes || []).filter(sub => sub.tipo !== 'CONSTATACAO').map((sub, subIdx) => {
+                                                        const isOrigemSub = secao.tempId === pendenciaParaMover.secaoTempId && sub.tempId === pendenciaParaMover.subsecaoTempId;
+                                                        return (
+                                                            <button
+                                                                key={sub.tempId}
+                                                                onClick={() => handleMoverPendencia(secao.tempId, sub.tempId)}
+                                                                disabled={isOrigemSub}
+                                                                className={`w-full text-left px-3 py-1.5 rounded-md text-sm transition-all ${
+                                                                    isOrigemSub
+                                                                        ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                                                        : 'bg-gray-700/30 text-gray-300 hover:bg-indigo-900/30 hover:text-white border border-transparent'
+                                                                }`}
+                                                            >
+                                                                {String.fromCharCode(65 + subIdx)}. {sub.titulo || 'Sem título'}
+                                                                {isOrigemSub && <span className="text-xs ml-2 text-gray-500">(atual)</span>}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
             )}
         </div >
     );

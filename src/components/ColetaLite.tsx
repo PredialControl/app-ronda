@@ -69,6 +69,8 @@ function getFromCache<T>(key: string, maxAgeMs = 30 * 60 * 1000): T | null {
     const raw = localStorage.getItem(CACHE_PREFIX + key);
     if (!raw) return null;
     const { data, timestamp } = JSON.parse(raw);
+    // Quando offline, não expirar cache (dados locais são tudo que temos)
+    if (!navigator.onLine) return data as T;
     if (Date.now() - timestamp > maxAgeMs) return null;
     return data as T;
   } catch {
@@ -237,6 +239,36 @@ async function deleteOfflineFoto(key: string): Promise<void> {
   });
 }
 
+async function getOfflineFotoByKey(key: string): Promise<any | null> {
+  const db = await openOfflineDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// Prefixo para referências de fotos de constatação salvas no IndexedDB
+const IDB_FOTO_PREFIX = 'idb://';
+
+// Cache em memória para fotos do IndexedDB (evita leitura assíncrona ao renderizar)
+const idbFotoCache = new Map<string, string>();
+
+// Resolver referência idb:// para base64 real (carrega do IndexedDB se não estiver no cache)
+async function resolveIdbFoto(ref: string): Promise<string> {
+  if (!ref.startsWith(IDB_FOTO_PREFIX)) return ref;
+  const key = ref.slice(IDB_FOTO_PREFIX.length);
+  const cached = idbFotoCache.get(key);
+  if (cached) return cached;
+  const entry = await getOfflineFotoByKey(key);
+  if (entry?.base64) {
+    idbFotoCache.set(key, entry.base64);
+    return entry.base64;
+  }
+  return ref; // fallback
+}
+
 type Tela =
   | 'contratos'
   | 'menu'
@@ -319,6 +351,9 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   const [constObsLocal, setConstObsLocal] = useState('');
   const constObsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Fotos de constatação resolvidas (idb:// -> base64 real para exibição)
+  const [constFotosResolvidas, setConstFotosResolvidas] = useState<Record<string, string>>({});
+
   // Nova pendência
   const [novaPendLocal, setNovaPendLocal] = useState('');
   const [novaPendDescricao, setNovaPendDescricao] = useState('');
@@ -363,6 +398,28 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   useEffect(() => {
     loadOfflineFotos();
   }, [tela, relatorioSelecionado]);
+
+  // Resolver referências idb:// das fotos de constatação para exibição
+  const fotosConstatacaoAtual = subsecaoSelecionada?.fotos_constatacao || [];
+  useEffect(() => {
+    const fotosIdb = fotosConstatacaoAtual.filter((f: string) => f?.startsWith(IDB_FOTO_PREFIX));
+    if (fotosIdb.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const novasResolvidas: Record<string, string> = {};
+      for (const ref of fotosIdb) {
+        if (cancelled) return;
+        try {
+          const base64 = await resolveIdbFoto(ref);
+          if (base64 !== ref) novasResolvidas[ref] = base64;
+        } catch {}
+      }
+      if (!cancelled && Object.keys(novasResolvidas).length > 0) {
+        setConstFotosResolvidas(prev => ({ ...prev, ...novasResolvidas }));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [fotosConstatacaoAtual.join(',')]);
 
   // PWA Install prompt
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -752,12 +809,16 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           if (secLocal.tem_subsecoes && secLocal.subsecoes) {
             for (const subLocal of secLocal.subsecoes) {
               try {
+                // Filtrar refs idb:// e base64 das fotos (serão uploadadas pelo syncConstatacaoFotos)
+                const fotosParaDB = (subLocal.fotos_constatacao || []).filter(
+                  (f: string) => f && !f.startsWith(IDB_FOTO_PREFIX) && !f.startsWith('data:')
+                );
                 const subCriada = await relatorioPendenciasService.createSubsecao({
                   secao_id: secao.id,
                   ordem: subLocal.ordem ?? 0,
                   titulo: subLocal.titulo || '',
                   tipo: subLocal.tipo || 'MANUAL',
-                  fotos_constatacao: subLocal.fotos_constatacao || [],
+                  fotos_constatacao: fotosParaDB,
                 } as any);
                 subIdMap[subLocal.id] = subCriada.id;
               } catch (e) {
@@ -935,6 +996,9 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       // Sync fotos órfãs do IndexedDB (de uploads que falharam)
       await syncOrphanFotos(relIdMap);
 
+      // Sync fotos de constatação do IndexedDB (idb:// -> upload Supabase)
+      await syncConstatacaoFotos(relIdMap, subIdMap);
+
       // Limpar fotos antigas do localStorage (migração)
       try {
         const oldKeys = Object.keys(localStorage).filter(k => k.startsWith('foto_offline_'));
@@ -1035,6 +1099,121 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         }
       }
     } catch {}
+  };
+
+  // Sync fotos de constatação salvas no IndexedDB (idb:// refs -> upload Supabase + atualizar DB)
+  const syncConstatacaoFotos = async (relIdMap: Record<string, string> = {}, subIdMap: Record<string, string> = {}) => {
+    try {
+      const offlineFotos = await getOfflineFotos();
+      const fotosConst = offlineFotos.filter(f => f.tipo === 'constatacao' && f.base64 && f.subsecaoId);
+
+      // Agrupar por subseção para fazer batch update
+      const porSubsecao: Record<string, Array<{ key: string; base64: string; relatorioId: string }>> = {};
+      for (const foto of fotosConst) {
+        const realSubId = subIdMap[foto.subsecaoId] || foto.subsecaoId;
+        const realRelId = relIdMap[foto.relatorioId] || foto.relatorioId;
+        if (realSubId.startsWith('offline_') || realRelId.startsWith('offline_')) continue;
+        if (!porSubsecao[realSubId]) porSubsecao[realSubId] = [];
+        porSubsecao[realSubId].push({ key: foto.key, base64: foto.base64, relatorioId: realRelId });
+      }
+
+      for (const [subsecaoId, fotos] of Object.entries(porSubsecao)) {
+        try {
+          // Buscar fotos atuais da subseção no banco (via relatório)
+          const relId = fotos[0]?.relatorioId;
+          let fotosAtuais: string[] = [];
+          if (relId) {
+            try {
+              const rel = await relatorioPendenciasService.getById(relId);
+              const sub = rel?.secoes?.flatMap((s: any) => s.subsecoes || []).find((s: any) => s.id === subsecaoId);
+              fotosAtuais = sub?.fotos_constatacao || [];
+            } catch {}
+          }
+
+          for (const foto of fotos) {
+            try {
+              const file = base64ToFile(foto.base64, `constatacao_${subsecaoId}_${Date.now()}.jpg`);
+              const url = await relatorioPendenciasService.uploadFoto(file, foto.relatorioId, `constatacao-${subsecaoId}-${Date.now()}`);
+
+              // Substituir a referência idb:// pela URL real
+              const idbRef = IDB_FOTO_PREFIX + foto.key;
+              fotosAtuais = fotosAtuais.map(f => f === idbRef ? url : f);
+              // Se não achou a referência (pode ter sido salva como base64 direto no DB), adicionar
+              if (!fotosAtuais.includes(url)) {
+                // Verificar se existe base64 raw no array e substituir
+                const base64Idx = fotosAtuais.findIndex(f => f.startsWith('data:') && f.length > 1000);
+                if (base64Idx >= 0) {
+                  fotosAtuais[base64Idx] = url;
+                } else {
+                  fotosAtuais.push(url);
+                }
+              }
+
+              await deleteOfflineFoto(foto.key);
+              idbFotoCache.delete(foto.key);
+              console.log('[SYNC-CONST] Foto constatação uploaded:', foto.key, '->', url);
+            } catch (e) {
+              console.error('[SYNC-CONST] Erro upload foto constatação:', foto.key, e);
+            }
+          }
+
+          // Atualizar subseção com URLs reais (remover qualquer base64 residual)
+          await relatorioPendenciasService.updateSubsecao(subsecaoId, { fotos_constatacao: fotosAtuais });
+          console.log('[SYNC-CONST] Subseção atualizada:', subsecaoId, 'fotos:', fotosAtuais.length);
+        } catch (e) {
+          console.error('[SYNC-CONST] Erro ao sync fotos da subseção:', subsecaoId, e);
+        }
+      }
+    } catch (e) {
+      console.error('[SYNC-CONST] Erro geral sync fotos constatação:', e);
+    }
+  };
+
+  // Reconstruir fotos de constatação do IndexedDB para um relatório
+  // (usado quando o cache expirou mas as fotos ainda estão no IndexedDB)
+  const reconstruirFotosConstatacao = async (relatorio: RelatorioPendencias): Promise<RelatorioPendencias> => {
+    try {
+      const offlineFotos = await getOfflineFotos();
+      const fotosConst = offlineFotos.filter(f => f.tipo === 'constatacao' && f.base64 && f.subsecaoId);
+      if (fotosConst.length === 0) return relatorio;
+
+      // Agrupar por subsecaoId
+      const porSub: Record<string, string[]> = {};
+      for (const foto of fotosConst) {
+        const subId = foto.subsecaoId;
+        if (!porSub[subId]) porSub[subId] = [];
+        const idbRef = IDB_FOTO_PREFIX + foto.key;
+        porSub[subId].push(idbRef);
+        // Popular cache de memória
+        idbFotoCache.set(foto.key, foto.base64);
+      }
+
+      // Injetar refs nas subseções do relatório
+      let modificou = false;
+      const secoes = (relatorio.secoes || []).map((secao: any) => ({
+        ...secao,
+        subsecoes: (secao.subsecoes || []).map((sub: any) => {
+          const fotosDoIdb = porSub[sub.id];
+          if (!fotosDoIdb || fotosDoIdb.length === 0) return sub;
+          // Adicionar fotos do IDB que não estão no array atual
+          const fotosAtuais = sub.fotos_constatacao || [];
+          const novas = fotosDoIdb.filter((ref: string) => !fotosAtuais.includes(ref));
+          if (novas.length === 0) return sub;
+          modificou = true;
+          return { ...sub, fotos_constatacao: [...fotosAtuais, ...novas] };
+        }),
+      }));
+
+      if (modificou) {
+        const relAtualizado = { ...relatorio, secoes };
+        saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+        console.log('[RECONSTRUCT] Fotos constatação reconstruídas do IndexedDB');
+        return relAtualizado as RelatorioPendencias;
+      }
+    } catch (e) {
+      console.warn('[RECONSTRUCT] Erro ao reconstruir fotos:', e);
+    }
+    return relatorio;
   };
 
   const showMsg = (msg: string) => {
@@ -2056,14 +2235,17 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                       // Tentar cache primeiro
                       const cached = getFromCache<RelatorioPendencias>(`relatorio_${rel.id}`, 15 * 60 * 1000);
                       if (cached) {
-                        setRelatorioSelecionado(cached);
+                        // Reconstruir fotos de constatação do IndexedDB (caso cache tenha perdido refs)
+                        const comFotos = await reconstruirFotosConstatacao(cached);
+                        setRelatorioSelecionado(comFotos);
                         setTela('relatorio-secoes');
                         // Atualizar em background
                         if (navigator.onLine) {
-                          relatorioPendenciasService.getById(rel.id).then(r => {
+                          relatorioPendenciasService.getById(rel.id).then(async (r) => {
                             if (r) {
-                              setRelatorioSelecionado(r);
-                              saveToCache(`relatorio_${r.id}`, r);
+                              const rComFotos = await reconstruirFotosConstatacao(r);
+                              setRelatorioSelecionado(rComFotos);
+                              saveToCache(`relatorio_${rComFotos.id}`, rComFotos);
                             }
                           }).catch(() => {});
                         }
@@ -2073,8 +2255,9 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                       try {
                         const relCompleto = await relatorioPendenciasService.getById(rel.id);
                         if (relCompleto) {
-                          setRelatorioSelecionado(relCompleto);
-                          saveToCache(`relatorio_${relCompleto.id}`, relCompleto);
+                          const comFotos = await reconstruirFotosConstatacao(relCompleto);
+                          setRelatorioSelecionado(comFotos);
+                          saveToCache(`relatorio_${comFotos.id}`, comFotos);
                           setTela('relatorio-secoes');
                         }
                       } catch (e) {
@@ -2418,6 +2601,24 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           } catch (err) {
             console.error('Erro upload:', err);
           }
+        } else {
+          // OFFLINE: salvar base64 no IndexedDB (localStorage é pequeno demais para muitas fotos)
+          try {
+            const idbKey = `constatacao_foto_${subsecaoSelecionada.id}_${Date.now()}`;
+            await saveOfflineFoto(idbKey, {
+              base64: constPreview,
+              subsecaoId: subsecaoSelecionada.id,
+              relatorioId: relatorioSelecionado.id,
+              tipo: 'constatacao',
+            });
+            urlFinal = IDB_FOTO_PREFIX + idbKey;
+            // Guardar base64 em cache de memória para exibição imediata
+            idbFotoCache.set(idbKey, constPreview);
+          } catch (err) {
+            console.error('Erro ao salvar foto constatação no IndexedDB:', err);
+            // Fallback: usar base64 direto (pode estourar localStorage, mas melhor que perder)
+            urlFinal = constPreview;
+          }
         }
 
         await atualizarFotosConst([...fotosConst, urlFinal]);
@@ -2537,8 +2738,22 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                     const url = await relatorioPendenciasService.uploadFoto(file, relatorioSelecionado.id, `constatacao-${subsecaoSelecionada.id}-${Date.now()}`);
                     novasUrls.push(url);
                   } else {
+                    // OFFLINE: salvar no IndexedDB em vez de guardar base64 no localStorage
                     const base64 = await compressImage(file, 800, 0.6);
-                    novasUrls.push(base64);
+                    try {
+                      const idbKey = `constatacao_foto_${subsecaoSelecionada.id}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+                      await saveOfflineFoto(idbKey, {
+                        base64,
+                        subsecaoId: subsecaoSelecionada.id,
+                        relatorioId: relatorioSelecionado.id,
+                        tipo: 'constatacao',
+                      });
+                      novasUrls.push(IDB_FOTO_PREFIX + idbKey);
+                      idbFotoCache.set(idbKey, base64);
+                    } catch (err) {
+                      console.error('Erro ao salvar foto constatação no IndexedDB:', err);
+                      novasUrls.push(base64); // fallback
+                    }
                   }
                 } catch (err) {
                   console.error('Erro upload foto constatação:', err);
@@ -2593,17 +2808,34 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
             {/* Grid de fotos */}
             {fotosConst.length > 0 && (
               <div className="grid grid-cols-2 gap-2">
-                {fotosConst.map((foto: string, idx: number) => (
-                  <div key={idx} className="relative aspect-[4/3] bg-gray-800 rounded-lg overflow-hidden">
-                    <img src={foto} className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => atualizarFotosConst(fotosConst.filter((_: any, i: number) => i !== idx))}
-                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
+                {fotosConst.map((foto: string, idx: number) => {
+                  // Resolver referência idb:// para base64 real
+                  const fotoSrc = foto.startsWith(IDB_FOTO_PREFIX)
+                    ? (constFotosResolvidas[foto] || idbFotoCache.get(foto.slice(IDB_FOTO_PREFIX.length)) || '')
+                    : foto;
+                  return (
+                    <div key={idx} className="relative aspect-[4/3] bg-gray-800 rounded-lg overflow-hidden">
+                      {fotoSrc ? (
+                        <img src={fotoSrc} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">Carregando...</div>
+                      )}
+                      <button
+                        onClick={async () => {
+                          // Se for idb://, deletar do IndexedDB também
+                          if (foto.startsWith(IDB_FOTO_PREFIX)) {
+                            const key = foto.slice(IDB_FOTO_PREFIX.length);
+                            try { await deleteOfflineFoto(key); idbFotoCache.delete(key); } catch {}
+                          }
+                          atualizarFotosConst(fotosConst.filter((_: any, i: number) => i !== idx));
+                        }}
+                        className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
