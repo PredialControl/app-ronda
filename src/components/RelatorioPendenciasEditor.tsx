@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Save, X, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Mic, MicOff, Edit3, RefreshCw, ArrowUp, ArrowDown, MoveRight, FolderInput, Check } from 'lucide-react';
+import { Plus, Save, X, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Mic, MicOff, Edit3, RefreshCw, ArrowUp, ArrowDown, MoveRight, FolderInput, Check, GripVertical } from 'lucide-react';
 import { Contrato, RelatorioPendencias as RelatorioPendenciasType } from '@/types';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 import { useVoiceCapture } from '@/hooks/useVoiceCapture';
@@ -137,8 +137,8 @@ interface PendenciaLocal {
     previewDepois?: string;
 }
 
-// Wrapper arrastável para pendência
-function DraggablePendencia({ id, children, isSelected }: { id: string; children: React.ReactNode; isSelected?: boolean }) {
+// Wrapper arrastável para pendência - usa drag handle (GripVertical) em vez de arrastar o card todo
+function DraggablePendencia({ id, children, isSelected }: { id: string; children: (dragHandle: React.ReactNode) => React.ReactNode; isSelected?: boolean }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
     const style: React.CSSProperties = {
         transform: CSS.Transform.toString(transform),
@@ -146,11 +146,15 @@ function DraggablePendencia({ id, children, isSelected }: { id: string; children
         opacity: isDragging ? 0.3 : 1,
         outline: isSelected ? '2px solid #6366f1' : undefined,
         outlineOffset: isSelected ? '2px' : undefined,
-        cursor: 'grab',
     };
+    const dragHandle = (
+        <div {...listeners} {...attributes} className="cursor-grab active:cursor-grabbing p-1 text-gray-500 hover:text-white touch-none">
+            <GripVertical className="w-4 h-4" />
+        </div>
+    );
     return (
-        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-            {children}
+        <div ref={setNodeRef} style={style}>
+            {children(dragHandle)}
         </div>
     );
 }
@@ -2350,11 +2354,13 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                 globalPendenciaCounter++;
                                                 return (
                                                     <DraggablePendencia key={pendencia.tempId} id={pendencia.tempId} isSelected={selectedPendencias.has(pendencia.tempId)}>
+                                                    {(dragHandle) => (
                                                     <div className="bg-gray-900 border border-gray-600 rounded-sm overflow-hidden mb-4 shadow-sm">
                                                         {/* Row 1: Número e Campos de Texto */}
                                                         <div className="flex border-b border-gray-600 min-h-[5rem]">
-                                                            {/* Coluna do Número + Setas + Checkbox */}
+                                                            {/* Coluna do Drag Handle + Número + Setas + Checkbox */}
                                                             <div className="w-[8%] min-w-[3.5rem] bg-indigo-900/30 flex flex-col items-center justify-center border-r border-gray-600 gap-0.5 py-1">
+                                                                {dragHandle}
                                                                 <button
                                                                     onClick={() => toggleSelectPendencia(pendencia.tempId)}
                                                                     className={`w-5 h-5 rounded border flex items-center justify-center mb-0.5 ${
@@ -2584,6 +2590,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                             </div>
                                                         </div>
                                                     </div>
+                                                    )}
                                                     </DraggablePendencia>
                                                 );
                                             })}
@@ -2786,9 +2793,11 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                         globalPendenciaCounter++;
                                                                         return (
                                                                             <DraggablePendencia key={pend.tempId} id={pend.tempId} isSelected={selectedPendencias.has(pend.tempId)}>
+                                                                            {(dragHandle) => (
                                                                             <div className="bg-gray-900 border border-gray-700 rounded-sm overflow-hidden shadow-sm">
                                                                                 <div className="flex min-h-[4rem] border-b border-gray-700">
                                                                                     <div className="w-[8%] min-w-[3rem] bg-indigo-900/20 flex flex-col items-center justify-center border-r border-gray-700 gap-0.5 py-1">
+                                                                                        {dragHandle}
                                                                                         <button
                                                                                             onClick={() => toggleSelectPendencia(pend.tempId)}
                                                                                             className={`w-4 h-4 rounded border flex items-center justify-center mb-0.5 ${
@@ -2949,6 +2958,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                     </div>
                                                                                 </div>
                                                                             </div>
+                                                                            )}
                                                                             </DraggablePendencia>
                                                                         );
                                                                     })}
