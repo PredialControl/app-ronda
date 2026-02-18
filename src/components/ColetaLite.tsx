@@ -25,6 +25,7 @@ import {
 const CACHE_PREFIX = 'coleta_cache_';
 const OFFLINE_QUEUE_KEY = 'coleta_offline_queue';
 const OFFLINE_SECOES_KEY = 'coleta_offline_secoes';
+const OFFLINE_RELATORIOS_KEY = 'coleta_offline_relatorios';
 
 interface OfflineSecao {
   id: string; // offline_sec_xxx
@@ -77,12 +78,9 @@ function getFromCache<T>(key: string, maxAgeMs = 30 * 60 * 1000): T | null {
 
 function getOfflineQueue(): OfflinePendencia[] {
   try {
-    // Limpeza única das pendências travadas de versões anteriores
+    // v3 cleanup já executou - só marca flag se não existir (não apaga mais fila)
     if (!localStorage.getItem('offline_queue_cleaned_v3')) {
-      localStorage.removeItem(OFFLINE_QUEUE_KEY);
-      localStorage.removeItem(OFFLINE_SECOES_KEY);
       localStorage.setItem('offline_queue_cleaned_v3', '1');
-      return [];
     }
     const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -104,6 +102,24 @@ function getOfflineSecoes(): OfflineSecao[] {
 
 function saveOfflineSecoes(secoes: OfflineSecao[]) {
   localStorage.setItem(OFFLINE_SECOES_KEY, JSON.stringify(secoes));
+}
+
+interface OfflineRelatorio {
+  id: string; // offline_rel_xxx
+  contrato_id: string;
+  titulo: string;
+  created_at: string;
+}
+
+function getOfflineRelatorios(): OfflineRelatorio[] {
+  try {
+    const raw = localStorage.getItem(OFFLINE_RELATORIOS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveOfflineRelatorios(rels: OfflineRelatorio[]) {
+  localStorage.setItem(OFFLINE_RELATORIOS_KEY, JSON.stringify(rels));
 }
 
 // Comprimir imagem antes de converter para base64 (máx 800px, qualidade 0.6)
@@ -300,6 +316,8 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   const [constCameraMode, setConstCameraMode] = useState(false);
   const [constPreview, setConstPreview] = useState<string | null>(null);
   const constCameraRef = useRef<HTMLInputElement>(null);
+  const [constObsLocal, setConstObsLocal] = useState('');
+  const constObsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Nova pendência
   const [novaPendLocal, setNovaPendLocal] = useState('');
@@ -395,28 +413,42 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   const [showSugestoesEditDescricao, setShowSugestoesEditDescricao] = useState(false);
 
   // Extrair valores únicos de todas as pendências do relatório para autocomplete
+  // Retorna os mais recentes primeiro (últimos adicionados)
   const getAutocompleteSugestoes = (campo: 'local' | 'descricao') => {
     if (!relatorioSelecionado?.secoes) return [];
-    const valores = new Set<string>();
-    relatorioSelecionado.secoes.forEach(secao => {
-      (secao.pendencias || []).forEach(p => {
-        const val = campo === 'local' ? p.local : p.descricao;
-        if (val && val.trim()) valores.add(val.trim());
-      });
-      (secao.subsecoes || []).forEach(sub => {
-        (sub.pendencias || []).forEach(p => {
-          const val = campo === 'local' ? p.local : p.descricao;
-          if (val && val.trim()) valores.add(val.trim());
-        });
-      });
-    });
-    return Array.from(valores).sort();
+    const valores: string[] = [];
+    const vistos = new Set<string>();
+    // Percorrer de trás para frente para pegar os mais recentes primeiro
+    const secoes = relatorioSelecionado.secoes;
+    for (let i = secoes.length - 1; i >= 0; i--) {
+      const secao = secoes[i];
+      const pends = secao.pendencias || [];
+      for (let j = pends.length - 1; j >= 0; j--) {
+        const val = campo === 'local' ? pends[j].local : pends[j].descricao;
+        if (val && val.trim() && !vistos.has(val.trim().toLowerCase())) {
+          vistos.add(val.trim().toLowerCase());
+          valores.push(val.trim());
+        }
+      }
+      const subs = secao.subsecoes || [];
+      for (let k = subs.length - 1; k >= 0; k--) {
+        const subPends = subs[k].pendencias || [];
+        for (let j = subPends.length - 1; j >= 0; j--) {
+          const val = campo === 'local' ? subPends[j].local : subPends[j].descricao;
+          if (val && val.trim() && !vistos.has(val.trim().toLowerCase())) {
+            vistos.add(val.trim().toLowerCase());
+            valores.push(val.trim());
+          }
+        }
+      }
+    }
+    return valores;
   };
 
   const filtrarSugestoes = (sugestoes: string[], termo: string) => {
-    if (!termo.trim()) return sugestoes;
+    if (!termo.trim()) return sugestoes.slice(0, 2);
     const t = termo.toLowerCase();
-    return sugestoes.filter(s => s.toLowerCase().includes(t));
+    return sugestoes.filter(s => s.toLowerCase().includes(t)).slice(0, 2);
   };
 
   // Online status
@@ -456,15 +488,35 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
 
   // Polling periódico: tenta sync a cada 30s se tem itens na fila
   // (resolve dados móveis onde o evento 'online' nem sempre dispara)
+  // Também verifica relatórios e seções offline no localStorage
   useEffect(() => {
     const interval = setInterval(() => {
       const queue = getOfflineQueue();
-      if (queue.length > 0 && navigator.onLine) {
+      const offlineRels = getOfflineRelatorios();
+      const offlineSecoes = getOfflineSecoes();
+      const temAlgoParaSync = queue.length > 0 || offlineRels.length > 0 || offlineSecoes.length > 0;
+      if (temAlgoParaSync && navigator.onLine) {
         setOfflineQueue(queue); // Atualizar state (pode ter limpado itens velhos)
         syncOfflineQueue();
       }
     }, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Sync inicial ao abrir o app (3s delay para deixar UI carregar primeiro)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (navigator.onLine) {
+        const queue = getOfflineQueue();
+        const offlineRels = getOfflineRelatorios();
+        const offlineSecoes = getOfflineSecoes();
+        if (queue.length > 0 || offlineRels.length > 0 || offlineSecoes.length > 0) {
+          console.log('[SYNC] Sync inicial: fila:', queue.length, 'rels:', offlineRels.length, 'secoes:', offlineSecoes.length);
+          syncOfflineQueue();
+        }
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
   }, []);
 
   // Geração DOCX
@@ -542,12 +594,19 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
 
   // Sincronizar fila offline (com lock para evitar duplicação)
   const syncLockRef = useRef(false);
+  const syncLockTimeRef = useRef<number>(0);
   const syncOfflineQueue = async () => {
+    // Se lock travado há mais de 2 minutos, forçar liberação (crash recovery)
+    if (syncLockRef.current && Date.now() - syncLockTimeRef.current > 120000) {
+      console.log('[SYNC] Lock travado há >2min, forçando liberação');
+      syncLockRef.current = false;
+    }
     if (syncLockRef.current || !navigator.onLine) {
       console.log('[SYNC] Bloqueado - lock:', syncLockRef.current, 'online:', navigator.onLine);
       return;
     }
     syncLockRef.current = true;
+    syncLockTimeRef.current = Date.now();
     console.log('[SYNC] Iniciando sincronização...');
 
     try {
@@ -568,11 +627,12 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         const fotos = await getOfflineFotos();
         temFotosOrfas = fotos.some(f => f.base64 && f.pendenciaId && !f.key?.startsWith('pendencia_foto_'));
       } catch {}
-      const temRelOffline = currentRelatorios.some(r => r.id?.startsWith('offline_rel_'));
+      const offlineRels = getOfflineRelatorios(); // Fonte de verdade: localStorage (sobrevive reload)
+      const temRelOffline = offlineRels.length > 0 || currentRelatorios.some(r => r.id?.startsWith('offline_rel_'));
       const offlineSecoes = getOfflineSecoes();
       const temSecaoOffline = offlineSecoes.length > 0;
 
-      console.log('[SYNC] fila:', queue.length, 'fotosOrfas:', temFotosOrfas, 'relOff:', temRelOffline, 'secOff:', offlineSecoes.length);
+      console.log('[SYNC] fila:', queue.length, 'fotosOrfas:', temFotosOrfas, 'relOff:', offlineRels.length, 'secOff:', offlineSecoes.length);
       console.log('[SYNC] relSelecionado:', currentRelSelecionado?.id, 'contrato:', currentContrato?.id);
 
       if (queue.length === 0 && !temFotosOrfas && !temRelOffline && !temSecaoOffline) {
@@ -583,19 +643,24 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
 
       setSyncing(true);
 
-      // 0. Sincronizar relatórios offline primeiro
+      // 0. Sincronizar relatórios offline primeiro (ler do localStorage - persiste entre reloads)
       const relIdMap: Record<string, string> = {}; // offline_rel_xxx -> real_id
-      // Ler relatorios do ref (valores frescos)
-      const relatoriosAtuais = [...currentRelatorios];
-      for (const rel of relatoriosAtuais.filter(r => r.id?.startsWith('offline_rel_'))) {
+      for (const relOff of offlineRels) {
         try {
+          console.log('[SYNC] Criando relatório offline no banco:', relOff.id, relOff.titulo);
           const novo = await relatorioPendenciasService.create({
-            contrato_id: (rel as any).contrato_id || currentContrato?.id,
-            titulo: rel.titulo,
+            contrato_id: relOff.contrato_id,
+            titulo: relOff.titulo,
           } as any);
-          relIdMap[rel.id] = novo.id;
+          relIdMap[relOff.id] = novo.id;
+          console.log('[SYNC] Relatório criado:', relOff.id, '->', novo.id);
+
+          // Remover do localStorage IMEDIATAMENTE após sucesso
+          const relsRestantes = getOfflineRelatorios().filter(r => r.id !== relOff.id);
+          saveOfflineRelatorios(relsRestantes);
+
           // Se é o relatório selecionado, atualizar
-          if (currentRelSelecionado?.id === rel.id) {
+          if (currentRelSelecionado?.id === relOff.id) {
             const relCompleto = await relatorioPendenciasService.getById(novo.id);
             if (relCompleto) {
               setRelatorioSelecionado(relCompleto);
@@ -603,10 +668,55 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
             }
           }
         } catch (e) {
-          console.error('Erro sync relatório offline:', e);
+          console.error('Erro sync relatório offline:', relOff.id, e);
         }
       }
-      // Atualizar lista de relatórios
+
+      // 0.5 RECUPERAÇÃO: Encontrar IDs offline_rel_xxx órfãos (dados perdidos antes do fix)
+      // e criar relatórios automaticamente usando o contrato atual
+      const offlineRelIdsOrfaos = new Set<string>();
+      for (const secOff of offlineSecoes) {
+        if (secOff.relatorio_id?.startsWith('offline_rel_') && !relIdMap[secOff.relatorio_id]) {
+          offlineRelIdsOrfaos.add(secOff.relatorio_id);
+        }
+      }
+      for (const pendOff of queue) {
+        if (pendOff.relatorio_id?.startsWith('offline_rel_') && !relIdMap[pendOff.relatorio_id]) {
+          offlineRelIdsOrfaos.add(pendOff.relatorio_id);
+        }
+      }
+      // Para cada relatório órfão, criar no banco com título genérico
+      if (offlineRelIdsOrfaos.size > 0 && currentContrato) {
+        console.log('[SYNC-RECUPERA] Encontrados', offlineRelIdsOrfaos.size, 'relatórios órfãos, recuperando...');
+        for (const offRelId of offlineRelIdsOrfaos) {
+          try {
+            // Tentar extrair título do cache local
+            const cachedRel = getFromCache<any>(`relatorio_${offRelId}`, 7 * 24 * 60 * 60 * 1000); // cache até 7 dias
+            const titulo = cachedRel?.titulo || `Relatório recuperado ${new Date().toLocaleDateString('pt-BR')}`;
+            const contratoId = cachedRel?.contrato_id || currentContrato.id;
+
+            console.log('[SYNC-RECUPERA] Criando relatório para', offRelId, '- título:', titulo);
+            const novo = await relatorioPendenciasService.create({
+              contrato_id: contratoId,
+              titulo,
+            } as any);
+            relIdMap[offRelId] = novo.id;
+            console.log('[SYNC-RECUPERA] Relatório criado:', offRelId, '->', novo.id);
+
+            if (currentRelSelecionado?.id === offRelId) {
+              const relCompleto = await relatorioPendenciasService.getById(novo.id);
+              if (relCompleto) {
+                setRelatorioSelecionado(relCompleto);
+                saveToCache(`relatorio_${relCompleto.id}`, relCompleto);
+              }
+            }
+          } catch (e) {
+            console.error('[SYNC-RECUPERA] Erro ao recuperar relatório:', offRelId, e);
+          }
+        }
+      }
+
+      // Atualizar lista de relatórios (limpar os offline do state)
       if (Object.keys(relIdMap).length > 0) {
         setRelatorios(prev => prev.filter(r => !r.id?.startsWith('offline_rel_')));
         if (currentContrato) {
@@ -623,8 +733,8 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           // Mapear relatorio_id offline para real se necessário
           const realRelId = relIdMap[secLocal.relatorio_id] || secLocal.relatorio_id;
           if (realRelId.startsWith('offline_')) {
-            console.log('[SYNC] Seção', secLocal.id, 'tem relatorio offline, pulando');
-            continue; // Relatório ainda não sincronizado
+            console.log('[SYNC] Seção', secLocal.id, 'tem relatorio offline sem recuperação possível, pulando');
+            continue; // Relatório ainda não sincronizado e sem contrato pra recuperar
           }
 
           console.log('[SYNC] Criando seção', secLocal.id, 'no relatório', realRelId);
@@ -664,15 +774,94 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         }
       }
 
+      // 1.5 RESGATE: Para pendências com IDs offline que NÃO estão no mapa,
+      // buscar o relatório no Supabase e tentar casar seções/subseções por título+ordem
+      // Isso resolve o caso em que seções já sincronizaram mas o mapa se perdeu
+      const rescueCache: Record<string, { secoes: any[] }> = {};
+      const resolveOfflineSecao = async (offlineSecId: string, relatorioId: string): Promise<string | null> => {
+        try {
+          const realRelId = relIdMap[relatorioId] || relatorioId;
+          if (realRelId.startsWith('offline_')) return null;
+          // Buscar relatório com seções do Supabase (com cache local)
+          if (!rescueCache[realRelId]) {
+            const rel = await relatorioPendenciasService.getById(realRelId);
+            rescueCache[realRelId] = { secoes: rel?.secoes || [] };
+          }
+          const secoesDB = rescueCache[realRelId].secoes;
+          // Tentar achar seção pelo cache local (offlineSecoes que já foram removidas)
+          // ou pela ordem no relatório
+          // Extrair o timestamp do ID offline para comparar ordem de criação
+          const offlineSecoes2 = getOfflineSecoes();
+          const secOffline = offlineSecoes2.find(s => s.id === offlineSecId);
+          if (secOffline) {
+            // Casar por titulo_principal + ordem
+            const match = secoesDB.find((s: any) =>
+              s.titulo_principal === secOffline.titulo_principal && s.ordem === secOffline.ordem
+            );
+            if (match) {
+              console.log('[SYNC-RESGATE] Casou seção offline', offlineSecId, '->', match.id, 'por título+ordem');
+              secaoIdMap[offlineSecId] = match.id;
+              // Mapear subseções também
+              if (secOffline.subsecoes && match.subsecoes) {
+                for (const subOff of secOffline.subsecoes) {
+                  const subMatch = match.subsecoes.find((sub: any) =>
+                    sub.titulo === subOff.titulo && sub.ordem === subOff.ordem
+                  );
+                  if (subMatch) {
+                    subIdMap[subOff.id] = subMatch.id;
+                    console.log('[SYNC-RESGATE] Casou subseção', subOff.id, '->', subMatch.id);
+                  }
+                }
+              }
+              return match.id;
+            }
+          }
+          // Fallback: se não achou no offlineSecoes, tentar casar por ordem apenas
+          if (secoesDB.length > 0) {
+            // Usar a seção com ordem mais próxima
+            const porOrdem = [...secoesDB].sort((a: any, b: any) => a.ordem - b.ordem);
+            // Se o relatório tem seções, pegar a última criada (mais provável ser a offline)
+            const ultima = porOrdem[porOrdem.length - 1];
+            if (ultima) {
+              console.log('[SYNC-RESGATE] Fallback: usando última seção', ultima.id, 'para', offlineSecId);
+              secaoIdMap[offlineSecId] = ultima.id;
+              if (ultima.subsecoes?.length > 0) {
+                // Mapear subseções por ordem
+                const subsOff = offlineSecoes2.find(s => s.id === offlineSecId)?.subsecoes || [];
+                for (const subOff of subsOff) {
+                  const subMatch = ultima.subsecoes.find((sub: any) => sub.ordem === subOff.ordem);
+                  if (subMatch) subIdMap[subOff.id] = subMatch.id;
+                }
+              }
+              return ultima.id;
+            }
+          }
+          return null;
+        } catch (e) {
+          console.error('[SYNC-RESGATE] Erro ao resolver seção offline:', e);
+          return null;
+        }
+      };
+
       showMsg(`Sincronizando ${queue.length} pendência(s)...`);
       const remaining: OfflinePendencia[] = [];
 
       for (const item of queue) {
         try {
           // Substituir IDs offline por IDs reais do banco
-          const realRelId = relIdMap[item.relatorio_id] || item.relatorio_id;
-          const realSecaoId = secaoIdMap[item.secao_id] || item.secao_id;
-          const realSubId = item.subsecao_id ? (subIdMap[item.subsecao_id] || item.subsecao_id) : null;
+          let realRelId = relIdMap[item.relatorio_id] || item.relatorio_id;
+          let realSecaoId = secaoIdMap[item.secao_id] || item.secao_id;
+          let realSubId = item.subsecao_id ? (subIdMap[item.subsecao_id] || item.subsecao_id) : null;
+
+          // RESGATE: Se secao_id ainda é offline e não está no mapa, tentar resolver
+          if (realSecaoId.startsWith('offline_') && !realRelId.startsWith('offline_')) {
+            console.log('[SYNC-RESGATE] Tentando resolver seção órfã:', realSecaoId);
+            const resolved = await resolveOfflineSecao(item.secao_id, item.relatorio_id);
+            if (resolved) {
+              realSecaoId = resolved;
+              realSubId = item.subsecao_id ? (subIdMap[item.subsecao_id] || item.subsecao_id) : null;
+            }
+          }
 
           console.log('[SYNC] Processando pendência:', item.id, 'relId:', realRelId, 'secaoId:', realSecaoId, 'subId:', realSubId);
 
@@ -681,6 +870,12 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
             console.log('[SYNC] IDs ainda offline, mantendo na fila');
             remaining.push(item);
             continue;
+          }
+
+          // Se subseção ainda é offline mas seção é real, ignorar subseção (salvar na seção raiz)
+          if (realSubId && realSubId.startsWith('offline_')) {
+            console.log('[SYNC] Subseção ainda offline, salvando sem subseção');
+            realSubId = null;
           }
 
           const novaPend: any = {
@@ -759,10 +954,18 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
     } catch {}
 
       const queueLeft = getOfflineQueue();
-      if (queueLeft.length === 0) {
+      const secoesLeft = getOfflineSecoes();
+      if (queueLeft.length === 0 && secoesLeft.length === 0) {
         showMsg('Tudo sincronizado!');
       } else {
         showMsg(`${queueLeft.length} pendência(s) ainda na fila`);
+        // Retry automático em 10s se sobrou itens (pode ser que seções syncem na próxima)
+        setTimeout(() => {
+          if (navigator.onLine && getOfflineQueue().length > 0) {
+            console.log('[SYNC] Retry automático após 10s...');
+            syncOfflineQueue();
+          }
+        }, 10000);
       }
 
       // Recarregar dados (usar refs para valores frescos)
@@ -1113,6 +1316,16 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       created_at: new Date().toISOString(),
     };
 
+    // Persistir no localStorage (sobrevive a reload)
+    const offlineRels = getOfflineRelatorios();
+    offlineRels.push({
+      id: offlineRelId,
+      contrato_id: contratoSelecionado.id,
+      titulo,
+      created_at: relLocal.created_at,
+    });
+    saveOfflineRelatorios(offlineRels);
+
     // Adicionar à lista local
     setRelatorios(prev => [...prev, relLocal]);
     setRelatorioSelecionado(relLocal);
@@ -1135,6 +1348,9 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           saveToCache(`relatorio_${relCompleto.id}`, relCompleto);
           // Atualizar lista substituindo o local pelo real
           setRelatorios(prev => prev.map(r => r.id === offlineRelId ? relCompleto : r));
+          // Remover do localStorage offline (sync deu certo)
+          const relsRestantes = getOfflineRelatorios().filter(r => r.id !== offlineRelId);
+          saveOfflineRelatorios(relsRestantes);
         }
       } catch (e) {
         console.error('Erro ao sync relatório (mantido local):', e);
@@ -1517,10 +1733,10 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
       {syncing && (
         <RefreshCw className="w-4 h-4 text-blue-400 animate-spin flex-shrink-0" />
       )}
-      {offlineQueue.length > 0 && isOnline && !syncing && (
+      {(offlineQueue.length > 0 || getOfflineRelatorios().length > 0 || getOfflineSecoes().length > 0) && isOnline && !syncing && (
         <button onClick={syncOfflineQueue} className="text-xs text-orange-400 bg-orange-500/20 px-2 py-1 rounded flex items-center gap-1 active:scale-90 transition-transform">
           <RefreshCw className="w-3 h-3" />
-          {offlineQueue.length}
+          {offlineQueue.length + getOfflineRelatorios().length + getOfflineSecoes().length}
         </button>
       )}
       {mensagem && (
@@ -1671,10 +1887,10 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           </div>
           {!isOnline && <WifiOff className="w-4 h-4 text-yellow-400 flex-shrink-0" />}
           {syncing && <RefreshCw className="w-4 h-4 text-blue-400 animate-spin flex-shrink-0" />}
-          {offlineQueue.length > 0 && isOnline && !syncing && (
+          {(offlineQueue.length > 0 || getOfflineRelatorios().length > 0 || getOfflineSecoes().length > 0) && isOnline && !syncing && (
             <button onClick={syncOfflineQueue} className="text-xs text-orange-400 bg-orange-500/20 px-2 py-1 rounded flex items-center gap-1 active:scale-90 transition-transform">
               <RefreshCw className="w-3 h-3" />
-              {offlineQueue.length}
+              {offlineQueue.length + getOfflineRelatorios().length + getOfflineSecoes().length}
             </button>
           )}
           {mensagem && <span className="text-xs text-green-400 animate-pulse">{mensagem}</span>}
@@ -2190,6 +2406,9 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         if (!constPreview || !relatorioSelecionado) return;
         setLoading(true);
 
+        // Salvar na galeria do celular
+        saveToGallery(constPreview, `ronda_constatacao_${Date.now()}.jpg`);
+
         let urlFinal = constPreview;
         // Se online, fazer upload
         if (navigator.onLine && !relatorioSelecionado.id.startsWith('offline_') && !subsecaoSelecionada.id.startsWith('offline_')) {
@@ -2209,13 +2428,16 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         setTimeout(() => constCameraRef.current?.click(), 300);
       };
 
-      const handleSalvarObservacao = async (texto: string) => {
+      // Sincronizar estado local com subsecao selecionada (ao abrir/trocar)
+      if (constObsLocal !== (subsecaoSelecionada.descricao_constatacao || '') && !constObsTimerRef.current) {
+        setConstObsLocal(subsecaoSelecionada.descricao_constatacao || '');
+      }
+
+      const commitObservacao = (texto: string) => {
         if (navigator.onLine && !subsecaoSelecionada.id.startsWith('offline_')) {
-          try {
-            await relatorioPendenciasService.updateSubsecao(subsecaoSelecionada.id, { descricao_constatacao: texto });
-          } catch (err) {
+          relatorioPendenciasService.updateSubsecao(subsecaoSelecionada.id, { descricao_constatacao: texto }).catch(err => {
             console.error('Erro ao salvar observação:', err);
-          }
+          });
         }
         const subAtualizada = { ...subsecaoSelecionada, descricao_constatacao: texto };
         setSubsecaoSelecionada(subAtualizada);
@@ -2234,6 +2456,15 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         };
         setRelatorioSelecionado(relAtualizado as any);
         saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+      };
+
+      const handleObsChange = (texto: string) => {
+        setConstObsLocal(texto);
+        if (constObsTimerRef.current) clearTimeout(constObsTimerRef.current);
+        constObsTimerRef.current = setTimeout(() => {
+          constObsTimerRef.current = null;
+          commitObservacao(texto);
+        }, 800);
       };
 
       // Input de câmera oculto (capture = abre câmera direto no celular)
@@ -2297,6 +2528,11 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
               const novasUrls: string[] = [];
               for (const file of files) {
                 try {
+                  // Salvar na galeria do celular
+                  try {
+                    const b64 = await compressImage(file, 800, 0.6);
+                    saveToGallery(b64, `ronda_constatacao_${Date.now()}.jpg`);
+                  } catch {}
                   if (navigator.onLine && !relatorioSelecionado.id.startsWith('offline_') && !subsecaoSelecionada.id.startsWith('offline_')) {
                     const url = await relatorioPendenciasService.uploadFoto(file, relatorioSelecionado.id, `constatacao-${subsecaoSelecionada.id}-${Date.now()}`);
                     novasUrls.push(url);
@@ -2326,8 +2562,8 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
             <div>
               <label className="text-gray-400 text-xs font-medium mb-1 block">Observação</label>
               <textarea
-                value={subsecaoSelecionada.descricao_constatacao || ''}
-                onChange={(e) => handleSalvarObservacao(e.target.value)}
+                value={constObsLocal}
+                onChange={(e) => handleObsChange(e.target.value)}
                 placeholder="Ex: O gerador foi testado e está em funcionamento..."
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white text-sm resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"
                 rows={3}
@@ -3144,7 +3380,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           </p>
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-gray-900 border-t border-gray-700">
+        <div className="p-4 pt-2">
           <button
             onClick={handleCriarPendencia}
             disabled={loading || (!novaPendLocal.trim() && !novaPendDescricao.trim())}
