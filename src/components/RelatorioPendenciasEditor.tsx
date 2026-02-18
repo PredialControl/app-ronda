@@ -1,14 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Save, X, GripVertical, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Mic, MicOff, Edit3, RefreshCw, ArrowUp, ArrowDown, MoveRight, FolderInput } from 'lucide-react';
+import { Plus, Save, X, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Mic, MicOff, Edit3, RefreshCw, ArrowUp, ArrowDown, MoveRight, FolderInput, Check } from 'lucide-react';
 import { Contrato, RelatorioPendencias as RelatorioPendenciasType } from '@/types';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 import { useVoiceCapture } from '@/hooks/useVoiceCapture';
 import { ImageEditor } from '@/components/ImageEditor';
+import {
+    DndContext,
+    closestCenter,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragOverlay,
+    DragStartEvent,
+    DragEndEvent,
+    useDroppable,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    verticalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // ============================================
 // IndexedDB para sync de fotos offline do celular
@@ -118,6 +135,54 @@ interface PendenciaLocal {
     preview?: string;
     fileDepois?: File;
     previewDepois?: string;
+}
+
+// Wrapper arrastável para pendência
+function DraggablePendencia({ id, children, isSelected }: { id: string; children: React.ReactNode; isSelected?: boolean }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const style: React.CSSProperties = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.3 : 1,
+        outline: isSelected ? '2px solid #6366f1' : undefined,
+        outlineOffset: isSelected ? '2px' : undefined,
+        cursor: 'grab',
+    };
+    return (
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+            {children}
+        </div>
+    );
+}
+
+// Wrapper arrastável para seção
+function DraggableSecao({ id, children }: { id: string; children: React.ReactNode }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const style: React.CSSProperties = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.3 : 1,
+    };
+    return (
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+            {children}
+        </div>
+    );
+}
+
+// Drop zone para seção/subseção (permite soltar pendências)
+function DropZone({ id, label }: { id: string; label: string }) {
+    const { setNodeRef, isOver } = useDroppable({ id });
+    return (
+        <div
+            ref={setNodeRef}
+            className={`border-2 border-dashed rounded-md px-3 py-2 text-center text-xs transition-all ${
+                isOver ? 'border-indigo-400 bg-indigo-900/30 text-indigo-300' : 'border-gray-700 text-gray-600'
+            }`}
+        >
+            {isOver ? 'Soltar aqui' : label}
+        </div>
+    );
 }
 
 export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCancel }: RelatorioPendenciasEditorProps) {
@@ -412,23 +477,6 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             console.log('✅ Pendência adicionada por voz:', textoLiteral);
         });
     }, [voice, secaoAtivaParaVoz, subsecaoAtivaParaVoz, secoes]);
-
-    // Função para converter número para romano
-    const toRoman = (num: number): string => {
-        const romanNumerals: [number, string][] = [
-            [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
-            [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
-            [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
-        ];
-        let result = '';
-        for (const [value, numeral] of romanNumerals) {
-            while (num >= value) {
-                result += numeral;
-                num -= value;
-            }
-        }
-        return result;
-    };
 
     // Função para gerar numeração automática da seção
     // VIII.1, VIII.2, VIII.3... (sem subseção)
@@ -999,6 +1047,263 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 pendencias: [], // Limpar da seção (agora estão na subseção)
             };
         }));
+    };
+
+    // ============================================
+    // Seleção múltipla de pendências
+    // ============================================
+    const [selectedPendencias, setSelectedPendencias] = useState<Set<string>>(new Set());
+
+    const toggleSelectPendencia = (tempId: string) => {
+        setSelectedPendencias(prev => {
+            const next = new Set(prev);
+            if (next.has(tempId)) next.delete(tempId);
+            else next.add(tempId);
+            return next;
+        });
+    };
+
+    const handleMoverSelecionadas = (destinoSecaoTempId: string, destinoSubTempId?: string) => {
+        if (selectedPendencias.size === 0) return;
+        setSecoes(prev => {
+            const pendenciasExtraidas: PendenciaLocal[] = [];
+
+            // 1. Extrair todas as pendências selecionadas de suas origens
+            const semSelecionadas = prev.map(s => ({
+                ...s,
+                pendencias: s.pendencias.filter(p => {
+                    if (selectedPendencias.has(p.tempId)) {
+                        pendenciasExtraidas.push({ ...p });
+                        return false;
+                    }
+                    return true;
+                }).map((p, i) => ({ ...p, ordem: i })),
+                subsecoes: (s.subsecoes || []).map(sub => ({
+                    ...sub,
+                    pendencias: sub.pendencias.filter(p => {
+                        if (selectedPendencias.has(p.tempId)) {
+                            pendenciasExtraidas.push({ ...p });
+                            return false;
+                        }
+                        return true;
+                    }).map((p, i) => ({ ...p, ordem: i })),
+                })),
+            }));
+
+            if (pendenciasExtraidas.length === 0) return prev;
+
+            // 2. Inserir no destino
+            return semSelecionadas.map(s => {
+                if (s.tempId !== destinoSecaoTempId) return s;
+                if (destinoSubTempId) {
+                    return {
+                        ...s,
+                        subsecoes: (s.subsecoes || []).map(sub => {
+                            if (sub.tempId !== destinoSubTempId) return sub;
+                            const base = sub.pendencias.length;
+                            return {
+                                ...sub,
+                                pendencias: [...sub.pendencias, ...pendenciasExtraidas.map((p, i) => ({ ...p, ordem: base + i }))],
+                            };
+                        }),
+                    };
+                } else {
+                    const base = s.pendencias.length;
+                    return {
+                        ...s,
+                        pendencias: [...s.pendencias, ...pendenciasExtraidas.map((p, i) => ({ ...p, ordem: base + i }))],
+                    };
+                }
+            });
+        });
+        setSelectedPendencias(new Set());
+        setPendenciaParaMover(null);
+    };
+
+    // ============================================
+    // Drag and Drop (dnd-kit)
+    // ============================================
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    );
+
+    const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+    // Encontrar a pendência sendo arrastada para o DragOverlay
+    const activeDragPendencia = useMemo(() => {
+        if (!activeDragId) return null;
+        for (const s of secoes) {
+            const found = s.pendencias.find(p => p.tempId === activeDragId);
+            if (found) return found;
+            for (const sub of (s.subsecoes || [])) {
+                const foundSub = sub.pendencias.find(p => p.tempId === activeDragId);
+                if (foundSub) return foundSub;
+            }
+        }
+        return null;
+    }, [activeDragId, secoes]);
+
+    // Encontrar container (secao/subsecao) de uma pendência
+    const findPendenciaContainer = (pendTempId: string): { secaoTempId: string; subsecaoTempId?: string } | null => {
+        for (const s of secoes) {
+            if (s.pendencias.some(p => p.tempId === pendTempId)) {
+                return { secaoTempId: s.tempId };
+            }
+            for (const sub of (s.subsecoes || [])) {
+                if (sub.pendencias.some(p => p.tempId === pendTempId)) {
+                    return { secaoTempId: s.tempId, subsecaoTempId: sub.tempId };
+                }
+            }
+        }
+        return null;
+    };
+
+    const handleDragStart = (event: DragStartEvent) => {
+        setActiveDragId(event.active.id as string);
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveDragId(null);
+        if (!over || active.id === over.id) return;
+
+        const activeId = active.id as string;
+        const overId = over.id as string;
+
+        // Caso 1: Arrastar seção sobre seção (reordenar seções)
+        // IDs de seção para drag usam prefixo "drag-secao-" para não conflitar com pendências cujo tempId já começa com "secao-"
+        if (activeId.startsWith('drag-secao-') && overId.startsWith('drag-secao-')) {
+            const fromTempId = activeId.replace('drag-secao-', '');
+            const toTempId = overId.replace('drag-secao-', '');
+            setSecoes(prev => {
+                const fromIdx = prev.findIndex(s => s.tempId === fromTempId);
+                const toIdx = prev.findIndex(s => s.tempId === toTempId);
+                if (fromIdx < 0 || toIdx < 0) return prev;
+                const arr = [...prev];
+                const [moved] = arr.splice(fromIdx, 1);
+                arr.splice(toIdx, 0, moved);
+                return arr.map((s, i) => ({ ...s, ordem: i }));
+            });
+            return;
+        }
+
+        // Caso 2: Arrastar pendência
+        const activeContainer = findPendenciaContainer(activeId);
+        if (!activeContainer) return;
+
+        // Over pode ser outra pendência ou um drop-zone de seção/subseção
+        let targetContainer: { secaoTempId: string; subsecaoTempId?: string } | null = null;
+        let targetIdx: number | null = null;
+
+        // Drop em outra pendência
+        const overContainer = findPendenciaContainer(overId);
+        if (overContainer) {
+            targetContainer = overContainer;
+            // Encontrar o índice da pendência alvo
+            for (const s of secoes) {
+                if (s.tempId === overContainer.secaoTempId) {
+                    if (overContainer.subsecaoTempId) {
+                        const sub = (s.subsecoes || []).find(sub => sub.tempId === overContainer.subsecaoTempId);
+                        if (sub) targetIdx = sub.pendencias.findIndex(p => p.tempId === overId);
+                    } else {
+                        targetIdx = s.pendencias.findIndex(p => p.tempId === overId);
+                    }
+                }
+            }
+        }
+
+        // Drop em zone de seção/subseção (drop-zone-secao-xxx ou drop-zone-sub-xxx)
+        if (overId.startsWith('drop-zone-sub-')) {
+            const subTempId = overId.replace('drop-zone-sub-', '');
+            for (const s of secoes) {
+                const sub = (s.subsecoes || []).find(sub => sub.tempId === subTempId);
+                if (sub) {
+                    targetContainer = { secaoTempId: s.tempId, subsecaoTempId: subTempId };
+                    break;
+                }
+            }
+        } else if (overId.startsWith('drop-zone-secao-')) {
+            const secTempId = overId.replace('drop-zone-secao-', '');
+            targetContainer = { secaoTempId: secTempId };
+        }
+
+        if (!targetContainer) return;
+
+        // Mover pendência(s): se a ativa está selecionada, mover todas selecionadas
+        const idsParaMover = selectedPendencias.has(activeId)
+            ? [...selectedPendencias]
+            : [activeId];
+
+        setSecoes(prev => {
+            const pendenciasExtraidas: PendenciaLocal[] = [];
+
+            // Extrair
+            const semMovidas = prev.map(s => ({
+                ...s,
+                pendencias: s.pendencias.filter(p => {
+                    if (idsParaMover.includes(p.tempId)) {
+                        pendenciasExtraidas.push({ ...p });
+                        return false;
+                    }
+                    return true;
+                }),
+                subsecoes: (s.subsecoes || []).map(sub => ({
+                    ...sub,
+                    pendencias: sub.pendencias.filter(p => {
+                        if (idsParaMover.includes(p.tempId)) {
+                            pendenciasExtraidas.push({ ...p });
+                            return false;
+                        }
+                        return true;
+                    }),
+                })),
+            }));
+
+            if (pendenciasExtraidas.length === 0) return prev;
+
+            // Inserir no destino
+            return semMovidas.map(s => {
+                if (s.tempId !== targetContainer!.secaoTempId) {
+                    return {
+                        ...s,
+                        pendencias: s.pendencias.map((p, i) => ({ ...p, ordem: i })),
+                        subsecoes: (s.subsecoes || []).map(sub => ({
+                            ...sub,
+                            pendencias: sub.pendencias.map((p, i) => ({ ...p, ordem: i })),
+                        })),
+                    };
+                }
+                if (targetContainer!.subsecaoTempId) {
+                    return {
+                        ...s,
+                        pendencias: s.pendencias.map((p, i) => ({ ...p, ordem: i })),
+                        subsecoes: (s.subsecoes || []).map(sub => {
+                            if (sub.tempId !== targetContainer!.subsecaoTempId) {
+                                return { ...sub, pendencias: sub.pendencias.map((p, i) => ({ ...p, ordem: i })) };
+                            }
+                            const arr = [...sub.pendencias];
+                            const insertAt = targetIdx !== null && targetIdx >= 0 ? targetIdx : arr.length;
+                            arr.splice(insertAt, 0, ...pendenciasExtraidas);
+                            return { ...sub, pendencias: arr.map((p, i) => ({ ...p, ordem: i })) };
+                        }),
+                    };
+                } else {
+                    const arr = [...s.pendencias];
+                    const insertAt = targetIdx !== null && targetIdx >= 0 ? targetIdx : arr.length;
+                    arr.splice(insertAt, 0, ...pendenciasExtraidas);
+                    return {
+                        ...s,
+                        pendencias: arr.map((p, i) => ({ ...p, ordem: i })),
+                        subsecoes: (s.subsecoes || []).map(sub => ({
+                            ...sub,
+                            pendencias: sub.pendencias.map((p, i) => ({ ...p, ordem: i })),
+                        })),
+                    };
+                }
+            });
+        });
+
+        setSelectedPendencias(new Set());
     };
 
     const handleFotoChange = (secaoTempId: string, pendenciaTempId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1879,13 +2184,21 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             </Card>
 
             {/* Seções */}
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="space-y-4">
                 <div className="flex justify-between items-center">
                     <h3 className="text-xl font-semibold text-white">Seções</h3>
-                    <Button onClick={handleAddSecao} variant="outline" className="text-blue-400">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Adicionar Seção
-                    </Button>
+                    <div className="flex gap-2 items-center">
+                        {selectedPendencias.size > 0 && (
+                            <span className="text-sm text-blue-400 font-medium">
+                                {selectedPendencias.size} selecionada(s)
+                            </span>
+                        )}
+                        <Button onClick={handleAddSecao} variant="outline" className="text-blue-400">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Adicionar Seção
+                        </Button>
+                    </div>
                 </div>
 
                 {secoes.length === 0 ? (
@@ -1897,8 +2210,11 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 ) : (() => {
                     let globalPendenciaCounter = 0;
 
-                    return secoes.map((secao, secaoIdx) => (
-                        <Card key={secao.tempId} className="bg-gray-800 border-gray-700">
+                    return (
+                    <SortableContext items={secoes.map(s => `drag-secao-${s.tempId}`)} strategy={verticalListSortingStrategy}>
+                    {secoes.map((secao, secaoIdx) => (
+                        <DraggableSecao key={secao.tempId} id={`drag-secao-${secao.tempId}`}>
+                        <Card className="bg-gray-800 border-gray-700">
                             <CardHeader>
                                 <div className="flex justify-between items-center">
                                     <CardTitle className="text-white flex items-center gap-2">
@@ -2018,16 +2334,32 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                         </div>
                                     </div>
 
+                                    {/* Drop zone para soltar pendências nesta seção */}
+                                    <DropZone id={`drop-zone-secao-${secao.tempId}`} label="Arraste pendências aqui" />
+
                                     {secao.pendencias.length > 0 && (
+                                        <SortableContext items={secao.pendencias.map(p => p.tempId)} strategy={verticalListSortingStrategy}>
                                         <div className="space-y-3 mb-6">
                                             {secao.pendencias.map((pendencia, pIdx) => {
                                                 globalPendenciaCounter++;
                                                 return (
-                                                    <div key={pendencia.tempId} className="bg-gray-900 border border-gray-600 rounded-sm overflow-hidden mb-4 shadow-sm">
+                                                    <DraggablePendencia key={pendencia.tempId} id={pendencia.tempId} isSelected={selectedPendencias.has(pendencia.tempId)}>
+                                                    <div className="bg-gray-900 border border-gray-600 rounded-sm overflow-hidden mb-4 shadow-sm">
                                                         {/* Row 1: Número e Campos de Texto */}
                                                         <div className="flex border-b border-gray-600 min-h-[5rem]">
-                                                            {/* Coluna do Número + Setas */}
+                                                            {/* Coluna do Número + Setas + Checkbox */}
                                                             <div className="w-[8%] min-w-[3.5rem] bg-indigo-900/30 flex flex-col items-center justify-center border-r border-gray-600 gap-0.5 py-1">
+                                                                <button
+                                                                    onClick={() => toggleSelectPendencia(pendencia.tempId)}
+                                                                    className={`w-5 h-5 rounded border flex items-center justify-center mb-0.5 ${
+                                                                        selectedPendencias.has(pendencia.tempId)
+                                                                            ? 'bg-indigo-500 border-indigo-400'
+                                                                            : 'border-gray-500 hover:border-gray-300'
+                                                                    }`}
+                                                                    title="Selecionar"
+                                                                >
+                                                                    {selectedPendencias.has(pendencia.tempId) && <Check className="w-3 h-3 text-white" />}
+                                                                </button>
                                                                 <button
                                                                     onClick={() => handleMovePendenciaUp(secao.tempId, pendencia.tempId)}
                                                                     disabled={pIdx === 0}
@@ -2246,9 +2578,11 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                             </div>
                                                         </div>
                                                     </div>
+                                                    </DraggablePendencia>
                                                 );
                                             })}
                                         </div>
+                                        </SortableContext>
                                     )}
                                 </div>
 
@@ -2434,16 +2768,32 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                 </div>
                                                             </div>
 
+                                                            {/* Drop zone para subseção */}
+                                                            <DropZone id={`drop-zone-sub-${subsecao.tempId}`} label="Arraste pendências aqui" />
+
                                                             {subsecao.pendencias.length === 0 ? (
                                                                 <p className="text-xs text-gray-500 text-center py-4 border border-dashed border-gray-700 rounded bg-gray-900/50">Nenhuma pendência na subseção</p>
                                                             ) : (
+                                                                <SortableContext items={subsecao.pendencias.map(p => p.tempId)} strategy={verticalListSortingStrategy}>
                                                                 <div className="space-y-3">
                                                                     {subsecao.pendencias.map((pend, pIdx) => {
                                                                         globalPendenciaCounter++;
                                                                         return (
-                                                                            <div key={pend.tempId} className="bg-gray-900 border border-gray-700 rounded-sm overflow-hidden shadow-sm">
+                                                                            <DraggablePendencia key={pend.tempId} id={pend.tempId} isSelected={selectedPendencias.has(pend.tempId)}>
+                                                                            <div className="bg-gray-900 border border-gray-700 rounded-sm overflow-hidden shadow-sm">
                                                                                 <div className="flex min-h-[4rem] border-b border-gray-700">
                                                                                     <div className="w-[8%] min-w-[3rem] bg-indigo-900/20 flex flex-col items-center justify-center border-r border-gray-700 gap-0.5 py-1">
+                                                                                        <button
+                                                                                            onClick={() => toggleSelectPendencia(pend.tempId)}
+                                                                                            className={`w-4 h-4 rounded border flex items-center justify-center mb-0.5 ${
+                                                                                                selectedPendencias.has(pend.tempId)
+                                                                                                    ? 'bg-indigo-500 border-indigo-400'
+                                                                                                    : 'border-gray-500 hover:border-gray-300'
+                                                                                            }`}
+                                                                                            title="Selecionar"
+                                                                                        >
+                                                                                            {selectedPendencias.has(pend.tempId) && <Check className="w-2.5 h-2.5 text-white" />}
+                                                                                        </button>
                                                                                         <button
                                                                                             onClick={() => handleMovePendenciaSubUp(secao.tempId, subsecao.tempId, pend.tempId)}
                                                                                             disabled={pIdx === 0}
@@ -2593,9 +2943,11 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                     </div>
                                                                                 </div>
                                                                             </div>
+                                                                            </DraggablePendencia>
                                                                         );
                                                                     })}
                                                                 </div>
+                                                                </SortableContext>
                                                             )}
                                                         </div>
                                                         )}
@@ -2607,7 +2959,10 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 </div>
                             </CardContent>
                         </Card>
-                    ));
+                        </DraggableSecao>
+                    ))}
+                    </SortableContext>
+                    );
                 })()}
 
                 {secoes.length > 0 && (
@@ -2658,6 +3013,23 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 )}
             </div>
 
+            {/* Overlay do item sendo arrastado */}
+            <DragOverlay>
+                {activeDragPendencia && (
+                    <div className="bg-indigo-900/80 border-2 border-indigo-400 rounded-md px-4 py-3 shadow-2xl text-white text-sm max-w-sm">
+                        <span className="font-bold">
+                            {activeDragPendencia.local || activeDragPendencia.descricao || 'Pendência'}
+                        </span>
+                        {selectedPendencias.size > 1 && selectedPendencias.has(activeDragPendencia.tempId) && (
+                            <span className="ml-2 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
+                                +{selectedPendencias.size - 1}
+                            </span>
+                        )}
+                    </div>
+                )}
+            </DragOverlay>
+            </DndContext>
+
             {/* Modal do Image Editor */}
             {editingImage && (
                 <ImageEditor
@@ -2667,18 +3039,23 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 />
             )}
 
-            {/* Modal Mover Pendência para outra seção/subseção */}
+            {/* Modal Mover Pendência(s) para outra seção/subseção */}
             {pendenciaParaMover && (
-                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setPendenciaParaMover(null)}>
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => { setPendenciaParaMover(null); }}>
                     <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-white font-semibold text-lg">Mover Pendência</h3>
+                            <h3 className="text-white font-semibold text-lg">
+                                {selectedPendencias.size > 1 ? `Mover ${selectedPendencias.size} Pendências` : 'Mover Pendência'}
+                            </h3>
                             <button onClick={() => setPendenciaParaMover(null)} className="text-gray-400 hover:text-white">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
                         <p className="text-gray-400 text-sm mb-4">
-                            Movendo: <span className="text-white font-medium">{pendenciaParaMover.pendenciaLabel}</span>
+                            {selectedPendencias.size > 1
+                                ? <span className="text-white font-medium">{selectedPendencias.size} pendências selecionadas</span>
+                                : <>Movendo: <span className="text-white font-medium">{pendenciaParaMover.pendenciaLabel}</span></>
+                            }
                         </p>
                         <p className="text-gray-500 text-xs mb-3">Selecione o destino:</p>
                         <div className="space-y-2">
@@ -2689,7 +3066,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                         {/* Seção como destino (se não tem subseções ou se pendências diretas são permitidas) */}
                                         {!secao.tem_subsecoes && (
                                             <button
-                                                onClick={() => handleMoverPendencia(secao.tempId)}
+                                                onClick={() => selectedPendencias.size > 1 ? handleMoverSelecionadas(secao.tempId) : handleMoverPendencia(secao.tempId)}
                                                 disabled={isOrigem}
                                                 className={`w-full text-left px-3 py-2 rounded-md text-sm transition-all ${
                                                     isOrigem
@@ -2713,7 +3090,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                         return (
                                                             <button
                                                                 key={sub.tempId}
-                                                                onClick={() => handleMoverPendencia(secao.tempId, sub.tempId)}
+                                                                onClick={() => selectedPendencias.size > 1 ? handleMoverSelecionadas(secao.tempId, sub.tempId) : handleMoverPendencia(secao.tempId, sub.tempId)}
                                                                 disabled={isOrigemSub}
                                                                 className={`w-full text-left px-3 py-1.5 rounded-md text-sm transition-all ${
                                                                     isOrigemSub
