@@ -1789,13 +1789,19 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         let subsecaoId = subsecao.id;
 
                         // Upload fotos de constatação (se for tipo CONSTATACAO)
-                        // NOTE: Campos tipo, fotos_constatacao e descricao_constatacao não existem no banco ainda
-                        // As fotos são enviadas mas não são salvas nos metadados da subseção
+                        // Manter URLs existentes + adicionar novas fotos uploadadas
                         let fotosConstatacaoUrls: string[] = [];
-                        if (subsecao.tipo === 'CONSTATACAO' && subsecao.fotos_constatacao_files) {
-                            for (const file of subsecao.fotos_constatacao_files) {
-                                const url = await relatorioPendenciasService.uploadFoto(file, relatorioId, `constatacao-${subsecao.tempId}-${Date.now()}`);
-                                fotosConstatacaoUrls.push(url);
+                        if (subsecao.tipo === 'CONSTATACAO') {
+                            // 1. Preservar fotos já existentes (URLs do banco)
+                            if (subsecao.fotos_constatacao && subsecao.fotos_constatacao.length > 0) {
+                                fotosConstatacaoUrls = [...subsecao.fotos_constatacao.filter(u => u && u.startsWith('http'))];
+                            }
+                            // 2. Upload de fotos novas (arquivos locais)
+                            if (subsecao.fotos_constatacao_files) {
+                                for (const file of subsecao.fotos_constatacao_files) {
+                                    const url = await relatorioPendenciasService.uploadFoto(file, relatorioId, `constatacao-${subsecao.tempId}-${Date.now()}`);
+                                    fotosConstatacaoUrls.push(url);
+                                }
                             }
                         }
 
