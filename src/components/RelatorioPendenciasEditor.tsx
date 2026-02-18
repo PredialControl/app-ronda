@@ -1810,8 +1810,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 titulo: subsecao.titulo,
                                 ordem: subsecao.ordem,
                                 tipo: subsecao.tipo || 'MANUAL',
-                                fotos_constatacao: subsecao.tipo === 'CONSTATACAO' ? fotosConstatacaoUrls : undefined,
-                                descricao_constatacao: subsecao.tipo === 'CONSTATACAO' ? subsecao.descricao_constatacao : undefined,
+                                fotos_constatacao: fotosConstatacaoUrls.length > 0 ? fotosConstatacaoUrls : (subsecao.fotos_constatacao || []),
+                                descricao_constatacao: subsecao.descricao_constatacao || undefined,
                             });
                         } else {
                             const newSubsecao = await relatorioPendenciasService.createSubsecao({
@@ -1819,8 +1819,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 titulo: subsecao.titulo,
                                 ordem: subsecao.ordem,
                                 tipo: subsecao.tipo || 'MANUAL',
-                                fotos_constatacao: subsecao.tipo === 'CONSTATACAO' ? fotosConstatacaoUrls : undefined,
-                                descricao_constatacao: subsecao.tipo === 'CONSTATACAO' ? subsecao.descricao_constatacao : undefined,
+                                fotos_constatacao: fotosConstatacaoUrls.length > 0 ? fotosConstatacaoUrls : (subsecao.fotos_constatacao || []),
+                                descricao_constatacao: subsecao.descricao_constatacao || undefined,
                             });
                             subsecaoId = newSubsecao.id;
                             subsecao.id = newSubsecao.id;
