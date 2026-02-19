@@ -2352,6 +2352,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                         <div className="space-y-3 mb-6">
                                             {secao.pendencias.map((pendencia, pIdx) => {
                                                 globalPendenciaCounter++;
+                                                const pendenciaNum = globalPendenciaCounter;
                                                 return (
                                                     <DraggablePendencia key={pendencia.tempId} id={pendencia.tempId} isSelected={selectedPendencias.has(pendencia.tempId)}>
                                                     {(dragHandle) => (
@@ -2381,7 +2382,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                     <ArrowUp className="w-3.5 h-3.5" />
                                                                 </button>
                                                                 <span className="text-2xl font-bold text-white leading-none">
-                                                                    {globalPendenciaCounter}
+                                                                    {pendenciaNum}
                                                                 </span>
                                                                 <button
                                                                     onClick={() => handleMovePendenciaDown(secao.tempId, pendencia.tempId)}
@@ -2400,7 +2401,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                         onClick={() => setPendenciaParaMover({
                                                                             secaoTempId: secao.tempId,
                                                                             pendenciaTempId: pendencia.tempId,
-                                                                            pendenciaLabel: `#${globalPendenciaCounter} ${pendencia.local || pendencia.descricao || ''}`.trim().slice(0, 40),
+                                                                            pendenciaLabel: `#${pendenciaNum} ${pendencia.local || pendencia.descricao || ''}`.trim().slice(0, 40),
                                                                         })}
                                                                         variant="ghost"
                                                                         size="sm"
@@ -2791,6 +2792,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                 <div className="space-y-3">
                                                                     {subsecao.pendencias.map((pend, pIdx) => {
                                                                         globalPendenciaCounter++;
+                                                                        const pendenciaNum = globalPendenciaCounter;
                                                                         return (
                                                                             <DraggablePendencia key={pend.tempId} id={pend.tempId} isSelected={selectedPendencias.has(pend.tempId)}>
                                                                             {(dragHandle) => (
@@ -2818,7 +2820,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                             <ArrowUp className="w-3 h-3" />
                                                                                         </button>
                                                                                         <span className="font-bold text-lg text-indigo-300 leading-none">
-                                                                                            {globalPendenciaCounter}
+                                                                                            {pendenciaNum}
                                                                                         </span>
                                                                                         <button
                                                                                             onClick={() => handleMovePendenciaSubDown(secao.tempId, subsecao.tempId, pend.tempId)}
@@ -2836,7 +2838,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                                     secaoTempId: secao.tempId,
                                                                                                     subsecaoTempId: subsecao.tempId,
                                                                                                     pendenciaTempId: pend.tempId,
-                                                                                                    pendenciaLabel: `#${globalPendenciaCounter} ${pend.local || pend.descricao || ''}`.trim().slice(0, 40),
+                                                                                                    pendenciaLabel: `#${pendenciaNum} ${pend.local || pend.descricao || ''}`.trim().slice(0, 40),
                                                                                                 })}
                                                                                                 variant="ghost"
                                                                                                 size="sm"
