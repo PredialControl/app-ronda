@@ -40,6 +40,7 @@ interface OfflineSecao {
     titulo: string;
     tipo: string;
     fotos_constatacao?: any[];
+    descricao_constatacao?: string;
   }>;
 }
 
@@ -819,6 +820,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                   titulo: subLocal.titulo || '',
                   tipo: subLocal.tipo || 'MANUAL',
                   fotos_constatacao: fotosParaDB,
+                  descricao_constatacao: subLocal.descricao_constatacao || '',
                 } as any);
                 subIdMap[subLocal.id] = subCriada.id;
               } catch (e) {
@@ -1554,6 +1556,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
           tipo: sub.tipo,
           pendencias: [],
           fotos_constatacao: sub.tipo === 'CONSTATACAO' ? [] : undefined,
+          descricao_constatacao: sub.tipo === 'CONSTATACAO' ? '' : undefined,
         }))
       : [];
 
@@ -1591,6 +1594,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         titulo: s.titulo,
         tipo: s.tipo,
         fotos_constatacao: s.fotos_constatacao,
+        descricao_constatacao: s.descricao_constatacao,
       })),
     });
     saveOfflineSecoes(offlineSecoes);
@@ -1629,6 +1633,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
                 titulo: sub.titulo,
                 tipo: sub.tipo,
                 fotos_constatacao: sub.fotos_constatacao,
+                descricao_constatacao: sub.descricao_constatacao || '',
               } as any);
               subIdsMap[sub.id] = subCriada.id;
             } catch (e) {
@@ -1755,11 +1760,20 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         }
       }
 
+      // Ler fila FRESCA do localStorage para evitar stale state (React state pode estar desatualizado)
+      const currentQueue = getOfflineQueue();
+
+      // Calcular ordem corretamente: pendências existentes + pendências offline da MESMA subseção/seção
+      const offlineMesmoLocal = currentQueue.filter(q =>
+        q.secao_id === secaoSelecionada.id &&
+        (subsecaoSelecionada ? q.subsecao_id === subsecaoSelecionada.id : !q.subsecao_id)
+      ).length;
+
       const offlineItem: OfflinePendencia = {
         id: itemId,
         secao_id: secaoSelecionada.id,
         subsecao_id: subsecaoSelecionada?.id || null,
-        ordem: pendenciasAtuais.length + offlineQueue.filter(q => q.secao_id === secaoSelecionada.id).length,
+        ordem: pendenciasAtuais.length + offlineMesmoLocal,
         local: novaPendLocal.trim(),
         descricao: novaPendDescricao.trim(),
         status: 'PENDENTE',
@@ -1767,9 +1781,6 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         relatorio_id: relatorioSelecionado.id,
         created_at: new Date().toISOString(),
       };
-
-      // Salvar na fila local imediatamente (ler do localStorage para evitar stale state)
-      const currentQueue = getOfflineQueue();
       const newQueue = [...currentQueue, offlineItem];
       saveOfflineQueue(newQueue);
       setOfflineQueue(newQueue);
@@ -2657,6 +2668,22 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
         };
         setRelatorioSelecionado(relAtualizado as any);
         saveToCache(`relatorio_${relAtualizado.id}`, relAtualizado);
+
+        // Persistir descricao_constatacao nas seções offline (IndexedDB/localStorage)
+        // para que o texto sobreviva a recarregamentos do app
+        try {
+          const offlineSecoes = getOfflineSecoes();
+          const secIdx = offlineSecoes.findIndex(s => s.id === secaoSelecionada.id);
+          if (secIdx >= 0) {
+            const subsAtualizadas = (offlineSecoes[secIdx].subsecoes || []).map(s =>
+              s.id === subsecaoSelecionada.id ? { ...s, descricao_constatacao: texto } : s
+            );
+            offlineSecoes[secIdx] = { ...offlineSecoes[secIdx], subsecoes: subsAtualizadas };
+            saveOfflineSecoes(offlineSecoes);
+          }
+        } catch (e) {
+          console.warn('Erro ao persistir observação offline:', e);
+        }
       };
 
       const handleObsChange = (texto: string) => {
