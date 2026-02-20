@@ -1773,6 +1773,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         data_recebimento: pendencia.data_recebimento,
                         status: pendencia.status || 'PENDENTE',
                         ordem: pendencia.ordem,
+                        secao_id: secaoId,
+                        subsecao_id: null, // Garantir que não fique associada a subseção antiga
                     };
 
                     if (pendencia.id) {
@@ -1862,6 +1864,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 data_recebimento: pendencia.data_recebimento,
                                 status: pendencia.status || 'PENDENTE',
                                 ordem: pendencia.ordem,
+                                secao_id: secaoId,
                                 subsecao_id: subsecaoId,
                             };
 
