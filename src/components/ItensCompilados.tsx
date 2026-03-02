@@ -63,6 +63,18 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
 
             relatoriosData.forEach(relatorio => {
                 relatorio.secoes?.forEach(secao => {
+                    // Helper: mapear status da pendência para situação da evolução
+                    const mapStatus = (pendencia: any, evolucao: any) => {
+                        if (evolucao?.situacao) return evolucao.situacao;
+                        // Fallback: usar status da própria pendência (salvo pelo celular)
+                        if (pendencia.status === 'RECEBIDO') return 'RECEBIDO';
+                        if (pendencia.status === 'NAO_FARAO') return 'NAO_FARA';
+                        return 'PENDENTE';
+                    };
+                    const mapDataRecebido = (pendencia: any, evolucao: any) => {
+                        return evolucao?.data_recebido || pendencia.data_recebimento || null;
+                    };
+
                     // Processar pendências diretas da seção
                     secao.pendencias?.forEach(pendencia => {
                         const evolucao = evolucaoMap.get(pendencia.id);
@@ -74,8 +86,8 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
                             item_numero: itemNumero++,
                             local: pendencia.local,
                             descricao: pendencia.descricao || '',
-                            situacao: evolucao?.situacao || 'PENDENTE',
-                            data_recebido: evolucao?.data_recebido || null,
+                            situacao: mapStatus(pendencia, evolucao),
+                            data_recebido: mapDataRecebido(pendencia, evolucao),
                             construtora: evolucao?.construtora || '',
                             sindico: evolucao?.sindico || '',
                         });
@@ -93,8 +105,8 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
                                 item_numero: itemNumero++,
                                 local: pendencia.local,
                                 descricao: pendencia.descricao || '',
-                                situacao: evolucao?.situacao || 'PENDENTE',
-                                data_recebido: evolucao?.data_recebido || null,
+                                situacao: mapStatus(pendencia, evolucao),
+                                data_recebido: mapDataRecebido(pendencia, evolucao),
                                 construtora: evolucao?.construtora || '',
                                 sindico: evolucao?.sindico || '',
                             });

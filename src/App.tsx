@@ -1416,10 +1416,14 @@ function App() {
   // Tela de coleta lite (full-screen mobile)
   if (viewMode === 'coleta-lite') {
     return (
-      <ColetaLite onVoltar={() => {
-        setViewMode('tabela');
-        setCurrentView('contratos');
-      }} />
+      <ColetaLite
+        onVoltar={() => {
+          setViewMode('tabela');
+          setCurrentView('contratos');
+        }}
+        onLogout={handleLogout}
+        usuario={usuarioLogado}
+      />
     );
   }
 
