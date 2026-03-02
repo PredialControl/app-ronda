@@ -531,7 +531,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                     fotos_constatacao_previews: tipo === 'CONSTATACAO' ? [] : undefined,
                     descricao_constatacao: tipo === 'CONSTATACAO' ? '' : undefined,
                 };
-                return { ...s, subsecoes: [...(s.subsecoes || []), newSubsecao] };
+                return { ...s, tem_subsecoes: true, subsecoes: [...(s.subsecoes || []), newSubsecao] };
             }
             return s;
         }));
@@ -554,11 +554,13 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const handleDeleteSubsecao = (secaoTempId: string, subsecaoTempId: string) => {
         setSecoes(prev => prev.map(s => {
             if (s.tempId === secaoTempId) {
+                const subsecoesRestantes = (s.subsecoes || [])
+                    .filter(sub => sub.tempId !== subsecaoTempId)
+                    .map((sub, idx) => ({ ...sub, ordem: idx }));
                 return {
                     ...s,
-                    subsecoes: (s.subsecoes || [])
-                        .filter(sub => sub.tempId !== subsecaoTempId)
-                        .map((sub, idx) => ({ ...sub, ordem: idx })),
+                    tem_subsecoes: subsecoesRestantes.length > 0,
+                    subsecoes: subsecoesRestantes,
                 };
             }
             return s;
