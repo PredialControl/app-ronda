@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Save, X, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Mic, MicOff, Edit3, RefreshCw, ArrowUp, ArrowDown, MoveRight, FolderInput, Check, GripVertical } from 'lucide-react';
+import { Plus, Save, X, Trash2, Image as ImageIcon, Loader2, ArrowLeft, Mic, MicOff, Edit3, RefreshCw, ArrowUp, ArrowDown, MoveRight, FolderInput, Check, GripVertical, Clock } from 'lucide-react';
 import { Contrato, RelatorioPendencias as RelatorioPendenciasType } from '@/types';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 import { useVoiceCapture } from '@/hooks/useVoiceCapture';
+import { useAutoSave } from '@/hooks/useAutoSave';
 import { ImageEditor } from '@/components/ImageEditor';
+import { ErrorModal } from '@/components/ErrorModal';
 import {
     DndContext,
     closestCenter,
@@ -204,6 +206,11 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     const [secoes, setSecoes] = useState<SecaoLocal[]>([]);
     const [isSaving, setIsSaving] = useState(false);
 
+    // Estados para auto-save e tratamento de erro
+    const [saveError, setSaveError] = useState<Error | null>(null);
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+
     // Rastrear IDs originais do banco para detectar deleções
     const originalIdsRef = useRef<{
         secaoIds: string[];
@@ -219,6 +226,76 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     // Sync offline
     const [syncingOffline, setSyncingOffline] = useState(false);
     const [offlinePendingCount, setOfflinePendingCount] = useState(0);
+
+    // Auto-save: Salva automaticamente a cada 2 minutos
+    const autoSaveKey = `relatorio_autosave_${relatorio?.id || 'novo'}_${contrato.id}`;
+    const { saveToLocalStorage, getFromLocalStorage, clearLocalStorage } = useAutoSave({
+        data: {
+            titulo,
+            secoes,
+            capaUrl,
+            fotoLocalidadeUrl,
+            dataInicioVistoria,
+            historicoVisitas,
+            dataSituacaoAtual,
+        },
+        key: autoSaveKey,
+        intervalMs: 120000, // 2 minutos
+        enabled: true,
+    });
+
+    // Atualizar timestamp do último auto-save
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const saved = getFromLocalStorage();
+            if (saved?.timestamp) {
+                setLastAutoSave(saved.timestamp);
+            }
+        }, 1000); // Atualiza a cada segundo
+
+        return () => clearInterval(interval);
+    }, [getFromLocalStorage]);
+
+    // Verificar se há backup ao montar o componente
+    useEffect(() => {
+        const checkForBackup = () => {
+            const backup = getFromLocalStorage();
+            if (backup?.data && backup.timestamp) {
+                const backupDate = new Date(backup.timestamp);
+                const minutosDiff = Math.floor((new Date().getTime() - backupDate.getTime()) / 60000);
+
+                if (minutosDiff < 180) { // Backup tem menos de 3 horas
+                    const restaurar = confirm(
+                        `⚠️ BACKUP ENCONTRADO!\n\n` +
+                        `Encontrei um backup automático de ${minutosDiff} minuto${minutosDiff !== 1 ? 's' : ''} atrás.\n\n` +
+                        `Deseja restaurar este backup?\n\n` +
+                        `(Isso pode recuperar dados não salvos)`
+                    );
+
+                    if (restaurar) {
+                        const { titulo: tit, secoes: sec, capaUrl: cap, fotoLocalidadeUrl: fot, dataInicioVistoria: dat, historicoVisitas: his, dataSituacaoAtual: sitAtual } = backup.data;
+                        if (tit) setTitulo(tit);
+                        if (sec) setSecoes(sec);
+                        if (cap) setCapaUrl(cap);
+                        if (fot) setFotoLocalidadeUrl(fot);
+                        if (dat) setDataInicioVistoria(dat);
+                        if (his) setHistoricoVisitas(his);
+                        if (sitAtual) setDataSituacaoAtual(sitAtual);
+                        alert('✅ Backup restaurado com sucesso!');
+                    } else {
+                        // Usuário não quis restaurar, limpar backup antigo
+                        clearLocalStorage();
+                    }
+                } else {
+                    // Backup muito antigo, limpar
+                    clearLocalStorage();
+                }
+            }
+        };
+
+        // Verificar mesmo se estiver editando relatório existente (proteção contra perda de dados)
+        checkForBackup();
+    }, []); // Executar apenas uma vez ao montar
 
     // Verificar se tem itens offline ao montar e periodicamente
     useEffect(() => {
@@ -1603,6 +1680,12 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         }
 
         setIsSaving(true);
+        setSaveError(null);
+        setShowErrorModal(false);
+
+        // BACKUP ANTES DE SALVAR: Salvar no localStorage antes de tentar enviar pro servidor
+        console.log('💾 Criando backup de segurança antes de salvar...');
+        saveToLocalStorage();
 
         try {
             let relatorioId = relatorio?.id;
@@ -1776,14 +1859,13 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         status: pendencia.status || 'PENDENTE',
                         ordem: pendencia.ordem,
                         secao_id: secaoId,
-                        subsecao_id: null, // Garantir que não fique associada a subseção antiga
+                        subsecao_id: undefined, // Garantir que não fique associada a subseção antiga
                     };
 
                     if (pendencia.id) {
                         await relatorioPendenciasService.updatePendencia(pendencia.id, pendenciaData);
                     } else {
                         const novaPend = await relatorioPendenciasService.createPendencia({
-                            secao_id: secaoId,
                             ...pendenciaData,
                         });
                         // Atualizar ID no state para evitar duplicação se o save falhar e for retentado
@@ -1874,7 +1956,6 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 await relatorioPendenciasService.updatePendencia(pendencia.id, pendenciaData);
                             } else {
                                 const novaPend = await relatorioPendenciasService.createPendencia({
-                                    secao_id: secaoId,
                                     ...pendenciaData,
                                 });
                                 // Atualizar ID no state para evitar duplicação se o save falhar e for retentado
@@ -1960,12 +2041,23 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 }
             }
 
+            // Salvamento bem sucedido! Limpar backup local
+            console.log('✅ Salvamento bem sucedido! Limpando backup local...');
+            clearLocalStorage();
+
             alert('Relatório de pendências salvo com sucesso!');
             onSave();
         } catch (error) {
             console.error('❌❌❌ ERRO AO SALVAR RELATÓRIO:', error);
             console.error('Stack trace:', error);
-            alert('Erro ao salvar relatório de pendências. Verifique o console.');
+
+            // Capturar erro e mostrar modal amigável
+            const err = error instanceof Error ? error : new Error(String(error));
+            setSaveError(err);
+            setShowErrorModal(true);
+
+            // NÃO limpar o backup - ele pode ser usado para recuperação!
+            console.log('⚠️ Backup local MANTIDO para possível recuperação');
         } finally {
             console.log('🏁 Finalizando processo de salvamento');
             setIsSaving(false);
@@ -1982,16 +2074,50 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         <div className="text-center">
                             <p className="text-xl font-bold text-white mb-2">Salvando Relatório</p>
                             <p className="text-sm text-gray-400">Aguarde enquanto processamos os dados...</p>
+                            <p className="text-xs text-gray-500 mt-2">💾 Backup de segurança criado</p>
                         </div>
                     </div>
                 </div>
             )}
 
+            {/* Error Modal */}
+            <ErrorModal
+                isOpen={showErrorModal}
+                error={saveError}
+                onClose={() => setShowErrorModal(false)}
+                onRetry={handleSave}
+                onRestore={() => {
+                    const backup = getFromLocalStorage();
+                    if (backup?.data) {
+                        const { titulo: tit, secoes: sec } = backup.data;
+                        if (tit) setTitulo(tit);
+                        if (sec) setSecoes(sec);
+                        setShowErrorModal(false);
+                        alert('✅ Backup local restaurado!');
+                    }
+                }}
+                hasBackup={!!getFromLocalStorage()?.data}
+            />
+
             {/* Header */}
             <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-white">
-                    {relatorio ? 'Editar Relatório de Pendências' : 'Novo Relatório de Pendências'}
-                </h2>
+                <div>
+                    <h2 className="text-2xl font-bold text-white">
+                        {relatorio ? 'Editar Relatório de Pendências' : 'Novo Relatório de Pendências'}
+                    </h2>
+                    {/* Indicador de Auto-Save */}
+                    {lastAutoSave && (
+                        <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            Auto-save: {(() => {
+                                const minutos = Math.floor((new Date().getTime() - lastAutoSave.getTime()) / 60000);
+                                if (minutos < 1) return 'agora mesmo';
+                                if (minutos === 1) return 'há 1 minuto';
+                                return `há ${minutos} minutos`;
+                            })()}
+                        </p>
+                    )}
+                </div>
                 <div className="flex gap-2">
                     <Button onClick={onCancel} variant="outline" disabled={isSaving}>
                         <X className="w-4 h-4 mr-2" />

@@ -30,7 +30,6 @@ export const relatorioPendenciasService = {
                     relatorio.secoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
                     relatorio.secoes.forEach((secao: any) => {
                         if (secao.pendencias) {
-                            secao.pendencias = secao.pendencias.filter((p: any) => !p.subsecao_id);
                             secao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
                         }
                         if (secao.subsecoes) {
@@ -79,9 +78,7 @@ export const relatorioPendenciasService = {
         if (data && data.secoes) {
             data.secoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
             data.secoes.forEach((secao: any) => {
-                // Filtrar pendências da seção para garantir que só pegamos as DIRETAS (sem subsecao_id)
                 if (secao.pendencias) {
-                    secao.pendencias = secao.pendencias.filter((p: any) => !p.subsecao_id);
                     secao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
                 }
 
