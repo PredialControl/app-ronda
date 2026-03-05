@@ -2553,7 +2553,13 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                     </div>
 
                                     {/* Drop zone para soltar pendências nesta seção */}
-                                    <DropZone id={`drop-zone-secao-${secao.tempId}`} label="Arraste pendências aqui" />
+                                    {secao.pendencias.length === 0 ? (
+                                        <div className="py-8">
+                                            <DropZone id={`drop-zone-secao-${secao.tempId}`} label="📋 Arraste pendências aqui (seção vazia)" />
+                                        </div>
+                                    ) : (
+                                        <DropZone id={`drop-zone-secao-${secao.tempId}`} label="Arraste pendências aqui" />
+                                    )}
 
                                     {secao.pendencias.length > 0 && (
                                         <SortableContext items={secao.pendencias.map(p => p.tempId)} strategy={verticalListSortingStrategy}>
@@ -3003,11 +3009,15 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                             </div>
 
                                                             {/* Drop zone para subseção */}
-                                                            <DropZone id={`drop-zone-sub-${subsecao.tempId}`} label="Arraste pendências aqui" />
-
                                                             {subsecao.pendencias.length === 0 ? (
-                                                                <p className="text-xs text-gray-500 text-center py-4 border border-dashed border-gray-700 rounded bg-gray-900/50">Nenhuma pendência na subseção</p>
+                                                                <div className="py-6">
+                                                                    <DropZone id={`drop-zone-sub-${subsecao.tempId}`} label="📋 Arraste pendências aqui (subseção vazia)" />
+                                                                </div>
                                                             ) : (
+                                                                <DropZone id={`drop-zone-sub-${subsecao.tempId}`} label="Arraste pendências aqui" />
+                                                            )}
+
+                                                            {subsecao.pendencias.length > 0 && (
                                                                 <SortableContext items={subsecao.pendencias.map(p => p.tempId)} strategy={verticalListSortingStrategy}>
                                                                 <div className="space-y-3">
                                                                     {subsecao.pendencias.map((pend, pIdx) => {
