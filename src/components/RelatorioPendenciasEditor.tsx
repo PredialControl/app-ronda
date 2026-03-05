@@ -11,6 +11,7 @@ import { useVoiceCapture } from '@/hooks/useVoiceCapture';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { ImageEditor } from '@/components/ImageEditor';
 import { ErrorModal } from '@/components/ErrorModal';
+import { RelatorioSumario } from '@/components/RelatorioSumario';
 import {
     DndContext,
     closestCenter,
@@ -226,6 +227,10 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
     // Sync offline
     const [syncingOffline, setSyncingOffline] = useState(false);
     const [offlinePendingCount, setOfflinePendingCount] = useState(0);
+
+    // Sumário e navegação
+    const secaoRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
+    const [activeSecaoId, setActiveSecaoId] = useState<string | undefined>();
 
     // Auto-save: Salva automaticamente a cada 2 minutos
     const autoSaveKey = `relatorio_autosave_${relatorio?.id || 'novo'}_${contrato.id}`;
@@ -1666,6 +1671,15 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         setHistoricoVisitas(historicoVisitas.filter((_, i) => i !== index));
     };
 
+    // Navegação pelo sumário
+    const handleNavigateToSecao = (secaoId: string, subsecaoId?: string) => {
+        const element = secaoRefsMap.current.get(subsecaoId || secaoId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setActiveSecaoId(secaoId);
+        }
+    };
+
     const handleSave = async () => {
         console.log('🚀 INICIANDO SALVAMENTO DO RELATÓRIO');
         console.log('📋 Dados iniciais:', {
@@ -2099,6 +2113,24 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 hasBackup={!!getFromLocalStorage()?.data}
             />
 
+            {/* Sumário Navegável */}
+            {secoes.length > 0 && (
+                <RelatorioSumario
+                    secoes={secoes.map(s => ({
+                        id: s.id || s.tempId,
+                        ordem: s.ordem,
+                        titulo: s.titulo_principal,
+                        subsecoes: s.subsecoes?.map(sub => ({
+                            id: sub.id || sub.tempId,
+                            ordem: sub.ordem,
+                            titulo: sub.titulo,
+                        })),
+                    }))}
+                    onNavigate={handleNavigateToSecao}
+                    activeSecaoId={activeSecaoId}
+                />
+            )}
+
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
@@ -2355,7 +2387,14 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                     <SortableContext items={secoes.map(s => `drag-secao-${s.tempId}`)} strategy={verticalListSortingStrategy}>
                     {secoes.map((secao, secaoIdx) => (
                         <DraggableSecao key={secao.tempId} id={`drag-secao-${secao.tempId}`}>
-                        <Card className="bg-gray-800 border-gray-700">
+                        <Card
+                            ref={(el) => {
+                                if (el) {
+                                    secaoRefsMap.current.set(secao.id || secao.tempId, el as HTMLDivElement);
+                                }
+                            }}
+                            className="bg-gray-800 border-gray-700"
+                        >
                             <CardHeader>
                                 <div className="flex justify-between items-center">
                                     <CardTitle className="text-white flex items-center gap-2">
@@ -2764,7 +2803,15 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                     ) : (
                                         <div className="space-y-4">
                                             {(secao.subsecoes || []).map((subsecao, subIdx) => (
-                                                <div key={subsecao.tempId} className="bg-gray-800 border border-indigo-600/30 rounded-md overflow-hidden shadow-md">
+                                                <div
+                                                    key={subsecao.tempId}
+                                                    ref={(el) => {
+                                                        if (el) {
+                                                            secaoRefsMap.current.set(subsecao.id || subsecao.tempId, el as HTMLDivElement);
+                                                        }
+                                                    }}
+                                                    className="bg-gray-800 border border-indigo-600/30 rounded-md overflow-hidden shadow-md"
+                                                >
                                                     <div className="bg-indigo-900/20 px-3 py-2 border-b border-indigo-600/20 flex justify-between items-center font-bold">
                                                         <span className="text-indigo-300">
                                                             Subseção {String.fromCharCode(65 + subIdx)} (VIII.{secao.ordem + 1}{String.fromCharCode(65 + subIdx)})
