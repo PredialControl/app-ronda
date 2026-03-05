@@ -177,6 +177,21 @@ function DraggableSecao({ id, children }: { id: string; children: React.ReactNod
     );
 }
 
+// Wrapper arrastável para subseção
+function DraggableSubsecao({ id, children }: { id: string; children: React.ReactNode }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const style: React.CSSProperties = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.3 : 1,
+    };
+    return (
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+            {children}
+        </div>
+    );
+}
+
 // Drop zone para seção/subseção (permite soltar pendências)
 function DropZone({ id, label }: { id: string; label: string }) {
     const { setNodeRef, isOver } = useDroppable({ id });
@@ -1271,6 +1286,28 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 const [moved] = arr.splice(fromIdx, 1);
                 arr.splice(toIdx, 0, moved);
                 return arr.map((s, i) => ({ ...s, ordem: i }));
+            });
+            return;
+        }
+
+        // Caso 1.5: Arrastar subseção sobre subseção (reordenar subseções dentro da mesma seção)
+        if (activeId.startsWith('drag-sub-') && overId.startsWith('drag-sub-')) {
+            const fromSubTempId = activeId.replace('drag-sub-', '');
+            const toSubTempId = overId.replace('drag-sub-', '');
+            setSecoes(prev => {
+                return prev.map(s => {
+                    const fromIdx = (s.subsecoes || []).findIndex(sub => sub.tempId === fromSubTempId);
+                    const toIdx = (s.subsecoes || []).findIndex(sub => sub.tempId === toSubTempId);
+                    // Ambas subseções devem estar na mesma seção
+                    if (fromIdx < 0 || toIdx < 0) return s;
+                    const arr = [...(s.subsecoes || [])];
+                    const [moved] = arr.splice(fromIdx, 1);
+                    arr.splice(toIdx, 0, moved);
+                    return {
+                        ...s,
+                        subsecoes: arr.map((sub, i) => ({ ...sub, ordem: i }))
+                    };
+                });
             });
             return;
         }
@@ -2398,6 +2435,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             <CardHeader>
                                 <div className="flex justify-between items-center">
                                     <CardTitle className="text-white flex items-center gap-2">
+                                        <GripVertical className="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing flex-shrink-0" />
                                         <div className="flex flex-col">
                                             <button
                                                 onClick={() => handleMoveSecaoUp(secao.tempId)}
@@ -2801,10 +2839,11 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                             Nenhuma subseção cadastrada.
                                         </p>
                                     ) : (
+                                        <SortableContext items={(secao.subsecoes || []).map(sub => `drag-sub-${sub.tempId}`)} strategy={verticalListSortingStrategy}>
                                         <div className="space-y-4">
                                             {(secao.subsecoes || []).map((subsecao, subIdx) => (
+                                                <DraggableSubsecao key={subsecao.tempId} id={`drag-sub-${subsecao.tempId}`}>
                                                 <div
-                                                    key={subsecao.tempId}
                                                     ref={(el) => {
                                                         if (el) {
                                                             secaoRefsMap.current.set(subsecao.id || subsecao.tempId, el as HTMLDivElement);
@@ -2813,9 +2852,12 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                     className="bg-gray-800 border border-indigo-600/30 rounded-md overflow-hidden shadow-md"
                                                 >
                                                     <div className="bg-indigo-900/20 px-3 py-2 border-b border-indigo-600/20 flex justify-between items-center font-bold">
-                                                        <span className="text-indigo-300">
-                                                            Subseção {String.fromCharCode(65 + subIdx)} (VIII.{secao.ordem + 1}{String.fromCharCode(65 + subIdx)})
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <GripVertical className="w-4 h-4 text-indigo-500 cursor-grab active:cursor-grabbing" />
+                                                            <span className="text-indigo-300">
+                                                                Subseção {String.fromCharCode(65 + subIdx)} (VIII.{secao.ordem + 1}{String.fromCharCode(65 + subIdx)})
+                                                            </span>
+                                                        </div>
                                                         <Button
                                                             onClick={() => handleDeleteSubsecao(secao.tempId, subsecao.tempId)}
                                                             variant="ghost"
@@ -3149,8 +3191,10 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                         )}
                                                     </div>
                                                 </div>
+                                                </DraggableSubsecao>
                                             ))}
                                         </div>
+                                        </SortableContext>
                                     )}
                                 </div>
                             </CardContent>
