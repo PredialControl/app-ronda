@@ -1800,63 +1800,32 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 }
             }
 
-            // Deletar pendências removidas
+            // ⚠️ IMPORTANTE: Identificar o que será deletado MAS NÃO DELETAR AINDA!
+            // Primeiro salvar tudo, DEPOIS deletar (senão CASCADE apaga as pendências movidas)
             const pendenciasParaDeletar = originalIdsRef.current.pendenciaIds.filter(id => !currentPendenciaIds.includes(id));
+            const subsecoesParaDeletar = originalIdsRef.current.subsecaoIds.filter(id => !currentSubsecaoIds.includes(id));
+            const secoesParaDeletar = originalIdsRef.current.secaoIds.filter(id => !currentSecaoIds.includes(id));
 
-            console.log('🔍 VERIFICAÇÃO DE DELEÇÃO DE PENDÊNCIAS:');
-            console.log('  - IDs originais carregados:', originalIdsRef.current.pendenciaIds.length);
-            console.log('  - IDs atuais no editor:', currentPendenciaIds.length);
-            console.log('  - Diferença (serão deletados):', pendenciasParaDeletar.length);
+            console.log('🔍 VERIFICAÇÃO DE DELEÇÕES (executar DEPOIS de salvar tudo):');
+            console.log('  - Pendências a deletar:', pendenciasParaDeletar.length);
+            console.log('  - Subseções a deletar:', subsecoesParaDeletar.length);
+            console.log('  - Seções a deletar:', secoesParaDeletar.length);
 
             // PROTEÇÃO: Se a diferença for muito grande (>10), não deletar automaticamente
             if (pendenciasParaDeletar.length > 10) {
                 console.error('⚠️⚠️⚠️ ALERTA: Tentativa de deletar', pendenciasParaDeletar.length, 'pendências!');
-                console.error('Isso pode indicar um bug. Deleção BLOQUEADA para proteção.');
-                console.error('IDs que SERIAM deletados:', pendenciasParaDeletar);
-                throw new Error(`Proteção ativada: tentativa de deletar ${pendenciasParaDeletar.length} pendências de uma vez. Isso pode ser um erro. Se realmente quer deletar, faça manualmente.`);
+                throw new Error(`Proteção ativada: tentativa de deletar ${pendenciasParaDeletar.length} pendências de uma vez.`);
             }
-
-            for (const id of pendenciasParaDeletar) {
-                console.log(`🗑️ Deletando pendência ${id} do banco`);
-                await relatorioPendenciasService.deletePendencia(id);
-            }
-            // Deletar subseções removidas
-            const subsecoesParaDeletar = originalIdsRef.current.subsecaoIds.filter(id => !currentSubsecaoIds.includes(id));
-
-            console.log('🔍 VERIFICAÇÃO DE DELEÇÃO DE SUBSEÇÕES:');
-            console.log('  - IDs originais:', originalIdsRef.current.subsecaoIds.length);
-            console.log('  - IDs atuais:', currentSubsecaoIds.length);
-            console.log('  - Diferença (serão deletados):', subsecoesParaDeletar.length);
-
             if (subsecoesParaDeletar.length > 5) {
                 console.error('⚠️ ALERTA: Tentativa de deletar', subsecoesParaDeletar.length, 'subseções!');
                 throw new Error(`Proteção ativada: tentativa de deletar ${subsecoesParaDeletar.length} subseções de uma vez.`);
             }
-
-            for (const id of subsecoesParaDeletar) {
-                console.log(`🗑️ Deletando subseção ${id} do banco`);
-                await relatorioPendenciasService.deleteSubsecao(id);
-            }
-
-            // Deletar seções removidas
-            const secoesParaDeletar = originalIdsRef.current.secaoIds.filter(id => !currentSecaoIds.includes(id));
-
-            console.log('🔍 VERIFICAÇÃO DE DELEÇÃO DE SEÇÕES:');
-            console.log('  - IDs originais:', originalIdsRef.current.secaoIds.length);
-            console.log('  - IDs atuais:', currentSecaoIds.length);
-            console.log('  - Diferença (serão deletados):', secoesParaDeletar.length);
-
             if (secoesParaDeletar.length > 3) {
                 console.error('⚠️ ALERTA: Tentativa de deletar', secoesParaDeletar.length, 'seções!');
                 throw new Error(`Proteção ativada: tentativa de deletar ${secoesParaDeletar.length} seções de uma vez.`);
             }
 
-            for (const id of secoesParaDeletar) {
-                console.log(`🗑️ Deletando seção ${id} do banco`);
-                await relatorioPendenciasService.deleteSecao(id);
-            }
-
-            // Save secoes and pendencias
+            // Save secoes and pendencias (PRIMEIRO SALVAR TUDO!)
             for (const secao of secoes) {
                 let secaoId = secao.id;
 
@@ -2198,6 +2167,31 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                     console.log('📊 SEÇÕES FINAIS:', secoesAtualizadas);
                 }
             }
+
+            // ============================================
+            // AGORA SIM: Deletar itens removidos (DEPOIS de salvar tudo)
+            // ============================================
+            console.log('🗑️ FASE FINAL: Deletando itens removidos do banco...');
+
+            // Deletar pendências removidas
+            for (const id of pendenciasParaDeletar) {
+                console.log(`🗑️ Deletando pendência ${id} do banco`);
+                await relatorioPendenciasService.deletePendencia(id);
+            }
+
+            // Deletar subseções removidas
+            for (const id of subsecoesParaDeletar) {
+                console.log(`🗑️ Deletando subseção ${id} do banco`);
+                await relatorioPendenciasService.deleteSubsecao(id);
+            }
+
+            // Deletar seções removidas (POR ÚLTIMO!)
+            for (const id of secoesParaDeletar) {
+                console.log(`🗑️ Deletando seção ${id} do banco`);
+                await relatorioPendenciasService.deleteSecao(id);
+            }
+
+            console.log('✅ Deleções concluídas!');
 
             // Salvamento bem sucedido! Limpar backup local
             console.log('✅ Salvamento bem sucedido! Limpando backup local...');
