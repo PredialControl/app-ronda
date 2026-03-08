@@ -1966,10 +1966,17 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
 
                 // Salvar subseções (se existirem)
                 if (secao.subsecoes && secao.subsecoes.length > 0) {
+                    console.log(`📁 Processando ${secao.subsecoes.length} subseções da seção ${secao.titulo_principal}`);
                     for (const subsecao of secao.subsecoes) {
+                        console.log(`🔍 Verificando subseção:`, {
+                            id: subsecao.id,
+                            titulo: subsecao.titulo,
+                            foiDeletada: subsecao.id ? subsecoesParaDeletar.includes(subsecao.id) : false,
+                        });
+
                         // SKIP subseções que foram deletadas (estão na lista de deleção)
                         if (subsecao.id && subsecoesParaDeletar.includes(subsecao.id)) {
-                            console.log(`⏭️ Pulando subseção ${subsecao.id} - já foi deletada do banco`);
+                            console.log(`⏭️ PULANDO subseção ${subsecao.id} (${subsecao.titulo}) - já foi deletada do banco`);
                             continue;
                         }
 
@@ -1993,6 +2000,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         }
 
                         if (subsecaoId) {
+                            console.log(`📝 UPDATE subseção ${subsecaoId} (${subsecao.titulo})`);
                             await relatorioPendenciasService.updateSubsecao(subsecaoId, {
                                 titulo: subsecao.titulo,
                                 ordem: subsecao.ordem,
@@ -2000,6 +2008,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 fotos_constatacao: fotosConstatacaoUrls.length > 0 ? fotosConstatacaoUrls : (subsecao.fotos_constatacao || []),
                                 descricao_constatacao: subsecao.descricao_constatacao || undefined,
                             });
+                            console.log(`✅ UPDATE subseção ${subsecaoId} concluído`);
                         } else {
                             const newSubsecao = await relatorioPendenciasService.createSubsecao({
                                 secao_id: secaoId,
