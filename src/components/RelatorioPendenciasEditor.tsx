@@ -2055,22 +2055,35 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             let fotoUrl = pendencia.foto_url;
                             let fotoDepoisUrl = pendencia.foto_depois_url;
 
+                            console.log(`📸 Processando fotos da pendência ${pendencia.id || 'NOVA'}:`, {
+                                temFile: !!pendencia.file,
+                                temPreview: !!pendencia.preview,
+                                temFotoUrl: !!pendencia.foto_url,
+                                fotoUrlAtual: pendencia.foto_url,
+                            });
+
                             if (pendencia.file) {
                                 fotoUrl = await relatorioPendenciasService.uploadFoto(pendencia.file, relatorioId, pendencia.tempId);
+                                console.log(`✅ Upload foto ANTES concluído: ${fotoUrl}`);
                             } else if (pendencia.preview || pendencia.foto_url) {
                                 // Manter URL existente do banco
                                 fotoUrl = pendencia.foto_url || null;
+                                console.log(`♻️ Mantendo foto ANTES existente: ${fotoUrl}`);
                             } else {
                                 fotoUrl = null;
+                                console.log(`❌ Sem foto ANTES`);
                             }
 
                             if (pendencia.fileDepois) {
                                 fotoDepoisUrl = await relatorioPendenciasService.uploadFoto(pendencia.fileDepois, relatorioId, `${pendencia.tempId}-depois`);
+                                console.log(`✅ Upload foto DEPOIS concluído: ${fotoDepoisUrl}`);
                             } else if (pendencia.previewDepois || pendencia.foto_depois_url) {
                                 // Manter URL existente do banco
                                 fotoDepoisUrl = pendencia.foto_depois_url || null;
+                                console.log(`♻️ Mantendo foto DEPOIS existente: ${fotoDepoisUrl}`);
                             } else {
                                 fotoDepoisUrl = null;
+                                console.log(`❌ Sem foto DEPOIS`);
                             }
 
                             const pendenciaData = {
@@ -2085,9 +2098,12 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 subsecao_id: subsecaoId,
                             };
 
+                            console.log(`💾 Salvando pendência ${pendencia.id || 'NOVA'} na subseção ${subsecaoId}:`, pendenciaData);
+
                             if (pendencia.id) {
                                 try {
                                     await relatorioPendenciasService.updatePendencia(pendencia.id, pendenciaData);
+                                    console.log(`✅ UPDATE pendência ${pendencia.id} concluído`);
                                 } catch (err: any) {
                                     // Se PGRST116 = item já foi deletado, OK (ignorar)
                                     if (err?.code === 'PGRST116') {
