@@ -1811,16 +1811,16 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             console.log('  - Subseções a deletar:', subsecoesParaDeletar.length);
             console.log('  - Seções a deletar:', secoesParaDeletar.length);
 
-            // PROTEÇÃO: Se a diferença for muito grande (>10), não deletar automaticamente
-            if (pendenciasParaDeletar.length > 10) {
+            // PROTEÇÃO: Se a diferença for MUITO grande, pode ser bug (filtro escondendo itens)
+            if (pendenciasParaDeletar.length > 30) {
                 console.error('⚠️⚠️⚠️ ALERTA: Tentativa de deletar', pendenciasParaDeletar.length, 'pendências!');
-                throw new Error(`Proteção ativada: tentativa de deletar ${pendenciasParaDeletar.length} pendências de uma vez.`);
+                throw new Error(`Proteção ativada: tentativa de deletar ${pendenciasParaDeletar.length} pendências de uma vez. Isso pode ser um erro.`);
             }
-            if (subsecoesParaDeletar.length > 5) {
+            if (subsecoesParaDeletar.length > 20) {
                 console.error('⚠️ ALERTA: Tentativa de deletar', subsecoesParaDeletar.length, 'subseções!');
                 throw new Error(`Proteção ativada: tentativa de deletar ${subsecoesParaDeletar.length} subseções de uma vez.`);
             }
-            if (secoesParaDeletar.length > 3) {
+            if (secoesParaDeletar.length > 10) {
                 console.error('⚠️ ALERTA: Tentativa de deletar', secoesParaDeletar.length, 'seções!');
                 throw new Error(`Proteção ativada: tentativa de deletar ${secoesParaDeletar.length} seções de uma vez.`);
             }
