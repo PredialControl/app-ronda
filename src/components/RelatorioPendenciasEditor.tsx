@@ -2103,7 +2103,29 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             console.error('Stack trace:', error);
 
             // Capturar erro e mostrar modal amigável
-            const err = error instanceof Error ? error : new Error(String(error));
+            let err: Error;
+            if (error instanceof Error) {
+                err = error;
+            } else if (typeof error === 'object' && error !== null) {
+                // Erro do Supabase ou outro objeto
+                const errorObj = error as any;
+                const message = errorObj.message || errorObj.error?.message || errorObj.error_description || JSON.stringify(error);
+                err = new Error(message);
+                // Preservar informações extras do Supabase
+                if (errorObj.code) (err as any).code = errorObj.code;
+                if (errorObj.details) (err as any).details = errorObj.details;
+                if (errorObj.hint) (err as any).hint = errorObj.hint;
+            } else {
+                err = new Error(String(error));
+            }
+
+            console.error('📋 Erro processado:', {
+                message: err.message,
+                code: (err as any).code,
+                details: (err as any).details,
+                hint: (err as any).hint,
+            });
+
             setSaveError(err);
             setShowErrorModal(true);
 

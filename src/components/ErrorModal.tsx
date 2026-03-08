@@ -14,7 +14,12 @@ export function ErrorModal({ isOpen, error, onClose, onRetry, onRestore, hasBack
   if (!isOpen || !error) return null;
 
   const copyErrorToClipboard = () => {
-    const errorText = `Erro: ${error.message}\n\nStack: ${error.stack || 'N/A'}`;
+    let errorText = `Erro: ${error.message}`;
+    if ((error as any).code) errorText += `\n\nCódigo: ${(error as any).code}`;
+    if ((error as any).details) errorText += `\n\nDetalhes: ${(error as any).details}`;
+    if ((error as any).hint) errorText += `\n\nDica: ${(error as any).hint}`;
+    if (error.stack) errorText += `\n\nStack: ${error.stack}`;
+
     navigator.clipboard.writeText(errorText);
     alert('Erro copiado! Envie para o suporte técnico.');
   };
@@ -91,8 +96,24 @@ export function ErrorModal({ isOpen, error, onClose, onRetry, onRestore, hasBack
                 <p className="mb-2">
                   <strong>Erro:</strong> {error.message}
                 </p>
+                {(error as any).code && (
+                  <p className="mb-2">
+                    <strong>Código:</strong> {(error as any).code}
+                  </p>
+                )}
+                {(error as any).details && (
+                  <p className="mb-2">
+                    <strong>Detalhes:</strong> {(error as any).details}
+                  </p>
+                )}
+                {(error as any).hint && (
+                  <p className="mb-2">
+                    <strong>Dica:</strong> {(error as any).hint}
+                  </p>
+                )}
                 {error.stack && (
-                  <pre className="whitespace-pre-wrap break-words">
+                  <pre className="whitespace-pre-wrap break-words mt-3">
+                    <strong>Stack:</strong><br/>
                     {error.stack}
                   </pre>
                 )}
