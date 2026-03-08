@@ -1880,6 +1880,9 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 subtitulo: secao.subtitulo || '',
                                 ordem: secao.ordem,
                             });
+                        } else if (err?.code === 'PGRST116') {
+                            // Seção já foi deletada, ignorar
+                            console.log(`⚠️ Seção ${secaoId} não existe mais no banco (já foi deletada) - ignorando UPDATE`);
                         } else {
                             throw err;
                         }
@@ -1954,7 +1957,16 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                     };
 
                     if (pendencia.id) {
-                        await relatorioPendenciasService.updatePendencia(pendencia.id, pendenciaData);
+                        try {
+                            await relatorioPendenciasService.updatePendencia(pendencia.id, pendenciaData);
+                        } catch (err: any) {
+                            // Se PGRST116 = item já foi deletado, OK (ignorar)
+                            if (err?.code === 'PGRST116') {
+                                console.log(`⚠️ Pendência ${pendencia.id} não existe mais no banco (já foi deletada) - ignorando UPDATE`);
+                            } else {
+                                throw err; // Outros erros, propagar
+                            }
+                        }
                     } else {
                         const novaPend = await relatorioPendenciasService.createPendencia({
                             ...pendenciaData,
@@ -2001,14 +2013,23 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
 
                         if (subsecaoId) {
                             console.log(`📝 UPDATE subseção ${subsecaoId} (${subsecao.titulo})`);
-                            await relatorioPendenciasService.updateSubsecao(subsecaoId, {
-                                titulo: subsecao.titulo,
-                                ordem: subsecao.ordem,
-                                tipo: subsecao.tipo || 'MANUAL',
-                                fotos_constatacao: fotosConstatacaoUrls.length > 0 ? fotosConstatacaoUrls : (subsecao.fotos_constatacao || []),
-                                descricao_constatacao: subsecao.descricao_constatacao || undefined,
-                            });
-                            console.log(`✅ UPDATE subseção ${subsecaoId} concluído`);
+                            try {
+                                await relatorioPendenciasService.updateSubsecao(subsecaoId, {
+                                    titulo: subsecao.titulo,
+                                    ordem: subsecao.ordem,
+                                    tipo: subsecao.tipo || 'MANUAL',
+                                    fotos_constatacao: fotosConstatacaoUrls.length > 0 ? fotosConstatacaoUrls : (subsecao.fotos_constatacao || []),
+                                    descricao_constatacao: subsecao.descricao_constatacao || undefined,
+                                });
+                                console.log(`✅ UPDATE subseção ${subsecaoId} concluído`);
+                            } catch (err: any) {
+                                // Se PGRST116 = item já foi deletado, OK (ignorar)
+                                if (err?.code === 'PGRST116') {
+                                    console.log(`⚠️ Subseção ${subsecaoId} não existe mais no banco (já foi deletada) - ignorando UPDATE`);
+                                } else {
+                                    throw err; // Outros erros, propagar
+                                }
+                            }
                         } else {
                             const newSubsecao = await relatorioPendenciasService.createSubsecao({
                                 secao_id: secaoId,
@@ -2065,7 +2086,16 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             };
 
                             if (pendencia.id) {
-                                await relatorioPendenciasService.updatePendencia(pendencia.id, pendenciaData);
+                                try {
+                                    await relatorioPendenciasService.updatePendencia(pendencia.id, pendenciaData);
+                                } catch (err: any) {
+                                    // Se PGRST116 = item já foi deletado, OK (ignorar)
+                                    if (err?.code === 'PGRST116') {
+                                        console.log(`⚠️ Pendência ${pendencia.id} não existe mais no banco (já foi deletada) - ignorando UPDATE`);
+                                    } else {
+                                        throw err; // Outros erros, propagar
+                                    }
+                                }
                             } else {
                                 const novaPend = await relatorioPendenciasService.createPendencia({
                                     ...pendenciaData,
