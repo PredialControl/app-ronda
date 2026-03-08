@@ -1914,6 +1914,12 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
 
                 // Salvar pendências diretas na seção (SEMPRE salvar se existirem)
                 for (const pendencia of secao.pendencias) {
+                    // SKIP pendências que foram deletadas (estão na lista de deleção)
+                    if (pendencia.id && pendenciasParaDeletar.includes(pendencia.id)) {
+                        console.log(`⏭️ Pulando pendência ${pendencia.id} - já foi deletada do banco`);
+                        continue;
+                    }
+
                     let fotoUrl = pendencia.foto_url;
                     let fotoDepoisUrl = pendencia.foto_depois_url;
 
@@ -1961,6 +1967,12 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 // Salvar subseções (se existirem)
                 if (secao.subsecoes && secao.subsecoes.length > 0) {
                     for (const subsecao of secao.subsecoes) {
+                        // SKIP subseções que foram deletadas (estão na lista de deleção)
+                        if (subsecao.id && subsecoesParaDeletar.includes(subsecao.id)) {
+                            console.log(`⏭️ Pulando subseção ${subsecao.id} - já foi deletada do banco`);
+                            continue;
+                        }
+
                         let subsecaoId = subsecao.id;
 
                         // Upload fotos de constatação (se for tipo CONSTATACAO)
@@ -2004,6 +2016,12 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         // Salvar pendências da subseção (só para tipo MANUAL)
                         if (subsecao.tipo !== 'CONSTATACAO') {
                         for (const pendencia of subsecao.pendencias) {
+                            // SKIP pendências que foram deletadas (estão na lista de deleção)
+                            if (pendencia.id && pendenciasParaDeletar.includes(pendencia.id)) {
+                                console.log(`⏭️ Pulando pendência ${pendencia.id} - já foi deletada do banco`);
+                                continue;
+                            }
+
                             let fotoUrl = pendencia.foto_url;
                             let fotoDepoisUrl = pendencia.foto_depois_url;
 
