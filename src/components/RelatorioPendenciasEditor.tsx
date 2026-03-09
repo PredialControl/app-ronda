@@ -1922,7 +1922,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         status: pendencia.status || 'PENDENTE',
                         ordem: pendencia.ordem,
                         secao_id: secaoId,
-                        subsecao_id: undefined, // Garantir que não fique associada a subseção antiga
+                        subsecao_id: undefined, // Explicitamente undefined para garantir que limpa subseção antiga
                     };
 
                     if (pendencia.id) {

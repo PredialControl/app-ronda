@@ -1,0 +1,55 @@
+# ================================================================
+# TEMPLATE PARA RECRIAR PENDÊNCIAS - NIK SUNSET PAULISTA
+# Relatório: 02- Relatório Áreas Mobilhadas
+# ================================================================
+#
+# INSTRUÇÕES:
+# 1. Preencha este arquivo com as pendências que você lembra
+# 2. Formato: SECAO | LOCAL | DESCRIÇÃO
+# 3. Linhas começando com # são ignoradas
+# 4. Deixe linhas vazias entre seções para melhor organização
+# 5. Depois rode: node importar-pendencias.mjs
+#
+# ================================================================
+# SEÇÕES DISPONÍVEIS:
+# ================================================================
+# 1. PISCINA
+# 2. VIII.2 – LAVANDERIA
+# 3. VIII.3 – WC´S
+# 4. VIII.4 – (título vazio)
+# ================================================================
+
+# ====== PISCINA ======
+# (Já tem 24 pendências - adicione as que faltam)
+
+# Exemplo:
+# PISCINA | Piscina - Deck | Tábuas soltas no deck
+# PISCINA | Piscina - Filtro | Vazamento no sistema de filtragem
+
+
+# ====== LAVANDERIA ======
+# (Já tem 10 pendências - adicione as que faltam)
+
+# Exemplo:
+# VIII.2 – LAVANDERIA | Lavanderia - Pia | Trinca no azulejo
+# VIII.2 – LAVANDERIA | Lavanderia - Teto | Infiltração visível
+
+
+# ====== WC's ======
+# (Já tem 1 pendência - adicione as que faltam)
+
+# Exemplo:
+# VIII.3 – WC´S | WC Feminino - 5º andar | Vaso sanitário com vazamento
+# VIII.3 – WC´S | WC Masculino - 8º andar | Torneira pingando
+
+
+# ====== OUTRAS (VIII.4) ======
+
+# Exemplo:
+# VIII.4 – | Local | Descrição da pendência
+
+
+# ================================================================
+# COLE ABAIXO AS PENDÊNCIAS QUE VOCÊ LEMBRA:
+# ================================================================
+

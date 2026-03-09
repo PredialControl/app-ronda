@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { Camera, Upload, X, ZoomIn } from 'lucide-react';
+import { IOSSaveImageButton } from './IOSSaveImageButton';
 
 interface PhotoUploadProps {
   photos: string[];
@@ -239,12 +240,20 @@ export function PhotoUpload({
           onClick={() => setPreviewImage(null)}
         >
           <div className="relative max-w-6xl max-h-[90vh]">
-            <button
-              onClick={() => setPreviewImage(null)}
-              className="absolute -top-10 right-0 p-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="absolute -top-10 right-0 flex gap-2">
+              {/* Botão de salvar na galeria (só aparece no iOS) */}
+              <IOSSaveImageButton
+                imageUrl={previewImage}
+                filename={`foto-${Date.now()}.jpg`}
+                variant="button"
+              />
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             <img
               src={previewImage}
               alt="Preview"

@@ -29,6 +29,7 @@ import { syncService } from '@/lib/syncService';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { ColetaOffline } from '@/components/ColetaOffline';
 import { ColetaLite } from '@/components/ColetaLite';
+import { setupIOSStyles } from '@/lib/iosHelpers';
 
 
 function App() {
@@ -125,6 +126,12 @@ function App() {
     } catch { }
 
     console.log('🌙 Tema escuro forçado via JavaScript');
+  }, []);
+
+  // Configurar estilos específicos para iOS standalone
+  useEffect(() => {
+    setupIOSStyles();
+    console.log('📱 Estilos iOS configurados');
   }, []);
 
   // Debug: Log do estado dos dados

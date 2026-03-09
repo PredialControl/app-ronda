@@ -680,3 +680,94 @@ label {
     height: 4px;
   }
 }
+
+/* ===== CORREÇÕES ESPECÍFICAS PARA iOS PWA (STANDALONE) ===== */
+/* Detecta quando o app está rodando como PWA instalado no iOS */
+.ios-standalone,
+html.ios-standalone,
+html.ios-standalone body {
+  /* Suporte para notch/safe areas do iPhone */
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+/* Correção para headers sticky no iOS standalone */
+.ios-standalone .sticky {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  /* Adicionar safe-area para headers no topo */
+  top: env(safe-area-inset-top, 0) !important;
+}
+
+/* Correção específica para z-index de headers no iOS */
+.ios-standalone [class*="sticky top-0 z-10"],
+.ios-standalone [class*="sticky top-0 z-20"],
+.ios-standalone [class*="sticky top-0 z-30"] {
+  z-index: 999 !important;
+  -webkit-transform: translateZ(0) !important;
+  transform: translateZ(0) !important;
+  will-change: transform !important;
+}
+
+/* Garantir que botões dentro de headers sticky sejam clicáveis */
+.ios-standalone .sticky button,
+.ios-standalone .sticky a {
+  position: relative !important;
+  z-index: 1000 !important;
+  -webkit-transform: translateZ(0) !important;
+  transform: translateZ(0) !important;
+}
+
+/* Melhorar área de toque de botões no iOS */
+.ios-standalone button {
+  min-height: 44px !important; /* Apple HIG recomenda 44px mínimo */
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Prevenir bounce scrolling no iOS (opcional) */
+.ios-standalone body {
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix para inputs no iOS não darem zoom */
+.ios-standalone input,
+.ios-standalone textarea,
+.ios-standalone select {
+  font-size: 16px !important;
+}
+
+/* Prevenir seleção de texto durante toques rápidos */
+.ios-standalone button,
+.ios-standalone a {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Status bar transparente no iOS */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .ios-standalone {
+    background-color: #1a2f2a; /* Cor do tema */
+  }
+}
+
+/* Animações mais suaves no iOS */
+.ios-standalone * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Media query adicional para iOS standalone via CSS */
+@media (display-mode: standalone) {
+  /* Aplica automaticamente quando está no modo standalone */
+  .sticky {
+    top: env(safe-area-inset-top, 0) !important;
+  }
+
+  button {
+    min-height: 44px !important;
+  }
+}

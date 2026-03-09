@@ -7,7 +7,11 @@
       "Bash(vercel --prod:*)",
       "Bash(vercel:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node check-ronda.cjs:*)",
+      "Bash(node diagnostico-pendencias.mjs:*)",
+      "Bash(npm run build:dev:web:*)"
     ],
     "deny": [],
     "ask": []
