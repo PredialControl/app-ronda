@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { compare } from 'bcryptjs';
 
 // Tipos para usuários autorizados
 export interface UsuarioAutorizado {
@@ -8,6 +9,7 @@ export interface UsuarioAutorizado {
   cargo: string;
   permissoes: string[];
   ativo: boolean;
+  is_admin?: boolean;
   ultimoAcesso?: string;
 }
 
@@ -70,23 +72,51 @@ export class AuthService {
   // Fazer login
   async fazerLogin(email: string, senha: string): Promise<{ sucesso: boolean; usuario?: UsuarioAutorizado; erro?: string }> {
     try {
-      // Verificar se email está autorizado
-      const usuario = await this.verificarEmailAutorizado(email);
-      if (!usuario) {
-        return { 
-          sucesso: false, 
-          erro: 'Email não autorizado para acessar o sistema' 
+      console.log('🔐 Tentando login:', email);
+
+      // Buscar usuário na tabela usuarios do Supabase
+      const { data: usuarioDB, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('email', email.toLowerCase().trim())
+        .eq('ativo', true)
+        .single();
+
+      if (error || !usuarioDB) {
+        console.log('❌ Usuário não encontrado');
+        return {
+          sucesso: false,
+          erro: 'Email ou senha incorretos'
         };
       }
 
-      // Para simplificar, vamos usar uma senha padrão (você pode mudar depois)
-      const senhaPadrao = 'manutencao2024';
-      if (senha !== senhaPadrao) {
-        return { 
-          sucesso: false, 
-          erro: 'Senha incorreta' 
+      // Verificar senha com bcrypt
+      const senhaCorreta = await compare(senha, usuarioDB.senha_hash);
+
+      if (!senhaCorreta) {
+        console.log('❌ Senha incorreta');
+        return {
+          sucesso: false,
+          erro: 'Email ou senha incorretos'
         };
       }
+
+      // Atualizar último acesso
+      await supabase
+        .from('usuarios')
+        .update({ ultimo_acesso: new Date().toISOString() })
+        .eq('id', usuarioDB.id);
+
+      // Criar objeto de usuário
+      const usuario: UsuarioAutorizado = {
+        id: usuarioDB.id,
+        email: usuarioDB.email,
+        nome: usuarioDB.nome,
+        cargo: usuarioDB.cargo || 'Usuário',
+        permissoes: usuarioDB.is_admin ? ['admin'] : [],
+        ativo: usuarioDB.ativo,
+        is_admin: usuarioDB.is_admin,
+      };
 
       // Criar sessão
       const sessao: SessaoUsuario = {
@@ -100,16 +130,16 @@ export class AuthService {
 
       // Salvar no localStorage
       localStorage.setItem('appRonda_sessao', JSON.stringify(sessao));
+      localStorage.setItem('usuario_logado', JSON.stringify(usuario));
 
-      // Log de acesso
-      await this.registrarAcesso(usuario, 'LOGIN');
+      console.log('✅ Login bem-sucedido:', usuario.nome);
 
       return { sucesso: true, usuario };
     } catch (error) {
-      console.error('Erro no login:', error);
-      return { 
-        sucesso: false, 
-        erro: 'Erro interno do sistema' 
+      console.error('❌ Erro no login:', error);
+      return {
+        sucesso: false,
+        erro: 'Erro interno do sistema'
       };
     }
   }
