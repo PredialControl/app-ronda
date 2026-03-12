@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
@@ -16,6 +16,16 @@ export function Login({ onLoginSuccess }: LoginProps) {
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
+  const [lembrarMe, setLembrarMe] = useState(false);
+
+  // Carregar email salvo ao montar o componente
+  useEffect(() => {
+    const emailSalvo = localStorage.getItem('ronda_email_salvo');
+    if (emailSalvo) {
+      setEmail(emailSalvo);
+      setLembrarMe(true);
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +74,13 @@ export function Login({ onLoginSuccess }: LoginProps) {
         cargo: usuario.cargo,
         is_admin: usuario.is_admin,
       }));
+
+      // Salvar email se "lembrar de mim" estiver marcado
+      if (lembrarMe) {
+        localStorage.setItem('ronda_email_salvo', email.toLowerCase().trim());
+      } else {
+        localStorage.removeItem('ronda_email_salvo');
+      }
 
       onLoginSuccess(usuario);
     } catch (err) {
@@ -132,6 +149,19 @@ export function Login({ onLoginSuccess }: LoginProps) {
               </div>
             )}
 
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="lembrar"
+                checked={lembrarMe}
+                onChange={(e) => setLembrarMe(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+              />
+              <Label htmlFor="lembrar" className="text-sm text-gray-400 cursor-pointer">
+                Lembrar meu email
+              </Label>
+            </div>
+
             <Button
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
@@ -139,10 +169,6 @@ export function Login({ onLoginSuccess }: LoginProps) {
             >
               {loading ? 'Entrando...' : 'Entrar'}
             </Button>
-
-            <div className="text-center text-sm text-gray-500 mt-4">
-              Credenciais padrão: admin@ronda.com / Admin123!
-            </div>
           </form>
         </CardContent>
       </Card>
