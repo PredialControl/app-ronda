@@ -16,7 +16,7 @@ import { OutroItemCorrigidoModal } from '@/components/OutroItemCorrigidoModal';
 import { OutroItemModal } from '@/components/OutroItemModal';
 import { EditarRondaModal } from '@/components/EditarRondaModal';
 import { Dashboard } from '@/components/Dashboard';
-import { Login } from '@/components/Login';
+import { LoginScreen } from '@/components/LoginScreen';
 import { GerenciarUsuarios } from '@/components/GerenciarUsuarios';
 import { AreaTecnica, Ronda, Contrato, FotoRonda, OutroItemCorrigido, UsuarioAutorizado } from '@/types';
 import { AREAS_TECNICAS_PREDEFINIDAS } from '@/data/areasTecnicas';
@@ -1396,7 +1396,7 @@ function App() {
 
   // Se não estiver autenticado, mostrar tela de login
   if (!isAutenticado) {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
   // Se estiver carregando, mostrar indicador de loading
