@@ -2055,7 +2055,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 console.log(`❌ Sem foto DEPOIS`);
                             }
 
-                            const pendenciaData = {
+                            const pendenciaData: any = {
                                 local: pendencia.local,
                                 descricao: pendencia.descricao,
                                 foto_url: fotoUrl,
@@ -2063,15 +2063,19 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 data_recebimento: pendencia.data_recebimento,
                                 status: pendencia.status || 'PENDENTE',
                                 ordem: pendencia.ordem,
-                                secao_id: secaoId,
                                 subsecao_id: subsecaoId,
+                                // ⚠️ FIX: NÃO incluir secao_id para pendências de subseção
                             };
 
                             console.log(`💾 Salvando pendência ${pendencia.id || 'NOVA'} na subseção ${subsecaoId}:`, pendenciaData);
 
                             if (pendencia.id) {
                                 try {
-                                    await relatorioPendenciasService.updatePendencia(pendencia.id, pendenciaData);
+                                    // ⚠️ IMPORTANTE: ao atualizar, limpar explicitamente o secao_id
+                                    await relatorioPendenciasService.updatePendencia(pendencia.id, {
+                                        ...pendenciaData,
+                                        secao_id: null, // Limpa o secao_id se existia antes
+                                    });
                                     console.log(`✅ UPDATE pendência ${pendencia.id} concluído`);
                                 } catch (err: any) {
                                     // Se PGRST116 = item já foi deletado, OK (ignorar)

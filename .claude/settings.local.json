@@ -11,7 +11,9 @@
       "Bash(npx tsc:*)",
       "Bash(node check-ronda.cjs:*)",
       "Bash(node diagnostico-pendencias.mjs:*)",
-      "Bash(npm run build:dev:web:*)"
+      "Bash(npm run build:dev:web:*)",
+      "Bash(node fix-duplicacao-pendencias.mjs:*)",
+      "Bash(node fix-duplicacao-casa-jau.mjs:*)"
     ],
     "deny": [],
     "ask": []

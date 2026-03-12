@@ -201,7 +201,7 @@ export interface RelatorioSubsecao {
 
 export interface RelatorioPendencia {
   id: string;
-  secao_id: string;
+  secao_id?: string; // ⚠️ OPCIONAL: pendências de subseção NÃO têm secao_id direto
   subsecao_id?: string; // NOVO: ID da subseção (se pertencer a uma)
   ordem: number;
   local: string;

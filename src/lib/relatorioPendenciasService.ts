@@ -30,6 +30,9 @@ export const relatorioPendenciasService = {
                     relatorio.secoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
                     relatorio.secoes.forEach((secao: any) => {
                         if (secao.pendencias) {
+                            // ⚠️ FIX DUPLICAÇÃO: Filtrar pendências que têm subsecao_id
+                            // Essas devem aparecer APENAS nas subseções, não na seção principal
+                            secao.pendencias = secao.pendencias.filter((p: any) => !p.subsecao_id);
                             secao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
                         }
                         if (secao.subsecoes) {
@@ -79,6 +82,9 @@ export const relatorioPendenciasService = {
             data.secoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
             data.secoes.forEach((secao: any) => {
                 if (secao.pendencias) {
+                    // ⚠️ FIX DUPLICAÇÃO: Filtrar pendências que têm subsecao_id
+                    // Essas devem aparecer APENAS nas subseções, não na seção principal
+                    secao.pendencias = secao.pendencias.filter((p: any) => !p.subsecao_id);
                     secao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
                 }
 
