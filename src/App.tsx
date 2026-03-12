@@ -16,7 +16,8 @@ import { OutroItemCorrigidoModal } from '@/components/OutroItemCorrigidoModal';
 import { OutroItemModal } from '@/components/OutroItemModal';
 import { EditarRondaModal } from '@/components/EditarRondaModal';
 import { Dashboard } from '@/components/Dashboard';
-import { LoginScreen } from '@/components/LoginScreen';
+import { Login } from '@/components/Login';
+import { GerenciarUsuarios } from '@/components/GerenciarUsuarios';
 import { AreaTecnica, Ronda, Contrato, FotoRonda, OutroItemCorrigido, UsuarioAutorizado } from '@/types';
 import { AREAS_TECNICAS_PREDEFINIDAS } from '@/data/areasTecnicas';
 import { FileText, Building2, BarChart3, LogOut, User, Kanban, FileCheck, ArrowLeft, Smartphone } from 'lucide-react';
@@ -58,7 +59,7 @@ function App() {
   const [currentView, setCurrentView] = useState<'contratos' | 'rondas'>('contratos');
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-lite'>(isMobile ? 'coleta-lite' : 'tabela');
+  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-lite' | 'usuarios'>(isMobile ? 'coleta-lite' : 'tabela');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
   const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
 
@@ -275,7 +276,7 @@ function App() {
 
 
   // Funções de autenticação
-  const handleLoginSuccess = (usuario: UsuarioAutorizado) => {
+  const handleLoginSuccess = (usuario: any) => {
     setUsuarioLogado(usuario);
     setIsAutenticado(true);
     console.log('✅ Login realizado com sucesso:', usuario.nome);
@@ -1395,7 +1396,7 @@ function App() {
 
   // Se não estiver autenticado, mostrar tela de login
   if (!isAutenticado) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+    return <Login onLoginSuccess={handleLoginSuccess} />;
   }
 
   // Se estiver carregando, mostrar indicador de loading
@@ -1434,6 +1435,44 @@ function App() {
     );
   }
 
+  // Tela de gerenciamento de usuários (apenas admin)
+  if (viewMode === 'usuarios') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <header className="bg-[rgba(26,47,42,0.8)] backdrop-blur-lg border-b border-green-500/20 shadow-lg">
+          <div className="w-full mx-auto px-3 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-14 sm:h-16">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <Button
+                  onClick={() => setViewMode('tabela')}
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-300 hover:text-white hover:bg-white/10"
+                >
+                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="hidden sm:inline ml-2">Voltar</span>
+                </Button>
+                <h1 className="text-sm sm:text-xl font-semibold text-white">Gerenciar Usuários</h1>
+              </div>
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                size="sm"
+                className="text-red-400 border-red-500/30 hover:bg-red-500/10"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline ml-2">Sair</span>
+              </Button>
+            </div>
+          </div>
+        </header>
+        <main className="w-full mx-auto px-3 sm:px-6 lg:px-8 py-8">
+          <GerenciarUsuarios usuarioLogado={usuarioLogado} />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       {/* Header com informações do usuário */}
@@ -1465,6 +1504,23 @@ function App() {
                 <span className="text-gray-500">•</span>
                 <span>{usuarioLogado?.cargo}</span>
               </div>
+
+              {/* Botão de usuários (apenas admin) */}
+              {usuarioLogado?.is_admin && (
+                <Button
+                  onClick={() => {
+                    setViewMode('usuarios');
+                    setContratoSelecionado(null);
+                    setCurrentView('contratos');
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/10 hover:border-yellow-500/50 px-2 sm:px-3"
+                >
+                  <User className="w-4 h-4" />
+                  <span className="hidden sm:inline ml-2">Usuários</span>
+                </Button>
+              )}
 
               {/* Botão de coleta lite */}
               <Button

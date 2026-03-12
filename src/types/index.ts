@@ -54,6 +54,7 @@ export interface UsuarioAutorizado {
   cargo: string;
   permissoes: string[];
   ativo: boolean;
+  is_admin?: boolean; // Se é administrador
   ultimoAcesso?: string;
 }
 
