@@ -159,21 +159,6 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                 )}
               </Button>
             </form>
-
-            {/* Informações de Acesso */}
-            <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-white/20">
-              <div className="text-center">
-                <p className="text-xs text-gray-300 mb-2">Usuários Autorizados:</p>
-                <div className="space-y-1 text-xs text-gray-300">
-                  <div className="font-medium text-blue-400">• Ricardo - Admin</div>
-                  <div>• Gessica</div>
-                  <div>• Felipe</div>
-                </div>
-                <p className="text-xs text-gray-300 mt-2">
-                  Senha padrão: <span className="font-mono bg-white/20 px-1 rounded text-white">manutencao2024</span>
-                </p>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
