@@ -59,7 +59,7 @@ function App() {
   const [currentView, setCurrentView] = useState<'contratos' | 'rondas'>('contratos');
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-lite' | 'usuarios'>(isMobile ? 'coleta-lite' : 'tabela');
+  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-lite' | 'usuarios'>('tabela');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
   const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
 
