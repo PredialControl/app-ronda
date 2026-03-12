@@ -13,6 +13,7 @@ import { contratoService } from '@/lib/supabaseService';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 import { generateRelatorioPendenciasDOCX } from '@/lib/docxRelatorioPendencias';
 import { supabase } from '@/lib/supabase';
+import { ColetaRondaEditor } from './ColetaRondaEditor';
 import {
   ArrowLeft, Building2, FileText, AlertTriangle, Camera, Search,
   Check, X, Upload, Download, ChevronRight, Loader2, Image as ImageIcon,
@@ -280,7 +281,9 @@ type Tela =
   | 'novo-relatorio'
   | 'nova-secao'
   | 'nova-pendencia'
-  | 'nova-ronda';
+  | 'nova-ronda'
+  | 'lista-rondas'
+  | 'editar-ronda';
 
 interface ColetaLiteProps {
   onVoltar: () => void;
@@ -304,6 +307,10 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   const [secaoSelecionada, setSecaoSelecionada] = useState<any>(null);
   const [subsecaoSelecionada, setSubsecaoSelecionada] = useState<any>(null);
   const [pendenciaSelecionada, setPendenciaSelecionada] = useState<RelatorioPendencia | null>(null);
+
+  // Rondas
+  const [rondas, setRondas] = useState<any[]>([]);
+  const [rondaSelecionada, setRondaSelecionada] = useState<any>(null);
 
   // Refs para sync (evita stale closures nos useEffects de auto-sync)
   const relatoriosRef = useRef(relatorios);
@@ -3654,25 +3661,103 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
   }
 
   // ============================================
-  // TELA: NOVA RONDA (placeholder - usa ColetaOffline existente)
+  // TELA: LISTA DE RONDAS
   // ============================================
-  if (tela === 'nova-ronda') {
+  if (tela === 'nova-ronda' || tela === 'lista-rondas') {
+    const carregarRondas = async () => {
+      if (!contratoSelecionado) return;
+
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('rondas')
+          .select('*')
+          .eq('contrato_id', contratoSelecionado.id)
+          .order('data', { ascending: false })
+          .order('hora', { ascending: false });
+
+        if (error) throw error;
+        setRondas(data || []);
+      } catch (error) {
+        console.error('Erro ao carregar rondas:', error);
+        setMensagem('Erro ao carregar rondas');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    useEffect(() => {
+      carregarRondas();
+    }, [contratoSelecionado]);
+
     return (
       <div className="min-h-screen bg-gray-900 flex flex-col">
-        {renderHeader('Nova Ronda')}
-        <div className="flex-1 flex items-center justify-center p-8">
-          <div className="text-center">
-            <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400 mb-4">Use o botão "Coleta em Campo" no app principal para criar novas rondas.</p>
-            <button
-              onClick={() => setTela('menu')}
-              className="text-blue-400 text-sm underline"
-            >
-              Voltar ao menu
-            </button>
-          </div>
+        {renderHeader('Rondas')}
+        <div className="flex-1 p-4">
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+            </div>
+          ) : rondas.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-400 mb-4">Nenhuma ronda encontrada</p>
+              <p className="text-sm text-gray-500">Crie uma ronda pelo app principal primeiro</p>
+              <Button
+                onClick={() => setTela('menu')}
+                className="mt-4"
+                variant="outline"
+              >
+                Voltar ao menu
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {rondas.map(ronda => (
+                <div
+                  key={ronda.id}
+                  onClick={() => {
+                    setRondaSelecionada(ronda);
+                    setTela('editar-ronda');
+                  }}
+                  className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 hover:bg-gray-800 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-white">{ronda.nome}</h3>
+                      <p className="text-sm text-gray-400">
+                        {new Date(ronda.data).toLocaleDateString('pt-BR')} • {ronda.hora}
+                      </p>
+                      {ronda.tipo_visita && (
+                        <span className="inline-block mt-1 px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded border border-blue-500/30">
+                          {ronda.tipo_visita}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-500" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+    );
+  }
+
+  // ============================================
+  // TELA: EDITAR RONDA
+  // ============================================
+  if (tela === 'editar-ronda' && rondaSelecionada) {
+    return (
+      <ColetaRondaEditor
+        rondaId={rondaSelecionada.id}
+        onVoltar={() => {
+          setTela('lista-rondas');
+          setRondaSelecionada(null);
+        }}
+        usuarioLogado={usuario}
+      />
     );
   }
 
