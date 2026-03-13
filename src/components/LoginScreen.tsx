@@ -42,7 +42,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Avatar do Manutencionista - Escondido no mobile */}
       <div className="fixed bottom-0 left-0 z-10 pointer-events-none flex-col items-center hidden lg:flex">
         <div className="text-center mb-2 ml-8">
@@ -64,21 +64,22 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       <div className="w-full max-w-md">
         {/* Logo e Título */}
         <div className="text-center mb-6 sm:mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-blue-600 rounded-full mb-3 sm:mb-4 shadow-lg">
-            <Building2 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full mb-4 sm:mb-6 shadow-2xl">
+            <Building2 className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600" />
           </div>
-          <h1 className="text-xl sm:text-3xl font-bold text-white mb-2">Portal de Visitas Manutenção Predial</h1>
-          <p className="text-gray-300 text-sm sm:text-base">Sistema de Gestão de Rondas Técnicas</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Portal de Visitas</h1>
+          <p className="text-blue-200 text-base sm:text-lg font-medium">Manutenção Predial</p>
+          <p className="text-blue-300 text-sm sm:text-base mt-1">Sistema de Gestão de Rondas Técnicas</p>
         </div>
 
         {/* Card de Login */}
-        <Card className="shadow-2xl border-0 bg-white/10 backdrop-blur-md">
-          <CardHeader className="text-center pb-4">
-            <CardTitle className="flex items-center justify-center gap-2 text-xl text-white">
-              <Lock className="w-5 h-5 text-blue-400" />
+        <Card className="shadow-2xl border-2 border-white/20 bg-white/95 backdrop-blur-md">
+          <CardHeader className="text-center pb-4 bg-blue-600">
+            <CardTitle className="flex items-center justify-center gap-2 text-xl sm:text-2xl text-white">
+              <Lock className="w-6 h-6 text-white" />
               Acesso ao Sistema
             </CardTitle>
-            <p className="text-sm text-gray-300">
+            <p className="text-sm sm:text-base text-blue-100">
               Digite suas credenciais para acessar
             </p>
           </CardHeader>
@@ -87,18 +88,18 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Campo Email */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-white">
+                <Label htmlFor="email" className="text-sm sm:text-base font-medium text-gray-700">
                   Email
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
                   <Input
                     id="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="seu@email.com"
-                    className="pl-10 bg-white/20 border-white/30 text-white placeholder-gray-300 focus:bg-white/30"
+                    className="pl-10 h-12 bg-white border-gray-300 text-gray-900 placeholder-gray-400 text-base focus:border-blue-500 focus:ring-blue-500"
                     required
                     disabled={isLoading}
                   />
@@ -107,18 +108,18 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
               {/* Campo Senha */}
               <div className="space-y-2">
-                <Label htmlFor="senha" className="text-sm font-medium text-white">
+                <Label htmlFor="senha" className="text-sm sm:text-base font-medium text-gray-700">
                   Senha
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
                   <Input
                     id="senha"
                     type="password"
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
                     placeholder="••••••••"
-                    className="pl-10 bg-white/20 border-white/30 text-white placeholder-gray-300 focus:bg-white/30"
+                    className="pl-10 h-12 bg-white border-gray-300 text-gray-900 placeholder-gray-400 text-base focus:border-blue-500 focus:ring-blue-500"
                     required
                     disabled={isLoading}
                   />
@@ -143,18 +144,18 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
               {/* Botão de Login */}
               <Button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white shadow-lg text-base sm:text-lg font-semibold"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Entrando...
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-base">Entrando...</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <Lock className="w-4 h-4" />
-                    Entrar no Sistema
+                    <Lock className="w-5 h-5" />
+                    <span className="text-base">Entrar no Sistema</span>
                   </div>
                 )}
               </Button>
@@ -164,8 +165,11 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 
         {/* Footer */}
         <div className="text-center mt-6">
-          <p className="text-xs text-gray-400">
-            © 2024 Portal de Visitas Manutenção Predial - Sistema de Gestão de Rondas Técnicas
+          <p className="text-xs sm:text-sm text-blue-200">
+            © 2024 Portal de Visitas Manutenção Predial
+          </p>
+          <p className="text-xs text-blue-300 mt-1">
+            Sistema de Gestão de Rondas Técnicas
           </p>
         </div>
       </div>
