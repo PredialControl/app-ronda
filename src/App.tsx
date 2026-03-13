@@ -290,6 +290,8 @@ function App() {
       setContratoSelecionado(null);
       setRondaSelecionada(null);
       setViewMode('tabela');
+      localStorage.removeItem('appRonda_contratoSelecionado');
+      localStorage.removeItem('appRonda_rondaSelecionada');
       console.log('✅ Logout realizado com sucesso');
     } catch (error) {
       console.error('❌ Erro no logout:', error);
@@ -303,6 +305,7 @@ function App() {
     setContratoSelecionado(null);
     setViewMode('tabela');
     localStorage.removeItem('appRonda_rondaSelecionada');
+    localStorage.removeItem('appRonda_contratoSelecionado');
     localStorage.removeItem('appRonda_contratos');
     localStorage.removeItem('appRonda_rondas');
     console.log('✅ Estado limpo com sucesso');
@@ -555,15 +558,38 @@ function App() {
     loadDataFromDatabase();
   }, []);
 
-  // Não selecionar automaticamente - deixar o usuário escolher
-  // useEffect(() => {
-  //   if (contratos.length > 0 && !contratoSelecionado) {
-  //     console.log('🔄 Selecionando automaticamente o primeiro contrato:', contratos[0].nome);
-  //     setContratoSelecionado(contratos[0]);
-  //     setCurrentView('rondas');
-  //     setViewMode('tabela'); // Ir para a tabela de rondas primeiro
-  //   }
-  // }, [contratos, contratoSelecionado]);
+  // Restaurar contrato selecionado do localStorage
+  useEffect(() => {
+    if (contratos.length > 0 && !contratoSelecionado) {
+      try {
+        const contratoSalvoId = localStorage.getItem('appRonda_contratoSelecionado');
+        if (contratoSalvoId) {
+          const contrato = contratos.find(c => c.id === contratoSalvoId);
+          if (contrato) {
+            console.log('🔄 Restaurando contrato selecionado:', contrato.nome);
+            setContratoSelecionado(contrato);
+            setCurrentView('rondas');
+          } else {
+            // Contrato não existe mais, limpar localStorage
+            localStorage.removeItem('appRonda_contratoSelecionado');
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao restaurar contrato selecionado:', error);
+        localStorage.removeItem('appRonda_contratoSelecionado');
+      }
+    }
+  }, [contratos, contratoSelecionado]);
+
+  // Salvar contrato selecionado no localStorage sempre que mudar
+  useEffect(() => {
+    if (contratoSelecionado) {
+      localStorage.setItem('appRonda_contratoSelecionado', contratoSelecionado.id);
+      console.log('💾 Contrato selecionado salvo no localStorage:', contratoSelecionado.nome);
+    } else {
+      localStorage.removeItem('appRonda_contratoSelecionado');
+    }
+  }, [contratoSelecionado]);
 
   // Salvar rondas automaticamente sempre que mudarem
   useEffect(() => {
@@ -1043,6 +1069,8 @@ function App() {
     if (confirm('ATENÇÃO: Esta ação irá apagar TODOS os dados da aplicação (contratos, rondas, áreas técnicas, fotos). Esta ação não pode ser desfeita. Tem certeza?')) {
       localStorage.removeItem('appRonda_contratos');
       localStorage.removeItem('appRonda_rondas');
+      localStorage.removeItem('appRonda_contratoSelecionado');
+      localStorage.removeItem('appRonda_rondaSelecionada');
       setContratos([]);
       setRondas([]);
       setContratoSelecionado(null);
@@ -1058,6 +1086,8 @@ function App() {
     if (confirm('Esta ação irá recriar os dados de exemplo. Tem certeza?')) {
       localStorage.removeItem('appRonda_contratos');
       localStorage.removeItem('appRonda_rondas');
+      localStorage.removeItem('appRonda_contratoSelecionado');
+      localStorage.removeItem('appRonda_rondaSelecionada');
       window.location.reload();
     }
   };
