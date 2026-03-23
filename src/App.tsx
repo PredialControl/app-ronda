@@ -18,9 +18,18 @@ import { EditarRondaModal } from '@/components/EditarRondaModal';
 import { Dashboard } from '@/components/Dashboard';
 import { LoginScreen } from '@/components/LoginScreen';
 import { GerenciarUsuarios } from '@/components/GerenciarUsuarios';
+import { MainNavigation } from '@/components/MainNavigation';
+import { ContratosMenu } from '@/components/ContratosMenu';
+import { ContratoDetalhe } from '@/components/ContratoDetalhe';
+import { AgendaMenu } from '@/components/AgendaMenu';
+import { DashboardMenu } from '@/components/DashboardMenu';
+import { ChamadosMenu } from '@/components/ChamadosMenu';
+import { AppLayout } from '@/components/AppLayout';
+import { MenuLevel } from '@/components/Sidebar';
+import { BreadcrumbItem } from '@/components/Breadcrumb';
 import { AreaTecnica, Ronda, Contrato, FotoRonda, OutroItemCorrigido, UsuarioAutorizado } from '@/types';
 import { AREAS_TECNICAS_PREDEFINIDAS } from '@/data/areasTecnicas';
-import { FileText, Building2, BarChart3, LogOut, User, Kanban, FileCheck, ArrowLeft, Smartphone } from 'lucide-react';
+import { FileText, Building2, BarChart3, LogOut, User, Kanban, FileCheck, ArrowLeft, Smartphone, Hammer, Shield } from 'lucide-react';
 
 import { contratoService, rondaService, areaTecnicaService, fotoRondaService, outroItemService } from '@/lib/supabaseService';
 import { supabase } from '@/lib/supabase';
@@ -57,11 +66,16 @@ function App() {
   const [isEditarRondaModalOpen, setIsEditarRondaModalOpen] = useState(false);
 
   const [currentView, setCurrentView] = useState<'contratos' | 'rondas'>('contratos');
+  const [mainSection, setMainSection] = useState<'contratos' | 'agenda' | 'chamados' | 'dashboard'>('contratos');
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-lite' | 'usuarios'>('tabela');
+  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-lite' | 'usuarios' | 'menu' | 'contrato-detalhe'>('menu');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
   const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
+
+  // Estado para o novo menu lateral
+  const [menuLevel, setMenuLevel] = useState<MenuLevel>('main');
+  const [subMenuType, setSubMenuType] = useState<'implantacao' | 'supervisao' | null>(null);
 
   // CORREÇÃO: Limpar localStorage inválido na inicialização
   useEffect(() => {
@@ -341,236 +355,106 @@ function App() {
     }
   };
 
-  // Carregar dados do banco de dados ao iniciar a aplicação
+  // Estado para controlar carregamento de rondas por contrato (lazy loading)
+  const [loadingContrato, setLoadingContrato] = useState<string | null>(null);
+  const [rondasCarregadas, setRondasCarregadas] = useState<Set<string>>(new Set());
+
+  // Carregar APENAS contratos ao iniciar (LAZY LOADING - rondas só quando clica no contrato)
   useEffect(() => {
-    const loadDataFromDatabase = async () => {
+    const loadContratosOnly = async () => {
       try {
         setIsLoading(true);
-        console.log('🔄 Carregando dados do banco Supabase/Neon...');
-        console.log('🔍 DEBUG - Verificando se há itens de chamado nas rondas...');
+        console.log('🚀 LAZY LOADING: Carregando apenas contratos...');
 
-        // RECUPERAR RONDAS DO BROOK YOU PRIMEIRO
-        console.log('🔥 RECUPERANDO RONDAS DO BROOK YOU...');
-        const todasChaves = Object.keys(localStorage);
-        let rondasBrookRecuperadas: Ronda[] = [];
+        // Buscar SOMENTE contratos (rápido!)
+        const contratosFromDB = await contratoService.getAll();
 
-        todasChaves.forEach(chave => {
-          try {
-            const dados = localStorage.getItem(chave);
-            if (dados) {
-              const parsed = JSON.parse(dados);
-              if (Array.isArray(parsed)) {
-                const rondasBrook = parsed.filter(item => {
-                  if (!item) return false;
-                  const contrato = item.contrato ? item.contrato.toLowerCase() : '';
-                  const nome = item.nome ? item.nome.toLowerCase() : '';
-                  return contrato.includes('brook') ||
-                    contrato.includes('you') ||
-                    nome.includes('brook') ||
-                    contrato.includes('brook you');
-                });
-                if (rondasBrook.length > 0) {
-                  console.log(`🎯 Encontradas ${rondasBrook.length} rondas do Brook You na chave "${chave}"`);
-                  rondasBrookRecuperadas = rondasBrookRecuperadas.concat(rondasBrook);
-                }
-              }
-            }
-          } catch (error) {
-            // Ignorar erros
-          }
-        });
-
-        if (rondasBrookRecuperadas.length > 0) {
-          console.log(`🎉 ${rondasBrookRecuperadas.length} RONDAS DO BROOK YOU RECUPERADAS!`, rondasBrookRecuperadas);
-          // Salvar no localStorage atual
-          const rondasAtuais = JSON.parse(localStorage.getItem('appRonda_rondas') || '[]');
-          const rondasCombinadas = [...rondasAtuais, ...rondasBrookRecuperadas];
-          localStorage.setItem('appRonda_rondas', JSON.stringify(rondasCombinadas));
-        }
-
-        // Buscar contratos e rondas em paralelo para reduzir latência total
-        const [contratosFromDB, rondasFromDB] = await Promise.all([
-          contratoService.getAll(),
-          rondaService.getAll(),
-        ]);
-
-        console.log('📥 Dados recebidos do banco:', {
-          contratos: contratosFromDB.length,
-          rondas: rondasFromDB.length,
-          contratosData: contratosFromDB,
-          rondasData: rondasFromDB
-        });
-
-        // Debug: Verificar se as rondas têm dados completos
-        rondasFromDB.forEach(ronda => {
-          console.log('🔍 DEBUG APP - Ronda carregada:', ronda.id, {
-            outrosItensCorrigidos: ronda.outrosItensCorrigidos?.length || 0,
-            fotosRonda: ronda.fotosRonda?.length || 0,
-            temOutrosItens: !!ronda.outrosItensCorrigidos,
-            outrosItensDetalhes: ronda.outrosItensCorrigidos
-          });
-        });
-
+        console.log(`✅ ${contratosFromDB.length} contratos carregados rapidamente`);
         setContratos(contratosFromDB);
-        setRondas(rondasFromDB);
-        console.log(`✅ ${contratosFromDB.length} contratos e ${rondasFromDB.length} rondas carregados`);
 
-        // Se não há contratos, limpar estado da ronda
+        // Se não há contratos, criar exemplo
         if (contratosFromDB.length === 0) {
-          console.log('📝 Nenhum contrato encontrado, limpando estado da ronda');
-          setRondaSelecionada(null);
-          setContratoSelecionado(null);
-          setViewMode('tabela');
-          // Limpar localStorage de ronda selecionada
-          localStorage.removeItem('appRonda_rondaSelecionada');
-        }
-
-        // Se não há dados no banco, criar dados de exemplo
-        if (contratosFromDB.length === 0 && rondasFromDB.length === 0) {
-          console.log('🔄 Banco vazio, criando dados de exemplo...');
-
-          try {
-            // Criar contratos de exemplo no banco
-            const contrato1 = await contratoService.create({
-              nome: 'CT001/2024 - Manutenção Preventiva',
-              sindico: 'Maria Santos',
-              endereco: 'Rua das Flores, 123 - Centro',
-              periodicidade: 'MENSAL',
-              status: 'IMPLANTADO',
-              observacoes: 'Contrato de manutenção preventiva mensal',
-              dataCriacao: '2024-01-01T00:00:00.000Z'
-            });
-
-            const contrato2 = await contratoService.create({
-              nome: 'CT002/2024 - Inspeção Semanal',
-              sindico: 'João Oliveira',
-              endereco: 'Av. Principal, 456 - Bairro Novo',
-              periodicidade: 'SEMANAL',
-              status: 'EM IMPLANTACAO',
-              observacoes: 'Inspeção semanal de segurança',
-              dataCriacao: '2024-01-01T00:00:00.000Z'
-            });
-
-            // Criar ronda de exemplo no banco
-            const ronda1 = await rondaService.create({
-              nome: 'Ronda Matutina - Centro',
-              contrato: 'CT001/2024 - Manutenção Preventiva',
-              data: '2024-01-15',
-              hora: '08:00',
-              responsavel: 'Ricardo Oliveira',
-              observacoesGerais: 'Verificação geral das áreas técnicas',
-              areasTecnicas: [],
-              fotosRonda: [],
-              outrosItensCorrigidos: []
-            });
-
-            console.log('✅ Dados de exemplo criados no banco');
-
-            // Atualizar estado com os dados criados
-            setContratos([contrato1, contrato2]);
-            setRondas([ronda1]);
-          } catch (error) {
-            console.error('❌ Erro ao criar dados de exemplo:', error);
-          }
+          console.log('📝 Nenhum contrato encontrado, criando exemplo...');
+          const contrato1 = await contratoService.create({
+            nome: 'CT001/2024 - Manutenção Preventiva',
+            sindico: 'Maria Santos',
+            endereco: 'Rua das Flores, 123 - Centro',
+            periodicidade: 'MENSAL',
+            status: 'IMPLANTADO',
+            observacoes: 'Contrato de manutenção preventiva mensal',
+            dataCriacao: '2024-01-01T00:00:00.000Z'
+          });
+          setContratos([contrato1]);
         }
       } catch (error) {
-        console.error('❌ Erro ao carregar dados do banco:', error);
-        console.log('🔄 Tentando carregar dados do localStorage como fallback...');
-
-        // Fallback para localStorage quando não conseguir conectar ao banco
+        console.error('❌ Erro ao carregar contratos:', error);
+        // Fallback para localStorage
         try {
           const savedContratos = localStorage.getItem('appRonda_contratos');
-          const savedRondas = localStorage.getItem('appRonda_rondas');
-
           if (savedContratos) {
-            const contratosFromStorage = JSON.parse(savedContratos);
-            setContratos(contratosFromStorage);
-            console.log(`✅ ${contratosFromStorage.length} contratos carregados do localStorage`);
+            setContratos(JSON.parse(savedContratos));
           }
-
-          if (savedRondas) {
-            const rondasFromStorage = JSON.parse(savedRondas);
-            setRondas(rondasFromStorage);
-            console.log(`✅ ${rondasFromStorage.length} rondas carregadas do localStorage`);
-          }
-
-          // Se não há dados nem no banco nem no localStorage, criar dados de exemplo
-          if ((!savedContratos || JSON.parse(savedContratos).length === 0) &&
-            (!savedRondas || JSON.parse(savedRondas).length === 0)) {
-            console.log('🔄 Criando dados de exemplo no localStorage...');
-
-            const contratoExemplo1: Contrato = {
-              id: crypto.randomUUID(),
-              nome: 'CT001/2024 - Manutenção Preventiva',
-              sindico: 'Maria Santos',
-              endereco: 'Rua das Flores, 123 - Centro',
-              periodicidade: 'MENSAL' as const,
-              status: 'IMPLANTADO' as const,
-              observacoes: 'Contrato de manutenção preventiva mensal',
-              dataCriacao: '2024-01-01T00:00:00.000Z'
-            };
-
-            const contratoExemplo2: Contrato = {
-              id: crypto.randomUUID(),
-              nome: 'CT002/2024 - Inspeção Semanal',
-              sindico: 'João Oliveira',
-              endereco: 'Av. Principal, 456 - Bairro Novo',
-              periodicidade: 'SEMANAL' as const,
-              status: 'EM IMPLANTACAO' as const,
-              observacoes: 'Inspeção semanal de segurança',
-              dataCriacao: '2024-01-01T00:00:00.000Z'
-            };
-
-            const rondaExemplo = {
-              id: crypto.randomUUID(),
-              nome: 'Ronda Matutina - Centro',
-              contrato: 'CT001/2024 - Manutenção Preventiva',
-              data: '2024-01-15',
-              hora: '08:00',
-              responsavel: 'Ricardo Oliveira',
-              observacoesGerais: 'Verificação geral das áreas técnicas',
-              areasTecnicas: [],
-              fotosRonda: [],
-              outrosItensCorrigidos: []
-            };
-
-            const contratosExemplo = [contratoExemplo1, contratoExemplo2];
-            const rondasExemplo = [rondaExemplo];
-
-            // Salvar no localStorage
-            localStorage.setItem('appRonda_contratos', JSON.stringify(contratosExemplo));
-            localStorage.setItem('appRonda_rondas', JSON.stringify(rondasExemplo));
-
-            // Atualizar estado
-            setContratos(contratosExemplo);
-            setRondas(rondasExemplo);
-
-            console.log('✅ Dados de exemplo criados no localStorage');
-          }
-        } catch (storageError) {
-          console.error('❌ Erro ao acessar localStorage:', storageError);
+        } catch (e) {
+          console.error('❌ Erro ao acessar localStorage:', e);
         }
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadDataFromDatabase();
+    loadContratosOnly();
   }, []);
 
-  // Restaurar contrato selecionado do localStorage
+  // Função para carregar rondas de um contrato específico (LAZY LOADING)
+  const carregarRondasDoContrato = async (contratoNome: string) => {
+    // Se já carregou as rondas desse contrato, não carrega de novo
+    if (rondasCarregadas.has(contratoNome)) {
+      console.log(`⚡ Rondas do contrato "${contratoNome}" já em cache`);
+      return;
+    }
+
+    try {
+      setLoadingContrato(contratoNome);
+      console.log(`🔄 LAZY LOADING: Carregando rondas do contrato "${contratoNome}"...`);
+
+      // Buscar todas as rondas e filtrar pelo contrato
+      const todasRondas = await rondaService.getAll();
+      const rondasDoContrato = todasRondas.filter(r => r.contrato === contratoNome);
+
+      console.log(`✅ ${rondasDoContrato.length} rondas carregadas para "${contratoNome}"`);
+
+      // Adicionar ao estado (mantendo as já existentes de outros contratos)
+      setRondas(prev => {
+        const outrasRondas = prev.filter(r => r.contrato !== contratoNome);
+        return [...outrasRondas, ...rondasDoContrato];
+      });
+
+      // Marcar como carregado
+      setRondasCarregadas(prev => new Set([...prev, contratoNome]));
+    } catch (error) {
+      console.error(`❌ Erro ao carregar rondas do contrato "${contratoNome}":`, error);
+    } finally {
+      setLoadingContrato(null);
+    }
+  };
+
+  // Restaurar contrato selecionado do localStorage - APENAS na primeira carga
+  const [jaRestaurou, setJaRestaurou] = useState(false);
   useEffect(() => {
-    if (contratos.length > 0 && !contratoSelecionado) {
+    // Só restaurar UMA VEZ na inicialização, não toda vez que contratoSelecionado mudar
+    if (contratos.length > 0 && !contratoSelecionado && !jaRestaurou) {
+      setJaRestaurou(true); // Marca que já tentou restaurar
       try {
         const contratoSalvoId = localStorage.getItem('appRonda_contratoSelecionado');
         if (contratoSalvoId) {
           const contrato = contratos.find(c => c.id === contratoSalvoId);
           if (contrato) {
-            console.log('🔄 Restaurando contrato selecionado:', contrato.nome);
+            console.log('🔄 Restaurando contrato selecionado (apenas na inicialização):', contrato.nome);
             setContratoSelecionado(contrato);
             setCurrentView('rondas');
+            setMenuLevel('contrato');
+            setViewMode('contrato-detalhe');
           } else {
-            // Contrato não existe mais, limpar localStorage
             localStorage.removeItem('appRonda_contratoSelecionado');
           }
         }
@@ -579,7 +463,7 @@ function App() {
         localStorage.removeItem('appRonda_contratoSelecionado');
       }
     }
-  }, [contratos, contratoSelecionado]);
+  }, [contratos]); // Remover contratoSelecionado das dependências!
 
   // Salvar contrato selecionado no localStorage sempre que mudar
   useEffect(() => {
@@ -665,47 +549,17 @@ function App() {
     ? rondas.filter(r => r.contrato === contratoSelecionado.nome)
     : [];
 
-  // Carregar dados completos das rondas quando um contrato for selecionado
+  // OTIMIZADO: Usar rondas básicas inicialmente, carregar completas só quando necessário
   useEffect(() => {
     if (contratoSelecionado && rondasDoContrato.length > 0) {
-      console.log('🔄 Carregando dados completos das rondas do contrato:', contratoSelecionado.nome);
-      console.log('🔄 Total de rondas do contrato:', rondasDoContrato.length);
-      console.log('🔄 IDs das rondas:', rondasDoContrato.map(r => ({ id: r.id, nome: r.nome })));
-
-      // Adicionar timeout para evitar carregamentos muito frequentes
-      const timeoutId = setTimeout(() => {
-        const rondasValidas = rondasDoContrato.filter(ronda => ronda && ronda.id && ronda.id.trim() !== '');
-        console.log('🔄 Rondas válidas para carregar:', rondasValidas.length);
-
-        Promise.all(
-          rondasValidas.map(ronda => {
-            console.log('🔄 Chamando loadCompleteRonda para:', ronda.id, ronda.nome);
-            return rondaService.loadCompleteRonda(ronda);
-          })
-        ).then(rondasCompletas => {
-          console.log('✅ Dados completos carregados:', rondasCompletas.length);
-          console.log('✅ Áreas técnicas por ronda:', rondasCompletas.map(r => ({
-            id: r.id,
-            nome: r.nome,
-            areasCount: r.areasTecnicas?.length || 0,
-            areas: r.areasTecnicas?.map(a => ({ nome: a.nome, status: a.status })) || []
-          })));
-          setRondasCompletas(rondasCompletas);
-        }).catch(error => {
-          console.error('❌ Erro ao carregar dados completos:', error);
-          setRondasCompletas(rondasDoContrato.filter(ronda => ronda && ronda.id && ronda.id.trim() !== '')); // Usar dados básicos se der erro
-        });
-      }, 100); // Debounce de 100ms
-
-      return () => clearTimeout(timeoutId);
+      // Usar dados básicos imediatamente (sem loading)
+      const rondasValidas = rondasDoContrato.filter(ronda => ronda && ronda.id && ronda.id.trim() !== '');
+      setRondasCompletas(rondasValidas);
+      console.log('⚡ Rondas básicas setadas:', rondasValidas.length);
     } else {
-      console.log('⚠️ Não carregando rondas completas:', {
-        temContrato: !!contratoSelecionado,
-        rondasCount: rondasDoContrato.length
-      });
       setRondasCompletas([]);
     }
-  }, [contratoSelecionado?.nome, rondas.length]); // Corrigido: usar contratoSelecionado.nome e rondas.length
+  }, [contratoSelecionado?.nome, rondas.length]);
 
   // Filtrar áreas técnicas pelo contrato selecionado
   const areasTecnicasDoContrato = contratoSelecionado
@@ -1418,10 +1272,201 @@ function App() {
   };
 
   const handleVoltarContratos = () => {
+    console.log('🔙 Voltando para contratos...');
+    // IMPORTANTE: Limpar localStorage ANTES de limpar estado para evitar restauração
+    localStorage.removeItem('appRonda_contratoSelecionado');
+    localStorage.removeItem('appRonda_rondaSelecionada');
+    // Agora limpar estados
+    setMenuLevel('main');
+    setSubMenuType(null);
+    setViewMode('menu');
     setCurrentView('contratos');
+    setMainSection('contratos');
     setContratoSelecionado(null);
     setRondaSelecionada(null);
-    setViewMode('tabela');
+    setRondasCompletas([]);
+  };
+
+  // Handler para navegação dos menus
+  const handleMenuNavigation = (destination: string) => {
+    console.log('🔀 Navegando para:', destination);
+
+    // Mapear destino para viewMode
+    const navigationMap: { [key: string]: typeof viewMode } = {
+      'kanban': 'kanban',
+      'relatorio-pendencias': 'relatorios-pendencias',
+      'evolucao-recebimentos': 'itens-compilados',
+      'documentacao-tecnica': 'laudos',
+      'plano-manutencao': 'plano-manutencao',
+      'rondas-supervisao': 'tabela',
+      'parecer-tecnico': 'parecer',
+      'documentos-condominio': 'laudos',
+      'verificar-preventivas': 'laudos',
+      // Sub-itens do Kanban
+      'kanban-vistoria': 'kanban',
+      'kanban-recebimento': 'kanban',
+      'kanban-conferencia': 'kanban',
+      'kanban-comissionamento': 'kanban',
+      'kanban-documentacao': 'kanban',
+    };
+
+    const newViewMode = navigationMap[destination] || 'tabela';
+
+    // Manter o contrato selecionado e ir para a view correta
+    setCurrentView('rondas');
+    setViewMode(newViewMode);
+  };
+
+  // Handler para navegação do sidebar
+  const handleSidebarNavigate = (destination: string) => {
+    console.log('📍 Sidebar navegando para:', destination);
+
+    // Menu principal
+    if (menuLevel === 'main') {
+      if (destination === 'contratos') {
+        setMainSection('contratos');
+        setViewMode('menu');
+      } else if (destination === 'agenda') {
+        setMainSection('agenda');
+        setViewMode('menu');
+      } else if (destination === 'chamados') {
+        setMainSection('chamados');
+        setViewMode('menu');
+      } else if (destination === 'dashboard') {
+        setMainSection('dashboard');
+        setViewMode('dashboard');
+      }
+      return;
+    }
+
+    // Menu do contrato (Implantação/Supervisão)
+    if (menuLevel === 'contrato') {
+      if (destination === 'implantacao') {
+        setMenuLevel('implantacao');
+        setSubMenuType('implantacao');
+      } else if (destination === 'supervisao') {
+        setMenuLevel('supervisao');
+        setSubMenuType('supervisao');
+      }
+      return;
+    }
+
+    // Menu de Implantação
+    if (menuLevel === 'implantacao') {
+      handleMenuNavigation(destination);
+      return;
+    }
+
+    // Menu de Supervisão
+    if (menuLevel === 'supervisao') {
+      handleMenuNavigation(destination);
+      return;
+    }
+  };
+
+  // Handler para voltar no sidebar (OTIMIZADO - sem recarregar dados)
+  const handleSidebarBack = () => {
+    console.log('⬅️ Sidebar voltando de:', menuLevel, 'subMenuType:', subMenuType);
+
+    if (menuLevel === 'implantacao' || menuLevel === 'supervisao') {
+      // Voltar de Implantação/Supervisão para seleção do contrato
+      setMenuLevel('contrato');
+      setSubMenuType(null);
+      setViewMode('contrato-detalhe');
+    } else if (menuLevel === 'contrato') {
+      // Voltar do contrato para lista de contratos
+      // IMPORTANTE: Limpar localStorage ANTES de limpar estado para evitar restauração
+      localStorage.removeItem('appRonda_contratoSelecionado');
+      localStorage.removeItem('appRonda_rondaSelecionada');
+      // Agora limpar estados
+      setMenuLevel('main');
+      setSubMenuType(null);
+      setViewMode('menu');
+      setMainSection('contratos');
+      setCurrentView('contratos');
+      setContratoSelecionado(null);
+      setRondaSelecionada(null);
+      setRondasCompletas([]);
+    }
+  };
+
+  // Calcular breadcrumbs
+  const getBreadcrumbs = (): BreadcrumbItem[] => {
+    const items: BreadcrumbItem[] = [];
+
+    // Sempre tem o item principal baseado na seção
+    const sectionLabels = {
+      contratos: 'Contratos',
+      agenda: 'Agenda',
+      chamados: 'Chamados',
+      dashboard: 'Dashboard'
+    };
+
+    items.push({
+      id: 'main',
+      label: sectionLabels[mainSection],
+      onClick: () => {
+        setMenuLevel('main');
+        setContratoSelecionado(null);
+        setViewMode('menu');
+      }
+    });
+
+    // Se tem contrato selecionado
+    if (contratoSelecionado) {
+      items.push({
+        id: 'contrato',
+        label: contratoSelecionado.nome,
+        onClick: () => {
+          setMenuLevel('contrato');
+          setSubMenuType(null);
+          setViewMode('contrato-detalhe');
+        }
+      });
+
+      // Se está em submenu (usar menuLevel como fonte de verdade)
+      if (menuLevel === 'implantacao') {
+        items.push({
+          id: 'implantacao',
+          label: 'Implantação',
+          onClick: () => {
+            setMenuLevel('implantacao');
+            setSubMenuType('implantacao');
+            setViewMode('contrato-detalhe');
+          }
+        });
+      } else if (menuLevel === 'supervisao') {
+        items.push({
+          id: 'supervisao',
+          label: 'Supervisão',
+          onClick: () => {
+            setMenuLevel('supervisao');
+            setSubMenuType('supervisao');
+            setViewMode('contrato-detalhe');
+          }
+        });
+      }
+
+      // Se está em uma view específica
+      const viewLabels: { [key: string]: string } = {
+        'kanban': 'Kanban',
+        'relatorios-pendencias': 'Relatório de Pendências',
+        'itens-compilados': 'Evolução dos Recebimentos',
+        'laudos': 'Documentação',
+        'tabela': 'Rondas',
+        'parecer': 'Parecer Técnico',
+        'dashboard': 'Dashboard'
+      };
+
+      if (viewMode !== 'menu' && viewMode !== 'contrato-detalhe' && viewLabels[viewMode]) {
+        items.push({
+          id: viewMode,
+          label: viewLabels[viewMode]
+        });
+      }
+    }
+
+    return items;
   };
 
   // Se não estiver autenticado, mostrar tela de login
@@ -1504,106 +1549,195 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Header com informações do usuário */}
-      <header className="bg-[rgba(26,47,42,0.8)] backdrop-blur-lg border-b border-green-500/20 shadow-lg">
-        <div className="w-full mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14 sm:h-16">
-            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-              {contratoSelecionado ? (
-                <Button
-                  onClick={handleVoltarContratos}
-                  variant="ghost"
-                  size="sm"
-                  className="text-gray-300 hover:text-white hover:bg-white/10 px-2 sm:px-3"
-                >
-                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="hidden sm:inline ml-2">Voltar</span>
-                </Button>
-              ) : (
-                <img src="/logo-mp.png" alt="MP Logo" className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0" />
-              )}
-              <h1 className="text-sm sm:text-xl font-semibold text-white truncate">Portal de Visitas MP</h1>
+    <AppLayout
+      menuLevel={menuLevel}
+      activeMenuItem={viewMode === 'menu' ? mainSection : viewMode}
+      contratoNome={contratoSelecionado?.nome}
+      breadcrumbItems={getBreadcrumbs()}
+      onNavigate={handleSidebarNavigate}
+      onBack={menuLevel !== 'main' ? handleSidebarBack : undefined}
+      onLogout={handleLogout}
+      onColetaLite={() => setViewMode('coleta-lite')}
+      onUsuarios={usuarioLogado?.is_admin ? () => {
+        setViewMode('usuarios');
+        setContratoSelecionado(null);
+        setCurrentView('contratos');
+        setMenuLevel('main');
+      } : undefined}
+      usuarioNome={usuarioLogado?.nome}
+      usuarioCargo={usuarioLogado?.cargo}
+      isAdmin={usuarioLogado?.is_admin}
+    >
+      {/* Contrato Info - Card quando contrato selecionado */}
+      {contratoSelecionado && (viewMode === 'contrato-detalhe' || menuLevel === 'contrato') && (
+        <div className="bg-gradient-to-r from-emerald-600/20 to-emerald-800/20 backdrop-blur-sm rounded-xl border border-emerald-500/30 p-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-semibold text-emerald-400 truncate">{contratoSelecionado.nome}</h2>
+              <div className="text-xs sm:text-sm text-gray-300 space-y-0.5">
+                <p className="truncate">Síndico: {contratoSelecionado.sindico}</p>
+                <p className="truncate">Endereço: {contratoSelecionado.endereco}</p>
+                <p className="truncate">Periodicidade: {contratoSelecionado.periodicidade}</p>
+              </div>
             </div>
-
-            <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-              {/* Informações do usuário - esconde detalhes no mobile */}
-              <div className="hidden md:flex items-center gap-2 text-sm text-gray-300">
-                <User className="w-4 h-4" />
-                <span>{usuarioLogado?.nome}</span>
-                <span className="text-gray-500">•</span>
-                <span>{usuarioLogado?.cargo}</span>
-              </div>
-
-              {/* Botão de usuários (apenas admin) */}
-              {usuarioLogado?.is_admin && (
-                <Button
-                  onClick={() => {
-                    setViewMode('usuarios');
-                    setContratoSelecionado(null);
-                    setCurrentView('contratos');
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/10 hover:border-yellow-500/50 px-2 sm:px-3"
-                >
-                  <User className="w-4 h-4" />
-                  <span className="hidden sm:inline ml-2">Usuários</span>
-                </Button>
-              )}
-
-              {/* Botão de coleta lite */}
-              <Button
-                onClick={() => setViewMode('coleta-lite')}
-                variant="outline"
-                size="sm"
-                className="text-green-400 border-green-500/30 hover:bg-green-500/10 hover:border-green-500/50 px-2 sm:px-3"
-              >
-                <Smartphone className="w-4 h-4" />
-                <span className="hidden sm:inline ml-2">Coleta em Campo</span>
-              </Button>
-
-              {/* Botão de logout */}
-              <Button
-                onClick={handleLogout}
-                variant="outline"
-                size="sm"
-                className="text-red-400 border-red-500/30 hover:bg-red-500/10 hover:border-red-500/50 px-2 sm:px-3"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline ml-2">Sair</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Contrato Info */}
-      {contratoSelecionado && (
-        <div className="bg-[rgba(16,185,129,0.1)] backdrop-blur-sm border-b border-green-500/30">
-          <div className="w-full mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="min-w-0">
-                <h2 className="text-base sm:text-xl font-semibold text-green-400 truncate">{contratoSelecionado.nome}</h2>
-                <div className="text-xs sm:text-sm text-gray-300 space-y-0.5 sm:space-y-0">
-                  <p className="truncate">Síndico: {contratoSelecionado.sindico}</p>
-                  <p className="truncate hidden sm:block">Endereço: {contratoSelecionado.endereco}</p>
-                  <p className="sm:hidden truncate">{contratoSelecionado.periodicidade}</p>
-                  <p className="hidden sm:block">Periodicidade: {contratoSelecionado.periodicidade}</p>
-                </div>
-              </div>
-              <div className="text-left sm:text-right flex sm:flex-col gap-3 sm:gap-0 flex-shrink-0">
-                <p className="text-xs sm:text-sm text-blue-200/80">Rondas: {rondasDoContrato.length}</p>
-                <p className="text-xs sm:text-sm text-blue-200/80">Hoje: {rondasDoContrato.filter(r => r.data === new Date().toISOString().split('T')[0]).length}</p>
-              </div>
+            <div className="text-left sm:text-right flex sm:flex-col gap-3 sm:gap-0 flex-shrink-0">
+              <p className="text-xs sm:text-sm text-blue-200/80">Rondas: {rondasDoContrato.length}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Main Content */}
-      <main className="w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
-        {currentView === 'contratos' ? (
+      <div>
+        {/* DEBUG: Mostrar estado atual */}
+        {console.log('🔍 DEBUG RENDER:', { contratoSelecionado: contratoSelecionado?.nome || null, viewMode, mainSection, menuLevel })}
+
+        {/* Lista de contratos - quando está no menu principal e seção contratos */}
+        {!contratoSelecionado && viewMode === 'menu' && mainSection === 'contratos' && (
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-4">Seus Contratos</h2>
+              <GerenciarContratos
+                contratos={contratos}
+                onSelectContrato={async (contrato) => {
+                  setContratoSelecionado(contrato);
+                  setViewMode('contrato-detalhe');
+                  setMenuLevel('contrato');
+                  // LAZY LOADING: Carregar rondas do contrato selecionado
+                  await carregarRondasDoContrato(contrato.nome);
+                }}
+                onSaveContrato={async (contrato: Contrato) => {
+                  try {
+                    console.log('🔄 Salvando contrato:', { id: contrato.id, nome: contrato.nome, isEdit: !!contrato.id });
+
+                    if (contrato.id && contrato.id.trim() !== '') {
+                      // Editando contrato existente
+                      console.log('🔄 Editando contrato existente com ID:', contrato.id);
+                      const contratoAtualizado = await contratoService.update(contrato.id, contrato);
+                      setContratos(prev => prev.map(c => c.id === contrato.id ? contratoAtualizado : c));
+                      if (contratoSelecionado?.id === contrato.id) {
+                        setContratoSelecionado(contratoAtualizado);
+                      }
+                      console.log('✅ Contrato atualizado com sucesso:', contratoAtualizado);
+                    } else {
+                      // Criando novo contrato
+                      console.log('🔄 Criando novo contrato');
+                      const { id, ...dadosNovoContrato } = contrato;
+                      const contratoSalvo = await contratoService.create(dadosNovoContrato);
+
+                      if (!contratoSalvo || !contratoSalvo.id) {
+                        throw new Error('Contrato não foi criado corretamente');
+                      }
+
+                      setContratos(prev => [...prev, contratoSalvo]);
+                      console.log('✅ Contrato criado com sucesso:', contratoSalvo);
+                    }
+                  } catch (error) {
+                    console.error('❌ Erro ao salvar contrato:', error);
+                    alert('Erro ao salvar contrato. Verifique o console.');
+                  }
+                }}
+                onDeleteContrato={async (id: string) => {
+                  if (confirm('Tem certeza que deseja excluir este contrato? Esta ação não pode ser desfeita.')) {
+                    try {
+                      await contratoService.delete(id);
+                      setContratos(prev => prev.filter(c => c.id !== id));
+                      if (contratoSelecionado?.id === id) {
+                        setContratoSelecionado(null);
+                        setCurrentView('contratos');
+                      }
+                      console.log('✅ Contrato excluído com sucesso');
+                    } catch (error) {
+                      console.error('❌ Erro ao excluir contrato:', error);
+                      alert('Erro ao excluir contrato. Verifique o console.');
+                    }
+                  }
+                }}
+                onVoltarContratos={() => {
+                  // Fechar modal e voltar à lista de contratos
+                  setCurrentView('contratos');
+                  setViewMode('menu');
+                }}
+              />
+            </div>
+        )}
+
+        {/* Tela de seleção - quando contrato selecionado mas ainda não escolheu Implantação/Supervisão */}
+        {contratoSelecionado && viewMode === 'contrato-detalhe' && menuLevel === 'contrato' && (
+          <div className="text-center py-12">
+            {loadingContrato ? (
+              <>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+                <h2 className="text-xl font-semibold text-white mb-2">Carregando dados...</h2>
+                <p className="text-gray-400">Buscando informações do contrato</p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-semibold text-white mb-4">Selecione uma opção</h2>
+                <p className="text-gray-400 text-lg">
+                  Use o menu lateral para escolher entre Implantação ou Supervisão
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Tela de Implantação - quando selecionou Implantação */}
+        {contratoSelecionado && menuLevel === 'implantacao' && viewMode === 'contrato-detalhe' && (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Hammer className="w-8 h-8 text-orange-400" />
+            </div>
+            <h2 className="text-2xl font-semibold text-white mb-4">Implantação</h2>
+            <p className="text-gray-400 text-lg mb-6">
+              Selecione uma opção no menu lateral:
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <button onClick={() => handleMenuNavigation('kanban')} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">
+                Kanban
+              </button>
+              <button onClick={() => handleMenuNavigation('relatorio-pendencias')} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                Relatório de Pendências
+              </button>
+              <button onClick={() => handleMenuNavigation('evolucao-recebimentos')} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
+                Evolução dos Recebimentos
+              </button>
+              <button onClick={() => handleMenuNavigation('documentacao-tecnica')} className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors">
+                Documentação Técnica
+              </button>
+              <button onClick={() => handleMenuNavigation('plano-manutencao')} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors">
+                Plano de Manutenção
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tela de Supervisão - quando selecionou Supervisão */}
+        {contratoSelecionado && menuLevel === 'supervisao' && viewMode === 'contrato-detalhe' && (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-blue-400" />
+            </div>
+            <h2 className="text-2xl font-semibold text-white mb-4">Supervisão</h2>
+            <p className="text-gray-400 text-lg mb-6">
+              Selecione uma opção no menu lateral:
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <button onClick={() => handleMenuNavigation('rondas-supervisao')} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">
+                Rondas de Supervisão
+              </button>
+              <button onClick={() => handleMenuNavigation('parecer-tecnico')} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                Parecer Técnico
+              </button>
+              <button onClick={() => handleMenuNavigation('documentos-condominio')} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
+                Documentos do Condomínio
+              </button>
+              <button onClick={() => handleMenuNavigation('verificar-preventivas')} className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors">
+                Verificar Preventivas
+              </button>
+            </div>
+          </div>
+        )}
+
+        {currentView === 'contratos' && viewMode !== 'menu' && viewMode !== 'contrato-detalhe' ? (
           <GerenciarContratos
             contratos={contratos}
             onSelectContrato={(contrato) => {
@@ -1676,106 +1810,7 @@ function App() {
           </div>
         ) : (
           <>
-            {/* Tabs de Navegação */}
-            <div className="border-b border-gray-200/20 mb-4 sm:mb-6">
-              <nav className="-mb-px flex overflow-x-auto scrollbar-hide gap-1 sm:gap-0 sm:space-x-8 pb-px">
-                <button
-                  onClick={() => setViewMode('tabela')}
-                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'tabela'
-                    ? 'border-blue-400 text-blue-300'
-                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                    }`}
-                >
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline">Rondas Realizadas</span>
-                    <span className="sm:hidden">Rondas</span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setViewMode('dashboard')}
-                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'dashboard'
-                    ? 'border-blue-400 text-blue-300'
-                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                    }`}
-                >
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    Dashboard
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setViewMode('kanban')}
-                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'kanban'
-                    ? 'border-blue-400 text-blue-300'
-                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                    }`}
-                >
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <Kanban className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    Kanban
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setViewMode('laudos')}
-                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'laudos'
-                    ? 'border-blue-400 text-blue-300'
-                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                    }`}
-                >
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <FileCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    Laudos
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setViewMode('parecer')}
-                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'parecer'
-                    ? 'border-blue-400 text-blue-300'
-                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                    }`}
-                >
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    Parecer
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setViewMode('relatorios-pendencias')}
-                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'relatorios-pendencias'
-                    ? 'border-blue-400 text-blue-300'
-                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                    }`}
-                >
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <FileCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline">Rel. Pendências</span>
-                    <span className="sm:hidden">Pendências</span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setViewMode('itens-compilados')}
-                  className={`py-2 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${viewMode === 'itens-compilados'
-                    ? 'border-blue-400 text-blue-300'
-                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
-                    }`}
-                >
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <FileCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline">Evolução dos Recebimentos</span>
-                    <span className="sm:hidden">Recebimentos</span>
-                  </div>
-                </button>
-              </nav>
-            </div>
-
-            {/* Conteúdo baseado no modo de visualização */}
+            {/* Conteúdo baseado no modo de visualização - Navegação via Sidebar */}
             {viewMode === 'tabela' && (
               <>
                 {/* Tabela de Rondas */}
@@ -1827,7 +1862,10 @@ function App() {
             )}
 
             {viewMode === 'kanban' && contratoSelecionado && (
-              <KanbanBoard />
+              <KanbanBoard
+                contratoId={contratoSelecionado.id}
+                contratoNome={contratoSelecionado.nome}
+              />
             )}
 
             {viewMode === 'laudos' && contratoSelecionado && (
@@ -1870,6 +1908,22 @@ function App() {
               />
             )}
 
+            {viewMode === 'plano-manutencao' && contratoSelecionado && (
+              <div className="bg-gray-800/50 rounded-xl p-8 text-center">
+                <div className="w-20 h-20 bg-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <FileCheck className="w-10 h-10 text-cyan-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-4">Plano de Manutenção</h2>
+                <p className="text-gray-400 mb-6">
+                  Em breve você poderá gerenciar o plano de manutenção preventiva do contrato aqui.
+                </p>
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500/10 border border-cyan-500/30 rounded-lg text-cyan-400">
+                  <span className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
+                  Em desenvolvimento
+                </div>
+              </div>
+            )}
+
             {viewMode === 'visualizar' && rondaSelecionada && contratoSelecionado && (
               <VisualizarRonda
                 ronda={rondaSelecionada}
@@ -1907,7 +1961,6 @@ function App() {
           </>
         )
         }
-      </main >
 
 
 
@@ -2070,7 +2123,8 @@ function App() {
 
       {/* Indicador de status offline */}
       <OfflineIndicator />
-    </div >
+      </div>
+    </AppLayout>
   );
 }
 

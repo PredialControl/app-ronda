@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { KanbanPhotoUpload } from '@/components/KanbanPhotoUpload';
+import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 import {
   Select,
   SelectContent,
@@ -22,7 +23,9 @@ import {
   X,
   Trash2,
   Filter,
-  Edit
+  Edit,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 
 // Definição das categorias e suas cores
@@ -234,6 +237,21 @@ interface KanbanItem {
   };
   // Fotos do card (até 40 fotos em WebP ou AVIF)
   fotos?: string[]; // Array de URLs base64 ou URLs das imagens
+  // Pendências vinculadas ao card (integração com Relatório de Pendências)
+  pendencias?: KanbanPendencia[];
+}
+
+// Interface para pendências do Kanban (compatível com RelatorioPendencia)
+interface KanbanPendencia {
+  id: string;
+  tipo: 'CONSTATACAO' | 'PENDENCIA'; // CONSTATACAO = OK, PENDENCIA = problema
+  local: string; // Local da verificação/problema
+  descricao: string; // Descrição da constatação ou pendência
+  foto_url: string | null; // Foto
+  foto_depois_url: string | null; // Foto do "depois" (quando corrigido)
+  data_recebimento?: string; // Data de recebimento (quando foi corrigido)
+  status: 'PENDENTE' | 'RECEBIDO' | 'NAO_FARAO';
+  created_at: string;
 }
 
 const initialItems: KanbanItem[] = [
@@ -244,6 +262,7 @@ const initialItems: KanbanItem[] = [
   { id: '4', title: 'ÁREAS TÉCNICAS', category: 'VISTORIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
   { id: '5', title: 'ELEVADORES', category: 'VISTORIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
   { id: '58', title: 'FACHADA', category: 'VISTORIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '59', title: 'GARAGENS', category: 'VISTORIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
 
   // 2. RECEBIMENTO ITENS DE INCÊNDIO (rosa claro)
   { id: '6', title: 'RECEBIMENTO ITENS DE INCÊNDIO', category: 'RECEBIMENTO_INCENDIO', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
@@ -319,10 +338,49 @@ interface KanbanBoardProps {
   items?: KanbanItem[];
   onAddItem?: (titulo: string) => void;
   onRemoveItem?: (itemId: string) => void;
+  contratoId?: string;
+  contratoNome?: string;
 }
 
-export function KanbanBoard({ }: KanbanBoardProps = {}) {
-  const [items, setItems] = useState<KanbanItem[]>(initialItems);
+export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {}) {
+  // Carregar items do localStorage se existir, senão usar initialItems
+  const getInitialItems = (): KanbanItem[] => {
+    if (!contratoId) return initialItems;
+    const saved = localStorage.getItem(`kanban_items_${contratoId}`);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return initialItems;
+      }
+    }
+    return initialItems;
+  };
+
+  const [items, setItems] = useState<KanbanItem[]>(getInitialItems);
+
+  // Salvar items no localStorage quando mudar
+  useEffect(() => {
+    if (contratoId && items.length > 0) {
+      localStorage.setItem(`kanban_items_${contratoId}`, JSON.stringify(items));
+    }
+  }, [items, contratoId]);
+
+  // Recarregar items quando o contrato mudar
+  useEffect(() => {
+    if (contratoId) {
+      const saved = localStorage.getItem(`kanban_items_${contratoId}`);
+      if (saved) {
+        try {
+          setItems(JSON.parse(saved));
+        } catch {
+          setItems(initialItems);
+        }
+      } else {
+        setItems(initialItems);
+      }
+    }
+  }, [contratoId]);
   const [draggedItem, setDraggedItem] = useState<KanbanItem | null>(null);
   const [showDateModal, setShowDateModal] = useState(false);
   const [pendingMove, setPendingMove] = useState<{ item: KanbanItem, newStatus: string } | null>(null);
@@ -360,6 +418,128 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
   const [editingItem, setEditingItem] = useState<KanbanItem | null>(null);
   const [newStatusValue, setNewStatusValue] = useState<string>('');
 
+  // Estados para pendências (integração com Relatório de Pendências)
+  const [showAddPendencia, setShowAddPendencia] = useState(false);
+  const [novaPendenciaTipo, setNovaPendenciaTipo] = useState<'CONSTATACAO' | 'PENDENCIA'>('PENDENCIA');
+  const [novaPendenciaLocal, setNovaPendenciaLocal] = useState('');
+  const [novaPendenciaDescricao, setNovaPendenciaDescricao] = useState('');
+  const [novaPendenciaFoto, setNovaPendenciaFoto] = useState<string | null>(null);
+  const [salvandoNoSupabase, setSalvandoNoSupabase] = useState(false);
+
+  // Função para salvar pendência no Supabase (cria relatório automaticamente com nome do card)
+  const salvarPendenciaNoSupabase = async (
+    cardTitle: string,
+    cardCategory: string,
+    local: string,
+    descricao: string,
+    fotoUrl: string | null,
+    tipo: 'CONSTATACAO' | 'PENDENCIA'
+  ) => {
+    if (!contratoId) {
+      console.log('ContratoId não disponível, salvando apenas localmente');
+      return;
+    }
+
+    try {
+      setSalvandoNoSupabase(true);
+      console.log('🔍 ========== SALVANDO PENDÊNCIA NO SUPABASE ==========');
+      console.log('🔍 Contrato ID:', contratoId);
+      console.log('🔍 Card Title:', cardTitle);
+      console.log('🔍 Card Category:', cardCategory);
+      console.log('🔍 Tipo:', tipo);
+
+      // 1. Buscar ou criar relatório com o nome do card
+      const relatorios = await relatorioPendenciasService.getAll(contratoId);
+      console.log('📋 Total de relatórios encontrados:', relatorios.length);
+      console.log('📋 Relatórios:', relatorios.map(r => ({ id: r.id, titulo: r.titulo })));
+
+      // Busca case-insensitive e com trim para evitar problemas
+      let relatorio = relatorios.find(r =>
+        r.titulo?.trim().toLowerCase() === cardTitle?.trim().toLowerCase()
+      );
+      console.log('🎯 Relatório encontrado (busca normalizada):', relatorio ? relatorio.id : 'NENHUM');
+
+      let relatorioId: string;
+
+      if (!relatorio) {
+        // Criar novo relatório com nome do card
+        const novoRelatorio = await relatorioPendenciasService.create({
+          contrato_id: contratoId,
+          titulo: cardTitle.trim()
+        });
+        relatorioId = novoRelatorio.id;
+        console.log('✅ Relatório CRIADO:', relatorioId, '- Título:', cardTitle);
+      } else {
+        relatorioId = relatorio.id;
+        console.log('✅ Relatório EXISTENTE:', relatorioId, '- Título:', relatorio.titulo);
+      }
+
+      // 2. Buscar dados frescos do relatório (incluindo seções)
+      const relatorioCompleto = await relatorioPendenciasService.getById(relatorioId);
+      console.log('📋 Relatório completo carregado:', relatorioCompleto?.id);
+      console.log('📋 Seções encontradas:', relatorioCompleto?.secoes?.length || 0);
+      if (relatorioCompleto?.secoes) {
+        console.log('📋 Detalhe das seções:', relatorioCompleto.secoes.map(s => ({
+          id: s.id,
+          titulo: s.titulo_principal,
+          pendencias: s.pendencias?.length || 0
+        })));
+      }
+
+      // Buscar seção existente (case-insensitive e com trim)
+      const secaoTitulo = cardCategory.trim();
+      let secao = relatorioCompleto?.secoes?.find(s =>
+        s.titulo_principal?.trim().toLowerCase() === secaoTitulo.toLowerCase()
+      );
+      console.log('🎯 Seção encontrada (busca normalizada):', secao ? secao.id : 'NENHUMA');
+
+      let secaoId: string;
+      let pendenciasExistentes = 0;
+
+      if (!secao) {
+        // Criar nova seção com a categoria
+        const ordem = (relatorioCompleto?.secoes?.length || 0) + 1;
+        const novaSecao = await relatorioPendenciasService.createSecao({
+          relatorio_id: relatorioId,
+          ordem: ordem,
+          titulo_principal: secaoTitulo,
+          subtitulo: tipo === 'CONSTATACAO' ? 'Constatações' : 'Pendências',
+          tem_subsecoes: false
+        });
+        secaoId = novaSecao.id;
+        pendenciasExistentes = 0;
+        console.log('✅ Seção CRIADA:', secaoId, '- Título:', secaoTitulo);
+      } else {
+        secaoId = secao.id;
+        pendenciasExistentes = secao.pendencias?.length || 0;
+        console.log('✅ Seção EXISTENTE:', secaoId, '- Título:', secao.titulo_principal, '- Pendências existentes:', pendenciasExistentes);
+      }
+
+      // 3. Adicionar pendência na seção
+      console.log('➕ Criando pendência na seção:', secaoId);
+      console.log('➕ Ordem:', pendenciasExistentes + 1);
+
+      const novaPendencia = await relatorioPendenciasService.createPendencia({
+        secao_id: secaoId,
+        ordem: pendenciasExistentes + 1,
+        local: local,
+        descricao: descricao,
+        foto_url: fotoUrl,
+        foto_depois_url: null,
+        status: tipo === 'CONSTATACAO' ? 'RECEBIDO' : 'PENDENTE'
+      });
+
+      console.log('✅ Pendência SALVA no Supabase:', novaPendencia.id);
+      console.log('🔍 ========== FIM SALVANDO PENDÊNCIA ==========');
+
+    } catch (error) {
+      console.error('❌ Erro ao salvar no Supabase:', error);
+      // Não bloquear - dados já estão salvos localmente
+    } finally {
+      setSalvandoNoSupabase(false);
+    }
+  };
+
   // Filtrar itens baseado na categoria selecionada
   const filteredItems = useMemo(() => {
     if (selectedCategory === 'TODOS') return items;
@@ -370,28 +550,28 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
   const getColumns = () => [
     {
       id: 'aguardando',
-      title: 'Não recebido',
+      title: 'Aguardando (MP)',
       icon: Search,
       color: 'bg-red-600 text-white',
       items: filteredItems.filter(item => item.status === 'aguardando')
     },
     {
       id: 'em_andamento',
-      title: 'Em Andamento',
+      title: 'Em andamento (MP)',
       icon: Wrench,
       color: 'bg-yellow-500 text-black',
       items: filteredItems.filter(item => item.status === 'em_andamento')
     },
     {
       id: 'em_correcao',
-      title: 'Em Correção',
+      title: 'Em correção (Construtora)',
       icon: ClipboardList,
       color: 'bg-orange-600 text-white',
       items: filteredItems.filter(item => item.status === 'em_correcao')
     },
     {
       id: 'finalizado',
-      title: 'Finalizado',
+      title: 'Recebido',
       icon: CheckCircle,
       color: 'bg-emerald-600 text-white',
       items: filteredItems.filter(item => item.status === 'finalizado')
@@ -1133,10 +1313,10 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                     ${selectedCard.status === 'em_correcao' ? 'bg-orange-600 text-white' : ''}
                     ${selectedCard.status === 'finalizado' ? 'bg-emerald-600 text-white' : ''}
                   `}>
-                      {selectedCard.status === 'aguardando' && 'Não recebido'}
-                      {selectedCard.status === 'em_andamento' && 'Em Andamento'}
-                      {selectedCard.status === 'em_correcao' && 'Em Correção'}
-                      {selectedCard.status === 'finalizado' && 'Finalizado'}
+                      {selectedCard.status === 'aguardando' && 'Aguardando (MP)'}
+                      {selectedCard.status === 'em_andamento' && 'Em andamento (MP)'}
+                      {selectedCard.status === 'em_correcao' && 'Em correção (Construtora)'}
+                      {selectedCard.status === 'finalizado' && 'Recebido'}
                     </Badge>
                   </div>
 
@@ -4773,6 +4953,275 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                     maxFotos={40}
                   />
                 </div>
+
+                {/* Seção de Constatações e Pendências */}
+                <div className="bg-black border-2 border-orange-600 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-bold text-orange-400">📋 Registros (Constatações e Pendências)</h3>
+                    <Button
+                      size="sm"
+                      onClick={() => setShowAddPendencia(!showAddPendencia)}
+                      className="bg-orange-600 hover:bg-orange-700 text-white text-xs"
+                    >
+                      {showAddPendencia ? 'Cancelar' : '+ Adicionar Registro'}
+                    </Button>
+                  </div>
+
+                  {/* Formulário para adicionar novo registro */}
+                  {showAddPendencia && (
+                    <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 mb-4 space-y-3">
+                      {/* Seletor de Tipo */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Tipo de Registro</label>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setNovaPendenciaTipo('CONSTATACAO')}
+                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
+                              novaPendenciaTipo === 'CONSTATACAO'
+                                ? 'bg-green-600 border-green-500 text-white'
+                                : 'bg-gray-800 border-gray-600 text-gray-400 hover:border-green-500'
+                            }`}
+                          >
+                            <CheckCircle2 className="w-5 h-5" />
+                            <span className="font-medium">Constatação (OK)</span>
+                          </button>
+                          <button
+                            onClick={() => setNovaPendenciaTipo('PENDENCIA')}
+                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
+                              novaPendenciaTipo === 'PENDENCIA'
+                                ? 'bg-red-600 border-red-500 text-white'
+                                : 'bg-gray-800 border-gray-600 text-gray-400 hover:border-red-500'
+                            }`}
+                          >
+                            <AlertTriangle className="w-5 h-5" />
+                            <span className="font-medium">Pendência</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                          Local
+                        </label>
+                        <input
+                          type="text"
+                          value={novaPendenciaLocal}
+                          onChange={(e) => setNovaPendenciaLocal(e.target.value)}
+                          placeholder="Ex: Parede da sala de estar, 3º andar"
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                          {novaPendenciaTipo === 'CONSTATACAO' ? 'Descrição da Constatação' : 'Descrição da Pendência'}
+                        </label>
+                        <textarea
+                          value={novaPendenciaDescricao}
+                          onChange={(e) => setNovaPendenciaDescricao(e.target.value)}
+                          placeholder={novaPendenciaTipo === 'CONSTATACAO'
+                            ? 'Ex: Verificado e em conformidade'
+                            : 'Ex: Trinca na parede, necessário reparo'}
+                          rows={2}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                          Foto (opcional)
+                        </label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setNovaPendenciaFoto(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="w-full text-sm text-gray-400"
+                        />
+                        {novaPendenciaFoto && (
+                          <img src={novaPendenciaFoto} alt="Preview" className="mt-2 w-24 h-24 object-cover rounded" />
+                        )}
+                      </div>
+                      <Button
+                        disabled={salvandoNoSupabase}
+                        onClick={async () => {
+                          if (!novaPendenciaLocal.trim() || !novaPendenciaDescricao.trim()) {
+                            alert('Preencha o local e a descrição');
+                            return;
+                          }
+                          const novaPendencia: KanbanPendencia = {
+                            id: `pend-${Date.now()}`,
+                            tipo: novaPendenciaTipo,
+                            local: novaPendenciaLocal,
+                            descricao: novaPendenciaDescricao,
+                            foto_url: novaPendenciaFoto,
+                            foto_depois_url: null,
+                            status: novaPendenciaTipo === 'CONSTATACAO' ? 'RECEBIDO' : 'PENDENTE',
+                            created_at: new Date().toISOString()
+                          };
+                          const pendenciasAtuais = selectedCard.pendencias || [];
+                          const updated = {
+                            ...selectedCard,
+                            pendencias: [...pendenciasAtuais, novaPendencia]
+                          };
+                          setItems(prev => prev.map(item =>
+                            item.id === selectedCard.id ? updated : item
+                          ));
+                          setSelectedCard(updated);
+
+                          // Salvar no Supabase (cria relatório automaticamente)
+                          await salvarPendenciaNoSupabase(
+                            selectedCard.title,
+                            selectedCard.category,
+                            novaPendenciaLocal,
+                            novaPendenciaDescricao,
+                            novaPendenciaFoto,
+                            novaPendenciaTipo
+                          );
+
+                          // Limpar formulário
+                          setNovaPendenciaTipo('PENDENCIA');
+                          setNovaPendenciaLocal('');
+                          setNovaPendenciaDescricao('');
+                          setNovaPendenciaFoto(null);
+                          setShowAddPendencia(false);
+                        }}
+                        className={`w-full text-white ${
+                          novaPendenciaTipo === 'CONSTATACAO'
+                            ? 'bg-green-600 hover:bg-green-700'
+                            : 'bg-red-600 hover:bg-red-700'
+                        }`}
+                      >
+                        {salvandoNoSupabase ? 'Salvando...' : (novaPendenciaTipo === 'CONSTATACAO' ? 'Salvar Constatação' : 'Salvar Pendência')}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Lista de registros existentes */}
+                  {selectedCard.pendencias && selectedCard.pendencias.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedCard.pendencias.map((pend, idx) => (
+                        <div key={pend.id} className={`bg-gray-900 border rounded-lg p-3 ${
+                          pend.tipo === 'CONSTATACAO' ? 'border-green-600' : 'border-red-600'
+                        }`}>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`font-bold text-xs ${
+                                  pend.tipo === 'CONSTATACAO' ? 'text-green-400' : 'text-red-400'
+                                }`}>#{idx + 1}</span>
+                                {/* Badge do Tipo */}
+                                <span className={`text-xs px-2 py-0.5 rounded flex items-center gap-1 ${
+                                  pend.tipo === 'CONSTATACAO'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-red-600 text-white'
+                                }`}>
+                                  {pend.tipo === 'CONSTATACAO' ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                                  {pend.tipo === 'CONSTATACAO' ? 'OK' : 'PENDÊNCIA'}
+                                </span>
+                                {/* Badge do Status (só para pendências) */}
+                                {pend.tipo === 'PENDENCIA' && (
+                                  <span className={`text-xs px-2 py-0.5 rounded ${
+                                    pend.status === 'PENDENTE' ? 'bg-yellow-600 text-white' :
+                                    pend.status === 'RECEBIDO' ? 'bg-green-600 text-white' :
+                                    'bg-gray-600 text-white'
+                                  }`}>
+                                    {pend.status}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-gray-400 text-xs mb-1">
+                                <strong>Local:</strong> {pend.local}
+                              </p>
+                              <p className="text-white text-sm">
+                                <strong>Descrição:</strong> {pend.descricao}
+                              </p>
+                            </div>
+                            {pend.foto_url && (
+                              <img src={pend.foto_url} alt="Foto" className="w-16 h-16 object-cover rounded ml-3" />
+                            )}
+                          </div>
+                          {/* Ações (só para pendências) */}
+                          <div className="flex gap-2 mt-2">
+                            {pend.tipo === 'PENDENCIA' && pend.status === 'PENDENTE' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    const updated = {
+                                      ...selectedCard,
+                                      pendencias: selectedCard.pendencias?.map(p =>
+                                        p.id === pend.id
+                                          ? { ...p, status: 'RECEBIDO' as const, data_recebimento: new Date().toISOString().split('T')[0] }
+                                          : p
+                                      )
+                                    };
+                                    setItems(prev => prev.map(item =>
+                                      item.id === selectedCard.id ? updated : item
+                                    ));
+                                    setSelectedCard(updated);
+                                  }}
+                                  className="bg-green-600 hover:bg-green-700 text-white text-xs"
+                                >
+                                  Marcar Recebido
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    const updated = {
+                                      ...selectedCard,
+                                      pendencias: selectedCard.pendencias?.map(p =>
+                                        p.id === pend.id
+                                          ? { ...p, status: 'NAO_FARAO' as const }
+                                          : p
+                                      )
+                                    };
+                                    setItems(prev => prev.map(item =>
+                                      item.id === selectedCard.id ? updated : item
+                                    ));
+                                    setSelectedCard(updated);
+                                  }}
+                                  className="bg-gray-600 hover:bg-gray-700 text-white text-xs"
+                                >
+                                  Não Farão
+                                </Button>
+                              </>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => {
+                                if (confirm('Remover esta pendência?')) {
+                                  const updated = {
+                                    ...selectedCard,
+                                    pendencias: selectedCard.pendencias?.filter(p => p.id !== pend.id)
+                                  };
+                                  setItems(prev => prev.map(item =>
+                                    item.id === selectedCard.id ? updated : item
+                                  ));
+                                  setSelectedCard(updated);
+                                }
+                              }}
+                              className="text-xs"
+                            >
+                              Excluir
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm text-center py-4">
+                      Nenhuma pendência registrada ainda.
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="p-4 bg-gray-900 border-t border-gray-700 flex justify-end shrink-0">
@@ -4794,10 +5243,10 @@ export function KanbanBoard({ }: KanbanBoardProps = {}) {
                 <SelectValue placeholder="Selecione o status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="aguardando">Não recebido</SelectItem>
-                <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                <SelectItem value="em_correcao">Em Correção</SelectItem>
-                <SelectItem value="finalizado">Finalizado</SelectItem>
+                <SelectItem value="aguardando">Aguardando (MP)</SelectItem>
+                <SelectItem value="em_andamento">Em andamento (MP)</SelectItem>
+                <SelectItem value="em_correcao">Em correção (Construtora)</SelectItem>
+                <SelectItem value="finalizado">Recebido</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex justify-end space-x-2">
