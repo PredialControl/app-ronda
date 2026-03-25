@@ -6,6 +6,21 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { KanbanPhotoUpload } from '@/components/KanbanPhotoUpload';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
+import { supabase } from '@/lib/supabase';
+
+// Função auxiliar para converter base64 para File
+const base64ToFile = (base64: string, filename: string): File => {
+  const arr = base64.split(',');
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
+};
 import {
   Select,
   SelectContent,
@@ -515,7 +530,37 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
         console.log('✅ Seção EXISTENTE:', secaoId, '- Título:', secao.titulo_principal, '- Pendências existentes:', pendenciasExistentes);
       }
 
-      // 3. Adicionar pendência na seção
+      // 3. Upload da foto para o Storage (se houver)
+      let fotoPublicUrl: string | null = null;
+      if (fotoUrl && fotoUrl.startsWith('data:')) {
+        console.log('📸 Fazendo upload da foto para o Storage...');
+        try {
+          const fileName = `kanban-${Date.now()}.jpg`;
+          const file = base64ToFile(fotoUrl, fileName);
+          const filePath = `kanban-pendencias/${relatorioId}/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('fotos')
+            .upload(filePath, file);
+
+          if (uploadError) {
+            console.error('❌ Erro no upload da foto:', uploadError);
+          } else {
+            const { data: urlData } = supabase.storage
+              .from('fotos')
+              .getPublicUrl(filePath);
+            fotoPublicUrl = urlData.publicUrl;
+            console.log('✅ Foto uploaded! URL:', fotoPublicUrl);
+          }
+        } catch (uploadErr) {
+          console.error('❌ Erro ao processar upload:', uploadErr);
+        }
+      } else if (fotoUrl) {
+        // Se já é uma URL (não é base64), usar direto
+        fotoPublicUrl = fotoUrl;
+      }
+
+      // 4. Adicionar pendência na seção
       console.log('➕ Criando pendência na seção:', secaoId);
       console.log('➕ Ordem:', pendenciasExistentes + 1);
 
@@ -524,7 +569,7 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
         ordem: pendenciasExistentes + 1,
         local: local,
         descricao: descricao,
-        foto_url: fotoUrl,
+        foto_url: fotoPublicUrl,
         foto_depois_url: null,
         status: tipo === 'CONSTATACAO' ? 'RECEBIDO' : 'PENDENTE'
       });
