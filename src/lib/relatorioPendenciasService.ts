@@ -89,10 +89,11 @@ export const relatorioPendenciasService = {
                 }
 
                 console.log(`📋 Seção "${secao.titulo_principal}": ${pendencias?.length || 0} pendências`);
-                // Debug: mostrar status de cada pendência
+                // Debug: mostrar TIPO e status de cada pendência
                 if (pendencias && pendencias.length > 0) {
-                    console.log('📋 Detalhe das pendências:', pendencias.map(p => ({
+                    console.log('📋 Detalhe das pendências (TIPO é importante!):', pendencias.map(p => ({
                         id: p.id,
+                        TIPO: p.tipo, // <-- VERIFICAR SE ESTÁ VINDO
                         local: p.local,
                         status: p.status,
                         descricao: p.descricao?.substring(0, 30)
