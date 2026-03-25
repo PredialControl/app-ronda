@@ -46,9 +46,23 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
         setShowEditor(true);
     };
 
-    const handleEditRelatorio = (relatorio: RelatorioPendenciasType) => {
-        setEditingRelatorio(relatorio);
-        setShowEditor(true);
+    const handleEditRelatorio = async (relatorio: RelatorioPendenciasType) => {
+        try {
+            setLoading(true);
+            // Carregar dados completos do relatório (com seções e pendências)
+            const relatorioCompleto = await relatorioPendenciasService.getById(relatorio.id);
+            if (relatorioCompleto) {
+                setEditingRelatorio(relatorioCompleto);
+                setShowEditor(true);
+            } else {
+                alert('Erro ao carregar relatório');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar relatório:', error);
+            alert('Erro ao carregar relatório de pendências');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleDeleteRelatorio = async (id: string) => {
