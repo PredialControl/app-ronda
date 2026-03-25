@@ -415,11 +415,10 @@ function App() {
 
     try {
       setLoadingContrato(contratoNome);
-      console.log(`🔄 LAZY LOADING: Carregando rondas do contrato "${contratoNome}"...`);
+      console.log(`⚡ LAZY LOADING: Carregando rondas do contrato "${contratoNome}"...`);
 
-      // Buscar todas as rondas e filtrar pelo contrato
-      const todasRondas = await rondaService.getAll();
-      const rondasDoContrato = todasRondas.filter(r => r.contrato === contratoNome);
+      // ⚡ OTIMIZADO: Buscar apenas rondas deste contrato (sem dados completos)
+      const rondasDoContrato = await rondaService.getByContrato(contratoNome);
 
       console.log(`✅ ${rondasDoContrato.length} rondas carregadas para "${contratoNome}"`);
 

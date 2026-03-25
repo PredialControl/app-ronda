@@ -252,83 +252,80 @@ export const contratoService = {
 
 // Serviços para Rondas
 export const rondaService = {
-  // Buscar todas as rondas (versão com fallback local)
-  async getAll(): Promise<Ronda[]> {
+  // ⚡ NOVO: Buscar rondas de um contrato específico (LAZY LOADING - SEM dados completos)
+  async getByContrato(contratoNome: string): Promise<Ronda[]> {
     try {
-      console.log('🔄 Tentando carregar rondas do banco...');
+      console.log(`⚡ LAZY: Buscando rondas do contrato "${contratoNome}"...`);
 
-      // Tentar consulta simples primeiro (mais rápida)
       const { data, error } = await supabase
         .from('rondas')
-        .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais, tipo_visita, secoes')
-        .order('data_criacao', { ascending: false});
+        .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais, tipo_visita')
+        .eq('contrato', contratoNome)
+        .order('data', { ascending: false })
+        .limit(50);
 
       if (error) {
-        console.warn('⚠️ Erro no banco, usando rondas locais:', error.message);
-        return this.getRondasLocais();
+        console.error('❌ Erro ao buscar rondas por contrato:', error);
+        return [];
       }
 
-      if (data && data.length > 0) {
-        console.log(`✅ ${data.length} rondas carregadas do banco (básicas)`);
+      console.log(`✅ ${data?.length || 0} rondas encontradas para "${contratoNome}"`);
 
-        // Carregar dados completos para cada ronda
-        const rondasCompletas = await Promise.all(
-          data.filter(row => row && row.id && row.id.toString().trim() !== '').map(async (row) => {
-            // Validar se o ID existe e não está vazio
-            const rondaId = row.id ? row.id.toString() : '';
-            if (!rondaId || rondaId.trim() === '') {
-              console.warn('⚠️ Ronda com ID inválido encontrada:', row);
-              return null;
-            }
-
-            const rondaBasica = {
-              id: rondaId,
-              nome: row.nome || 'Ronda sem nome',
-              contrato: row.contrato || 'Contrato não especificado',
-              data: row.data || new Date().toISOString().split('T')[0],
-              hora: row.hora || '00:00',
-              tipoVisita: ((row as any).tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || 'RONDA',
-              responsavel: row.responsavel || 'Responsável não informado',
-              observacoesGerais: row.observacoes_gerais || '',
-              secoes: (() => {
-                const secoesRaw = (row as any).secoes;
-                console.log('📋 Seções raw do banco:', secoesRaw, 'tipo:', typeof secoesRaw);
-                if (!secoesRaw) return undefined;
-                const parsed = typeof secoesRaw === 'string' ? JSON.parse(secoesRaw) : secoesRaw;
-                console.log('📋 Seções parseadas:', parsed);
-                return parsed;
-              })(),
-              areasTecnicas: [],
-              fotosRonda: [],
-              outrosItensCorrigidos: []
-            };
-
-            // Carregar dados completos desta ronda apenas se o ID for válido
-            if (rondaBasica.id && rondaBasica.id.trim() !== '') {
-              console.log('🔄 Carregando dados completos para ronda:', rondaBasica.id);
-              const rondaCompleta = await this.loadCompleteRonda(rondaBasica);
-              console.log('✅ Ronda completa carregada:', rondaCompleta.id, {
-                outrosItensCorrigidos: rondaCompleta.outrosItensCorrigidos?.length || 0,
-                fotosRonda: rondaCompleta.fotosRonda?.length || 0
-              });
-              return rondaCompleta;
-            } else {
-              console.warn('⚠️ Ronda com ID inválido, retornando dados básicos:', rondaBasica);
-              return rondaBasica;
-            }
-          })
-        );
-
-        // Filtrar rondas nulas
-        return rondasCompletas.filter(ronda => ronda !== null);
-      }
-
-      // Se não há dados no banco, usar rondas locais
-      console.log('📝 Banco vazio, usando rondas de exemplo');
-      return this.getRondasLocais();
+      // Retornar rondas básicas SEM carregar dados completos
+      return (data || []).map(row => ({
+        id: row.id?.toString() || '',
+        nome: row.nome || 'Ronda sem nome',
+        contrato: row.contrato || contratoNome,
+        data: row.data || new Date().toISOString().split('T')[0],
+        hora: row.hora || '00:00',
+        tipoVisita: ((row as any).tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || 'RONDA',
+        responsavel: row.responsavel || '',
+        observacoesGerais: row.observacoes_gerais || '',
+        areasTecnicas: [], // Será carregado quando clicar na ronda
+        fotosRonda: [],
+        outrosItensCorrigidos: []
+      })).filter(r => r.id && r.id.trim() !== '');
     } catch (error) {
-      console.warn('⚠️ Erro crítico, usando rondas locais:', error);
-      return this.getRondasLocais();
+      console.error('❌ Erro crítico ao buscar rondas por contrato:', error);
+      return [];
+    }
+  },
+
+  // Buscar todas as rondas (versão OTIMIZADA - sem carregar dados completos automaticamente)
+  async getAll(): Promise<Ronda[]> {
+    try {
+      console.log('🔄 Buscando rondas do banco (básicas)...');
+
+      const { data, error } = await supabase
+        .from('rondas')
+        .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais, tipo_visita')
+        .order('data', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.warn('⚠️ Erro no banco:', error.message);
+        return [];
+      }
+
+      console.log(`✅ ${data?.length || 0} rondas carregadas (básicas)`);
+
+      // Retornar rondas básicas SEM carregar dados completos
+      return (data || []).map(row => ({
+        id: row.id?.toString() || '',
+        nome: row.nome || 'Ronda sem nome',
+        contrato: row.contrato || '',
+        data: row.data || new Date().toISOString().split('T')[0],
+        hora: row.hora || '00:00',
+        tipoVisita: ((row as any).tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || 'RONDA',
+        responsavel: row.responsavel || '',
+        observacoesGerais: row.observacoes_gerais || '',
+        areasTecnicas: [],
+        fotosRonda: [],
+        outrosItensCorrigidos: []
+      })).filter(r => r.id && r.id.trim() !== '');
+    } catch (error) {
+      console.warn('⚠️ Erro crítico:', error);
+      return [];
     }
   },
 
@@ -460,35 +457,6 @@ export const rondaService = {
 
     console.log(`✅ ${rondasExemplo.length} rondas de exemplo criadas`);
     return rondasExemplo;
-  },
-
-  // Buscar rondas por contrato
-  async getByContrato(contratoNome: string): Promise<Ronda[]> {
-    try {
-      const { data, error } = await supabase
-        .from('rondas')
-        .select('*')
-        .eq('contrato', contratoNome)
-        .order('data_criacao', { ascending: false });
-
-      if (error) throw error;
-
-      return data.filter(row => row && row.id && row.id.toString().trim() !== '').map(row => ({
-        id: row.id.toString(),
-        nome: row.nome,
-        contrato: row.contrato,
-        data: row.data,
-        hora: row.hora,
-        responsavel: row.responsavel,
-        observacoesGerais: row.observacoes_gerais,
-        areasTecnicas: [],
-        fotosRonda: [],
-        outrosItensCorrigidos: []
-      }));
-    } catch (error) {
-      console.error('Erro ao buscar rondas por contrato:', error);
-      throw error;
-    }
   },
 
   // Carregar dados completos de uma ronda (áreas técnicas, fotos, etc.)
