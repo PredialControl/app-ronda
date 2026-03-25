@@ -1487,9 +1487,19 @@ export async function generateRelatorioPendenciasDOCX(
         if (temPendenciasDiretas) {
             const pendenciasDiretas = secao.pendencias || [];
 
+            // DEBUG: Ver status de cada pendência
+            console.log(`[DOCX] 🔍 Seção "${secao.titulo_principal}" - Pendências:`, pendenciasDiretas.map(p => ({
+                id: p.id,
+                descricao: p.descricao?.substring(0, 30),
+                status: p.status,
+                tipo: (p as any).tipo
+            })));
+
             // Separar constatações (RECEBIDO) de pendências normais
             const constatacoes = pendenciasDiretas.filter(p => p.status === 'RECEBIDO');
             const pendenciasNormais = pendenciasDiretas.filter(p => p.status !== 'RECEBIDO');
+
+            console.log(`[DOCX] ✅ Constatações: ${constatacoes.length}, Pendências: ${pendenciasNormais.length}`);
 
             // 1A. Processar CONSTATAÇÕES em grid (6 por página, 2x3)
             if (constatacoes.length > 0) {

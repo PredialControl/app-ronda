@@ -89,6 +89,15 @@ export const relatorioPendenciasService = {
                 }
 
                 console.log(`📋 Seção "${secao.titulo_principal}": ${pendencias?.length || 0} pendências`);
+                // Debug: mostrar status de cada pendência
+                if (pendencias && pendencias.length > 0) {
+                    console.log('📋 Detalhe das pendências:', pendencias.map(p => ({
+                        id: p.id,
+                        local: p.local,
+                        status: p.status,
+                        descricao: p.descricao?.substring(0, 30)
+                    })));
+                }
 
                 // Buscar subseções
                 const { data: subsecoes, error: subError } = await supabase
