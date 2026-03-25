@@ -69,7 +69,7 @@ function App() {
   const [mainSection, setMainSection] = useState<'contratos' | 'agenda' | 'chamados' | 'dashboard'>('contratos');
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-lite' | 'usuarios' | 'menu' | 'contrato-detalhe'>('menu');
+  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-lite' | 'usuarios' | 'menu' | 'contrato-detalhe' | 'plano-manutencao'>('menu');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
   const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
 
@@ -1588,9 +1588,6 @@ function App() {
       )}
 
       <div>
-        {/* DEBUG: Mostrar estado atual */}
-        {console.log('🔍 DEBUG RENDER:', { contratoSelecionado: contratoSelecionado?.nome || null, viewMode, mainSection, menuLevel })}
-
         {/* Lista de contratos - quando está no menu principal e seção contratos */}
         {!contratoSelecionado && viewMode === 'menu' && mainSection === 'contratos' && (
             <div>
