@@ -581,23 +581,68 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
         fotoPublicUrl = fotoUrl;
       }
 
-      // 4. Adicionar pendência na seção
-      console.log('➕ Criando pendência na seção:', secaoId);
-      console.log('➕ Ordem:', pendenciasExistentes + 1);
+      // 4. CONSTATAÇÃO = Subseção com grid de fotos | PENDÊNCIA = Pendência normal
+      if (tipo === 'CONSTATACAO') {
+        // CONSTATAÇÃO: Criar ou atualizar SUBSEÇÃO tipo CONSTATACAO
+        console.log('🟢 Criando SUBSEÇÃO tipo CONSTATACAO...');
 
-      const novaPendencia = await relatorioPendenciasService.createPendencia({
-        secao_id: secaoId,
-        ordem: pendenciasExistentes + 1,
-        tipo: tipo, // CONSTATACAO ou PENDENCIA
-        local: local,
-        descricao: descricao,
-        foto_url: fotoPublicUrl,
-        foto_depois_url: null,
-        status: 'PENDENTE' // Status inicial sempre PENDENTE
-      });
+        // Buscar subseção de constatação existente na seção
+        const secaoCompleta = relatorioCompleto?.secoes?.find(s => s.id === secaoId);
+        let subsecaoConstatacao = secaoCompleta?.subsecoes?.find(
+          (sub: any) => sub.tipo === 'CONSTATACAO'
+        );
 
-      console.log('✅ Pendência SALVA no Supabase:', novaPendencia.id);
-      console.log('🔍 ========== FIM SALVANDO PENDÊNCIA ==========');
+        if (subsecaoConstatacao) {
+          // Subseção já existe: adicionar foto ao array
+          console.log('📸 Adicionando foto à subseção existente:', subsecaoConstatacao.id);
+          const fotosExistentes = (subsecaoConstatacao as any).fotos_constatacao || [];
+          const novasFotos = fotoPublicUrl ? [...fotosExistentes, fotoPublicUrl] : fotosExistentes;
+          const novaDescricao = descricao || (subsecaoConstatacao as any).descricao_constatacao || '';
+
+          await relatorioPendenciasService.updateSubsecao(subsecaoConstatacao.id, {
+            fotos_constatacao: novasFotos,
+            descricao_constatacao: novaDescricao
+          });
+          console.log('✅ Subseção ATUALIZADA com nova foto');
+        } else {
+          // Criar nova subseção de constatação
+          console.log('🆕 Criando nova subseção de constatação...');
+          const ordemSubsecao = (secaoCompleta?.subsecoes?.length || 0);
+          const letra = String.fromCharCode(65 + ordemSubsecao); // A, B, C...
+
+          // Marcar seção como tendo subseções
+          await relatorioPendenciasService.updateSecao(secaoId, {
+            tem_subsecoes: true
+          });
+
+          await relatorioPendenciasService.createSubsecao({
+            secao_id: secaoId,
+            ordem: ordemSubsecao,
+            titulo: `${letra} - CONSTATAÇÃO`,
+            tipo: 'CONSTATACAO',
+            fotos_constatacao: fotoPublicUrl ? [fotoPublicUrl] : [],
+            descricao_constatacao: descricao || ''
+          });
+          console.log('✅ Subseção CONSTATACAO criada');
+        }
+      } else {
+        // PENDÊNCIA: Criar pendência normal
+        console.log('🔴 Criando PENDÊNCIA normal...');
+        console.log('➕ Ordem:', pendenciasExistentes + 1);
+
+        await relatorioPendenciasService.createPendencia({
+          secao_id: secaoId,
+          ordem: pendenciasExistentes + 1,
+          local: local,
+          descricao: descricao,
+          foto_url: fotoPublicUrl,
+          foto_depois_url: null,
+          status: 'PENDENTE'
+        });
+        console.log('✅ Pendência SALVA no Supabase');
+      }
+
+      console.log('🔍 ========== FIM SALVANDO ==========');
 
     } catch (error) {
       console.error('❌ Erro ao salvar no Supabase:', error);
