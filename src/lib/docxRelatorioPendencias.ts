@@ -1485,14 +1485,194 @@ export async function generateRelatorioPendenciasDOCX(
 
         // 1. Processar pendências DIRETAS da seção primeiro
         if (temPendenciasDiretas) {
-            let directCount = 0;
             const pendenciasDiretas = secao.pendencias || [];
-            for (const pendencia of pendenciasDiretas) {
+
+            // Separar constatações (RECEBIDO) de pendências normais
+            const constatacoes = pendenciasDiretas.filter(p => p.status === 'RECEBIDO');
+            const pendenciasNormais = pendenciasDiretas.filter(p => p.status !== 'RECEBIDO');
+
+            // 1A. Processar CONSTATAÇÕES em grid (6 por página, 2x3)
+            if (constatacoes.length > 0) {
+                children.push(
+                    new Paragraph({
+                        children: [
+                            new TextRun({
+                                text: 'Constatações',
+                                bold: true,
+                                size: 24,
+                                color: '2E7D32', // Verde
+                            }),
+                        ],
+                        spacing: { before: 200, after: 150 },
+                    })
+                );
+
+                const fotoWidth = 240; // Menor para caber 2 por linha com descrição
+                const fotoHeight = 180;
+
+                // Processar em blocos de 6 (3 linhas x 2 colunas)
+                for (let bloco = 0; bloco < constatacoes.length; bloco += 6) {
+                    const constatacoesBloco = constatacoes.slice(bloco, bloco + 6);
+                    const tableRows: any[] = [];
+
+                    // Processar em pares (linhas)
+                    for (let i = 0; i < constatacoesBloco.length; i += 2) {
+                        const cells: any[] = [];
+
+                        // Constatação esquerda
+                        if (constatacoesBloco[i]) {
+                            const const1 = constatacoesBloco[i];
+                            const cellChildren: any[] = [];
+
+                            // Descrição em cima da foto
+                            cellChildren.push(
+                                new Paragraph({
+                                    children: [
+                                        new TextRun({
+                                            text: const1.descricao || const1.local || '',
+                                            size: 18,
+                                            bold: true,
+                                        }),
+                                    ],
+                                    spacing: { before: 50, after: 50 },
+                                    alignment: AlignmentType.CENTER,
+                                })
+                            );
+
+                            // Foto
+                            if (const1.foto_url) {
+                                try {
+                                    const imageData = await convertImageToPNG(const1.foto_url, 600);
+                                    cellChildren.push(
+                                        new Paragraph({
+                                            children: [
+                                                new ImageRun({
+                                                    data: imageData,
+                                                    transformation: { width: fotoWidth, height: fotoHeight },
+                                                    type: "png",
+                                                }),
+                                            ],
+                                            alignment: AlignmentType.CENTER,
+                                            spacing: { before: 0, after: 50 },
+                                        })
+                                    );
+                                } catch (err) {
+                                    console.error('Erro ao converter foto de constatação:', err);
+                                }
+                            }
+
+                            cells.push(
+                                new TableCell({
+                                    children: cellChildren,
+                                    width: { size: 50, type: WidthType.PERCENTAGE },
+                                    margins: { top: 50, bottom: 50, left: 50, right: 50 },
+                                    borders: {
+                                        top: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+                                        bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+                                        left: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+                                        right: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+                                    },
+                                })
+                            );
+                        }
+
+                        // Constatação direita
+                        if (constatacoesBloco[i + 1]) {
+                            const const2 = constatacoesBloco[i + 1];
+                            const cellChildren: any[] = [];
+
+                            // Descrição em cima da foto
+                            cellChildren.push(
+                                new Paragraph({
+                                    children: [
+                                        new TextRun({
+                                            text: const2.descricao || const2.local || '',
+                                            size: 18,
+                                            bold: true,
+                                        }),
+                                    ],
+                                    spacing: { before: 50, after: 50 },
+                                    alignment: AlignmentType.CENTER,
+                                })
+                            );
+
+                            // Foto
+                            if (const2.foto_url) {
+                                try {
+                                    const imageData = await convertImageToPNG(const2.foto_url, 600);
+                                    cellChildren.push(
+                                        new Paragraph({
+                                            children: [
+                                                new ImageRun({
+                                                    data: imageData,
+                                                    transformation: { width: fotoWidth, height: fotoHeight },
+                                                    type: "png",
+                                                }),
+                                            ],
+                                            alignment: AlignmentType.CENTER,
+                                            spacing: { before: 0, after: 50 },
+                                        })
+                                    );
+                                } catch (err) {
+                                    console.error('Erro ao converter foto de constatação:', err);
+                                }
+                            }
+
+                            cells.push(
+                                new TableCell({
+                                    children: cellChildren,
+                                    width: { size: 50, type: WidthType.PERCENTAGE },
+                                    margins: { top: 50, bottom: 50, left: 50, right: 50 },
+                                    borders: {
+                                        top: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+                                        bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+                                        left: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+                                        right: { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' },
+                                    },
+                                })
+                            );
+                        } else if (cells.length === 1) {
+                            // Célula vazia para manter layout
+                            cells.push(
+                                new TableCell({
+                                    children: [new Paragraph({ text: '' })],
+                                    width: { size: 50, type: WidthType.PERCENTAGE },
+                                })
+                            );
+                        }
+
+                        if (cells.length > 0) {
+                            tableRows.push(new TableRow({ children: cells }));
+                        }
+                    }
+
+                    if (tableRows.length > 0) {
+                        children.push(
+                            new Table({
+                                rows: tableRows,
+                                width: { size: 100, type: WidthType.PERCENTAGE },
+                            })
+                        );
+                    }
+
+                    // Quebra de página após cada bloco de 6
+                    if (bloco + 6 < constatacoes.length) {
+                        children.push(new Paragraph({ children: [new PageBreak()] }));
+                    }
+                }
+
+                // Espaço após constatações
+                children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+            }
+
+            // 1B. Processar PENDÊNCIAS normais
+            let directCount = 0;
+            for (const pendencia of pendenciasNormais) {
                 directCount++;
                 await processarPendencia(pendencia);
 
                 // Quebra de página a cada 2 pendências
-                if (directCount % 2 === 0 && directCount < pendenciasDiretas.length) {
+                if (directCount % 2 === 0 && directCount < pendenciasNormais.length) {
                     children.push(new Paragraph({ children: [new PageBreak()] }));
                 }
             }
