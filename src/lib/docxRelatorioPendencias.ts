@@ -1487,17 +1487,17 @@ export async function generateRelatorioPendenciasDOCX(
         if (temPendenciasDiretas) {
             const pendenciasDiretas = secao.pendencias || [];
 
-            // DEBUG: Ver status de cada pendência
+            // DEBUG: Ver tipo de cada pendência
             console.log(`[DOCX] 🔍 Seção "${secao.titulo_principal}" - Pendências:`, pendenciasDiretas.map(p => ({
                 id: p.id,
                 descricao: p.descricao?.substring(0, 30),
-                status: p.status,
-                tipo: (p as any).tipo
+                tipo: p.tipo,
+                status: p.status
             })));
 
-            // Separar constatações (RECEBIDO) de pendências normais
-            const constatacoes = pendenciasDiretas.filter(p => p.status === 'RECEBIDO');
-            const pendenciasNormais = pendenciasDiretas.filter(p => p.status !== 'RECEBIDO');
+            // Separar CONSTATAÇÕES (tipo) de PENDÊNCIAS (tipo)
+            const constatacoes = pendenciasDiretas.filter(p => p.tipo === 'CONSTATACAO');
+            const pendenciasNormais = pendenciasDiretas.filter(p => p.tipo !== 'CONSTATACAO');
 
             console.log(`[DOCX] ✅ Constatações: ${constatacoes.length}, Pendências: ${pendenciasNormais.length}`);
 

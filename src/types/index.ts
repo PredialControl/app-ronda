@@ -205,6 +205,7 @@ export interface RelatorioPendencia {
   secao_id?: string; // ⚠️ OPCIONAL: pendências de subseção NÃO têm secao_id direto
   subsecao_id?: string; // NOVO: ID da subseção (se pertencer a uma)
   ordem: number;
+  tipo?: 'CONSTATACAO' | 'PENDENCIA'; // Tipo: constatação (grid de fotos) ou pendência (formato completo)
   local: string;
   descricao: string;
   foto_url: string | null;

@@ -588,11 +588,12 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
       const novaPendencia = await relatorioPendenciasService.createPendencia({
         secao_id: secaoId,
         ordem: pendenciasExistentes + 1,
+        tipo: tipo, // CONSTATACAO ou PENDENCIA
         local: local,
         descricao: descricao,
         foto_url: fotoPublicUrl,
         foto_depois_url: null,
-        status: tipo === 'CONSTATACAO' ? 'RECEBIDO' : 'PENDENTE'
+        status: 'PENDENTE' // Status inicial sempre PENDENTE
       });
 
       console.log('✅ Pendência SALVA no Supabase:', novaPendencia.id);
