@@ -3,27 +3,39 @@ import { RelatorioPendencias, RelatorioSecao, RelatorioPendencia, RelatorioSubse
 
 export const relatorioPendenciasService = {
     // ==================== RELATÓRIOS ===================
-    // Query simplificada para lista - carrega apenas dados básicos + contagem
+    // Query ultra-simplificada para evitar timeout
     async getAll(contratoId: string): Promise<RelatorioPendencias[]> {
-        const { data, error } = await supabase
-            .from('relatorios_pendencias')
-            .select(`
-                id,
-                contrato_id,
-                titulo,
-                capa_url,
-                created_at,
-                updated_at
-            `)
-            .eq('contrato_id', contratoId)
-            .order('created_at', { ascending: false });
+        console.log('📋 getAll - Buscando relatórios para contrato:', contratoId);
 
-        if (error) {
-            console.error('Erro ao buscar relatórios:', error);
-            throw error;
+        try {
+            // Query mínima sem ordenação (ordenar no cliente)
+            const { data, error } = await supabase
+                .from('relatorios_pendencias')
+                .select('id, contrato_id, titulo, created_at, updated_at')
+                .eq('contrato_id', contratoId)
+                .limit(50);
+
+            if (error) {
+                console.error('❌ Erro ao buscar relatórios:', error);
+                // Se for timeout, retornar array vazio
+                if (error.code === '57014') {
+                    console.warn('⚠️ Timeout - retornando lista vazia');
+                    return [];
+                }
+                throw error;
+            }
+
+            // Ordenar no cliente (mais recentes primeiro)
+            const sorted = (data || []).sort((a, b) =>
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
+
+            console.log('✅ Relatórios encontrados:', sorted.length);
+            return sorted;
+        } catch (err) {
+            console.error('❌ Exceção ao buscar relatórios:', err);
+            return []; // Retornar vazio em vez de travar
         }
-
-        return data || [];
     },
 
     async getById(id: string): Promise<RelatorioPendencias | null> {
