@@ -374,10 +374,31 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
 
   const [items, setItems] = useState<KanbanItem[]>(getInitialItems);
 
-  // Salvar items no localStorage quando mudar
+  // Salvar items no localStorage quando mudar (SEM fotos para evitar QuotaExceededError)
   useEffect(() => {
     if (contratoId && items.length > 0) {
-      localStorage.setItem(`kanban_items_${contratoId}`, JSON.stringify(items));
+      try {
+        // Remover fotos base64 das pendências antes de salvar (muito grandes)
+        const itemsSemFotos = items.map(item => ({
+          ...item,
+          pendencias: item.pendencias?.map(p => ({
+            ...p,
+            foto_url: p.foto_url?.startsWith('data:') ? null : p.foto_url, // Manter só URLs, não base64
+            foto_depois_url: p.foto_depois_url?.startsWith('data:') ? null : p.foto_depois_url
+          }))
+        }));
+        localStorage.setItem(`kanban_items_${contratoId}`, JSON.stringify(itemsSemFotos));
+      } catch (e) {
+        console.warn('⚠️ Erro ao salvar no localStorage (possivelmente cheio):', e);
+        // Tentar limpar dados antigos
+        try {
+          const keys = Object.keys(localStorage).filter(k => k.startsWith('kanban_items_'));
+          if (keys.length > 5) {
+            // Manter apenas os 5 mais recentes
+            keys.slice(0, keys.length - 5).forEach(k => localStorage.removeItem(k));
+          }
+        } catch {}
+      }
     }
   }, [items, contratoId]);
 
