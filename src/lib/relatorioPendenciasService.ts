@@ -41,52 +41,104 @@ export const relatorioPendenciasService = {
     async getById(id: string): Promise<RelatorioPendencias | null> {
         console.log('🔍 getById - Buscando relatório:', id);
 
-        const { data, error } = await supabase
-            .from('relatorios_pendencias')
-            .select(`
-                *,
-                secoes:relatorio_secoes(
-                    *,
-                    pendencias:relatorio_pendencias(*),
-                    subsecoes:relatorio_subsecoes(
-                        *,
-                        pendencias:relatorio_pendencias(*)
-                    )
-                )
-            `)
-            .eq('id', id)
-            .single();
+        try {
+            // 1. Buscar relatório básico
+            const { data: relatorio, error: relError } = await supabase
+                .from('relatorios_pendencias')
+                .select('*')
+                .eq('id', id)
+                .single();
 
-        if (error) {
-            console.error('❌ Erro ao buscar relatório:', error);
-            throw error;
-        }
+            if (relError) {
+                console.error('❌ Erro ao buscar relatório:', relError);
+                throw relError;
+            }
 
-        console.log('✅ getById - Dados brutos do Supabase:', data);
+            if (!relatorio) {
+                console.warn('⚠️ Relatório não encontrado:', id);
+                return null;
+            }
 
-        // Ordenar seções, subseções e pendências, e FILTRAR pendências duplicadas
-        if (data && data.secoes) {
-            data.secoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
-            data.secoes.forEach((secao: any) => {
-                if (secao.pendencias) {
-                    // ⚠️ FIX DUPLICAÇÃO: Filtrar pendências que têm subsecao_id
-                    // Essas devem aparecer APENAS nas subseções, não na seção principal
-                    secao.pendencias = secao.pendencias.filter((p: any) => !p.subsecao_id);
-                    secao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+            console.log('✅ Relatório básico:', relatorio.id, relatorio.titulo);
+
+            // 2. Buscar seções do relatório
+            const { data: secoes, error: secError } = await supabase
+                .from('relatorio_secoes')
+                .select('*')
+                .eq('relatorio_id', id)
+                .order('ordem', { ascending: true });
+
+            if (secError) {
+                console.error('❌ Erro ao buscar seções:', secError);
+            }
+
+            console.log('✅ Seções encontradas:', secoes?.length || 0);
+
+            // 3. Para cada seção, buscar pendências e subseções
+            const secoesCompletas = await Promise.all((secoes || []).map(async (secao) => {
+                // Buscar pendências da seção (que NÃO têm subsecao_id)
+                const { data: pendencias, error: pendError } = await supabase
+                    .from('relatorio_pendencias')
+                    .select('*')
+                    .eq('secao_id', secao.id)
+                    .is('subsecao_id', null)
+                    .order('ordem', { ascending: true });
+
+                if (pendError) {
+                    console.error('❌ Erro ao buscar pendências da seção:', secao.id, pendError);
                 }
 
-                if (secao.subsecoes) {
-                    secao.subsecoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
-                    secao.subsecoes.forEach((sub: any) => {
-                        if (sub.pendencias) {
-                            sub.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
-                        }
-                    });
+                console.log(`📋 Seção "${secao.titulo_principal}": ${pendencias?.length || 0} pendências`);
+
+                // Buscar subseções
+                const { data: subsecoes, error: subError } = await supabase
+                    .from('relatorio_subsecoes')
+                    .select('*')
+                    .eq('secao_id', secao.id)
+                    .order('ordem', { ascending: true });
+
+                if (subError) {
+                    console.error('❌ Erro ao buscar subseções:', subError);
                 }
+
+                // Para cada subseção, buscar pendências
+                const subsecoesCompletas = await Promise.all((subsecoes || []).map(async (sub) => {
+                    const { data: subPendencias } = await supabase
+                        .from('relatorio_pendencias')
+                        .select('*')
+                        .eq('subsecao_id', sub.id)
+                        .order('ordem', { ascending: true });
+
+                    return {
+                        ...sub,
+                        pendencias: subPendencias || []
+                    };
+                }));
+
+                return {
+                    ...secao,
+                    pendencias: pendencias || [],
+                    subsecoes: subsecoesCompletas
+                };
+            }));
+
+            const resultado = {
+                ...relatorio,
+                secoes: secoesCompletas
+            };
+
+            console.log('✅ getById COMPLETO:', {
+                id: resultado.id,
+                titulo: resultado.titulo,
+                secoes: resultado.secoes?.length || 0,
+                totalPendencias: resultado.secoes?.reduce((acc: number, s: any) => acc + (s.pendencias?.length || 0), 0) || 0
             });
-        }
 
-        return data;
+            return resultado;
+        } catch (err) {
+            console.error('❌ Exceção em getById:', err);
+            throw err;
+        }
     },
 
     async create(relatorio: Omit<RelatorioPendencias, 'id' | 'created_at' | 'updated_at'>): Promise<RelatorioPendencias> {
