@@ -3,49 +3,24 @@ import { RelatorioPendencias, RelatorioSecao, RelatorioPendencia, RelatorioSubse
 
 export const relatorioPendenciasService = {
     // ==================== RELATÓRIOS ===================
+    // Query simplificada para lista - carrega apenas dados básicos + contagem
     async getAll(contratoId: string): Promise<RelatorioPendencias[]> {
         const { data, error } = await supabase
             .from('relatorios_pendencias')
             .select(`
-                *,
-                secoes:relatorio_secoes(
-                    *,
-                    pendencias:relatorio_pendencias(*),
-                    subsecoes:relatorio_subsecoes(
-                        *,
-                        pendencias:relatorio_pendencias(*)
-                    )
-                )
+                id,
+                contrato_id,
+                titulo,
+                capa_url,
+                created_at,
+                updated_at
             `)
             .eq('contrato_id', contratoId)
             .order('created_at', { ascending: false });
+
         if (error) {
             console.error('Erro ao buscar relatórios:', error);
             throw error;
-        }
-
-        if (data) {
-            data.forEach((relatorio: any) => {
-                if (relatorio.secoes) {
-                    relatorio.secoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
-                    relatorio.secoes.forEach((secao: any) => {
-                        if (secao.pendencias) {
-                            // ⚠️ FIX DUPLICAÇÃO: Filtrar pendências que têm subsecao_id
-                            // Essas devem aparecer APENAS nas subseções, não na seção principal
-                            secao.pendencias = secao.pendencias.filter((p: any) => !p.subsecao_id);
-                            secao.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
-                        }
-                        if (secao.subsecoes) {
-                            secao.subsecoes.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
-                            secao.subsecoes.forEach((sub: any) => {
-                                if (sub.pendencias) {
-                                    sub.pendencias.sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
-                                }
-                            });
-                        }
-                    });
-                }
-            });
         }
 
         return data || [];
