@@ -286,70 +286,73 @@ async function syncItemsToSupabase(
 
   for (const [contratoId, contratoItems] of Object.entries(byContrato)) {
     try {
-      // 1. Buscar ou criar relatório para este contrato
-      onProgress?.(processed, pending.length, `Buscando relatórios do contrato...`);
-      let relatorioId: string | null = null;
-
-      const relatorios = await relatorioPendenciasService.getAll(contratoId);
-      console.log(`[SYNC] Relatórios existentes para ${contratoId}:`, relatorios.length);
-
-      // Buscar relatório existente com título "Inspeção - Coleta de Campo"
-      const existing = relatorios.find(r => r.titulo?.includes('Inspeção - Coleta'));
-      if (existing) {
-        relatorioId = existing.id;
-        console.log(`[SYNC] Relatório existente encontrado: ${relatorioId}`);
-      } else {
-        // Criar novo relatório
-        console.log(`[SYNC] Criando novo relatório para contrato ${contratoId}...`);
-        try {
-          const { data: novoRel, error: relError } = await supabase
-            .from('relatorios_pendencias')
-            .insert([{
-              contrato_id: contratoId,
-              titulo: 'Inspeção - Coleta de Campo',
-            }])
-            .select()
-            .single();
-
-          if (relError) {
-            const msg = `Erro ao criar relatório: ${relError.message} (code: ${relError.code})`;
-            console.error('[SYNC]', msg);
-            errorDetails.push(msg);
-            throw new Error(msg);
-          }
-
-          relatorioId = novoRel.id;
-          console.log(`[SYNC] Relatório criado: ${relatorioId}`);
-        } catch (createRelErr: any) {
-          if (!createRelErr.message?.includes('Erro ao criar relatório')) {
-            const msg = `Exceção ao criar relatório: ${createRelErr.message || createRelErr}`;
-            errorDetails.push(msg);
-          }
-          throw createRelErr;
-        }
-      }
-
-      // 2. Buscar relatório completo para ver seções existentes
-      onProgress?.(processed, pending.length, `Carregando seções existentes...`);
-      const relCompleto = await relatorioPendenciasService.getById(relatorioId);
-      const secoesExistentes = relCompleto?.secoes || [];
-      console.log(`[SYNC] Seções existentes: ${secoesExistentes.length}`);
-
-      // Agrupar items por cardTitle para criar seções
+      // Agrupar items por cardTitle - cada card vira um RELATÓRIO separado
       const byCard: Record<string, InspectionItem[]> = {};
       for (const item of contratoItems) {
         if (!byCard[item.cardTitle]) byCard[item.cardTitle] = [];
         byCard[item.cardTitle].push(item);
       }
 
+      // Buscar relatórios existentes do contrato
+      onProgress?.(processed, pending.length, `Buscando relatórios do contrato...`);
+      const relatoriosExistentes = await relatorioPendenciasService.getAll(contratoId);
+      console.log(`[SYNC] Relatórios existentes para ${contratoId}:`, relatoriosExistentes.length);
+
       for (const [cardTitle, cardItems] of Object.entries(byCard)) {
-        // 3. Buscar ou criar seção para este card
+        // 1. Buscar ou criar RELATÓRIO com o nome do card
+        let relatorioId: string | null = null;
+
+        // Buscar relatório existente com mesmo título do card
+        const existing = relatoriosExistentes.find(r => r.titulo === cardTitle);
+        if (existing) {
+          relatorioId = existing.id;
+          console.log(`[SYNC] Relatório "${cardTitle}" já existe: ${relatorioId}`);
+        } else {
+          // Criar novo relatório com o nome do card
+          console.log(`[SYNC] Criando relatório "${cardTitle}" para contrato ${contratoId}...`);
+          try {
+            const { data: novoRel, error: relError } = await supabase
+              .from('relatorios_pendencias')
+              .insert([{
+                contrato_id: contratoId,
+                titulo: cardTitle,
+              }])
+              .select()
+              .single();
+
+            if (relError) {
+              const msg = `Erro ao criar relatório "${cardTitle}": ${relError.message} (code: ${relError.code})`;
+              console.error('[SYNC]', msg);
+              errorDetails.push(msg);
+              throw new Error(msg);
+            }
+
+            relatorioId = novoRel.id;
+            relatoriosExistentes.push(novoRel as any);
+            console.log(`[SYNC] Relatório "${cardTitle}" criado: ${relatorioId}`);
+          } catch (createRelErr: any) {
+            if (!createRelErr.message?.includes('Erro ao criar relatório')) {
+              const msg = `Exceção ao criar relatório: ${createRelErr.message || createRelErr}`;
+              errorDetails.push(msg);
+            }
+            throw createRelErr;
+          }
+        }
+
+        // 2. Buscar relatório completo para ver seções existentes
+        onProgress?.(processed, pending.length, `Carregando seções de "${cardTitle}"...`);
+        const relCompleto = await relatorioPendenciasService.getById(relatorioId);
+        const secoesExistentes = relCompleto?.secoes || [];
+        console.log(`[SYNC] Seções existentes em "${cardTitle}": ${secoesExistentes.length}`);
+
+        // 3. Buscar ou criar seção dentro do relatório (usa cardCategory como subtítulo)
+        const secaoTitulo = cardItems[0]?.cardCategory || 'VISTORIA';
         let secao = secoesExistentes.find(
           s => s.titulo_principal === cardTitle
         );
 
         if (!secao) {
-          console.log(`[SYNC] Criando seção "${cardTitle}"...`);
+          console.log(`[SYNC] Criando seção "${cardTitle}" no relatório...`);
           const ordemMax = secoesExistentes.length > 0
             ? Math.max(...secoesExistentes.map(s => s.ordem))
             : 0;
@@ -361,7 +364,7 @@ async function syncItemsToSupabase(
                 relatorio_id: relatorioId,
                 ordem: ordemMax + 1,
                 titulo_principal: cardTitle,
-                subtitulo: cardItems[0]?.cardCategory || '',
+                subtitulo: secaoTitulo,
               }])
               .select()
               .single();
