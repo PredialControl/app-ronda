@@ -110,6 +110,7 @@ interface SubsecaoLocal {
     fotos_constatacao?: string[];
     fotos_constatacao_files?: File[];
     fotos_constatacao_previews?: string[];
+    legendas_constatacao?: string[]; // Texto sobre cada foto (opcional)
     descricao_constatacao?: string;
 }
 
@@ -486,17 +487,31 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 ...s,
                 tempId: `secao-${idx}`,
                 tem_subsecoes: s.tem_subsecoes || false,
-                subsecoes: (s.subsecoes || []).map((sub, subIdx) => ({
+                subsecoes: (s.subsecoes || []).map((sub, subIdx) => {
+                    // Deserializar legendas do descricao_constatacao (pode ser JSON com legendas)
+                    let descricaoText = sub.descricao_constatacao || '';
+                    let legendasFromDb: string[] = (sub.fotos_constatacao || []).map(() => '');
+                    try {
+                        if (descricaoText.startsWith('{')) {
+                            const parsed = JSON.parse(descricaoText);
+                            descricaoText = parsed.text || '';
+                            legendasFromDb = parsed.legendas || legendasFromDb;
+                        }
+                    } catch { /* não é JSON, manter como texto */ }
+
+                    return {
                     ...sub,
                     tempId: `subsecao-${idx}-${subIdx}`,
                     fotos_constatacao_previews: sub.fotos_constatacao || [],
+                    legendas_constatacao: legendasFromDb,
+                    descricao_constatacao: descricaoText,
                     pendencias: (sub.pendencias || []).map((p, pIdx) => ({
                         ...p,
                         tempId: `pend-${idx}-${subIdx}-${pIdx}`,
                         preview: p.foto_url || undefined,
                         previewDepois: p.foto_depois_url || undefined,
                     })),
-                })),
+                }; }),
                 pendencias: (s.pendencias || []).map((p, pIdx) => ({
                     ...p,
                     tempId: `pend-${idx}-${pIdx}`,
@@ -675,10 +690,12 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                     subsecoes: (s.subsecoes || []).map(sub => {
                         if (sub.tempId === subsecaoTempId) {
                             const newPreviews = files.map(file => URL.createObjectURL(file));
+                            const newLegendas = files.map(() => '');
                             return {
                                 ...sub,
                                 fotos_constatacao_files: [...(sub.fotos_constatacao_files || []), ...files],
                                 fotos_constatacao_previews: [...(sub.fotos_constatacao_previews || []), ...newPreviews],
+                                legendas_constatacao: [...(sub.legendas_constatacao || []), ...newLegendas],
                             };
                         }
                         return sub;
@@ -701,11 +718,15 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             const newFiles = [...(sub.fotos_constatacao_files || [])];
                             const newPreviews = [...(sub.fotos_constatacao_previews || [])];
                             const newUrls = [...(sub.fotos_constatacao || [])];
+                            const newLegendas = [...(sub.legendas_constatacao || [])];
 
                             newFiles.splice(index, 1);
                             newPreviews.splice(index, 1);
                             if (newUrls.length > index) {
                                 newUrls.splice(index, 1);
+                            }
+                            if (newLegendas.length > index) {
+                                newLegendas.splice(index, 1);
                             }
 
                             return {
@@ -713,7 +734,29 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 fotos_constatacao_files: newFiles,
                                 fotos_constatacao_previews: newPreviews,
                                 fotos_constatacao: newUrls,
+                                legendas_constatacao: newLegendas,
                             };
+                        }
+                        return sub;
+                    }),
+                };
+            }
+            return s;
+        }));
+    };
+
+    const handleUpdateLegendaConstatacao = (secaoTempId: string, subsecaoTempId: string, index: number, value: string) => {
+        setSecoes(prev => prev.map(s => {
+            if (s.tempId === secaoTempId) {
+                return {
+                    ...s,
+                    subsecoes: (s.subsecoes || []).map(sub => {
+                        if (sub.tempId === subsecaoTempId) {
+                            const newLegendas = [...(sub.legendas_constatacao || [])];
+                            // Garantir que array tem tamanho suficiente
+                            while (newLegendas.length <= index) newLegendas.push('');
+                            newLegendas[index] = value;
+                            return { ...sub, legendas_constatacao: newLegendas };
                         }
                         return sub;
                     }),
@@ -1983,12 +2026,19 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         if (subsecaoId) {
                             console.log(`📝 UPDATE subseção ${subsecaoId} (${subsecao.titulo})`);
                             try {
+                                // Embeber legendas dentro de descricao_constatacao como JSON
+                                const legendas = subsecao.legendas_constatacao || [];
+                                const temLegendas = legendas.some(l => l && l.trim() !== '');
+                                const descConstatacao = temLegendas
+                                    ? JSON.stringify({ text: subsecao.descricao_constatacao || '', legendas })
+                                    : (subsecao.descricao_constatacao || undefined);
+
                                 await relatorioPendenciasService.updateSubsecao(subsecaoId, {
                                     titulo: subsecao.titulo,
                                     ordem: subsecao.ordem,
                                     tipo: subsecao.tipo || 'MANUAL',
                                     fotos_constatacao: fotosConstatacaoUrls.length > 0 ? fotosConstatacaoUrls : (subsecao.fotos_constatacao || []),
-                                    descricao_constatacao: subsecao.descricao_constatacao || undefined,
+                                    descricao_constatacao: descConstatacao,
                                 });
                                 console.log(`✅ UPDATE subseção ${subsecaoId} concluído`);
                             } catch (err: any) {
@@ -2000,13 +2050,20 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                 }
                             }
                         } else {
+                            // Embeber legendas dentro de descricao_constatacao como JSON
+                            const legendasNew = subsecao.legendas_constatacao || [];
+                            const temLegendasNew = legendasNew.some(l => l && l.trim() !== '');
+                            const descConstatacaoNew = temLegendasNew
+                                ? JSON.stringify({ text: subsecao.descricao_constatacao || '', legendas: legendasNew })
+                                : (subsecao.descricao_constatacao || undefined);
+
                             const newSubsecao = await relatorioPendenciasService.createSubsecao({
                                 secao_id: secaoId,
                                 titulo: subsecao.titulo,
                                 ordem: subsecao.ordem,
                                 tipo: subsecao.tipo || 'MANUAL',
                                 fotos_constatacao: fotosConstatacaoUrls.length > 0 ? fotosConstatacaoUrls : (subsecao.fotos_constatacao || []),
-                                descricao_constatacao: subsecao.descricao_constatacao || undefined,
+                                descricao_constatacao: descConstatacaoNew,
                             });
                             subsecaoId = newSubsecao.id;
                             subsecao.id = newSubsecao.id;
@@ -2618,6 +2675,20 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                     <p className="text-xs text-gray-500 mt-1">Título principal (Ex: VIII.1 - HALLS RESIDENCIAL)</p>
                                 </div>
 
+                                {/* Texto descritivo opcional da Seção */}
+                                <div>
+                                    <Label htmlFor={`descricao-secao-${secao.tempId}`} className="text-gray-300">
+                                        Texto da Seção <span className="text-gray-500 font-normal">(opcional)</span>
+                                    </Label>
+                                    <Textarea
+                                        id={`descricao-secao-${secao.tempId}`}
+                                        value={secao.subtitulo || ''}
+                                        onChange={(e) => handleUpdateSecao(secao.tempId, 'subtitulo', e.target.value)}
+                                        placeholder="Texto descritivo abaixo do título (opcional)"
+                                        className="bg-gray-900 border-gray-700 text-white mt-1 min-h-[60px]"
+                                    />
+                                </div>
+
                                 {/* Pendências da Seção (renderizadas ANTES das subseções) */}
                                 <div className="border-t border-gray-700 pt-4 mt-4">
                                     <div className="flex justify-between items-center mb-3">
@@ -3040,34 +3111,44 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                 {(subsecao.fotos_constatacao_previews || []).length > 0 && (
                                                                     <div className="grid grid-cols-2 gap-2">
                                                                         {(subsecao.fotos_constatacao_previews || []).map((preview, idx) => (
-                                                                            <div key={idx} className="relative aspect-square bg-gray-900 rounded border border-amber-700/30 overflow-hidden group">
-                                                                                <img
-                                                                                    src={preview}
-                                                                                    alt={`Foto ${idx + 1}`}
-                                                                                    className="w-full h-full object-cover"
+                                                                            <div key={idx} className="bg-gray-900 rounded border border-amber-700/30 overflow-hidden group">
+                                                                                {/* Campo de legenda em cima da foto */}
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={(subsecao.legendas_constatacao || [])[idx] || ''}
+                                                                                    onChange={(e) => handleUpdateLegendaConstatacao(secao.tempId, subsecao.tempId, idx, e.target.value)}
+                                                                                    placeholder={`Legenda foto ${idx + 1} (opcional)`}
+                                                                                    className="w-full bg-gray-800 border-b border-amber-700/30 text-white text-xs px-2 py-1.5 placeholder-gray-500 focus:outline-none focus:bg-gray-700"
                                                                                 />
-                                                                                <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                                    <Button
-                                                                                        onClick={() => handleOpenImageEditorConstatacao(secao.tempId, subsecao.tempId, idx, preview)}
-                                                                                        variant="ghost"
-                                                                                        size="sm"
-                                                                                        className="h-6 w-6 p-0 bg-purple-600/80 hover:bg-purple-600 text-white"
-                                                                                        title="Editar com marcações"
-                                                                                    >
-                                                                                        <Edit3 className="w-3.5 h-3.5" />
-                                                                                    </Button>
-                                                                                    <Button
-                                                                                        onClick={() => handleRemoveFotoConstatacao(secao.tempId, subsecao.tempId, idx)}
-                                                                                        variant="ghost"
-                                                                                        size="sm"
-                                                                                        className="h-6 w-6 p-0 bg-red-500/80 hover:bg-red-600 text-white"
-                                                                                    >
-                                                                                        <X className="w-4 h-4" />
-                                                                                    </Button>
+                                                                                <div className="relative aspect-square overflow-hidden">
+                                                                                    <img
+                                                                                        src={preview}
+                                                                                        alt={`Foto ${idx + 1}`}
+                                                                                        className="w-full h-full object-cover"
+                                                                                    />
+                                                                                    <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                        <Button
+                                                                                            onClick={() => handleOpenImageEditorConstatacao(secao.tempId, subsecao.tempId, idx, preview)}
+                                                                                            variant="ghost"
+                                                                                            size="sm"
+                                                                                            className="h-6 w-6 p-0 bg-purple-600/80 hover:bg-purple-600 text-white"
+                                                                                            title="Editar com marcações"
+                                                                                        >
+                                                                                            <Edit3 className="w-3.5 h-3.5" />
+                                                                                        </Button>
+                                                                                        <Button
+                                                                                            onClick={() => handleRemoveFotoConstatacao(secao.tempId, subsecao.tempId, idx)}
+                                                                                            variant="ghost"
+                                                                                            size="sm"
+                                                                                            className="h-6 w-6 p-0 bg-red-500/80 hover:bg-red-600 text-white"
+                                                                                        >
+                                                                                            <X className="w-4 h-4" />
+                                                                                        </Button>
+                                                                                    </div>
+                                                                                    <span className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                                                                                        {idx + 1}
+                                                                                    </span>
                                                                                 </div>
-                                                                                <span className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                                                                                    {idx + 1}
-                                                                                </span>
                                                                             </div>
                                                                         ))}
                                                                     </div>
