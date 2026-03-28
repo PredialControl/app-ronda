@@ -23,7 +23,9 @@ interface InspectionItem {
   cardCategory: string;
   local: string;
   descricao: string;
+  observacao?: string; // Texto em cima da foto (opcional)
   fotoBase64: string;
+  tipo: 'PENDENCIA' | 'CONSTATACAO'; // Tipo do item
   status: 'PENDENTE' | 'SYNCED';
   synced: boolean;
   relatorioId?: string;
@@ -265,6 +267,36 @@ function compressImage(file: File | Blob): Promise<string> {
 // SYNC LOGIC
 // ============================================================================
 
+async function uploadFotoItem(item: InspectionItem, relatorioId: string): Promise<string | null> {
+  if (!item.fotoBase64) return null;
+  try {
+    const base64Data = item.fotoBase64.split(',')[1] || item.fotoBase64;
+    const binaryStr = atob(base64Data);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+    const blob = new Blob([bytes], { type: 'image/jpeg' });
+    const fileName = `${item.id}-${Date.now()}.jpg`;
+    const filePath = `relatorios-pendencias/${relatorioId}/${fileName}`;
+
+    const { error: upErr } = await supabase.storage
+      .from('fotos')
+      .upload(filePath, blob, { upsert: true });
+
+    if (upErr) {
+      console.error('[SYNC] Upload foto falhou:', upErr.message);
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage.from('fotos').getPublicUrl(filePath);
+    return urlData.publicUrl;
+  } catch (err: any) {
+    console.error('[SYNC] Exceção no upload:', err.message);
+    return null;
+  }
+}
+
 async function syncItemsToSupabase(
   onProgress?: (current: number, total: number, detail: string) => void
 ): Promise<{ synced: number; errors: number; errorDetails: string[] }> {
@@ -387,54 +419,18 @@ async function syncItemsToSupabase(
           }
         }
 
-        // 4. Criar pendências para cada item
+        // 4. Separar itens por tipo: PENDENCIA vs CONSTATACAO
+        const pendenciaItems = cardItems.filter(i => (i.tipo || 'PENDENCIA') === 'PENDENCIA');
+        const constatacaoItems = cardItems.filter(i => i.tipo === 'CONSTATACAO');
         let pendenciasExistentes = secao.pendencias?.length || 0;
 
-        for (const item of cardItems) {
+        // 4A. Criar pendências normais
+        for (const item of pendenciaItems) {
           try {
             onProgress?.(processed, pending.length, `Enviando: ${item.local}...`);
+            const fotoUrl = await uploadFotoItem(item, relatorioId!);
 
-            // 4a. Upload foto para Supabase Storage
-            let fotoUrl: string | null = null;
-            if (item.fotoBase64) {
-              try {
-                const base64Data = item.fotoBase64.split(',')[1] || item.fotoBase64;
-                const binaryStr = atob(base64Data);
-                const bytes = new Uint8Array(binaryStr.length);
-                for (let i = 0; i < binaryStr.length; i++) {
-                  bytes[i] = binaryStr.charCodeAt(i);
-                }
-                const blob = new Blob([bytes], { type: 'image/jpeg' });
-                const fileName = `${item.id}-${Date.now()}.jpg`;
-                const filePath = `relatorios-pendencias/${relatorioId}/${fileName}`;
-
-                console.log(`[SYNC] Uploading foto: ${filePath} (${blob.size} bytes)`);
-
-                const { error: upErr } = await supabase.storage
-                  .from('fotos')
-                  .upload(filePath, blob, { upsert: true });
-
-                if (upErr) {
-                  const msg = `Upload foto falhou: ${upErr.message}`;
-                  console.error('[SYNC]', msg);
-                  errorDetails.push(msg);
-                  // Continua sem foto - não bloqueia a criação da pendência
-                } else {
-                  const { data: urlData } = supabase.storage.from('fotos').getPublicUrl(filePath);
-                  fotoUrl = urlData.publicUrl;
-                  console.log(`[SYNC] Foto uploaded: ${fotoUrl}`);
-                }
-              } catch (uploadErr: any) {
-                const msg = `Exceção no upload: ${uploadErr.message || uploadErr}`;
-                console.error('[SYNC]', msg);
-                errorDetails.push(msg);
-              }
-            }
-
-            // 4b. Criar pendência no Supabase
             pendenciasExistentes++;
-            console.log(`[SYNC] Criando pendência #${pendenciasExistentes} na seção ${secao.id}...`);
-
             const pendenciaData = {
               secao_id: secao.id,
               ordem: pendenciasExistentes,
@@ -446,22 +442,17 @@ async function syncItemsToSupabase(
               status: 'PENDENTE',
             };
 
-            console.log(`[SYNC] Dados pendência:`, JSON.stringify(pendenciaData));
-
-            const { data: pendCriada, error: pendError } = await supabase
+            const { error: pendError } = await supabase
               .from('relatorio_pendencias')
               .insert([pendenciaData])
               .select()
               .single();
 
             if (pendError) {
-              const msg = `Erro ao criar pendência: ${pendError.message} (code: ${pendError.code}, details: ${pendError.details || 'none'})`;
-              console.error('[SYNC]', msg);
+              const msg = `Erro ao criar pendência: ${pendError.message}`;
               errorDetails.push(msg);
               throw new Error(msg);
             }
-
-            console.log(`[SYNC] Pendência criada: ${pendCriada.id}`);
 
             await dbMarkSynced(item.id);
             syncedCount++;
@@ -475,6 +466,59 @@ async function syncItemsToSupabase(
 
           processed++;
           onProgress?.(processed, pending.length, '');
+        }
+
+        // 4B. Criar constatações (subseções CONSTATACAO com fotos)
+        if (constatacaoItems.length > 0) {
+          try {
+            // Ativar tem_subsecoes na seção
+            await supabase.from('relatorio_secoes').update({ tem_subsecoes: true }).eq('id', secao.id);
+
+            // Agrupar constatações - cada uma vira uma subseção separada
+            const subsecaoOrdemBase = (secao as any).subsecoes?.length || 0;
+
+            for (let ci = 0; ci < constatacaoItems.length; ci++) {
+              const item = constatacaoItems[ci];
+              try {
+                onProgress?.(processed, pending.length, `Enviando constatação...`);
+                const fotoUrl = await uploadFotoItem(item, relatorioId!);
+
+                // Criar subseção CONSTATACAO
+                const letra = String.fromCharCode(65 + subsecaoOrdemBase + ci);
+                const descJson = item.observacao
+                  ? JSON.stringify({ text: item.observacao, legendas: [item.observacao] })
+                  : (item.descricao || undefined);
+
+                const { error: subErr } = await supabase
+                  .from('relatorio_subsecoes')
+                  .insert([{
+                    secao_id: secao.id,
+                    ordem: subsecaoOrdemBase + ci,
+                    titulo: `${letra} - CONSTATAÇÃO`,
+                    tipo: 'CONSTATACAO',
+                    fotos_constatacao: fotoUrl ? [fotoUrl] : [],
+                    descricao_constatacao: descJson,
+                  }]);
+
+                if (subErr) {
+                  errorDetails.push(`Erro constatação: ${subErr.message}`);
+                  errorCount++;
+                } else {
+                  await dbMarkSynced(item.id);
+                  syncedCount++;
+                }
+              } catch (constErr: any) {
+                errorDetails.push(`Constatação: ${constErr.message || constErr}`);
+                errorCount++;
+              }
+              processed++;
+              onProgress?.(processed, pending.length, '');
+            }
+          } catch (constBlockErr: any) {
+            errorDetails.push(`Bloco constatação: ${constBlockErr.message}`);
+            errorCount += constatacaoItems.length;
+            processed += constatacaoItems.length;
+          }
         }
       }
     } catch (contratoErr: any) {
@@ -518,6 +562,8 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
   const [fotoBase64, setFotoBase64] = useState<string | null>(null);
   const [localValue, setLocalValue] = useState('');
   const [descricao, setDescricao] = useState('');
+  const [observacao, setObservacao] = useState('');
+  const [tipoItem, setTipoItem] = useState<'PENDENCIA' | 'CONSTATACAO'>('PENDENCIA');
   const [autoMic, setAutoMic] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -677,21 +723,18 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
       console.warn('Speech error:', e.error);
       setIsRecording(false);
     };
+    // Usar resultIndex para só processar resultados NOVOS (evita duplicação)
     recognition.onresult = (event: any) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
-      for (let i = 0; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript;
-        } else {
-          interimTranscript += result[0].transcript;
-        }
+      // Só pegar o resultado mais recente (último)
+      const latestResult = event.results[event.results.length - 1];
+      const transcript = latestResult[0].transcript.trim();
+
+      if (latestResult.isFinal) {
+        // Resultado final — adicionar ao texto existente
+        setDescricao(prev => prev ? prev + ' ' + transcript : transcript);
       }
-      setDescricao(prev => {
-        if (finalTranscript) return prev ? prev + ' ' + finalTranscript : finalTranscript;
-        return prev || interimTranscript;
-      });
+      // Ignorar interim results para evitar duplicação
+      // O usuário verá o texto aparecer quando confirmar cada frase
     };
 
     recognitionRef.current = recognition;
@@ -741,13 +784,15 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
       alert('Tire uma foto primeiro');
       return;
     }
-    if (!localValue.trim()) {
-      alert('Preencha o local');
-      return;
-    }
-    if (!descricao.trim()) {
-      alert('Descreva a pendência');
-      return;
+    if (tipoItem === 'PENDENCIA') {
+      if (!localValue.trim()) {
+        alert('Preencha o local');
+        return;
+      }
+      if (!descricao.trim()) {
+        alert('Descreva a pendência');
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -761,8 +806,10 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
         cardTitle: selectedCard.title,
         cardCategory: selectedCard.category,
         local: localValue.trim(),
-        descricao: descricao.trim(),
+        descricao: tipoItem === 'CONSTATACAO' ? (observacao.trim() || 'Constatação') : descricao.trim(),
+        observacao: observacao.trim() || undefined,
         fotoBase64,
+        tipo: tipoItem,
         status: 'PENDENTE',
         synced: false,
         createdAt: new Date().toISOString(),
@@ -779,9 +826,10 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
       setAllContratoItems(prev => [...prev, newItem]);
       setPendingSyncCount(prev => prev + 1);
 
-      // Limpar formulário para próximo item (manter local!)
+      // Limpar formulário para próximo item (manter local e tipo!)
       setFotoBase64(null);
       setDescricao('');
+      setObservacao('');
 
       // Vibrar para feedback tátil
       if (navigator.vibrate) navigator.vibrate(100);
@@ -1177,85 +1225,152 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
           ) : (
             /* Formulário após foto */
             <div className="p-4 space-y-4">
+              {/* Toggle: Pendência / Constatação */}
+              <div className="flex bg-gray-800 rounded-lg p-1">
+                <button
+                  onClick={() => setTipoItem('PENDENCIA')}
+                  className={`flex-1 py-2 rounded-md text-sm font-bold transition ${
+                    tipoItem === 'PENDENCIA'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Pendência
+                </button>
+                <button
+                  onClick={() => setTipoItem('CONSTATACAO')}
+                  className={`flex-1 py-2 rounded-md text-sm font-bold transition ${
+                    tipoItem === 'CONSTATACAO'
+                      ? 'bg-amber-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Constatação
+                </button>
+              </div>
+
+              {/* Observação em cima da foto (opcional) */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-gray-400">
+                    {tipoItem === 'CONSTATACAO' ? 'DESCRIÇÃO DA CONSTATAÇÃO' : 'OBSERVAÇÃO'} <span className="font-normal text-gray-500">(opcional)</span>
+                  </label>
+                  <button
+                    onClick={() => {
+                      if (isRecording) {
+                        stopVoice();
+                      } else {
+                        // Direcionar áudio para observação
+                        const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+                        if (!SR) return;
+                        if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
+                        const recognition = new SR();
+                        recognition.continuous = false;
+                        recognition.interimResults = false;
+                        recognition.lang = 'pt-BR';
+                        recognition.onstart = () => setIsRecording(true);
+                        recognition.onend = () => setIsRecording(false);
+                        recognition.onerror = () => setIsRecording(false);
+                        recognition.onresult = (event: any) => {
+                          const result = event.results[event.results.length - 1];
+                          if (result.isFinal) {
+                            const text = result[0].transcript.trim();
+                            setObservacao(prev => prev ? prev + ' ' + text : text);
+                          }
+                        };
+                        recognitionRef.current = recognition;
+                        try { recognition.start(); } catch {}
+                      }
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition ${
+                      isRecording
+                        ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+                        : 'bg-amber-600 hover:bg-amber-700'
+                    }`}
+                  >
+                    {isRecording ? <MicOff size={12} /> : <Mic size={12} />}
+                    {isRecording ? 'Parar' : 'Ditar'}
+                  </button>
+                </div>
+                <textarea
+                  value={observacao}
+                  onChange={(e) => setObservacao(e.target.value)}
+                  placeholder={tipoItem === 'CONSTATACAO' ? 'Descreva a constatação...' : 'Texto sobre a foto (opcional)...'}
+                  className="w-full h-16 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 p-3 text-sm resize-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                />
+              </div>
+
               {/* Foto preview */}
               <div className="relative rounded-lg overflow-hidden">
+                {/* Observação sobreposta na foto */}
+                {observacao.trim() && (
+                  <div className="absolute top-0 left-0 right-0 bg-black/70 text-white text-xs px-3 py-2 z-10 font-medium">
+                    {observacao.trim()}
+                  </div>
+                )}
                 <img src={fotoBase64} alt="Foto capturada" className="w-full max-h-48 object-cover rounded-lg" />
                 <button
-                  onClick={() => { setFotoBase64(null); setDescricao(''); }}
-                  className="absolute top-2 right-2 p-2 bg-black/60 rounded-full hover:bg-black/80 transition"
+                  onClick={() => { setFotoBase64(null); setDescricao(''); setObservacao(''); }}
+                  className="absolute top-2 right-2 p-2 bg-black/60 rounded-full hover:bg-black/80 transition z-20"
                 >
                   <Camera size={16} />
                 </button>
 
                 {isRecording && (
-                  <div className="absolute top-2 left-2 flex items-center gap-2 bg-red-600 px-3 py-1.5 rounded-full animate-pulse">
+                  <div className="absolute bottom-2 left-2 flex items-center gap-2 bg-red-600 px-3 py-1.5 rounded-full animate-pulse z-20">
                     <div className="w-2 h-2 bg-white rounded-full" />
                     <span className="text-xs font-bold">Gravando...</span>
                   </div>
                 )}
               </div>
 
-              {/* Auto-mic toggle */}
-              <div className="flex items-center justify-between bg-gray-800 p-3 rounded-lg">
-                <span className="text-sm">Microfone automático</span>
-                <button
-                  onClick={() => {
-                    const newVal = !autoMic;
-                    setAutoMic(newVal);
-                    dbSaveSetting('autoMic', newVal);
-                  }}
-                  className={`w-12 h-7 rounded-full transition relative ${
-                    autoMic ? 'bg-blue-600' : 'bg-gray-600'
-                  }`}
-                >
-                  <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all ${
-                    autoMic ? 'left-6' : 'left-1'
-                  }`} />
-                </button>
-              </div>
+              {/* Campos de Pendência (só aparece no modo Pendência) */}
+              {tipoItem === 'PENDENCIA' && (
+                <>
+                  {/* Local */}
+                  <div>
+                    <label className="text-xs font-bold text-gray-400 block mb-1.5">LOCAL</label>
+                    <Input
+                      value={localValue}
+                      onChange={(e) => setLocalValue(e.target.value)}
+                      placeholder="Ex: 22 Pavimento, Hall do 3º andar..."
+                      className="bg-gray-800 border-gray-600 text-white placeholder-gray-500 h-11"
+                      autoComplete="off"
+                    />
+                    <p className="text-[10px] text-gray-500 mt-1">O local fica salvo para os próximos itens deste card</p>
+                  </div>
 
-              {/* Local */}
-              <div>
-                <label className="text-xs font-bold text-gray-400 block mb-1.5">LOCAL</label>
-                <Input
-                  value={localValue}
-                  onChange={(e) => setLocalValue(e.target.value)}
-                  placeholder="Ex: 22 Pavimento, Hall do 3º andar..."
-                  className="bg-gray-800 border-gray-600 text-white placeholder-gray-500 h-11"
-                  autoComplete="off"
-                />
-                <p className="text-[10px] text-gray-500 mt-1">O local fica salvo para os próximos itens deste card</p>
-              </div>
-
-              {/* Pendência / Descrição */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-gray-400">PENDÊNCIA / DESCRIÇÃO</label>
-                  <button
-                    onClick={() => isRecording ? stopVoice() : startVoice()}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition ${
-                      isRecording
-                        ? 'bg-red-600 hover:bg-red-700 animate-pulse'
-                        : 'bg-blue-600 hover:bg-blue-700'
-                    }`}
-                  >
-                    {isRecording ? <MicOff size={12} /> : <Mic size={12} />}
-                    {isRecording ? 'Parar' : 'Falar'}
-                  </button>
-                </div>
-                <textarea
-                  ref={descricaoRef}
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                  placeholder="Descreva a pendência ou fale usando o microfone..."
-                  className="w-full h-24 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 p-3 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
+                  {/* Pendência / Descrição */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-gray-400">PENDÊNCIA / DESCRIÇÃO</label>
+                      <button
+                        onClick={() => isRecording ? stopVoice() : startVoice()}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition ${
+                          isRecording
+                            ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                      >
+                        {isRecording ? <MicOff size={12} /> : <Mic size={12} />}
+                        {isRecording ? 'Parar' : 'Falar'}
+                      </button>
+                    </div>
+                    <textarea
+                      ref={descricaoRef}
+                      value={descricao}
+                      onChange={(e) => setDescricao(e.target.value)}
+                      placeholder="Descreva a pendência ou fale usando o microfone..."
+                      className="w-full h-24 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 p-3 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Botões de ação */}
               <div className="flex gap-3 pt-2">
                 <Button
-                  onClick={() => { setFotoBase64(null); setDescricao(''); }}
+                  onClick={() => { setFotoBase64(null); setDescricao(''); setObservacao(''); }}
                   variant="outline"
                   className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border-gray-600 h-12"
                 >
@@ -1264,8 +1379,12 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
                 </Button>
                 <Button
                   onClick={handleSaveItem}
-                  disabled={!localValue.trim() || !descricao.trim() || isSaving}
-                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 h-12 text-base font-bold"
+                  disabled={tipoItem === 'PENDENCIA' ? (!localValue.trim() || !descricao.trim() || isSaving) : (!fotoBase64 || isSaving)}
+                  className={`flex-1 h-12 text-base font-bold ${
+                    tipoItem === 'CONSTATACAO'
+                      ? 'bg-amber-600 hover:bg-amber-700 disabled:bg-gray-700'
+                      : 'bg-green-600 hover:bg-green-700 disabled:bg-gray-700'
+                  }`}
                 >
                   {isSaving ? (
                     <RefreshCw size={16} className="mr-2 animate-spin" />
