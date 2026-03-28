@@ -32,7 +32,19 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
         try {
             setLoading(true);
             const data = await relatorioPendenciasService.getAll(contratoSelecionado.id);
-            setRelatorios(data);
+            // Carregar dados completos (seções + pendências) para cada relatório
+            // para exibir contagens corretas na listagem
+            const completos = await Promise.all(
+                data.map(async (rel) => {
+                    try {
+                        const completo = await relatorioPendenciasService.getById(rel.id);
+                        return completo || rel;
+                    } catch {
+                        return rel;
+                    }
+                })
+            );
+            setRelatorios(completos as RelatorioPendenciasType[]);
         } catch (error) {
             console.error('Erro ao carregar relatórios:', error);
             alert('Erro ao carregar relatórios de pendências');

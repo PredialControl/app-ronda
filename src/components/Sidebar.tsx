@@ -149,18 +149,21 @@ export function Sidebar({
         <div className="flex items-center justify-between">
           {!collapsed && (
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="font-bold text-white text-lg">Portal MP</h1>
-                <p className="text-xs text-gray-400">Visitas Técnicas</p>
-              </div>
+              <img
+                src="/logo-mp-full.svg"
+                alt="Manutenção Predial"
+                className="h-11 w-auto"
+                style={{ filter: 'brightness(1.6) saturate(1.1)' }}
+              />
             </div>
           )}
           {collapsed && (
-            <div className="w-10 h-10 mx-auto rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 mx-auto rounded-xl overflow-hidden">
+              <img
+                src="/logo-mp-icon.svg"
+                alt="MP"
+                className="w-10 h-10"
+              />
             </div>
           )}
         </div>

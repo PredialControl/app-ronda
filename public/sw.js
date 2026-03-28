@@ -1,5 +1,5 @@
-const CACHE_NAME = 'app-ronda-v6';
-const STATIC_CACHE = 'app-ronda-static-v6';
+const CACHE_NAME = 'app-ronda-v7';
+const STATIC_CACHE = 'app-ronda-static-v7';
 
 const urlsToCache = [
   '/',
@@ -58,25 +58,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Assets estáticos: cache-first com atualização em background
+  // Assets estáticos: network-first com fallback para cache
+  // (Vite adiciona hashes nos nomes, então sempre queremos a versão mais recente)
   const isStaticAsset = STATIC_EXTENSIONS.some(ext => url.pathname.endsWith(ext));
   if (isStaticAsset) {
     event.respondWith(
-      caches.match(event.request).then(cached => {
-        // Buscar da rede em background para atualizar cache
-        const networkFetch = fetch(event.request).then(response => {
+      fetch(event.request)
+        .then(response => {
           if (response.ok) {
             const clone = response.clone();
             caches.open(STATIC_CACHE).then(cache => cache.put(event.request, clone));
           }
           return response;
-        }).catch(() => null);
-
-        // Se tem cache, retornar imediatamente
-        if (cached) return cached;
-        // Se não tem cache, esperar rede
-        return networkFetch.then(r => r || new Response('Recurso indisponível offline', { status: 503 }));
-      })
+        })
+        .catch(() => {
+          return caches.match(event.request)
+            .then(cached => cached || new Response('Recurso indisponível offline', { status: 503 }));
+        })
     );
     return;
   }

@@ -1,7 +1,7 @@
 import { useState, ReactNode } from 'react';
 import { Sidebar, MenuLevel } from './Sidebar';
 import { Breadcrumb, BreadcrumbItem } from './Breadcrumb';
-import { LogOut, User, Smartphone } from 'lucide-react';
+import { LogOut, User, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -16,7 +16,7 @@ interface AppLayoutProps {
   onNavigate: (destination: string) => void;
   onBack?: () => void;
   onLogout: () => void;
-  onColetaLite?: () => void;
+  onColetaInspecao?: () => void;
   onUsuarios?: () => void;
   // Usuário
   usuarioNome?: string;
@@ -35,7 +35,7 @@ export function AppLayout({
   onNavigate,
   onBack,
   onLogout,
-  onColetaLite,
+  onColetaInspecao,
   onUsuarios,
   usuarioNome,
   usuarioCargo,
@@ -90,15 +90,15 @@ export function AppLayout({
                 </Button>
               )}
 
-              {/* Coleta Lite */}
-              {onColetaLite && (
+              {/* Coleta Inspeção */}
+              {onColetaInspecao && (
                 <Button
-                  onClick={onColetaLite}
+                  onClick={onColetaInspecao}
                   variant="outline"
                   size="sm"
                   className="text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 hover:border-emerald-500/50 px-2 lg:px-3"
                 >
-                  <Smartphone className="w-4 h-4" />
+                  <ClipboardCheck className="w-4 h-4" />
                   <span className="hidden lg:inline ml-2">Coleta</span>
                 </Button>
               )}

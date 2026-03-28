@@ -18,27 +18,19 @@ import { EditarRondaModal } from '@/components/EditarRondaModal';
 import { Dashboard } from '@/components/Dashboard';
 import { LoginScreen } from '@/components/LoginScreen';
 import { GerenciarUsuarios } from '@/components/GerenciarUsuarios';
-import { MainNavigation } from '@/components/MainNavigation';
-import { ContratosMenu } from '@/components/ContratosMenu';
-import { ContratoDetalhe } from '@/components/ContratoDetalhe';
-import { AgendaMenu } from '@/components/AgendaMenu';
-import { DashboardMenu } from '@/components/DashboardMenu';
-import { ChamadosMenu } from '@/components/ChamadosMenu';
 import { AppLayout } from '@/components/AppLayout';
 import { MenuLevel } from '@/components/Sidebar';
 import { BreadcrumbItem } from '@/components/Breadcrumb';
 import { AreaTecnica, Ronda, Contrato, FotoRonda, OutroItemCorrigido, UsuarioAutorizado } from '@/types';
-import { AREAS_TECNICAS_PREDEFINIDAS } from '@/data/areasTecnicas';
-import { FileText, Building2, BarChart3, LogOut, User, Kanban, FileCheck, ArrowLeft, Smartphone, Hammer, Shield } from 'lucide-react';
+import { FileText, Building2, BarChart3, LogOut, User, Kanban, FileCheck, ArrowLeft, Hammer, Shield } from 'lucide-react';
 
 import { contratoService, rondaService, areaTecnicaService, fotoRondaService, outroItemService } from '@/lib/supabaseService';
 import { supabase } from '@/lib/supabase';
 import { authService } from '@/lib/auth';
-import { debugSupabaseConnection, debugTableStructure } from '@/lib/debugSupabase';
 import { syncService } from '@/lib/syncService';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { ColetaOffline } from '@/components/ColetaOffline';
-import { ColetaLite } from '@/components/ColetaLite';
+import { ColetaInspecao } from '@/components/ColetaInspecao';
 import { setupIOSStyles } from '@/lib/iosHelpers';
 
 
@@ -69,7 +61,7 @@ function App() {
   const [mainSection, setMainSection] = useState<'contratos' | 'agenda' | 'chamados' | 'dashboard'>('contratos');
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-lite' | 'usuarios' | 'menu' | 'contrato-detalhe' | 'plano-manutencao'>('menu');
+  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-inspecao' | 'usuarios' | 'menu' | 'contrato-detalhe' | 'plano-manutencao'>('menu');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
   const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
 
@@ -1495,10 +1487,10 @@ function App() {
     );
   }
 
-  // Tela de coleta lite (full-screen mobile)
-  if (viewMode === 'coleta-lite') {
+  // Tela de coleta de inspeção (full-screen mobile)
+  if (viewMode === 'coleta-inspecao') {
     return (
-      <ColetaLite
+      <ColetaInspecao
         onVoltar={() => {
           setViewMode('tabela');
           setCurrentView('contratos');
@@ -1556,7 +1548,7 @@ function App() {
       onNavigate={handleSidebarNavigate}
       onBack={menuLevel !== 'main' ? handleSidebarBack : undefined}
       onLogout={handleLogout}
-      onColetaLite={() => setViewMode('coleta-lite')}
+      onColetaInspecao={() => setViewMode('coleta-inspecao')}
       onUsuarios={usuarioLogado?.is_admin ? () => {
         setViewMode('usuarios');
         setContratoSelecionado(null);
