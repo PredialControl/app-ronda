@@ -23,7 +23,8 @@ interface InspectionItem {
   cardCategory: string;
   local: string;
   descricao: string;
-  observacao?: string; // Texto em cima da foto (opcional)
+  observacao?: string; // Descrição geral (o que foi feito/visto)
+  legendaFoto?: string; // Texto em cima da foto (obs pontual)
   fotoBase64: string;
   tipo: 'PENDENCIA' | 'CONSTATACAO'; // Tipo do item
   status: 'PENDENTE' | 'SYNCED';
@@ -485,9 +486,12 @@ async function syncItemsToSupabase(
 
                 // Criar subseção CONSTATACAO
                 const letra = String.fromCharCode(65 + subsecaoOrdemBase + ci);
-                const descJson = item.observacao
-                  ? JSON.stringify({ text: item.observacao, legendas: [item.observacao] })
-                  : (item.descricao || undefined);
+                // Descrição geral + legenda da foto como JSON
+                const legendas = item.legendaFoto ? [item.legendaFoto] : [''];
+                const temLegenda = item.legendaFoto && item.legendaFoto.trim() !== '';
+                const descJson = (item.observacao || temLegenda)
+                  ? JSON.stringify({ text: item.observacao || '', legendas })
+                  : undefined;
 
                 const { error: subErr } = await supabase
                   .from('relatorio_subsecoes')
@@ -562,7 +566,8 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
   const [fotoBase64, setFotoBase64] = useState<string | null>(null);
   const [localValue, setLocalValue] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [observacao, setObservacao] = useState('');
+  const [observacao, setObservacao] = useState(''); // Descrição geral
+  const [legendaFoto, setLegendaFoto] = useState(''); // Texto em cima da foto
   const [tipoItem, setTipoItem] = useState<'PENDENCIA' | 'CONSTATACAO'>('PENDENCIA');
   const [autoMic, setAutoMic] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
@@ -808,6 +813,7 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
         local: localValue.trim(),
         descricao: tipoItem === 'CONSTATACAO' ? (observacao.trim() || 'Constatação') : descricao.trim(),
         observacao: observacao.trim() || undefined,
+        legendaFoto: legendaFoto.trim() || undefined,
         fotoBase64,
         tipo: tipoItem,
         status: 'PENDENTE',
@@ -830,6 +836,7 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
       setFotoBase64(null);
       setDescricao('');
       setObservacao('');
+      setLegendaFoto('');
 
       // Vibrar para feedback tátil
       if (navigator.vibrate) navigator.vibrate(100);
@@ -1249,18 +1256,17 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
                 </button>
               </div>
 
-              {/* Observação em cima da foto (opcional) */}
+              {/* Descrição geral — o que foi feito/visto */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-bold text-gray-400">
-                    {tipoItem === 'CONSTATACAO' ? 'DESCRIÇÃO DA CONSTATAÇÃO' : 'OBSERVAÇÃO'} <span className="font-normal text-gray-500">(opcional)</span>
+                    {tipoItem === 'CONSTATACAO' ? 'DESCRIÇÃO GERAL' : 'OBSERVAÇÃO GERAL'} <span className="font-normal text-gray-500">(opcional)</span>
                   </label>
                   <button
                     onClick={() => {
                       if (isRecording) {
                         stopVoice();
                       } else {
-                        // Direcionar áudio para observação
                         const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
                         if (!SR) return;
                         if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
@@ -1295,33 +1301,78 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
                 <textarea
                   value={observacao}
                   onChange={(e) => setObservacao(e.target.value)}
-                  placeholder={tipoItem === 'CONSTATACAO' ? 'Descreva a constatação...' : 'Texto sobre a foto (opcional)...'}
-                  className="w-full h-16 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 p-3 text-sm resize-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  placeholder={tipoItem === 'CONSTATACAO' ? 'O que foi feito/visto nesta constatação...' : 'Observação geral sobre o que foi visto...'}
+                  className="w-full h-20 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500 p-3 text-sm resize-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                 />
               </div>
 
-              {/* Foto preview */}
-              <div className="relative rounded-lg overflow-hidden">
-                {/* Observação sobreposta na foto */}
-                {observacao.trim() && (
-                  <div className="absolute top-0 left-0 right-0 bg-black/70 text-white text-xs px-3 py-2 z-10 font-medium">
-                    {observacao.trim()}
-                  </div>
-                )}
-                <img src={fotoBase64} alt="Foto capturada" className="w-full max-h-48 object-cover rounded-lg" />
-                <button
-                  onClick={() => { setFotoBase64(null); setDescricao(''); setObservacao(''); }}
-                  className="absolute top-2 right-2 p-2 bg-black/60 rounded-full hover:bg-black/80 transition z-20"
-                >
-                  <Camera size={16} />
-                </button>
+              {/* Foto preview com legenda em cima */}
+              <div className="rounded-lg overflow-hidden">
+                {/* Campo de legenda em cima da foto */}
+                <div className="flex items-center bg-gray-800 border border-gray-600 border-b-0 rounded-t-lg">
+                  <input
+                    type="text"
+                    value={legendaFoto}
+                    onChange={(e) => setLegendaFoto(e.target.value)}
+                    placeholder="Texto sobre a foto (pendência/obs pontual)..."
+                    className="flex-1 bg-transparent text-white text-xs px-3 py-2 placeholder-gray-500 focus:outline-none"
+                  />
+                  <button
+                    onClick={() => {
+                      if (isRecording) {
+                        stopVoice();
+                      } else {
+                        const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+                        if (!SR) return;
+                        if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
+                        const recognition = new SR();
+                        recognition.continuous = false;
+                        recognition.interimResults = false;
+                        recognition.lang = 'pt-BR';
+                        recognition.onstart = () => setIsRecording(true);
+                        recognition.onend = () => setIsRecording(false);
+                        recognition.onerror = () => setIsRecording(false);
+                        recognition.onresult = (event: any) => {
+                          const result = event.results[event.results.length - 1];
+                          if (result.isFinal) {
+                            const text = result[0].transcript.trim();
+                            setLegendaFoto(prev => prev ? prev + ' ' + text : text);
+                          }
+                        };
+                        recognitionRef.current = recognition;
+                        try { recognition.start(); } catch {}
+                      }
+                    }}
+                    className={`px-2 py-1.5 mr-1 rounded-full transition ${
+                      isRecording ? 'text-red-400 animate-pulse' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {isRecording ? <MicOff size={14} /> : <Mic size={14} />}
+                  </button>
+                </div>
 
-                {isRecording && (
-                  <div className="absolute bottom-2 left-2 flex items-center gap-2 bg-red-600 px-3 py-1.5 rounded-full animate-pulse z-20">
-                    <div className="w-2 h-2 bg-white rounded-full" />
-                    <span className="text-xs font-bold">Gravando...</span>
-                  </div>
-                )}
+                <div className="relative">
+                  {/* Legenda sobreposta na foto */}
+                  {legendaFoto.trim() && (
+                    <div className="absolute top-0 left-0 right-0 bg-black/70 text-white text-xs px-3 py-2 z-10 font-medium">
+                      {legendaFoto.trim()}
+                    </div>
+                  )}
+                  <img src={fotoBase64} alt="Foto capturada" className="w-full max-h-48 object-cover" />
+                  <button
+                    onClick={() => { setFotoBase64(null); setDescricao(''); setObservacao(''); setLegendaFoto(''); }}
+                    className="absolute top-2 right-2 p-2 bg-black/60 rounded-full hover:bg-black/80 transition z-20"
+                  >
+                    <Camera size={16} />
+                  </button>
+
+                  {isRecording && (
+                    <div className="absolute bottom-2 left-2 flex items-center gap-2 bg-red-600 px-3 py-1.5 rounded-full animate-pulse z-20">
+                      <div className="w-2 h-2 bg-white rounded-full" />
+                      <span className="text-xs font-bold">Gravando...</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Campos de Pendência (só aparece no modo Pendência) */}
@@ -1370,7 +1421,7 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
               {/* Botões de ação */}
               <div className="flex gap-3 pt-2">
                 <Button
-                  onClick={() => { setFotoBase64(null); setDescricao(''); setObservacao(''); }}
+                  onClick={() => { setFotoBase64(null); setDescricao(''); setObservacao(''); setLegendaFoto(''); }}
                   variant="outline"
                   className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border-gray-600 h-12"
                 >
