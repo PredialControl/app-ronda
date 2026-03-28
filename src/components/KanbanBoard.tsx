@@ -40,7 +40,9 @@ import {
   Filter,
   Edit,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink,
+  FileText
 } from 'lucide-react';
 
 // Definição das categorias e suas cores
@@ -118,6 +120,7 @@ interface KanbanItem {
   dataCorrecao?: string;
   dataAndamento?: string;
   historicoCorrecao?: string;
+  documentoUrl?: string; // Link do Google Drive para documentos (categoria DOCUMENTACAO)
   // Checklist para cards de VISTORIA
   checklistVistoria?: {
     vistoriaRealizada: boolean;
@@ -5065,6 +5068,53 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                     maxFotos={40}
                   />
                 </div>
+
+                {/* Seção de Link do Documento (DOCUMENTAÇÃO) */}
+                {selectedCard.category === 'DOCUMENTACAO' && (
+                  <div className="bg-black border-2 border-green-600 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-green-400 mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Link do Documento (Google Drive)
+                    </h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-white font-bold mb-2 text-sm">
+                          Cole aqui o link do Google Drive para este documento:
+                        </label>
+                        <input
+                          type="url"
+                          value={selectedCard.documentoUrl || ''}
+                          onChange={(e) => {
+                            const updated = {
+                              ...selectedCard,
+                              documentoUrl: e.target.value
+                            };
+                            setItems(prev => prev.map(item =>
+                              item.id === selectedCard.id ? updated : item
+                            ));
+                            setSelectedCard(updated);
+                          }}
+                          placeholder="https://drive.google.com/file/d/..."
+                          className="w-full px-3 py-2 border-2 border-green-500 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-white bg-gray-900 font-medium text-sm"
+                        />
+                      </div>
+                      {selectedCard.documentoUrl && (
+                        <Button
+                          onClick={() => window.open(selectedCard.documentoUrl, '_blank')}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold flex items-center justify-center gap-2"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          Abrir Documento no Drive
+                        </Button>
+                      )}
+                      {!selectedCard.documentoUrl && (
+                        <p className="text-gray-500 text-xs text-center">
+                          Nenhum link cadastrado. Cole o link do Google Drive acima para acessar o documento diretamente.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Seção de Constatações e Pendências */}
                 <div className="bg-black border-2 border-orange-600 rounded-lg p-4">
