@@ -44,7 +44,16 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
     const loadItens = async () => {
         try {
             setLoading(true);
-            const relatoriosData = await relatorioPendenciasService.getAll(contratoSelecionado.id);
+            // Primeiro busca a lista de relatórios (dados básicos)
+            const relatoriosBasicos = await relatorioPendenciasService.getAll(contratoSelecionado.id);
+
+            // Depois busca os dados completos de cada relatório (com seções e pendências)
+            const relatoriosCompletos = await Promise.all(
+                relatoriosBasicos.map(rel => relatorioPendenciasService.getById(rel.id))
+            );
+
+            // Filtrar nulls
+            const relatoriosData = relatoriosCompletos.filter(r => r !== null) as any[];
             setRelatorios(relatoriosData);
 
             // Buscar dados salvos da evolução
