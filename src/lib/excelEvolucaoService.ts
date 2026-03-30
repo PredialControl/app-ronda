@@ -21,6 +21,138 @@ interface EvolucaoData {
     acumulado: number;
 }
 
+// Função auxiliar para truncar nome da aba (máximo 31 caracteres no Excel)
+function truncarNomeAba(nome: string, index: number): string {
+    const nomeBase = nome.replace(/[*?:/\\[\]]/g, '').trim(); // Remove caracteres inválidos
+    if (nomeBase.length <= 28) {
+        return nomeBase;
+    }
+    return `${nomeBase.substring(0, 25)}...(${index + 1})`;
+}
+
+// Função auxiliar para criar aba de um relatório
+function criarAbaRelatorio(
+    workbook: ExcelJS.Workbook,
+    nomeAba: string,
+    tituloRelatorio: string,
+    itensRelatorio: ItemCompilado[],
+    tableIndex: number
+) {
+    const sheet = workbook.addWorksheet(nomeAba);
+
+    // Título
+    sheet.mergeCells('A1:G1');
+    const titleCell = sheet.getCell('A1');
+    titleCell.value = tituloRelatorio;
+    titleCell.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    titleCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF1F2937' }
+    };
+    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    sheet.getRow(1).height = 25;
+
+    // Resumo do relatório
+    const itensApontados = itensRelatorio.length;
+    const itensRecebidos = itensRelatorio.filter(i => i.situacao === 'RECEBIDO').length;
+    const naoFarao = itensRelatorio.filter(i => i.situacao === 'NAO_FARA').length;
+    const itensPendentes = itensRelatorio.filter(i => i.situacao === 'PENDENTE').length;
+
+    const percentualRecebidos = itensApontados > 0 ? Math.round((itensRecebidos / itensApontados) * 100) : 0;
+    const percentualPendentes = itensApontados > 0 ? Math.round((itensPendentes / itensApontados) * 100) : 0;
+    const percentualNaoFarao = itensApontados > 0 ? Math.round((naoFarao / itensApontados) * 100) : 0;
+
+    // Linha de resumo
+    sheet.getCell('A2').value = `Total: ${itensApontados} | `;
+    sheet.getCell('A2').font = { bold: true };
+
+    sheet.getCell('B2').value = `Recebidos: ${itensRecebidos} (${percentualRecebidos}%)`;
+    sheet.getCell('B2').font = { bold: true, color: { argb: 'FF22C55E' } };
+
+    sheet.getCell('D2').value = `Pendentes: ${itensPendentes} (${percentualPendentes}%)`;
+    sheet.getCell('D2').font = { bold: true, color: { argb: 'FFF97316' } };
+
+    sheet.getCell('F2').value = `Não Farão: ${naoFarao} (${percentualNaoFarao}%)`;
+    sheet.getCell('F2').font = { bold: true, color: { argb: 'FFEF4444' } };
+
+    // Tabela de itens
+    if (itensRelatorio.length > 0) {
+        sheet.addTable({
+            name: `TabelaRelatorio${tableIndex}`,
+            ref: 'A4',
+            headerRow: true,
+            style: {
+                theme: 'TableStyleMedium9',
+                showRowStripes: true,
+            },
+            columns: [
+                { name: 'Item', filterButton: true },
+                { name: 'Seção', filterButton: true },
+                { name: 'Local', filterButton: true },
+                { name: 'Descrição', filterButton: true },
+                { name: 'Situação', filterButton: true },
+                { name: 'Data Recebido', filterButton: true },
+                { name: 'Construtora', filterButton: true }
+            ],
+            rows: itensRelatorio.map((item, idx) => [
+                idx + 1, // Número sequencial dentro do relatório
+                item.secao_titulo,
+                item.local,
+                item.descricao,
+                item.situacao === 'RECEBIDO' ? 'RECEBIDO' : item.situacao === 'NAO_FARA' ? 'NÃO FARÁ' : 'PENDENTE',
+                item.data_recebido ? new Date(item.data_recebido + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
+                item.construtora || '-'
+            ])
+        });
+
+        // Ajustar larguras
+        sheet.getColumn('A').width = 8;
+        sheet.getColumn('B').width = 25;
+        sheet.getColumn('C').width = 25;
+        sheet.getColumn('D').width = 40;
+        sheet.getColumn('E').width = 15;
+        sheet.getColumn('F').width = 15;
+        sheet.getColumn('G').width = 20;
+
+        // Aplicar cores nas situações
+        for (let i = 5; i < 5 + itensRelatorio.length; i++) {
+            const row = sheet.getRow(i);
+            const situacaoCell = row.getCell(5);
+            situacaoCell.alignment = { horizontal: 'center' };
+            situacaoCell.font = { bold: true };
+
+            const situacao = itensRelatorio[i - 5].situacao;
+            if (situacao === 'RECEBIDO') {
+                situacaoCell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FF22C55E' }
+                };
+                situacaoCell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            } else if (situacao === 'NAO_FARA') {
+                situacaoCell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFEF4444' }
+                };
+                situacaoCell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            } else {
+                situacaoCell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFF97316' }
+                };
+                situacaoCell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            }
+
+            // Centralizar item número e data
+            row.getCell(1).alignment = { horizontal: 'center' };
+            row.getCell(6).alignment = { horizontal: 'center' };
+        }
+    }
+}
+
 export async function exportarEvolucaoParaExcel(
     itens: ItemCompilado[],
     evolucaoData: EvolucaoData[],
@@ -32,8 +164,8 @@ export async function exportarEvolucaoParaExcel(
     workbook.creator = 'App Ronda';
     workbook.created = new Date();
 
-    // ==================== ABA 1: RESUMO ====================
-    const resumoSheet = workbook.addWorksheet('Resumo', {
+    // ==================== ABA 1: RESUMO GERAL ====================
+    const resumoSheet = workbook.addWorksheet('Resumo Geral', {
         views: [{ showGridLines: true }]
     });
 
@@ -60,7 +192,7 @@ export async function exportarEvolucaoParaExcel(
     // Espaço
     resumoSheet.getRow(3).height = 10;
 
-    // Estatísticas
+    // Estatísticas GERAIS
     const itensApontados = itens.length;
     const itensRecebidos = itens.filter(i => i.situacao === 'RECEBIDO').length;
     const naoFarao = itens.filter(i => i.situacao === 'NAO_FARA').length;
@@ -70,17 +202,9 @@ export async function exportarEvolucaoParaExcel(
     const percentualPendentes = itensApontados > 0 ? Math.round((itensPendentes / itensApontados) * 100) : 0;
     const percentualNaoFarao = itensApontados > 0 ? Math.round((naoFarao / itensApontados) * 100) : 0;
 
-    // Tabela de resumo
-    const resumoData = [
-        ['Métrica', 'Quantidade', 'Percentual'],
-        ['Itens Apontados', itensApontados, '100%'],
-        ['Itens Recebidos', itensRecebidos, `${percentualRecebidos}%`],
-        ['Não Farão', naoFarao, `${percentualNaoFarao}%`],
-        ['Itens Pendentes', itensPendentes, `${percentualPendentes}%`]
-    ];
-
+    // Tabela de resumo geral
     resumoSheet.addTable({
-        name: 'TabelaResumo',
+        name: 'TabelaResumoGeral',
         ref: 'A4',
         headerRow: true,
         style: {
@@ -92,7 +216,12 @@ export async function exportarEvolucaoParaExcel(
             { name: 'Quantidade', filterButton: false },
             { name: 'Percentual', filterButton: false }
         ],
-        rows: resumoData.slice(1).map(row => row)
+        rows: [
+            ['Itens Apontados', itensApontados, '100%'],
+            ['Itens Recebidos', itensRecebidos, `${percentualRecebidos}%`],
+            ['Não Farão', naoFarao, `${percentualNaoFarao}%`],
+            ['Itens Pendentes', itensPendentes, `${percentualPendentes}%`]
+        ]
     });
 
     // Ajustar larguras
@@ -118,41 +247,93 @@ export async function exportarEvolucaoParaExcel(
         }
     }
 
-    // ==================== VISUALIZAÇÃO ADICIONAL ====================
+    // Visualização visual
     if (itensApontados > 0) {
-        // Adicionar visualização textual da distribuição
         resumoSheet.getCell('E4').value = 'Distribuição Visual';
         resumoSheet.getCell('E4').font = { size: 12, bold: true };
 
-        const criarBarraVisual = (percentual: number, cor: string) => {
+        const criarBarraVisual = (percentual: number) => {
             const blocos = Math.round(percentual / 5);
             return '█'.repeat(blocos);
         };
 
-        // Recebidos
         resumoSheet.getCell('E6').value = `Recebidos (${percentualRecebidos}%)`;
-        resumoSheet.getCell('F6').value = criarBarraVisual(percentualRecebidos, 'verde');
+        resumoSheet.getCell('F6').value = criarBarraVisual(percentualRecebidos);
         resumoSheet.getCell('F6').font = { color: { argb: 'FF22C55E' }, size: 14 };
 
-        // Pendentes
         resumoSheet.getCell('E7').value = `Pendentes (${percentualPendentes}%)`;
-        resumoSheet.getCell('F7').value = criarBarraVisual(percentualPendentes, 'laranja');
+        resumoSheet.getCell('F7').value = criarBarraVisual(percentualPendentes);
         resumoSheet.getCell('F7').font = { color: { argb: 'FFF97316' }, size: 14 };
 
-        // Não Farão
         resumoSheet.getCell('E8').value = `Não Farão (${percentualNaoFarao}%)`;
-        resumoSheet.getCell('F8').value = criarBarraVisual(percentualNaoFarao, 'vermelho');
+        resumoSheet.getCell('F8').value = criarBarraVisual(percentualNaoFarao);
         resumoSheet.getCell('F8').font = { color: { argb: 'FFEF4444' }, size: 14 };
 
         resumoSheet.getColumn('E').width = 25;
         resumoSheet.getColumn('F').width = 30;
     }
 
+    // ==================== RESUMO POR RELATÓRIO ====================
+    // Agrupar itens por relatório
+    const relatoriosMap = new Map<string, { titulo: string; itens: ItemCompilado[] }>();
+    itens.forEach(item => {
+        if (!relatoriosMap.has(item.relatorio_id)) {
+            relatoriosMap.set(item.relatorio_id, {
+                titulo: item.relatorio_titulo,
+                itens: []
+            });
+        }
+        relatoriosMap.get(item.relatorio_id)!.itens.push(item);
+    });
+
+    // Tabela de resumo por relatório
+    if (relatoriosMap.size > 0) {
+        resumoSheet.getCell('A11').value = 'Resumo por Relatório';
+        resumoSheet.getCell('A11').font = { size: 14, bold: true };
+        resumoSheet.mergeCells('A11:F11');
+
+        const relatoriosArray = Array.from(relatoriosMap.entries());
+
+        resumoSheet.addTable({
+            name: 'TabelaResumoPorRelatorio',
+            ref: 'A13',
+            headerRow: true,
+            style: {
+                theme: 'TableStyleLight9',
+                showRowStripes: true,
+            },
+            columns: [
+                { name: 'Relatório', filterButton: true },
+                { name: 'Total', filterButton: true },
+                { name: 'Recebidos', filterButton: true },
+                { name: 'Pendentes', filterButton: true },
+                { name: 'Não Farão', filterButton: true },
+                { name: '% Concluído', filterButton: true }
+            ],
+            rows: relatoriosArray.map(([_, rel]) => {
+                const total = rel.itens.length;
+                const recebidos = rel.itens.filter(i => i.situacao === 'RECEBIDO').length;
+                const pendentes = rel.itens.filter(i => i.situacao === 'PENDENTE').length;
+                const naoFara = rel.itens.filter(i => i.situacao === 'NAO_FARA').length;
+                const pctConcluido = total > 0 ? Math.round((recebidos / total) * 100) : 0;
+                return [rel.titulo, total, recebidos, pendentes, naoFara, `${pctConcluido}%`];
+            })
+        });
+
+        // Estilizar colunas
+        for (let i = 14; i < 14 + relatoriosArray.length; i++) {
+            const row = resumoSheet.getRow(i);
+            row.getCell(3).font = { bold: true, color: { argb: 'FF22C55E' } }; // Recebidos
+            row.getCell(4).font = { bold: true, color: { argb: 'FFF97316' } }; // Pendentes
+            row.getCell(5).font = { bold: true, color: { argb: 'FFEF4444' } }; // Não Farão
+            row.getCell(6).font = { bold: true, color: { argb: 'FF2563EB' } }; // % Concluído
+        }
+    }
+
     // ==================== ABA 2: EVOLUÇÃO POR DATA ====================
     if (evolucaoData.length > 0) {
         const evolucaoSheet = workbook.addWorksheet('Evolução por Data');
 
-        // Título
         evolucaoSheet.mergeCells('A1:D1');
         const evTitleCell = evolucaoSheet.getCell('A1');
         evTitleCell.value = 'Recebimentos por Data';
@@ -165,7 +346,6 @@ export async function exportarEvolucaoParaExcel(
         evTitleCell.alignment = { vertical: 'middle', horizontal: 'center' };
         evolucaoSheet.getRow(1).height = 25;
 
-        // Tabela de evolução
         evolucaoSheet.addTable({
             name: 'TabelaEvolucao',
             ref: 'A3',
@@ -184,20 +364,17 @@ export async function exportarEvolucaoParaExcel(
                 new Date(item.data + 'T00:00:00').toLocaleDateString('pt-BR'),
                 item.quantidade,
                 item.acumulado,
-                '' // Progresso será preenchido depois
+                ''
             ])
         });
 
-        // Ajustar larguras
         evolucaoSheet.getColumn('A').width = 15;
         evolucaoSheet.getColumn('B').width = 20;
         evolucaoSheet.getColumn('C').width = 20;
         evolucaoSheet.getColumn('D').width = 35;
 
-        // ==================== VISUALIZAÇÃO DE TENDÊNCIA ====================
         const maxAcumulado = evolucaoData[evolucaoData.length - 1].acumulado;
 
-        // Centralizar valores e adicionar progresso
         for (let i = 4; i < 4 + evolucaoData.length; i++) {
             const dataIndex = i - 4;
             const row = evolucaoSheet.getRow(i);
@@ -207,107 +384,21 @@ export async function exportarEvolucaoParaExcel(
             row.getCell(2).font = { bold: true, color: { argb: 'FF22C55E' } };
             row.getCell(3).font = { bold: true, color: { argb: 'FF2563EB' } };
 
-            // Adicionar barra de progresso
             const percentual = Math.round((evolucaoData[dataIndex].acumulado / maxAcumulado) * 100);
             const blocos = Math.round(percentual / 5);
 
             row.getCell(4).value = '█'.repeat(blocos) + ` ${percentual}%`;
-            row.getCell(4).font = {
-                color: { argb: 'FF22C55E' },
-                size: 10
-            };
+            row.getCell(4).font = { color: { argb: 'FF22C55E' }, size: 10 };
         }
     }
 
-    // ==================== ABA 3: DETALHAMENTO ====================
-    const detalhamentoSheet = workbook.addWorksheet('Detalhamento');
-
-    // Título
-    detalhamentoSheet.mergeCells('A1:G1');
-    const detTitleCell = detalhamentoSheet.getCell('A1');
-    detTitleCell.value = 'Detalhamento de Todas as Pendências';
-    detTitleCell.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
-    detTitleCell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF1F2937' }
-    };
-    detTitleCell.alignment = { vertical: 'middle', horizontal: 'center' };
-    detalhamentoSheet.getRow(1).height = 25;
-
-    // Tabela de detalhamento
-    detalhamentoSheet.addTable({
-        name: 'TabelaDetalhamento',
-        ref: 'A3',
-        headerRow: true,
-        style: {
-            theme: 'TableStyleMedium9',
-            showRowStripes: true,
-        },
-        columns: [
-            { name: 'Item', filterButton: true },
-            { name: 'Local', filterButton: true },
-            { name: 'Descrição', filterButton: true },
-            { name: 'Situação', filterButton: true },
-            { name: 'Data Recebido', filterButton: true },
-            { name: 'Construtora', filterButton: true },
-            { name: 'Síndico', filterButton: true }
-        ],
-        rows: itens.map(item => [
-            item.item_numero,
-            item.local,
-            item.descricao,
-            item.situacao === 'RECEBIDO' ? 'RECEBIDO' : item.situacao === 'NAO_FARA' ? 'NÃO FARÁ' : 'PENDENTE',
-            item.data_recebido ? new Date(item.data_recebido + 'T00:00:00').toLocaleDateString('pt-BR') : '-',
-            item.construtora || '-',
-            item.sindico || '-'
-        ])
+    // ==================== ABAS POR RELATÓRIO (uma aba para cada) ====================
+    let tableIndex = 1;
+    relatoriosMap.forEach((relatorio, relatorioId) => {
+        const nomeAba = truncarNomeAba(relatorio.titulo, tableIndex);
+        criarAbaRelatorio(workbook, nomeAba, relatorio.titulo, relatorio.itens, tableIndex);
+        tableIndex++;
     });
-
-    // Ajustar larguras
-    detalhamentoSheet.getColumn('A').width = 8;
-    detalhamentoSheet.getColumn('B').width = 25;
-    detalhamentoSheet.getColumn('C').width = 40;
-    detalhamentoSheet.getColumn('D').width = 15;
-    detalhamentoSheet.getColumn('E').width = 15;
-    detalhamentoSheet.getColumn('F').width = 20;
-    detalhamentoSheet.getColumn('G').width = 20;
-
-    // Aplicar cores nas situações
-    for (let i = 4; i < 4 + itens.length; i++) {
-        const row = detalhamentoSheet.getRow(i);
-        const situacaoCell = row.getCell(4);
-        situacaoCell.alignment = { horizontal: 'center' };
-        situacaoCell.font = { bold: true };
-
-        const situacao = itens[i - 4].situacao;
-        if (situacao === 'RECEBIDO') {
-            situacaoCell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FF22C55E' }
-            };
-            situacaoCell.font = { ...situacaoCell.font, color: { argb: 'FFFFFFFF' } };
-        } else if (situacao === 'NAO_FARA') {
-            situacaoCell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFEF4444' }
-            };
-            situacaoCell.font = { ...situacaoCell.font, color: { argb: 'FFFFFFFF' } };
-        } else {
-            situacaoCell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFF97316' }
-            };
-            situacaoCell.font = { ...situacaoCell.font, color: { argb: 'FFFFFFFF' } };
-        }
-
-        // Centralizar item número e data
-        row.getCell(1).alignment = { horizontal: 'center' };
-        row.getCell(5).alignment = { horizontal: 'center' };
-    }
 
     // ==================== GERAR E BAIXAR ARQUIVO ====================
     const buffer = await workbook.xlsx.writeBuffer();
