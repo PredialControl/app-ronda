@@ -250,6 +250,18 @@ interface KanbanItem {
     dataAlarmeSonoro?: string;
     observacoes?: string;
   };
+  // Checklist para CONFERENCIA - MEMORIAL DESCRITIVO
+  checklistConferenciaMemorial?: {
+    // Memorial Descritivo
+    mdAreasEquipamentos?: 'sim' | 'nao';
+    mdAcabamentos?: 'sim' | 'nao';
+    mdMobiliario?: 'sim' | 'nao';
+    // Memorial de Vendas
+    mvAreasEquipamentos?: 'sim' | 'nao';
+    mvAcabamentos?: 'sim' | 'nao';
+    mvMobiliario?: 'sim' | 'nao';
+    observacoes?: string;
+  };
   // Checklist para CONFERENCIA - ITENS DE BOMBEIRO
   checklistConferenciaIncendio?: {
     temExtintor?: 'sim' | 'nao' | 'x';
@@ -2361,6 +2373,92 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                             </div>
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Checklist para CONFERENCIA - MEMORIAL DESCRITIVO */}
+                {selectedCard.id === '65' && (() => {
+                  type SN = 'sim' | 'nao' | undefined;
+                  const cm = selectedCard.checklistConferenciaMemorial || {};
+
+                  const updateCM = (field: string, val: SN | string) => {
+                    const updated = {
+                      ...selectedCard,
+                      checklistConferenciaMemorial: { ...cm, [field]: val }
+                    };
+                    setItems(prev => prev.map(item => item.id === selectedCard.id ? updated : item));
+                    setSelectedCard(updated);
+                  };
+
+                  const SnBtns = ({ field, value }: { field: string; value: SN }) => (
+                    <div className="flex gap-1">
+                      {(['sim', 'nao'] as const).map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => updateCM(field, value === opt ? undefined : opt)}
+                          className={`px-4 py-1 rounded text-xs font-bold border-2 transition-colors ${
+                            value === opt
+                              ? opt === 'sim' ? 'bg-green-600 border-green-500 text-white'
+                                             : 'bg-red-600 border-red-500 text-white'
+                              : 'bg-gray-900 border-gray-600 text-gray-400 hover:border-gray-400'
+                          }`}
+                        >
+                          {opt === 'sim' ? 'Sim' : 'Não'}
+                        </button>
+                      ))}
+                    </div>
+                  );
+
+                  const secoes = [
+                    {
+                      titulo: 'Conferência Memorial Descritivo',
+                      itens: [
+                        { label: 'Áreas e Equipamentos', field: 'mdAreasEquipamentos' },
+                        { label: 'Acabamentos (piso, pintura, pedra, metais, etc)', field: 'mdAcabamentos' },
+                        { label: 'Mobiliário', field: 'mdMobiliario' },
+                      ]
+                    },
+                    {
+                      titulo: 'Conferência Memorial de Vendas',
+                      itens: [
+                        { label: 'Áreas e Equipamentos', field: 'mvAreasEquipamentos' },
+                        { label: 'Acabamentos (piso, pintura, pedra, metais, etc)', field: 'mvAcabamentos' },
+                        { label: 'Mobiliário', field: 'mvMobiliario' },
+                      ]
+                    }
+                  ];
+
+                  return (
+                    <div className="bg-black border-2 border-purple-500 rounded-lg p-4">
+                      <h3 className="text-sm font-bold text-purple-400 mb-3 flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4" />
+                        Conferência Memorial Descritivo
+                      </h3>
+                      <div className="space-y-4">
+                        {secoes.map(({ titulo, itens }) => (
+                          <div key={titulo} className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                            <div className="text-purple-300 font-bold text-xs mb-3 uppercase">{titulo}</div>
+                            <div className="space-y-3">
+                              {itens.map(({ label, field }) => (
+                                <div key={field} className="flex items-center justify-between gap-3">
+                                  <span className="text-white text-xs flex-1">{label}</span>
+                                  <SnBtns field={field} value={(cm as Record<string, SN>)[field]} />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        <div className="mt-1">
+                          <label className="block text-white font-bold text-xs mb-2">📝 Observações</label>
+                          <textarea
+                            value={cm.observacoes || ''}
+                            onChange={(e) => updateCM('observacoes', e.target.value)}
+                            placeholder="Digite observações sobre o memorial..."
+                            className="w-full px-3 py-2 border-2 border-purple-500 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 h-20 resize-none text-white bg-gray-900 text-xs"
+                          />
+                        </div>
                       </div>
                     </div>
                   );
