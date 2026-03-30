@@ -1281,13 +1281,13 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Kanban - Implantação de Manutenção Predial</h1>
-          <p className="text-gray-600 mt-1">Acompanhe o progresso da implantação dos sistemas prediais</p>
+          <h1 className="text-xl font-bold text-white">Kanban — Implantação</h1>
+          <p className="text-gray-500 mt-0.5 text-sm">Acompanhe o progresso da implantação dos sistemas prediais</p>
         </div>
 
         <div className="flex items-center gap-3">
           {/* Filtro de Categoria */}
-          <div className="flex items-center gap-2 bg-white p-1 rounded-md border border-gray-200 shadow-sm">
+          <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10">
             <Filter className="w-4 h-4 text-gray-500 ml-2" />
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="w-[200px] border-0 focus:ring-0 h-8">
@@ -1318,19 +1318,19 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
       </div>
 
       {/* Summary */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h3 className="font-semibold text-gray-900 mb-3">Resumo do Progresso {selectedCategory !== 'TODOS' && `(${Object.values(CATEGORIES).find(c => c.id === selectedCategory)?.label})`}</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+        <h3 className="font-semibold text-gray-400 text-xs uppercase tracking-wider mb-3">Resumo do Progresso {selectedCategory !== 'TODOS' && `— ${Object.values(CATEGORIES).find(c => c.id === selectedCategory)?.label}`}</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {getColumns().map((column) => {
             const Icon = column.icon;
             return (
-              <div key={column.id} className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <Icon className="w-4 h-4" />
-                  <span className="text-sm font-medium text-gray-700">{column.title}</span>
+              <div key={column.id} className="bg-white/[0.03] rounded-lg p-3 text-center border border-white/[0.05]">
+                <div className="flex items-center justify-center gap-1.5 mb-1.5">
+                  <Icon className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-xs font-medium text-gray-400">{column.title}</span>
                 </div>
                 <div className="text-2xl font-bold text-white">{column.items.length}</div>
-                <div className="text-xs text-gray-500">itens</div>
+                <div className="text-[10px] text-gray-600 mt-0.5">itens</div>
               </div>
             );
           })}
@@ -1344,18 +1344,18 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
           return (
             <div
               key={column.id}
-              className="flex flex-col border-2 border-dashed border-gray-200 rounded-lg"
-              style={{ height: 'calc(100vh - 350px)', minHeight: '700px' }}
+              className="flex flex-col border border-white/[0.07] rounded-xl overflow-hidden"
+              style={{ background: 'rgba(255,255,255,0.02)', height: 'calc(100vh - 350px)', minHeight: '700px' }}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
             >
               {/* Column Header */}
-              <div className={`flex items-center gap-2 p-3 rounded-t-lg ${column.color}`}>
-                <Icon className="w-5 h-5" />
-                <h3 className="font-semibold">{column.title}</h3>
-                <Badge variant="outline" className="ml-auto text-black">
+              <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-white/[0.06]" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <div className={`w-2 h-2 rounded-full ${column.color} opacity-90`} />
+                <h3 className="font-semibold text-sm text-gray-300 flex-1">{column.title}</h3>
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/[0.07] text-gray-400">
                   {column.items.length}
-                </Badge>
+                </span>
               </div>
 
               {/* Column Items - Scrollable Area */}
@@ -1364,7 +1364,8 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                   {column.items.map((item) => (
                     <Card
                       key={item.id}
-                      className={`cursor-move hover:shadow-md transition-shadow bg-white border-l-4 ${getCategoryColor(item.category)}`}
+                      className={`cursor-move transition-all border-l-4 ${getCategoryColor(item.category)}`}
+                      style={{ background: 'rgba(255,255,255,0.04)', borderTopColor: 'transparent', borderRightColor: 'rgba(255,255,255,0.07)', borderBottomColor: 'rgba(255,255,255,0.07)' }}
                       draggable
                       onDragStart={() => handleDragStart(item)}
                       onClick={() => handleShowCardDetails(item)}
@@ -1372,10 +1373,10 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                       <CardContent className="p-3">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 pr-2">
-                            <div className="mb-1">
+                            <div className="mb-1.5">
                               {getCategoryBadge(item.category)}
                             </div>
-                            <h4 className="font-medium text-gray-900 text-sm leading-tight">
+                            <h4 className="font-medium text-gray-200 text-sm leading-tight">
                               {item.title}
                             </h4>
                           </div>
@@ -1432,7 +1433,7 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
 
                   {/* Empty state */}
                   {column.items.length === 0 && (
-                    <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
+                    <div className="flex items-center justify-center h-32 text-gray-600 text-xs border border-dashed border-white/[0.06] rounded-lg mx-1">
                       Nenhum item nesta coluna
                     </div>
                   )}
@@ -1705,9 +1706,9 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
       {/* Modal de Detalhes do Card */}
       {
         showCardDetails && selectedCard && (
-          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-            <div className="bg-black rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col border-2 border-gray-700">
-              <div className={`p-4 ${getCategoryColor(selectedCard.category).replace('border-l-4', 'border-l-8')} border-l-solid bg-gray-900 flex justify-between items-start shrink-0`}>
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}>
+            <div className="rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" style={{ background: '#0f0f1a', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div className={`p-4 ${getCategoryColor(selectedCard.category).replace('border-l-4', 'border-l-4')} flex justify-between items-start shrink-0`} style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                 <div>
                   <div className="mb-2">
                     {getCategoryBadge(selectedCard.category)}
@@ -1725,7 +1726,7 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                 </Button>
               </div>
 
-              <div className="p-6 space-y-6 overflow-y-auto flex-1 bg-black">
+              <div className="p-6 space-y-6 overflow-y-auto flex-1" style={{ background: '#0a0a0f', scrollbarWidth: 'thin', scrollbarColor: '#1e293b transparent' }}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h3 className="text-sm font-medium text-gray-300 mb-1 font-semibold">Status Atual</h3>

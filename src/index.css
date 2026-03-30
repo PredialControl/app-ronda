@@ -113,25 +113,13 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Força textos claros para dark mode */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  color: #f9fafb !important;
-}
-
-p,
-span,
-div,
-label {
-  color: #d1d5db !important;
+/* Texto base — sem !important para não bloquear componentes */
+h1, h2, h3, h4, h5, h6 {
+  color: #e2e8f0;
 }
 
 .text-muted {
-  color: #9ca3af !important;
+  color: #64748b;
 }
 
 /* Estilos específicos para impressão */
@@ -522,34 +510,14 @@ label {
 
 }
 
-/* Correções de contraste no modo escuro */
-.dark .text-gray-900 {
-  color: #e5e7eb !important;
-}
-
-.dark .text-gray-800 {
-  color: #e5e7eb !important;
-}
-
-.dark .text-gray-700 {
-  color: #d1d5db !important;
-}
-
-.dark .text-gray-600 {
-  color: #cbd5e1 !important;
-}
-
-.dark .border-gray-200 {
-  border-color: rgba(255, 255, 255, 0.15) !important;
-}
-
-.dark .bg-white {
-  background-color: rgba(255, 255, 255, 0.04) !important;
-}
-
-.dark .bg-gray-50 {
-  background-color: rgba(255, 255, 255, 0.02) !important;
-}
+/* Correções dark mode */
+.dark .text-gray-900 { color: #e2e8f0; }
+.dark .text-gray-800 { color: #e2e8f0; }
+.dark .text-gray-700 { color: #cbd5e1; }
+.dark .text-gray-600 { color: #94a3b8; }
+.dark .border-gray-200 { border-color: rgba(255,255,255,0.1); }
+.dark .bg-white { background-color: rgba(255,255,255,0.04); }
+.dark .bg-gray-50 { background-color: rgba(255,255,255,0.02); }
 
 /* Radix Select - contraste no modo escuro (reforçado) */
 .dark .radix-select-trigger {
