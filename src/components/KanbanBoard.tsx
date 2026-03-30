@@ -272,6 +272,8 @@ interface KanbanItem {
     temChaveStorz?: 'sim' | 'nao' | 'x';
     temBico?: 'sim' | 'nao' | 'x';
   };
+  // Checklist genérico para COMISSIONAMENTO (Record<itemId, 'sim'|'nao'|'x'>)
+  checklistComissionamento?: Record<string, 'sim' | 'nao' | 'x'>;
   // Fotos do card (até 40 fotos em WebP ou AVIF)
   fotos?: string[]; // Array de URLs base64 ou URLs das imagens
   // Pendências vinculadas ao card (integração com Relatório de Pendências)
@@ -290,6 +292,276 @@ interface KanbanPendencia {
   status: 'PENDENTE' | 'RECEBIDO' | 'NAO_FARAO';
   created_at: string;
 }
+
+// ============================================================
+// CHECKLISTS DE COMISSIONAMENTO — mapeados por card ID
+// ============================================================
+const COMISSIONAMENTO_CHECKLISTS: Record<string, { grupo: string; itens: { id: string; label: string }[] }[]> = {
+
+  // GERADOR
+  '9': [
+    { grupo: 'Inspeção Visual', itens: [
+      { id: 'g1', label: 'Alinhamento do gerador e amortecedores de vibração instalados corretamente' },
+      { id: 'g2', label: 'Silencioso, tubulação de escape, suportes e isolamento térmico sem danos' },
+      { id: 'g3', label: 'Entrada de ar suficiente para não superaquecer' },
+      { id: 'g4', label: 'Venezianas de entrada e saída de ar livres de obstrução' },
+      { id: 'g5', label: 'Nível do líquido de arrefecimento (água + aditivo) no radiador OK' },
+      { id: 'g6', label: 'Nível do óleo do cárter verificado pela vareta de medição' },
+      { id: 'g7', label: 'Nível de óleo diesel no tanque a 100%' },
+    ]},
+    { grupo: 'Teste em Carga', itens: [
+      { id: 'g8', label: 'Partida no modo Manual — sem ruídos anormais, fumaça ou instabilidade' },
+      { id: 'g9', label: 'Sem vazamentos de óleo, água ou gases de escape com motor em vibração' },
+    ]},
+    { grupo: 'Simulação de Blackout', itens: [
+      { id: 'g10', label: 'Desligar disjuntor geral — simular falta de energia' },
+      { id: 'g11', label: 'Tempo de retardo para partida do motor e transferência do QTA cronometrado' },
+      { id: 'g12', label: 'Gerador assumiu carga real por 1h — temperatura, pressão, tensão, corrente e frequência OK' },
+      { id: 'g13', label: 'Re-transferência do QTA ao religar a energia' },
+      { id: 'g14', label: 'Gerador resfria 3 a 5 min sem carga antes de desligar automaticamente' },
+      { id: 'g15', label: 'Botoeira de emergência acionada — gerador desliga imediatamente' },
+    ]},
+  ],
+
+  // SISTEMA ELÉTRICO — Quadro Iluminação e Tomada
+  '10': [
+    { grupo: 'Quadro Elétrico — Iluminação e Tomada', itens: [
+      { id: 'qe1', label: 'Diagrama unifilar e bitola do cabo correspondem ao disjuntor instalado' },
+      { id: 'qe2', label: 'Diagrama unifilar afixado na porta do quadro' },
+      { id: 'qe3', label: 'Projetado igual ao executado (projeto vs. campo)' },
+      { id: 'qe4', label: 'Disjuntores de iluminação acionados — interruptores validados no ambiente' },
+      { id: 'qe5', label: 'Disjuntores das tomadas — tensão confirmada com multímetro ou testador' },
+      { id: 'qe6', label: 'Etiquetas claras em todos os disjuntores' },
+      { id: 'qe7', label: 'Barramentos de Neutro e Terra separados e isolados entre si' },
+      { id: 'qe8', label: 'DRs e DPS presentes e instalados corretamente' },
+      { id: 'qe9', label: 'Botão "T" do DR testado — atuação mecânica confirmada' },
+      { id: 'qe10', label: 'Padrão de cores dos cabos correto (Azul=Neutro, Verde=Terra)' },
+      { id: 'qe11', label: 'Corrente por fase medida com alicate amperímetro — fases equilibradas' },
+      { id: 'qe12', label: 'Termografia no quadro com carga — sem disjuntores ou cabos sobreaquecendo' },
+    ]},
+  ],
+
+  // SPDA
+  '11': [
+    { grupo: 'Inspeção da Malha', itens: [
+      { id: 'sp1', label: 'Tensionamento dos cabos, fixação dos suportes e integridade dos mastros' },
+      { id: 'sp2', label: 'Conectores mecânicos apertados e qualidade das soldas exotérmicas OK' },
+      { id: 'sp3', label: 'Sem oxidação nem contato inadequado entre metais diferentes (corrosão galvânica)' },
+      { id: 'sp4', label: 'Conexões nos pilares de concreto (esperas no topo e na base)' },
+      { id: 'sp5', label: 'Distanciamento e proteção mecânica das descidas externas (últimos 3m)' },
+    ]},
+    { grupo: 'Malha de Terra', itens: [
+      { id: 'sp6', label: 'Laudo com teste de continuidade e resistência da Malha de Terra' },
+      { id: 'sp7', label: 'Caixas de inspeção no solo — hastes OK, caixa limpa, conexão haste-cabo' },
+      { id: 'sp8', label: 'Todas as massas metálicas do prédio interligadas ao BEP com bitola adequada' },
+      { id: 'sp9', label: 'DPS dos quadros elétricos aterrados na mesma malha do SPDA' },
+    ]},
+  ],
+
+  // BOMBA INCÊNDIO — Hidrante + Sprinkler
+  '12': [
+    { grupo: 'Bomba de Incêndio — Hidrante', itens: [
+      { id: 'bh1', label: 'Diagrama unifilar e bitola do cabo correspondem ao disjuntor' },
+      { id: 'bh2', label: 'Diagrama unifilar na porta do quadro' },
+      { id: 'bh3', label: 'Projetado igual ao executado' },
+      { id: 'bh4', label: 'Botão de acionamento da portaria liga a bomba' },
+      { id: 'bh5', label: 'Bomba ligada diretamente pelo quadro' },
+      { id: 'bh6', label: 'Teste mangueira — água lançada no mínimo 5 metros de distância' },
+      { id: 'bh7', label: 'Botoeira testada em TODOS os andares' },
+      { id: 'bh8', label: 'Etiquetas claras em todos os disjuntores' },
+      { id: 'bh9', label: 'Neutro e Terra separados e isolados' },
+      { id: 'bh10', label: 'Padrão de cores dos cabos correto' },
+      { id: 'bh11', label: 'Corrente por fase equilibrada com alicate amperímetro' },
+      { id: 'bh12', label: 'Termografia no quadro com carga' },
+    ]},
+    { grupo: 'Bomba de Incêndio — Sprinkler', itens: [
+      { id: 'bs1', label: 'Diagrama unifilar e bitola do cabo correspondem ao disjuntor' },
+      { id: 'bs2', label: 'Diagrama unifilar na porta do quadro' },
+      { id: 'bs3', label: 'Projetado igual ao executado' },
+      { id: 'bs4', label: 'Bomba jockey em automático — abrir dreno, pressão cai e jockey entra' },
+      { id: 'bs5', label: 'Abrir mais o dreno — bomba principal entra' },
+      { id: 'bs6', label: 'Fechar dreno, desligar principal — jockey pressuriza e desliga automaticamente' },
+      { id: 'bs7', label: 'Etiquetas claras em todos os disjuntores' },
+      { id: 'bs8', label: 'Neutro e Terra separados e isolados' },
+      { id: 'bs9', label: 'Padrão de cores dos cabos correto' },
+      { id: 'bs10', label: 'Corrente por fase equilibrada com alicate amperímetro' },
+      { id: 'bs11', label: 'Termografia no quadro com carga' },
+    ]},
+  ],
+
+  // BOMBAS DE RECALQUE
+  '13': [
+    { grupo: 'Quadro Elétrico — Bomba de Recalque', itens: [
+      { id: 're1', label: 'Diagrama unifilar e bitola do cabo correspondem ao disjuntor' },
+      { id: 're2', label: 'Diagrama unifilar na porta do quadro' },
+      { id: 're3', label: 'Projetado igual ao executado' },
+      { id: 're4', label: 'Bombas fazem revezamento automático' },
+      { id: 're5', label: 'Bóias testadas — acionamento correto no quadro e sinais no quadro sinótico da portaria' },
+      { id: 're6', label: 'Etiquetas claras em todos os disjuntores' },
+      { id: 're7', label: 'Neutro e Terra separados e isolados' },
+      { id: 're8', label: 'DPS instalado corretamente' },
+      { id: 're9', label: 'Padrão de cores dos cabos correto' },
+      { id: 're10', label: 'Corrente por fase equilibrada com alicate amperímetro' },
+      { id: 're11', label: 'Termografia no quadro com carga' },
+    ]},
+  ],
+
+  // BOMBAS DE PRESSURIZAÇÃO
+  '14': [
+    { grupo: 'Quadro Elétrico — Bomba de Pressurização', itens: [
+      { id: 'pr1', label: 'Diagrama unifilar e bitola do cabo correspondem ao disjuntor' },
+      { id: 'pr2', label: 'Diagrama unifilar na porta do quadro' },
+      { id: 'pr3', label: 'Projetado igual ao executado' },
+      { id: 'pr4', label: 'Bombas fazem revezamento automático' },
+      { id: 'pr5', label: 'Abrir ponto de consumo — bomba atua; fechar registro até pressão de projeto; bomba desliga automaticamente' },
+      { id: 'pr6', label: 'Etiquetas claras em todos os disjuntores' },
+      { id: 'pr7', label: 'Neutro e Terra separados e isolados' },
+      { id: 'pr8', label: 'DPS instalado corretamente' },
+      { id: 'pr9', label: 'Padrão de cores dos cabos correto' },
+      { id: 'pr10', label: 'Corrente por fase equilibrada com alicate amperímetro' },
+      { id: 'pr11', label: 'Termografia no quadro com carga' },
+    ]},
+  ],
+
+  // POÇOS E PRUMADAS
+  '16': [
+    { grupo: 'Poços e Prumadas (Pluvial, Esgoto e Águas Servidas)', itens: [
+      { id: 'poc1', label: 'Diâmetros, interligações e declividade (caimento) conforme projeto' },
+      { id: 'poc2', label: 'Caimento mínimo (1% a 2%) confirmado com nível' },
+      { id: 'poc3', label: 'Bater nas tubulações — verificar se estão limpas/desentupidas' },
+      { id: 'poc4', label: 'Boroscópio nas tubulações acessíveis — confirmar limpeza' },
+      { id: 'poc5', label: 'Espaçamento das abraçadeiras nas prumadas correto' },
+      { id: 'poc6', label: 'Tampa dos poços — fundo limpo com formato "meia cana"' },
+      { id: 'poc7', label: 'Pedestal de escorregamento e corrente de içamento em aço inox fixados' },
+      { id: 'poc8', label: 'Válvula de retenção na tubulação de recalque logo após saída do poço' },
+    ]},
+  ],
+
+  // SISTEMA HIDRÁULICO — Prumada Água Potável
+  '17': [
+    { grupo: 'Prumada Água Potável — VRP e Pressão', itens: [
+      { id: 'hid1', label: 'Zonas de pressão verificadas — pressão máxima 40 m.c.a. (NBR 5626)' },
+      { id: 'hid2', label: 'Pressão de entrada e saída de cada VRP conforme projeto' },
+      { id: 'hid3', label: 'Prumada pintada/identificada em verde e abraçadeiras firmes' },
+      { id: 'hid4', label: 'Cavalete com registros, filtro Y, manômetros e bypass instalados corretamente' },
+      { id: 'hid5', label: 'Válvula de alívio a jusante da VRP direcionada para ralo ou dreno seguro' },
+      { id: 'hid6', label: 'Ventosas instaladas nos pontos mais altos das prumadas' },
+      { id: 'hid7', label: 'Sem vazamentos no sistema' },
+    ]},
+  ],
+
+  // SISTEMA DE ÁGUA QUENTE
+  '18': [
+    { grupo: 'Sistema de Água Quente', itens: [
+      { id: 'aq1', label: 'Setpoints levantados (boiler, gás, recirculação, pressão do gás)' },
+      { id: 'aq2', label: 'Isolamento da tubulação, boiler e trocador de calor OK' },
+      { id: 'aq3', label: 'Placas solares — fixação, inclinação, orientação norte, vidros e sombreamento' },
+      { id: 'aq4', label: 'Chaminés de exaustão com caimento correto e grelhas de ventilação permanente' },
+      { id: 'aq5', label: 'Vasos de expansão pré-calibrados e válvulas de alívio PT no boiler' },
+      { id: 'aq6', label: 'Ligar bomba — fluxostato libera ignição; simular falha da bomba desliga queimadores' },
+      { id: 'aq7', label: 'Bombas de recirculação dos andares funcionando' },
+      { id: 'aq8', label: 'Sem vazamentos no sistema' },
+    ]},
+  ],
+
+  // SDAI
+  '19': [
+    { grupo: 'Central e Dispositivos', itens: [
+      { id: 'sd1', label: 'Lista de dispositivos (nome e localização) confrontada com a central' },
+      { id: 'sd2', label: 'Tipo de laço confirmado: Classe A (anel) ou Classe B (radial)' },
+      { id: 'sd3', label: 'Fixação, limpeza, aterramento e baterias de reserva da central OK' },
+      { id: 'sd4', label: 'Capas de proteção plástico removidas de todos os detectores' },
+      { id: 'sd5', label: 'Acionadores manuais na altura correta (1,10m–1,20m) e sem obstáculos' },
+      { id: 'sd6', label: 'Sirenes fixadas corretamente e direcionadas para melhor propagação' },
+    ]},
+    { grupo: 'Testes Funcionais', itens: [
+      { id: 'sd7', label: 'Desligar rede — central opera nas baterias e emite "Falha de Rede"' },
+      { id: 'sd8', label: 'Desligar borne da bateria — central emite "Falha de Bateria"' },
+      { id: 'sd9', label: 'Todos os detectores de fumaça testados com spray de ensaio aprovado' },
+      { id: 'sd10', label: 'Detectores de temperatura (garagens) testados com soprador térmico' },
+      { id: 'sd11', label: 'Todos os acionadores manuais testados e retornados à posição original' },
+      { id: 'sd12', label: 'Válvulas de fluxo do sistema de SPK testadas' },
+      { id: 'sd13', label: 'Nível sonoro das sirenes medido — mín. 65 dB e +10–15 dB acima do ruído de fundo' },
+      { id: 'sd14', label: 'Endereçamento validado na central durante os testes (texto correto no display)' },
+    ]},
+  ],
+
+  // PRESSURIZAÇÃO DE ESCADA
+  '20': [
+    { grupo: 'Pressurização de Escada', itens: [
+      { id: 'pe1', label: 'Captação de ar em local limpo (longe de chaminés, exaustões de gerador)' },
+      { id: 'pe2', label: 'Grelhas internas desobstruídas e damper de alívio livre para abrir' },
+      { id: 'pe3', label: 'Simular incêndio — pressurização entra em funcionamento automaticamente' },
+      { id: 'pe4', label: 'Detector inverso (casa de máquina) — pressurização desliga com fumaça' },
+      { id: 'pe5', label: 'Botão de acionamento manual na portaria aciona o sistema' },
+      { id: 'pe6', label: 'Pressão medida em andares amostrais (térreo, meio, topo) — entre 50 e 60 Pa' },
+      { id: 'pe7', label: 'Simular falha de um ventilador (se múltiplos) — reserva assume automaticamente' },
+    ]},
+  ],
+
+  // EXAUSTÃO GARAGEM
+  '21': [
+    { grupo: 'Exaustão da Garagem', itens: [
+      { id: 'ex1', label: 'Volume de ar exigido e taxa de renovação conferidos com projeto' },
+      { id: 'ex2', label: 'Sensores de CO — área de cobertura e altura correta (~1,50m)' },
+      { id: 'ex3', label: 'Fixação dos equipamentos, amortecedores de vibração e conexão flexível' },
+      { id: 'ex4', label: 'Fixação dos dutos, vedação das emendas e posição das grelhas de captação' },
+      { id: 'ex5', label: 'Teste com gás de calibração no sensor CO — sistema entra em operação' },
+      { id: 'ex6', label: 'Tempo de retardo configurado após normalização do CO' },
+      { id: 'ex7', label: 'Velocidade do ar nas grelhas medida com anemômetro — conforme projeto' },
+    ]},
+  ],
+
+  // PORTÕES — Deslizante, Basculante e Pivotante
+  '22': [
+    { grupo: 'Portão Deslizante', itens: [
+      { id: 'pd1', label: 'Peso da folha e ciclos/hora conferidos com especificações do motorredutor' },
+      { id: 'pd2', label: 'Modo manual — portão corre livremente sem solavancos ou atrito' },
+      { id: 'pd3', label: 'Cremalheira alinhada com pinhão (folga ~2mm); não apoia peso no eixo do motor' },
+      { id: 'pd4', label: 'Parafusos/soldas da cremalheira firmes em toda a extensão' },
+      { id: 'pd5', label: 'Batentes mecânicos (fim de curso) nas duas extremidades do trilho' },
+      { id: 'pd6', label: 'Fotocélula: portão para e inverte ao interromper o feixe' },
+      { id: 'pd7', label: 'Laço indutivo (se houver): bloqueia fechamento com veículo sobre o sensor' },
+      { id: 'pd8', label: 'Intertravamento: segundo portão não abre com o primeiro aberto' },
+      { id: 'pd9', label: 'Sinaleira e bipe sonoro acionados 2 segundos antes do movimento' },
+    ]},
+    { grupo: 'Portão Basculante', itens: [
+      { id: 'pb1', label: 'Peso da folha e ciclos/hora conferidos com especificações do motorredutor' },
+      { id: 'pb2', label: 'Altura útil com portão totalmente aberto atende ao projeto' },
+      { id: 'pb3', label: 'Modo manual a 45° — portão fica parado no ar (contrapesos corretos)' },
+      { id: 'pb4', label: 'Cabos de aço inspecionados — sem fios partidos; roldanas livres e lubrificadas' },
+      { id: 'pb5', label: 'Calha guia no prumo; fuso limpo e lubrificado com graxa branca' },
+      { id: 'pb6', label: 'Fotocélula: portão para e inverte ao interromper o feixe' },
+      { id: 'pb7', label: 'Laço indutivo (se houver): bloqueia fechamento com veículo sobre o sensor' },
+      { id: 'pb8', label: 'Intertravamento: segundo portão não abre com o primeiro aberto' },
+      { id: 'pb9', label: 'Sinaleira e bipe sonoro acionados 2 segundos antes do movimento' },
+    ]},
+    { grupo: 'Portão Pivotante', itens: [
+      { id: 'pp1', label: 'Tamanho do braço e força do motor adequados para a largura da folha' },
+      { id: 'pp2', label: 'Modo manual a 45° — portão fica parado (gonzos no prumo)' },
+      { id: 'pp3', label: 'Cabo entre pilar fixo e motor — folga correta, sem risco de esmagamento pelas dobradiças' },
+      { id: 'pp4', label: 'Fotocélula: portão para e inverte ao interromper o feixe' },
+      { id: 'pp5', label: 'Laço indutivo (se houver): bloqueia fechamento com veículo sobre o sensor' },
+      { id: 'pp6', label: 'Intertravamento: segundo portão não abre com o primeiro aberto' },
+      { id: 'pp7', label: 'Sinaleira e bipe sonoro acionados 2 segundos antes do movimento' },
+    ]},
+  ],
+
+  // INTERFONE
+  '23': [
+    { grupo: 'Interfone', itens: [
+      { id: 'if1', label: 'Diagrama unifilar e planilha de ramais (apt → ramal → posição na central) em mãos' },
+      { id: 'if2', label: 'Fixação da central, aterramento do chassi e organização dos cabos de saída' },
+      { id: 'if3', label: 'Nobreak na central instalado — simulação de queda de energia testada' },
+      { id: 'if4', label: 'Shafts de dados — réguas de engate e anilhas/etiquetas por apartamento' },
+      { id: 'if5', label: 'Interfones em halls, elevadores, escadarias, áreas técnicas e comuns conforme projeto' },
+      { id: 'if6', label: 'Todos os interfones testados com pessoa na portaria recebendo as ligações' },
+    ]},
+  ],
+
+  // CFTV (AR CONDICIONADO usa id '24' — sem checklist fornecido)
+  // IRRIGAÇÃO (id '25' — sem checklist definido)
+};
 
 const initialItems: KanbanItem[] = [
   // 1. VISTORIA
@@ -5117,6 +5389,99 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                     maxFotos={40}
                   />
                 </div>
+
+                {/* Checklist para COMISSIONAMENTO */}
+                {selectedCard.category === 'COMISSIONAMENTO' && (() => {
+                  const grupos = COMISSIONAMENTO_CHECKLISTS[selectedCard.id];
+                  if (!grupos) return null;
+
+                  type SNX = 'sim' | 'nao' | 'x' | undefined;
+                  const cc: Record<string, SNX> = (selectedCard.checklistComissionamento || {}) as Record<string, SNX>;
+
+                  const updateCC = (itemId: string, val: SNX) => {
+                    const newVal = cc[itemId] === val ? undefined : val;
+                    const updated = {
+                      ...selectedCard,
+                      checklistComissionamento: { ...cc, [itemId]: newVal }
+                    };
+                    setItems(prev => prev.map(item => item.id === selectedCard.id ? updated : item));
+                    setSelectedCard(updated);
+                  };
+
+                  const SnxBtns = ({ itemId }: { itemId: string }) => (
+                    <div className="flex gap-1 shrink-0">
+                      {(['sim', 'nao', 'x'] as const).map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => updateCC(itemId, opt)}
+                          className={`px-2 py-1 rounded text-xs font-bold border-2 transition-colors ${
+                            cc[itemId] === opt
+                              ? opt === 'sim' ? 'bg-green-600 border-green-500 text-white'
+                              : opt === 'nao' ? 'bg-red-600 border-red-500 text-white'
+                              : 'bg-gray-500 border-gray-400 text-white'
+                              : 'bg-gray-900 border-gray-600 text-gray-400 hover:border-gray-400'
+                          }`}
+                        >
+                          {opt === 'sim' ? 'Sim' : opt === 'nao' ? 'Não' : 'X'}
+                        </button>
+                      ))}
+                    </div>
+                  );
+
+                  const allItems = grupos.flatMap(g => g.itens);
+                  const total = allItems.length;
+                  const simCount = allItems.filter(i => cc[i.id] === 'sim').length;
+                  const naoCount = allItems.filter(i => cc[i.id] === 'nao').length;
+                  const xCount = allItems.filter(i => cc[i.id] === 'x').length;
+                  const respondidos = simCount + naoCount + xCount;
+                  const allOk = total > 0 && simCount === total;
+
+                  return (
+                    <div className="bg-black border-2 border-orange-500 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-bold text-orange-400 flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4" />
+                          Checklist de Comissionamento
+                        </h3>
+                        {allOk && (
+                          <span className="text-xs bg-green-700 text-green-100 px-2 py-0.5 rounded-full font-bold">
+                            ✅ Tudo OK
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Barra de progresso */}
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="flex-1 bg-gray-800 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-orange-500 h-full transition-all duration-300"
+                            style={{ width: total > 0 ? `${(respondidos / total) * 100}%` : '0%' }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-400 shrink-0">{respondidos}/{total}</span>
+                        {simCount > 0 && <span className="text-xs text-green-400 shrink-0">✓{simCount}</span>}
+                        {naoCount > 0 && <span className="text-xs text-red-400 shrink-0">✗{naoCount}</span>}
+                        {xCount > 0 && <span className="text-xs text-gray-400 shrink-0">X{xCount}</span>}
+                      </div>
+
+                      <div className="space-y-4">
+                        {grupos.map(({ grupo, itens }) => (
+                          <div key={grupo} className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                            <div className="text-orange-300 font-bold text-xs mb-3 uppercase">{grupo}</div>
+                            <div className="space-y-3">
+                              {itens.map(({ id: itemId, label }) => (
+                                <div key={itemId} className="flex items-start justify-between gap-3">
+                                  <span className="text-white text-xs flex-1 leading-relaxed">{label}</span>
+                                  <SnxBtns itemId={itemId} />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Seção de Link do Documento (DOCUMENTAÇÃO) */}
                 {selectedCard.category === 'DOCUMENTACAO' && (
