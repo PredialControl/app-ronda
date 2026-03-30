@@ -1670,57 +1670,125 @@ function App() {
 
         {/* Tela de Implantação - quando selecionou Implantação */}
         {contratoSelecionado && menuLevel === 'implantacao' && viewMode === 'contrato-detalhe' && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Hammer className="w-8 h-8 text-orange-400" />
+          <div className="py-10 px-4 max-w-4xl mx-auto">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 bg-orange-500/20 rounded-full flex items-center justify-center shrink-0">
+                <Hammer className="w-6 h-6 text-orange-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Implantação</h2>
+                <p className="text-gray-400 text-sm mt-0.5">Use o menu lateral para navegar entre as seções</p>
+              </div>
             </div>
-            <h2 className="text-2xl font-semibold text-white mb-4">Implantação</h2>
-            <p className="text-gray-400 text-lg mb-6">
-              Selecione uma opção no menu lateral:
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <button onClick={() => handleMenuNavigation('kanban')} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">
-                Kanban
-              </button>
-              <button onClick={() => handleMenuNavigation('relatorio-pendencias')} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-                Relatório de Pendências
-              </button>
-              <button onClick={() => handleMenuNavigation('evolucao-recebimentos')} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
-                Evolução dos Recebimentos
-              </button>
-              <button onClick={() => handleMenuNavigation('documentacao-tecnica')} className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors">
-                Documentação Técnica
-              </button>
-              <button onClick={() => handleMenuNavigation('plano-manutencao')} className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors">
-                Plano de Manutenção
-              </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                {
+                  key: 'kanban',
+                  icon: '📋',
+                  titulo: 'Kanban',
+                  cor: 'border-emerald-500/40 hover:border-emerald-400',
+                  descricao: 'Acompanhe o andamento de cada etapa da implantação: comissionamentos, conferências, documentação e vistoria. Visualize o status de cada card e registre fotos, checklists e pendências.'
+                },
+                {
+                  key: 'relatorio-pendencias',
+                  icon: '📝',
+                  titulo: 'Relatório de Pendências',
+                  cor: 'border-blue-500/40 hover:border-blue-400',
+                  descricao: 'Crie e gerencie relatórios com as pendências do contrato. Organize itens por seção, registre locais e descrições, e acompanhe o status de cada pendência ao longo do processo.'
+                },
+                {
+                  key: 'evolucao-recebimentos',
+                  icon: '📈',
+                  titulo: 'Evolução dos Recebimentos',
+                  cor: 'border-purple-500/40 hover:border-purple-400',
+                  descricao: 'Visualize a evolução dos recebimentos com tabela resumo por relatório, gráficos de distribuição de status e linha do tempo de itens recebidos e não farão ao longo do projeto.'
+                },
+                {
+                  key: 'documentacao-tecnica',
+                  icon: '📂',
+                  titulo: 'Documentação Técnica',
+                  cor: 'border-amber-500/40 hover:border-amber-400',
+                  descricao: 'Acesse e gerencie todos os documentos técnicos do empreendimento: manuais, projetos as built, alvarás, ARTs, certificados e demais documentos obrigatórios para entrega.'
+                },
+                {
+                  key: 'plano-manutencao',
+                  icon: '🔧',
+                  titulo: 'Plano de Manutenção',
+                  cor: 'border-cyan-500/40 hover:border-cyan-400',
+                  descricao: 'Consulte e registre o plano de manutenção preventiva do condomínio, com frequências, responsáveis e histórico de execuções para garantir a conservação do empreendimento.'
+                },
+              ].map(({ key, icon, titulo, cor, descricao }) => (
+                <button
+                  key={key}
+                  onClick={() => handleMenuNavigation(key)}
+                  className={`text-left bg-gray-800 border-2 ${cor} rounded-xl p-5 transition-all duration-200 hover:bg-gray-750 group`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl">{icon}</span>
+                    <span className="text-white font-bold text-base group-hover:text-orange-300 transition-colors">{titulo}</span>
+                  </div>
+                  <p className="text-gray-400 text-sm leading-relaxed">{descricao}</p>
+                </button>
+              ))}
             </div>
           </div>
         )}
 
         {/* Tela de Supervisão - quando selecionou Supervisão */}
         {contratoSelecionado && menuLevel === 'supervisao' && viewMode === 'contrato-detalhe' && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-8 h-8 text-blue-400" />
+          <div className="py-10 px-4 max-w-4xl mx-auto">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center shrink-0">
+                <Shield className="w-6 h-6 text-blue-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Supervisão</h2>
+                <p className="text-gray-400 text-sm mt-0.5">Use o menu lateral para navegar entre as seções</p>
+              </div>
             </div>
-            <h2 className="text-2xl font-semibold text-white mb-4">Supervisão</h2>
-            <p className="text-gray-400 text-lg mb-6">
-              Selecione uma opção no menu lateral:
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <button onClick={() => handleMenuNavigation('rondas-supervisao')} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">
-                Rondas de Supervisão
-              </button>
-              <button onClick={() => handleMenuNavigation('parecer-tecnico')} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
-                Parecer Técnico
-              </button>
-              <button onClick={() => handleMenuNavigation('documentos-condominio')} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
-                Documentos do Condomínio
-              </button>
-              <button onClick={() => handleMenuNavigation('verificar-preventivas')} className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors">
-                Verificar Preventivas
-              </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                {
+                  key: 'rondas-supervisao',
+                  icon: '🔍',
+                  titulo: 'Rondas de Supervisão',
+                  cor: 'border-emerald-500/40 hover:border-emerald-400',
+                  descricao: 'Registre e acompanhe as rondas de supervisão realizadas no condomínio. Documente inspeções, ocorrências e conformidades observadas durante as visitas técnicas.'
+                },
+                {
+                  key: 'parecer-tecnico',
+                  icon: '📋',
+                  titulo: 'Parecer Técnico',
+                  cor: 'border-blue-500/40 hover:border-blue-400',
+                  descricao: 'Elabore e consulte pareceres técnicos sobre o estado do empreendimento. Registre avaliações, recomendações e laudos emitidos pela equipe de supervisão.'
+                },
+                {
+                  key: 'documentos-condominio',
+                  icon: '📂',
+                  titulo: 'Documentos do Condomínio',
+                  cor: 'border-purple-500/40 hover:border-purple-400',
+                  descricao: 'Centralize e acesse os documentos do condomínio: atas, regulamentos, apólices de seguro, contratos de manutenção e demais arquivos relevantes para a gestão condominial.'
+                },
+                {
+                  key: 'verificar-preventivas',
+                  icon: '✅',
+                  titulo: 'Verificar Preventivas',
+                  cor: 'border-amber-500/40 hover:border-amber-400',
+                  descricao: 'Verifique a execução das manutenções preventivas programadas. Confirme a realização dos serviços, registre observações e acompanhe o cumprimento do plano de manutenção.'
+                },
+              ].map(({ key, icon, titulo, cor, descricao }) => (
+                <button
+                  key={key}
+                  onClick={() => handleMenuNavigation(key)}
+                  className={`text-left bg-gray-800 border-2 ${cor} rounded-xl p-5 transition-all duration-200 hover:bg-gray-750 group`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl">{icon}</span>
+                    <span className="text-white font-bold text-base group-hover:text-blue-300 transition-colors">{titulo}</span>
+                  </div>
+                  <p className="text-gray-400 text-sm leading-relaxed">{descricao}</p>
+                </button>
+              ))}
             </div>
           </div>
         )}
