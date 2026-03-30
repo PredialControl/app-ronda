@@ -658,7 +658,6 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
   const mergeAndSort = (savedItems: KanbanItem[]): KanbanItem[] => {
     const savedIds = new Set(savedItems.map(i => i.id));
     const newItems = initialItems.filter(i => !savedIds.has(i.id));
-    if (newItems.length === 0) return savedItems;
     const orderMap = new Map(initialItems.map((item, idx) => [item.id, idx]));
     return [...savedItems, ...newItems].sort((a, b) => {
       const ai = orderMap.has(a.id) ? orderMap.get(a.id)! : Infinity;
