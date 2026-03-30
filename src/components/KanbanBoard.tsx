@@ -145,17 +145,14 @@ interface KanbanItem {
     dataBicos?: string;
     observacoes?: string;
   };
-  // Checklist para cards de RECEBIMENTO_AREAS
+  // Lista de áreas comuns para RECEBIMENTO_AREAS
   checklistRecebimentoAreas?: {
-    conferenciaMemorial: boolean;
-    dataConferenciaMemorial?: string;
-    conferenciaChaves: boolean;
-    dataConferenciaChaves?: string;
-    testeEquipamentos: boolean;
-    dataTesteEquipamentos?: string;
-    conferenciaEstetica: boolean;
-    dataConferenciaEstetica?: string;
-    observacoes?: string;
+    areas: {
+      id: string;
+      nome: string;
+      status: 'recebido' | 'pendente';
+      data?: string;
+    }[];
   };
   // Checklist para cards de RECEBIMENTO_CHAVES
   checklistRecebimentoChaves?: {
@@ -2136,284 +2133,133 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                   </div>
                 )}
 
-                {/* Checklist para RECEBIMENTO_AREAS */}
-                {selectedCard.category === 'RECEBIMENTO_AREAS' && (
-                  <div className="bg-black border-2 border-yellow-500 rounded-lg p-4">
-                    <h3 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4" />
-                      Checklist de Recebimento de Áreas Comuns
-                    </h3>
-                    <div className="space-y-3">
-                      {/* CONFERÊNCIA MEMORIAL DESCRITIVO */}
-                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
-                        <label className="flex items-center gap-3 cursor-pointer mb-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false}
-                            onChange={(e) => {
-                              const updated = {
-                                ...selectedCard,
-                                checklistRecebimentoAreas: {
-                                  conferenciaMemorial: e.target.checked,
-                                  dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
-                                  conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
-                                  dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
-                                  testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
-                                  dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
-                                  conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
-                                  dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
-                                  observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
-                                }
-                              };
-                              setItems(prev => prev.map(item =>
-                                item.id === selectedCard.id ? updated : item
-                              ));
-                              setSelectedCard(updated);
-                            }}
-                            className="w-5 h-5 cursor-pointer"
-                          />
-                          <span className="text-white font-bold">✓ CONFERÊNCIA MEMORIAL DESCRITIVO</span>
-                        </label>
-                        <input
-                          type="date"
-                          value={selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || ''}
-                          onChange={(e) => {
-                            const updated = {
-                              ...selectedCard,
-                              checklistRecebimentoAreas: {
-                                conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
-                                dataConferenciaMemorial: e.target.value,
-                                conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
-                                dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
-                                testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
-                                dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
-                                conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
-                                dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
-                                observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
-                              }
-                            };
-                            setItems(prev => prev.map(item =>
-                              item.id === selectedCard.id ? updated : item
-                            ));
-                            setSelectedCard(updated);
-                          }}
-                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
-                        />
+                {/* Lista de Áreas Comuns para RECEBIMENTO_AREAS */}
+                {selectedCard.category === 'RECEBIMENTO_AREAS' && (() => {
+                  const AREAS_PADRAO = [
+                    'Academia', 'Churrasqueira', 'Espaço Gourmet', 'Salão de Festas',
+                    'Playground', 'Piscina', 'Quadra Esportiva', 'Sauna',
+                    'Brinquedoteca', 'Salão de Jogos'
+                  ];
+                  const areas = selectedCard.checklistRecebimentoAreas?.areas ||
+                    AREAS_PADRAO.map((nome, i) => ({ id: String(i), nome, status: 'pendente' as const, data: '' }));
+
+                  const updateAreas = (newAreas: typeof areas) => {
+                    const updated = { ...selectedCard, checklistRecebimentoAreas: { areas: newAreas } };
+                    setItems(prev => prev.map(item => item.id === selectedCard.id ? updated : item));
+                    setSelectedCard(updated);
+                  };
+
+                  const todasRecebidas = areas.length > 0 && areas.every(a => a.status === 'recebido');
+
+                  return (
+                    <div className="bg-black border-2 border-yellow-500 rounded-lg p-4">
+                      <h3 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4" />
+                        Lista das Áreas do Condomínio
+                      </h3>
+
+                      <div className="space-y-2">
+                        {areas.map((area, index) => (
+                          <div
+                            key={area.id}
+                            className={`rounded-md px-3 py-2 border flex items-center gap-3 flex-wrap transition-colors ${
+                              area.status === 'recebido'
+                                ? 'bg-green-900/30 border-green-600'
+                                : 'bg-gray-900 border-gray-700'
+                            }`}
+                          >
+                            {/* Checkbox clicável */}
+                            <input
+                              type="checkbox"
+                              checked={area.status === 'recebido'}
+                              onChange={(e) => {
+                                const newAreas = [...areas];
+                                const hoje = new Date().toISOString().split('T')[0];
+                                newAreas[index] = {
+                                  ...area,
+                                  status: e.target.checked ? 'recebido' : 'pendente',
+                                  data: e.target.checked ? (area.data || hoje) : area.data
+                                };
+                                updateAreas(newAreas);
+                              }}
+                              className="w-5 h-5 cursor-pointer accent-green-500"
+                            />
+
+                            {/* Nome da área — clicar no nome também marca */}
+                            <label
+                              className={`text-sm font-semibold flex-1 cursor-pointer select-none ${
+                                area.status === 'recebido' ? 'text-green-400 line-through' : 'text-white'
+                              }`}
+                              onClick={() => {
+                                const newAreas = [...areas];
+                                const hoje = new Date().toISOString().split('T')[0];
+                                const novoStatus = area.status === 'recebido' ? 'pendente' : 'recebido';
+                                newAreas[index] = {
+                                  ...area,
+                                  status: novoStatus,
+                                  data: novoStatus === 'recebido' ? (area.data || hoje) : area.data
+                                };
+                                updateAreas(newAreas);
+                              }}
+                            >
+                              {area.nome}
+                            </label>
+
+                            {/* Badge de status */}
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                              area.status === 'recebido'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-700 text-gray-400'
+                            }`}>
+                              {area.status === 'recebido' ? '✓ Recebido' : 'Pendente'}
+                            </span>
+
+                            {/* Data */}
+                            <input
+                              type="date"
+                              value={area.data || ''}
+                              onChange={(e) => {
+                                const newAreas = [...areas];
+                                newAreas[index] = { ...area, data: e.target.value };
+                                updateAreas(newAreas);
+                              }}
+                              className="text-xs px-1 py-0.5 border border-yellow-500 rounded bg-black text-white w-28"
+                            />
+
+                            {/* Remover */}
+                            <button
+                              onClick={() => updateAreas(areas.filter((_, i) => i !== index))}
+                              className="text-red-500 hover:text-red-400 font-bold text-base leading-none"
+                              title="Remover área"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
                       </div>
 
-                      {/* CONFERÊNCIA DAS CHAVES */}
-                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
-                        <label className="flex items-center gap-3 cursor-pointer mb-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false}
-                            onChange={(e) => {
-                              const updated = {
-                                ...selectedCard,
-                                checklistRecebimentoAreas: {
-                                  conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
-                                  dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
-                                  conferenciaChaves: e.target.checked,
-                                  dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
-                                  testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
-                                  dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
-                                  conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
-                                  dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
-                                  observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
-                                }
-                              };
-                              setItems(prev => prev.map(item =>
-                                item.id === selectedCard.id ? updated : item
-                              ));
-                              setSelectedCard(updated);
-                            }}
-                            className="w-5 h-5 cursor-pointer"
-                          />
-                          <span className="text-white font-bold">✓ CONFERÊNCIA DAS CHAVES</span>
-                        </label>
-                        <input
-                          type="date"
-                          value={selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || ''}
-                          onChange={(e) => {
-                            const updated = {
-                              ...selectedCard,
-                              checklistRecebimentoAreas: {
-                                conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
-                                dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
-                                conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
-                                dataConferenciaChaves: e.target.value,
-                                testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
-                                dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
-                                conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
-                                dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
-                                observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
-                              }
-                            };
-                            setItems(prev => prev.map(item =>
-                              item.id === selectedCard.id ? updated : item
-                            ));
-                            setSelectedCard(updated);
-                          }}
-                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
-                        />
-                      </div>
+                      {/* Botão adicionar área */}
+                      <button
+                        onClick={() => {
+                          const novaArea = prompt('Nome da nova área:');
+                          if (novaArea && novaArea.trim()) {
+                            updateAreas([...areas, { id: Date.now().toString(), nome: novaArea.trim(), status: 'pendente', data: '' }]);
+                          }
+                        }}
+                        className="mt-3 flex items-center gap-2 text-green-400 hover:text-green-300 text-sm font-bold"
+                      >
+                        <span className="w-6 h-6 bg-green-600 hover:bg-green-500 rounded-full flex items-center justify-center text-white text-base leading-none">+</span>
+                        Adicionar área
+                      </button>
 
-                      {/* TESTE DE TODOS EQUIPAMENTOS INSTALADOS */}
-                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
-                        <label className="flex items-center gap-3 cursor-pointer mb-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false}
-                            onChange={(e) => {
-                              const updated = {
-                                ...selectedCard,
-                                checklistRecebimentoAreas: {
-                                  conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
-                                  dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
-                                  conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
-                                  dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
-                                  testeEquipamentos: e.target.checked,
-                                  dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
-                                  conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
-                                  dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
-                                  observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
-                                }
-                              };
-                              setItems(prev => prev.map(item =>
-                                item.id === selectedCard.id ? updated : item
-                              ));
-                              setSelectedCard(updated);
-                            }}
-                            className="w-5 h-5 cursor-pointer"
-                          />
-                          <span className="text-white font-bold">✓ TESTE DE TODOS EQUIPAMENTOS INSTALADOS</span>
-                        </label>
-                        <input
-                          type="date"
-                          value={selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || ''}
-                          onChange={(e) => {
-                            const updated = {
-                              ...selectedCard,
-                              checklistRecebimentoAreas: {
-                                conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
-                                dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
-                                conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
-                                dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
-                                testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
-                                dataTesteEquipamentos: e.target.value,
-                                conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
-                                dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
-                                observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
-                              }
-                            };
-                            setItems(prev => prev.map(item =>
-                              item.id === selectedCard.id ? updated : item
-                            ));
-                            setSelectedCard(updated);
-                          }}
-                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
-                        />
-                      </div>
-
-                      {/* CONFERÊNCIA ESTÉTICA DO AMBIENTE */}
-                      <div className="bg-gray-900 rounded-md p-3 border border-gray-700">
-                        <label className="flex items-center gap-3 cursor-pointer mb-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false}
-                            onChange={(e) => {
-                              const updated = {
-                                ...selectedCard,
-                                checklistRecebimentoAreas: {
-                                  conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
-                                  dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
-                                  conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
-                                  dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
-                                  testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
-                                  dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
-                                  conferenciaEstetica: e.target.checked,
-                                  dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
-                                  observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
-                                }
-                              };
-                              setItems(prev => prev.map(item =>
-                                item.id === selectedCard.id ? updated : item
-                              ));
-                              setSelectedCard(updated);
-                            }}
-                            className="w-5 h-5 cursor-pointer"
-                          />
-                          <span className="text-white font-bold">✓ CONFERÊNCIA ESTÉTICA DO AMBIENTE</span>
-                        </label>
-                        <input
-                          type="date"
-                          value={selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || ''}
-                          onChange={(e) => {
-                            const updated = {
-                              ...selectedCard,
-                              checklistRecebimentoAreas: {
-                                conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
-                                dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
-                                conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
-                                dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
-                                testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
-                                dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
-                                conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
-                                dataConferenciaEstetica: e.target.value,
-                                observacoes: selectedCard.checklistRecebimentoAreas?.observacoes || ''
-                              }
-                            };
-                            setItems(prev => prev.map(item =>
-                              item.id === selectedCard.id ? updated : item
-                            ));
-                            setSelectedCard(updated);
-                          }}
-                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-white bg-black font-medium"
-                        />
-                      </div>
-
-                      {/* OBSERVAÇÕES */}
-                      <div className="mt-3">
-                        <label className="block text-white font-bold mb-2">
-                          📝 Observações Gerais
-                        </label>
-                        <textarea
-                          value={selectedCard.checklistRecebimentoAreas?.observacoes || ''}
-                          onChange={(e) => {
-                            const updated = {
-                              ...selectedCard,
-                              checklistRecebimentoAreas: {
-                                conferenciaMemorial: selectedCard.checklistRecebimentoAreas?.conferenciaMemorial || false,
-                                dataConferenciaMemorial: selectedCard.checklistRecebimentoAreas?.dataConferenciaMemorial || '',
-                                conferenciaChaves: selectedCard.checklistRecebimentoAreas?.conferenciaChaves || false,
-                                dataConferenciaChaves: selectedCard.checklistRecebimentoAreas?.dataConferenciaChaves || '',
-                                testeEquipamentos: selectedCard.checklistRecebimentoAreas?.testeEquipamentos || false,
-                                dataTesteEquipamentos: selectedCard.checklistRecebimentoAreas?.dataTesteEquipamentos || '',
-                                conferenciaEstetica: selectedCard.checklistRecebimentoAreas?.conferenciaEstetica || false,
-                                dataConferenciaEstetica: selectedCard.checklistRecebimentoAreas?.dataConferenciaEstetica || '',
-                                observacoes: e.target.value
-                              }
-                            };
-                            setItems(prev => prev.map(item =>
-                              item.id === selectedCard.id ? updated : item
-                            ));
-                            setSelectedCard(updated);
-                          }}
-                          placeholder="Digite observações gerais sobre o recebimento..."
-                          className="w-full px-3 py-2 border-2 border-yellow-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 h-24 resize-none text-white bg-gray-900 font-medium"
-                        />
-                      </div>
+                      {todasRecebidas && (
+                        <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
+                          ✅ Todas as áreas recebidas
+                        </div>
+                      )}
                     </div>
-                    {selectedCard.checklistRecebimentoAreas?.conferenciaMemorial &&
-                     selectedCard.checklistRecebimentoAreas?.conferenciaChaves &&
-                     selectedCard.checklistRecebimentoAreas?.testeEquipamentos &&
-                     selectedCard.checklistRecebimentoAreas?.conferenciaEstetica && (
-                      <div className="mt-3 bg-green-600 text-white border-2 border-green-500 px-3 py-1 rounded text-xs font-bold">
-                        ✅ Checklist Completo - Todos os itens conferidos
-                      </div>
-                    )}
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Checklist para RECEBIMENTO_CHAVES */}
                 {selectedCard.category === 'RECEBIMENTO_CHAVES' && (
