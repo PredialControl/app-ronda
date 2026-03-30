@@ -417,13 +417,16 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
     }
   }, [items, contratoId]);
 
-  // Recarregar items quando o contrato mudar
+  // Recarregar items quando o contrato mudar (com merge de novos items)
   useEffect(() => {
     if (contratoId) {
       const saved = localStorage.getItem(`kanban_items_${contratoId}`);
       if (saved) {
         try {
-          setItems(JSON.parse(saved));
+          const savedItems: KanbanItem[] = JSON.parse(saved);
+          const savedIds = new Set(savedItems.map(i => i.id));
+          const newItems = initialItems.filter(i => !savedIds.has(i.id));
+          setItems(newItems.length > 0 ? [...savedItems, ...newItems] : savedItems);
         } catch {
           setItems(initialItems);
         }
