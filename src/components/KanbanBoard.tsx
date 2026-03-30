@@ -1426,6 +1426,47 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                             </div>
                           )}
                         </div>
+
+                        {/* Progress Bar do Checklist */}
+                        {(() => {
+                          let total = 0;
+                          let filled = 0;
+
+                          if (COMISSIONAMENTO_CHECKLISTS[item.id]) {
+                            const grupos = COMISSIONAMENTO_CHECKLISTS[item.id];
+                            grupos.forEach(g => { total += g.itens.length; });
+                            const cl = item.checklistComissionamento || {};
+                            filled = Object.keys(cl).length;
+                          } else if (item.id === '55') {
+                            const fields = ['temExtintor','extintorValidade','temMangueira','mangueirasValidade','temEngates','temChaveStorz','temBico'] as const;
+                            total = fields.length;
+                            const cl = item.checklistConferenciaIncendio || {};
+                            filled = fields.filter(f => cl[f]).length;
+                          } else if (item.id === '65') {
+                            const fields = ['mdAreasEquipamentos','mdAcabamentos','mdMobiliario','mvAreasEquipamentos','mvAcabamentos','mvMobiliario'] as const;
+                            total = fields.length;
+                            const cl = item.checklistConferenciaMemorial || {};
+                            filled = fields.filter(f => cl[f]).length;
+                          }
+
+                          if (total === 0) return null;
+
+                          const pct = Math.round((filled / total) * 100);
+                          const barColor = pct === 100 ? 'bg-green-500' : pct > 0 ? 'bg-yellow-400' : 'bg-gray-300';
+                          const textColor = pct === 100 ? 'text-green-600' : pct > 0 ? 'text-yellow-600' : 'text-gray-400';
+
+                          return (
+                            <div className="mt-2">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] text-gray-400">Checklist</span>
+                                <span className={`text-[10px] font-semibold ${textColor}`}>{filled}/{total}</span>
+                              </div>
+                              <div className="w-full bg-gray-100 rounded-full h-1.5">
+                                <div className={`h-1.5 rounded-full transition-all duration-300 ${barColor}`} style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </CardContent>
                     </Card>
                   ))}
