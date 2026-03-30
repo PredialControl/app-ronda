@@ -7,22 +7,18 @@ import { cn } from '@/lib/utils';
 
 interface AppLayoutProps {
   children: ReactNode;
-  // Navegação
   menuLevel: MenuLevel;
   activeMenuItem?: string;
   contratoNome?: string;
   breadcrumbItems: BreadcrumbItem[];
-  // Callbacks
   onNavigate: (destination: string) => void;
   onBack?: () => void;
   onLogout: () => void;
   onColetaInspecao?: () => void;
   onUsuarios?: () => void;
-  // Usuário
   usuarioNome?: string;
   usuarioCargo?: string;
   isAdmin?: boolean;
-  // Loading
   isLoading?: boolean;
 }
 
@@ -45,8 +41,7 @@ export function AppLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-hidden">
-      {/* Sidebar */}
+    <div className="flex h-screen overflow-hidden" style={{ background: '#0a0a0f' }}>
       <Sidebar
         currentLevel={menuLevel}
         contratoNome={contratoNome}
@@ -57,73 +52,79 @@ export function AppLayout({
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header */}
-        <header className="bg-[rgba(26,47,42,0.95)] backdrop-blur-lg border-b border-white/10 px-4 lg:px-6 py-3 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            {/* Left - Breadcrumb */}
-            <div className="flex items-center gap-4 min-w-0 pl-12 lg:pl-0">
-              <Breadcrumb items={breadcrumbItems} />
-            </div>
+        {/* Header */}
+        <header
+          className="flex-shrink-0 border-b px-5 lg:px-6 py-3 flex items-center justify-between"
+          style={{
+            background: 'rgba(10,10,15,0.9)',
+            borderColor: 'rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(20px)',
+          }}
+        >
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-3 min-w-0 pl-12 lg:pl-0">
+            <Breadcrumb items={breadcrumbItems} />
+          </div>
 
-            {/* Right - User Info & Actions */}
-            <div className="flex items-center gap-2 lg:gap-4 flex-shrink-0">
-              {/* User Info - Desktop */}
-              <div className="hidden lg:flex items-center gap-2 text-sm text-gray-300">
-                <User className="w-4 h-4" />
-                <span>{usuarioNome}</span>
-                <span className="text-gray-500">•</span>
-                <span className="text-gray-400">{usuarioCargo}</span>
+          {/* Actions */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* User info */}
+            <div className="hidden lg:flex items-center gap-2 mr-2">
+              <div className="w-7 h-7 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                <User className="w-3.5 h-3.5 text-orange-400" />
               </div>
-
-              {/* Admin Button */}
-              {isAdmin && onUsuarios && (
-                <Button
-                  onClick={onUsuarios}
-                  variant="outline"
-                  size="sm"
-                  className="text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/10 hover:border-yellow-500/50 px-2 lg:px-3"
-                >
-                  <User className="w-4 h-4" />
-                  <span className="hidden lg:inline ml-2">Usuários</span>
-                </Button>
-              )}
-
-              {/* Coleta Inspeção */}
-              {onColetaInspecao && (
-                <Button
-                  onClick={onColetaInspecao}
-                  variant="outline"
-                  size="sm"
-                  className="text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 hover:border-emerald-500/50 px-2 lg:px-3"
-                >
-                  <ClipboardCheck className="w-4 h-4" />
-                  <span className="hidden lg:inline ml-2">Coleta</span>
-                </Button>
-              )}
-
-              {/* Logout */}
-              <Button
-                onClick={onLogout}
-                variant="outline"
-                size="sm"
-                className="text-red-400 border-red-500/30 hover:bg-red-500/10 hover:border-red-500/50 px-2 lg:px-3"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden lg:inline ml-2">Sair</span>
-              </Button>
+              <div className="text-right">
+                <div className="text-xs font-semibold text-gray-300 leading-none">{usuarioNome}</div>
+                {usuarioCargo && (
+                  <div className="text-[10px] text-gray-600 mt-0.5">{usuarioCargo}</div>
+                )}
+              </div>
             </div>
+
+            {/* Admin */}
+            {isAdmin && onUsuarios && (
+              <button
+                onClick={onUsuarios}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/10 transition-all"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">Usuários</span>
+              </button>
+            )}
+
+            {/* Coleta */}
+            {onColetaInspecao && (
+              <button
+                onClick={onColetaInspecao}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/10 transition-all"
+              >
+                <ClipboardCheck className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">Coleta</span>
+              </button>
+            )}
+
+            {/* Logout */}
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-500 border border-white/10 hover:bg-white/5 hover:text-gray-300 transition-all"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">Sair</span>
+            </button>
           </div>
         </header>
 
-        {/* Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        {/* Content */}
+        <main
+          className="flex-1 overflow-y-auto p-4 lg:p-6"
+          style={{ scrollbarWidth: 'thin', scrollbarColor: '#1f2937 transparent' }}
+        >
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="flex flex-col items-center gap-4">
-                <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
-                <p className="text-gray-400">Carregando...</p>
+                <div className="w-10 h-10 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+                <p className="text-gray-500 text-sm">Carregando...</p>
               </div>
             </div>
           ) : (
