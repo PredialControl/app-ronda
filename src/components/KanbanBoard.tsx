@@ -297,6 +297,7 @@ const initialItems: KanbanItem[] = [
   { id: '62', title: 'ACESSIBILIDADE ÁREAS COMUNS', category: 'CONFERENCIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
   { id: '63', title: 'ACESSIBILIDADE PISCINA', category: 'CONFERENCIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
   { id: '64', title: 'ACESSIBILIDADE ENTRADA DO PRÉDIO', category: 'CONFERENCIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
+  { id: '65', title: 'MEMORIAL DESCRITIVO', category: 'CONFERENCIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
 
   // 6. COMISSIONAMENTO
   { id: '9', title: 'GERADOR', category: 'COMISSIONAMENTO', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
