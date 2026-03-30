@@ -369,6 +369,19 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {}) {
+  // Ordena o array merged pela ordem do initialItems (items fora do initialItems vão pro final)
+  const mergeAndSort = (savedItems: KanbanItem[]): KanbanItem[] => {
+    const savedIds = new Set(savedItems.map(i => i.id));
+    const newItems = initialItems.filter(i => !savedIds.has(i.id));
+    if (newItems.length === 0) return savedItems;
+    const orderMap = new Map(initialItems.map((item, idx) => [item.id, idx]));
+    return [...savedItems, ...newItems].sort((a, b) => {
+      const ai = orderMap.has(a.id) ? orderMap.get(a.id)! : Infinity;
+      const bi = orderMap.has(b.id) ? orderMap.get(b.id)! : Infinity;
+      return ai - bi;
+    });
+  };
+
   // Carregar items do localStorage se existir, senão usar initialItems
   // Faz merge: adiciona novos items do initialItems que ainda não existem no localStorage
   const getInitialItems = (): KanbanItem[] => {
@@ -376,10 +389,7 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
     const saved = localStorage.getItem(`kanban_items_${contratoId}`);
     if (saved) {
       try {
-        const savedItems: KanbanItem[] = JSON.parse(saved);
-        const savedIds = new Set(savedItems.map(i => i.id));
-        const newItems = initialItems.filter(i => !savedIds.has(i.id));
-        return newItems.length > 0 ? [...savedItems, ...newItems] : savedItems;
+        return mergeAndSort(JSON.parse(saved));
       } catch {
         return initialItems;
       }
@@ -424,9 +434,7 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
       if (saved) {
         try {
           const savedItems: KanbanItem[] = JSON.parse(saved);
-          const savedIds = new Set(savedItems.map(i => i.id));
-          const newItems = initialItems.filter(i => !savedIds.has(i.id));
-          setItems(newItems.length > 0 ? [...savedItems, ...newItems] : savedItems);
+          setItems(mergeAndSort(savedItems));
         } catch {
           setItems(initialItems);
         }
