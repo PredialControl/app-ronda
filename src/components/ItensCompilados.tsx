@@ -394,34 +394,106 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
                 </Card>
             )}
 
-            {/* Resumo e Gráficos */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Resumo */}
-                <Card className="bg-gray-800 border-gray-700">
-                    <CardHeader>
-                        <CardTitle className="text-white">Resumo</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-2">
-                            <div className="flex justify-between py-2 border-b border-gray-700">
-                                <span className="text-gray-300">Itens Apontados</span>
-                                <span className="text-white font-bold">{itensApontados}</span>
+            {/* Tabela Resumo por Relatório */}
+            {(() => {
+                // Calcular stats por relatório usando todos os itens (sem filtro de situação)
+                const statsPorRelatorio = relatorios.map(rel => {
+                    const relItens = itens.filter(i => i.relatorio_id === rel.id);
+                    return {
+                        titulo: rel.titulo || 'Sem título',
+                        total: relItens.length,
+                        naoFara: relItens.filter(i => i.situacao === 'NAO_FARA').length,
+                        recebidos: relItens.filter(i => i.situacao === 'RECEBIDO').length,
+                        pendentes: relItens.filter(i => i.situacao === 'PENDENTE').length,
+                    };
+                });
+
+                const totalGeral = itens.length;
+                const totalNaoFara = itens.filter(i => i.situacao === 'NAO_FARA').length;
+                const totalRecebidos = itens.filter(i => i.situacao === 'RECEBIDO').length;
+                const totalPendentes = itens.filter(i => i.situacao === 'PENDENTE').length;
+                const pct = (n: number) => totalGeral > 0 ? `${Math.round((n / totalGeral) * 100)}%` : '0%';
+
+                return (
+                    <Card className="bg-gray-800 border-gray-700">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-white text-base">📊 Resumo por Relatório</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs">
+                                    <thead>
+                                        <tr className="bg-gray-700 text-gray-300 uppercase text-center">
+                                            <th className="text-left px-3 py-2 font-semibold">Relatório</th>
+                                            <th className="px-3 py-2 font-semibold">Qnt. Itens</th>
+                                            <th className="px-3 py-2 font-semibold text-orange-400">Não Farão</th>
+                                            <th className="px-3 py-2 font-semibold text-green-400">Recebidos</th>
+                                            <th className="px-3 py-2 font-semibold text-red-400">Pendentes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {statsPorRelatorio.map((row, idx) => (
+                                            <tr
+                                                key={idx}
+                                                className="border-t border-gray-700 hover:bg-gray-700/40 transition-colors"
+                                            >
+                                                <td className="px-3 py-1.5 text-gray-200 max-w-[180px] truncate" title={row.titulo}>
+                                                    {row.titulo}
+                                                </td>
+                                                <td className="px-3 py-1.5 text-center text-white font-medium">{row.total}</td>
+                                                <td className="px-3 py-1.5 text-center">
+                                                    <span className={row.naoFara > 0 ? 'text-orange-400 font-bold' : 'text-gray-500'}>
+                                                        {row.naoFara}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-1.5 text-center">
+                                                    <span className={row.recebidos > 0 ? 'text-green-400 font-bold' : 'text-gray-500'}>
+                                                        {row.recebidos}
+                                                    </span>
+                                                </td>
+                                                <td className="px-3 py-1.5 text-center">
+                                                    <span className={row.pendentes > 0 ? 'text-red-400 font-bold' : 'text-gray-500'}>
+                                                        {row.pendentes}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr className="border-t-2 border-gray-500 bg-gray-700/60">
+                                            <td className="px-3 py-2 text-white font-bold">Total de Itens apontados</td>
+                                            <td className="px-3 py-2 text-center text-white font-bold">{totalGeral}</td>
+                                            <td colSpan={2}></td>
+                                            <td className="px-3 py-2 text-center text-white font-bold">100%</td>
+                                        </tr>
+                                        <tr className="border-t border-gray-600 bg-orange-900/30">
+                                            <td className="px-3 py-1.5 text-orange-300 font-bold">Não Farão</td>
+                                            <td className="px-3 py-1.5 text-center text-orange-300 font-bold">{totalNaoFara}</td>
+                                            <td colSpan={2}></td>
+                                            <td className="px-3 py-1.5 text-center text-orange-300 font-bold">{pct(totalNaoFara)}</td>
+                                        </tr>
+                                        <tr className="border-t border-gray-600 bg-green-900/30">
+                                            <td className="px-3 py-1.5 text-green-300 font-bold">Itens Recebidos</td>
+                                            <td className="px-3 py-1.5 text-center text-green-300 font-bold">{totalRecebidos}</td>
+                                            <td colSpan={2}></td>
+                                            <td className="px-3 py-1.5 text-center text-green-300 font-bold">{pct(totalRecebidos)}</td>
+                                        </tr>
+                                        <tr className="border-t border-gray-600 bg-red-900/30">
+                                            <td className="px-3 py-1.5 text-red-300 font-bold">Itens Pendentes</td>
+                                            <td className="px-3 py-1.5 text-center text-red-300 font-bold">{totalPendentes}</td>
+                                            <td colSpan={2}></td>
+                                            <td className="px-3 py-1.5 text-center text-red-300 font-bold">{pct(totalPendentes)}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
-                            <div className="flex justify-between py-2 border-b border-gray-700">
-                                <span className="text-green-500">Itens Recebidos</span>
-                                <span className="text-green-500 font-bold">{itensRecebidos}</span>
-                            </div>
-                            <div className="flex justify-between py-2 border-b border-gray-700">
-                                <span className="text-red-500">Não Farão</span>
-                                <span className="text-red-500 font-bold">{naoFarao}</span>
-                            </div>
-                            <div className="flex justify-between py-2">
-                                <span className="text-orange-500">Itens Pendentes</span>
-                                <span className="text-orange-500 font-bold">{itensPendentes}</span>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                );
+            })()}
+
+            {/* Gráficos */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                 {/* Gráfico de Pizza MODERNO */}
                 <Card className="bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700 shadow-2xl">

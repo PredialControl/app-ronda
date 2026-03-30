@@ -121,6 +121,7 @@ interface KanbanItem {
   dataAndamento?: string;
   historicoCorrecao?: string;
   documentoUrl?: string; // Link do Google Drive para documentos (categoria DOCUMENTACAO)
+  documentoConferido?: 'sim' | 'nao'; // Status de conferência do documento
   // Checklist para cards de VISTORIA
   checklistVistoria?: {
     vistoriaRealizada: boolean;
@@ -5375,20 +5376,22 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                 )}
 
                 {/* Seção de Fotos */}
-                <div className="bg-black border-2 border-gray-600 rounded-lg p-4">
-                  <h3 className="text-sm font-bold text-gray-300 mb-4">📸 Fotos do Card</h3>
-                  <KanbanPhotoUpload
-                    fotos={selectedCard.fotos || []}
-                    onFotosChange={(novasFotos) => {
-                      const updated = { ...selectedCard, fotos: novasFotos };
-                      setItems(prev => prev.map(item =>
-                        item.id === selectedCard.id ? updated : item
-                      ));
-                      setSelectedCard(updated);
-                    }}
-                    maxFotos={40}
-                  />
-                </div>
+                {selectedCard.category !== 'DOCUMENTACAO' && (
+                  <div className="bg-black border-2 border-gray-600 rounded-lg p-4">
+                    <h3 className="text-sm font-bold text-gray-300 mb-4">📸 Fotos do Card</h3>
+                    <KanbanPhotoUpload
+                      fotos={selectedCard.fotos || []}
+                      onFotosChange={(novasFotos) => {
+                        const updated = { ...selectedCard, fotos: novasFotos };
+                        setItems(prev => prev.map(item =>
+                          item.id === selectedCard.id ? updated : item
+                        ));
+                        setSelectedCard(updated);
+                      }}
+                      maxFotos={40}
+                    />
+                  </div>
+                )}
 
                 {/* Checklist para COMISSIONAMENTO */}
                 {selectedCard.category === 'COMISSIONAMENTO' && (() => {
@@ -5526,6 +5529,33 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                           Nenhum link cadastrado. Cole o link do Google Drive acima para acessar o documento diretamente.
                         </p>
                       )}
+
+                      {/* Conferido */}
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+                        <span className="text-white text-sm font-bold">Conferido:</span>
+                        <div className="flex gap-2">
+                          {(['sim', 'nao'] as const).map(opt => (
+                            <button
+                              key={opt}
+                              onClick={() => {
+                                const newVal = selectedCard.documentoConferido === opt ? undefined : opt;
+                                const updated = { ...selectedCard, documentoConferido: newVal };
+                                setItems(prev => prev.map(item => item.id === selectedCard.id ? updated : item));
+                                setSelectedCard(updated);
+                              }}
+                              className={`px-4 py-1.5 rounded text-sm font-bold border-2 transition-colors ${
+                                selectedCard.documentoConferido === opt
+                                  ? opt === 'sim'
+                                    ? 'bg-green-600 border-green-500 text-white'
+                                    : 'bg-red-600 border-red-500 text-white'
+                                  : 'bg-gray-900 border-gray-600 text-gray-400 hover:border-gray-400'
+                              }`}
+                            >
+                              {opt === 'sim' ? 'Sim' : 'Não'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
