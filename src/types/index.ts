@@ -166,6 +166,7 @@ export interface RelatorioPendencias {
   id: string;
   contrato_id: string;
   titulo: string;
+  familia?: string; // Grupo/família para agrupar relatórios no relatório e evolução
   capa_url?: string; // URL da imagem de capa personalizada
   foto_localidade_url?: string; // URL da foto da localidade
   data_inicio_vistoria?: string; // Data de início das vistorias (formato: DD/MM/YYYY)

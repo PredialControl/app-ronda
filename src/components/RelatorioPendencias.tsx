@@ -128,6 +128,25 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
         rel.titulo.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    // Agrupar relatórios por família
+    const relatoriosAgrupados = (() => {
+        const grupos = new Map<string, typeof filteredRelatorios>();
+        const semFamilia: typeof filteredRelatorios = [];
+        filteredRelatorios.forEach(rel => {
+            if (rel.familia?.trim()) {
+                const f = rel.familia.trim();
+                if (!grupos.has(f)) grupos.set(f, []);
+                grupos.get(f)!.push(rel);
+            } else {
+                semFamilia.push(rel);
+            }
+        });
+        const result: { familia: string | null; relatorios: typeof filteredRelatorios }[] = [];
+        grupos.forEach((rels, familia) => result.push({ familia, relatorios: rels }));
+        if (semFamilia.length > 0) result.push({ familia: null, relatorios: semFamilia });
+        return result;
+    })();
+
     if (showEditor) {
         return (
             <RelatorioPendenciasEditor
@@ -231,70 +250,83 @@ export function RelatorioPendencias({ contratoSelecionado }: RelatorioPendencias
                     </CardContent>
                 </Card>
             ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                    {filteredRelatorios.map((relatorio) => (
-                        <div key={relatorio.id} className="group flex flex-col gap-2">
-                            {/* Card / Mini Capa */}
-                            <Card
-                                className="relative overflow-hidden border-0 shadow-md hover:shadow-2xl transition-all duration-300 group-hover:-translate-y-1"
-                                style={{ aspectRatio: '1/1.5' }}
-                            >
-                                {/* Background Image */}
-                                <div
-                                    className="absolute inset-0 bg-cover bg-center"
-                                    style={{
-                                        backgroundImage: `url(${relatorio.capa_url || '/placeholder-cover.jpg'})`,
-                                        backgroundColor: '#1f2937'
-                                    }}
-                                />
-
-                                {/* Hover Overlay with Actions */}
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-3 p-4">
-                                    <Button
-                                        onClick={() => handleEditRelatorio(relatorio)}
-                                        variant="secondary"
-                                        size="sm"
-                                        className="w-full bg-white/90 hover:bg-white text-gray-900"
-                                    >
-                                        <Edit className="w-4 h-4 mr-2" />
-                                        Editar
-                                    </Button>
-                                    <Button
-                                        onClick={() => handleExportDOCX(relatorio)}
-                                        variant="secondary"
-                                        size="sm"
-                                        className="w-full bg-green-500/90 hover:bg-green-500 text-white border-0"
-                                    >
-                                        <Download className="w-4 h-4 mr-2" />
-                                        DOCX
-                                    </Button>
-                                    <Button
-                                        onClick={() => handleDeleteRelatorio(relatorio.id)}
-                                        variant="secondary"
-                                        size="sm"
-                                        className="w-full bg-red-500/90 hover:bg-red-500 text-white border-0"
-                                    >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        Excluir
-                                    </Button>
-                                </div>
-                            </Card>
-
-                            {/* Título e Info */}
-                            <div className="px-1">
-                                <h3 className="text-sm font-semibold text-white truncate" title={relatorio.titulo}>
-                                    {relatorio.titulo}
+                <div className="space-y-8">
+                    {relatoriosAgrupados.map(({ familia, relatorios: rels }) => (
+                        <div key={familia ?? '__sem_familia__'}>
+                            {/* Cabeçalho do grupo */}
+                            <div className="flex items-center gap-3 mb-4">
+                                <span className="text-lg">🗂️</span>
+                                <h3 className="text-base font-bold text-white">
+                                    {familia ?? 'Sem Família'}
                                 </h3>
-                                <p className="text-xs text-gray-400 mt-1">
-                                    {relatorio.secoes?.length || 0} seções • {relatorio.secoes?.reduce((acc, sec) => {
-                                        const pendenciasDiretas = sec.pendencias?.length || 0;
-                                        const pendenciasSubsecoes = (sec.subsecoes || []).reduce((subAcc, sub) => subAcc + (sub.pendencias?.length || 0), 0);
-                                        return acc + pendenciasDiretas + pendenciasSubsecoes;
-                                    }, 0) || 0} pendências
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                    {new Date(relatorio.created_at).toLocaleDateString('pt-BR')}
-                                </p>
+                                <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded-full">
+                                    {rels.length} {rels.length === 1 ? 'relatório' : 'relatórios'}
+                                </span>
+                                <div className="flex-1 h-px bg-gray-700" />
+                            </div>
+
+                            {/* Grid de relatórios do grupo */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                                {rels.map((relatorio) => (
+                                    <div key={relatorio.id} className="group flex flex-col gap-2">
+                                        <Card
+                                            className="relative overflow-hidden border-0 shadow-md hover:shadow-2xl transition-all duration-300 group-hover:-translate-y-1"
+                                            style={{ aspectRatio: '1/1.5' }}
+                                        >
+                                            <div
+                                                className="absolute inset-0 bg-cover bg-center"
+                                                style={{
+                                                    backgroundImage: `url(${relatorio.capa_url || '/placeholder-cover.jpg'})`,
+                                                    backgroundColor: '#1f2937'
+                                                }}
+                                            />
+                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-3 p-4">
+                                                <Button
+                                                    onClick={() => handleEditRelatorio(relatorio)}
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    className="w-full bg-white/90 hover:bg-white text-gray-900"
+                                                >
+                                                    <Edit className="w-4 h-4 mr-2" />
+                                                    Editar
+                                                </Button>
+                                                <Button
+                                                    onClick={() => handleExportDOCX(relatorio)}
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    className="w-full bg-green-500/90 hover:bg-green-500 text-white border-0"
+                                                >
+                                                    <Download className="w-4 h-4 mr-2" />
+                                                    DOCX
+                                                </Button>
+                                                <Button
+                                                    onClick={() => handleDeleteRelatorio(relatorio.id)}
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    className="w-full bg-red-500/90 hover:bg-red-500 text-white border-0"
+                                                >
+                                                    <Trash2 className="w-4 h-4 mr-2" />
+                                                    Excluir
+                                                </Button>
+                                            </div>
+                                        </Card>
+                                        <div className="px-1">
+                                            <h3 className="text-sm font-semibold text-white truncate" title={relatorio.titulo}>
+                                                {relatorio.titulo}
+                                            </h3>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                {relatorio.secoes?.length || 0} seções • {relatorio.secoes?.reduce((acc, sec) => {
+                                                    const pendenciasDiretas = sec.pendencias?.length || 0;
+                                                    const pendenciasSubsecoes = (sec.subsecoes || []).reduce((subAcc, sub) => subAcc + (sub.pendencias?.length || 0), 0);
+                                                    return acc + pendenciasDiretas + pendenciasSubsecoes;
+                                                }, 0) || 0} pendências
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                {new Date(relatorio.created_at).toLocaleDateString('pt-BR')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     ))}

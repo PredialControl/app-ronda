@@ -210,6 +210,7 @@ function DropZone({ id, label }: { id: string; label: string }) {
 
 export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCancel }: RelatorioPendenciasEditorProps) {
     const [titulo, setTitulo] = useState(relatorio?.titulo || '');
+    const [familia, setFamilia] = useState(relatorio?.familia || '');
     const [capaUrl, setCapaUrl] = useState(relatorio?.capa_url || '');
     const [capaFile, setCapaFile] = useState<File | null>(null);
     const [capaPreview, setCapaPreview] = useState(relatorio?.capa_url || '');
@@ -1791,6 +1792,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             if (relatorioId) {
                 await relatorioPendenciasService.update(relatorioId, {
                     titulo,
+                    familia: familia.trim() || undefined,
                     capa_url: finalCapaUrl,
                     data_inicio_vistoria: dataInicioVistoria,
                     historico_visitas: historicoVisitas,
@@ -1800,6 +1802,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                 const newRelatorio = await relatorioPendenciasService.create({
                     contrato_id: contrato.id,
                     titulo,
+                    familia: familia.trim() || undefined,
                     capa_url: finalCapaUrl,
                     data_inicio_vistoria: dataInicioVistoria,
                     historico_visitas: historicoVisitas,
@@ -2393,6 +2396,21 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             onChange={(e) => setTitulo(e.target.value)}
                             placeholder="Ex: Relatório de Pendências - Torre 1"
                             className="bg-gray-900 border-gray-700 text-white mt-1"
+                        />
+                    </div>
+                    <div className="mt-4">
+                        <Label htmlFor="familia" className="text-gray-300">
+                            🗂️ Família (opcional)
+                        </Label>
+                        <p className="text-xs text-gray-400 mb-1">
+                            Agrupa relatórios na Evolução dos Recebimentos. Ex: "Comissionamento", "Acessibilidade"
+                        </p>
+                        <Input
+                            id="familia"
+                            value={familia}
+                            onChange={(e) => setFamilia(e.target.value)}
+                            placeholder="Ex: Comissionamento"
+                            className="bg-gray-900 border-orange-600 text-white mt-1 focus:border-orange-400"
                         />
                     </div>
                 </CardContent>

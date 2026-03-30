@@ -182,10 +182,21 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
         }));
     };
 
+    // Famílias únicas dos relatórios (para abas de família)
+    const familias = Array.from(
+        new Set(relatorios.map(r => (r as any).familia?.trim()).filter(Boolean))
+    ) as string[];
+
+    // IDs dos relatórios de uma família
+    const relatorioIdsDaFamilia = (fam: string) =>
+        new Set(relatorios.filter(r => (r as any).familia?.trim() === fam).map(r => r.id));
+
     // Filtrar itens baseado na aba ativa e situação
     let itensFiltrados = abaAtiva === 'geral'
         ? itens
-        : itens.filter(item => item.relatorio_id === abaAtiva);
+        : familias.includes(abaAtiva)
+            ? itens.filter(item => relatorioIdsDaFamilia(abaAtiva).has(item.relatorio_id))
+            : itens.filter(item => item.relatorio_id === abaAtiva);
 
     // Aplicar filtro de situação
     if (filtroSituacao !== 'TODOS') {
@@ -295,6 +306,26 @@ export function ItensCompilados({ contratoSelecionado }: ItensCompiladosProps) {
                         >
                             📊 Resumo Geral
                         </button>
+
+                        {/* Abas por Família */}
+                        {familias.map(fam => (
+                            <button
+                                key={`fam-${fam}`}
+                                onClick={() => setAbaAtiva(fam)}
+                                className={`px-6 py-3 font-medium text-sm whitespace-nowrap border-b-2 transition-colors ${
+                                    abaAtiva === fam
+                                        ? 'border-orange-500 text-orange-400 bg-gray-700/50'
+                                        : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-gray-700/30'
+                                }`}
+                            >
+                                🗂️ {fam}
+                            </button>
+                        ))}
+
+                        {/* Separador visual se há famílias */}
+                        {familias.length > 0 && (
+                            <div className="w-px bg-gray-600 my-2 self-stretch" />
+                        )}
 
                         {/* Abas dos Relatórios Individuais */}
                         {relatorios.map((relatorio, index) => (
