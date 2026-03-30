@@ -250,6 +250,16 @@ interface KanbanItem {
     dataAlarmeSonoro?: string;
     observacoes?: string;
   };
+  // Checklist para CONFERENCIA - ITENS DE BOMBEIRO
+  checklistConferenciaIncendio?: {
+    temExtintor?: 'sim' | 'nao' | 'x';
+    extintorValidade?: 'sim' | 'nao' | 'x';
+    temMangueira?: 'sim' | 'nao' | 'x';
+    mangueirasValidade?: 'sim' | 'nao' | 'x';
+    temEngates?: 'sim' | 'nao' | 'x';
+    temChaveStorz?: 'sim' | 'nao' | 'x';
+    temBico?: 'sim' | 'nao' | 'x';
+  };
   // Fotos do card (até 40 fotos em WebP ou AVIF)
   fotos?: string[]; // Array de URLs base64 ou URLs das imagens
   // Pendências vinculadas ao card (integração com Relatório de Pendências)
@@ -360,12 +370,16 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {}) {
   // Carregar items do localStorage se existir, senão usar initialItems
+  // Faz merge: adiciona novos items do initialItems que ainda não existem no localStorage
   const getInitialItems = (): KanbanItem[] => {
     if (!contratoId) return initialItems;
     const saved = localStorage.getItem(`kanban_items_${contratoId}`);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const savedItems: KanbanItem[] = JSON.parse(saved);
+        const savedIds = new Set(savedItems.map(i => i.id));
+        const newItems = initialItems.filter(i => !savedIds.has(i.id));
+        return newItems.length > 0 ? [...savedItems, ...newItems] : savedItems;
       } catch {
         return initialItems;
       }
@@ -2258,6 +2272,85 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                           ✅ Todas as áreas recebidas
                         </div>
                       )}
+                    </div>
+                  );
+                })()}
+
+                {/* Checklist para CONFERENCIA - ITENS DE BOMBEIRO */}
+                {selectedCard.id === '55' && (() => {
+                  type SNX = 'sim' | 'nao' | 'x' | undefined;
+                  const ci = selectedCard.checklistConferenciaIncendio || {};
+
+                  const updateCI = (field: string, val: SNX) => {
+                    const updated = {
+                      ...selectedCard,
+                      checklistConferenciaIncendio: { ...ci, [field]: val }
+                    };
+                    setItems(prev => prev.map(item => item.id === selectedCard.id ? updated : item));
+                    setSelectedCard(updated);
+                  };
+
+                  const SnxBtns = ({ field, value }: { field: string; value: SNX }) => (
+                    <div className="flex gap-1">
+                      {(['sim', 'nao', 'x'] as const).map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => updateCI(field, value === opt ? undefined : opt)}
+                          className={`px-3 py-1 rounded text-xs font-bold border-2 transition-colors ${
+                            value === opt
+                              ? opt === 'sim' ? 'bg-green-600 border-green-500 text-white'
+                              : opt === 'nao' ? 'bg-red-600 border-red-500 text-white'
+                              : 'bg-gray-500 border-gray-400 text-white'
+                              : 'bg-gray-900 border-gray-600 text-gray-400 hover:border-gray-400'
+                          }`}
+                        >
+                          {opt === 'sim' ? 'Sim' : opt === 'nao' ? 'Não' : 'X'}
+                        </button>
+                      ))}
+                    </div>
+                  );
+
+                  const secoes = [
+                    {
+                      titulo: 'Extintores',
+                      itens: [
+                        { label: 'Todos os andares têm extintor?', field: 'temExtintor' },
+                        { label: 'Os extintores estão dentro da validade (mínimo 1 ano)?', field: 'extintorValidade' },
+                      ]
+                    },
+                    {
+                      titulo: 'Hidrantes',
+                      itens: [
+                        { label: 'Todos os hidrantes têm mangueira?', field: 'temMangueira' },
+                        { label: 'As mangueiras estão dentro da validade (mínimo 1 ano)?', field: 'mangueirasValidade' },
+                        { label: 'Todos os hidrantes têm conexões de engate nas tubulações?', field: 'temEngates' },
+                        { label: 'Todos os hidrantes têm chave storz?', field: 'temChaveStorz' },
+                        { label: 'Todos os hidrantes têm bico?', field: 'temBico' },
+                      ]
+                    }
+                  ];
+
+                  return (
+                    <div className="bg-black border-2 border-purple-500 rounded-lg p-4">
+                      <h3 className="text-sm font-bold text-purple-400 mb-3 flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4" />
+                        Conferência de Itens de Bombeiro
+                      </h3>
+                      <div className="space-y-4">
+                        {secoes.map(({ titulo, itens }) => (
+                          <div key={titulo} className="bg-gray-900 rounded-md p-3 border border-gray-700">
+                            <div className="text-purple-300 font-bold text-xs mb-3 uppercase">{titulo}</div>
+                            <div className="space-y-3">
+                              {itens.map(({ label, field }) => (
+                                <div key={field} className="flex items-center justify-between gap-3">
+                                  <span className="text-white text-xs flex-1">{label}</span>
+                                  <SnxBtns field={field} value={(ci as Record<string, SNX>)[field]} />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   );
                 })()}
