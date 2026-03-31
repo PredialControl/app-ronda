@@ -11,7 +11,7 @@ export const relatorioPendenciasService = {
             // Query mínima sem ordenação (ordenar no cliente)
             const { data, error } = await supabase
                 .from('relatorios_pendencias')
-                .select('id, contrato_id, titulo, familia, created_at, updated_at')
+                .select('*')
                 .eq('contrato_id', contratoId)
                 .limit(50);
 
