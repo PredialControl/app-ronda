@@ -1,5 +1,5 @@
 import { Document, Page, View, Text, StyleSheet, Image as PDFImage, pdf, Svg, Path, Circle, Line, Polyline } from '@react-pdf/renderer';
-import { AreaTecnica, Ronda, Contrato, FotoRonda, SecaoRonda } from '@/types';
+import { AreaTecnica, Ronda, Contrato, FotoRonda, SecaoRonda, ChecklistItem } from '@/types';
 import { CM_TO_PT } from './pdfConfig';
 
 // Componente de Ícone para PDF
@@ -581,6 +581,49 @@ const CardFoto: React.FC<{ foto: PdfFotoItem }> = ({ foto }) => {
 
 export type PdfImage = { data: Uint8Array; format: 'jpeg' | 'png' };
 export type PdfFotoItem = { id: string; src: PdfImage | string | null; local: string; especialidade: string; pendencia: string; observacoes?: string; responsavel?: string; criticidade?: string };
+export type PdfChecklistItem = { id: string; tipo: string; local: string; fotos: (string | null)[]; status: 'OK' | 'NAO_OK'; observacao?: string };
+
+// Card para itens do Checklist (Ronda Mobile)
+const CardChecklist: React.FC<{ item: PdfChecklistItem }> = ({ item }) => {
+  const borderColor = item.status === 'OK' ? neonColors.green : neonColors.red;
+
+  return (
+    <View style={[styles.card, { borderColor: borderColor, borderWidth: 2 }]} wrap={false}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{item.tipo}</Text>
+        <View style={[styles.badge, {
+          backgroundColor: item.status === 'OK' ? '#dcfce7' : '#fee2e2'
+        }]}>
+          <Text style={{ color: item.status === 'OK' ? '#166534' : '#991b1b', fontSize: 8, fontWeight: 'bold' }}>
+            {item.status === 'OK' ? 'OK' : 'NÃO OK'}
+          </Text>
+        </View>
+      </View>
+
+      {item.fotos && item.fotos.length > 0 && item.fotos[0] ? (
+        <View style={styles.imageContainer}>
+          <PDFImage src={item.fotos[0] as any} style={styles.image} />
+        </View>
+      ) : (
+        <View style={styles.imageContainer}>
+          <Text style={styles.noImageText}>Sem imagem</Text>
+        </View>
+      )}
+
+      <View style={styles.cardFooter}>
+        <Text style={styles.label}>Local:</Text>
+        <Text style={styles.value}>{item.local}</Text>
+
+        {item.observacao ? (
+          <>
+            <Text style={styles.label}>Observação:</Text>
+            <Text style={styles.value}>{item.observacao}</Text>
+          </>
+        ) : null}
+      </View>
+    </View>
+  );
+};
 
 // Componente Principal do PDF
 // Componente Principal do PDF
@@ -673,7 +716,20 @@ export const RelatorioPDF = ({ ronda, contrato, areas, headerImage }: { ronda: R
       }
     });
 
-    return { equipamentosAtencao, equipamentosNormais, chamadosAbertos, itensCorrigidos };
+    // Processar Checklist Items (Ronda Mobile)
+    const checklistOk: string[] = [];
+    const checklistNaoOk: string[] = [];
+
+    (ronda.checklistItems || []).forEach(item => {
+      const text = `${item.tipo} (${item.local})${item.observacao ? ': ' + item.observacao : ''}`;
+      if (item.status === 'OK') {
+        checklistOk.push(text);
+      } else {
+        checklistNaoOk.push(text);
+      }
+    });
+
+    return { equipamentosAtencao, equipamentosNormais, chamadosAbertos, itensCorrigidos, checklistOk, checklistNaoOk };
   })();
 
   // Carregar imagem de capa padrão
@@ -740,15 +796,43 @@ export const RelatorioPDF = ({ ronda, contrato, areas, headerImage }: { ronda: R
           ));
         })()}
 
-        {/* Conteúdo: Áreas e Fotos */}
-        <View style={styles.sectionTitle}>
-          <Text>Áreas Inspecionadas</Text>
-        </View>
-        <View style={styles.gridContainer}>
-          {areas.map((area: any, index: number) => (
-            <CardArea key={`area-${index}`} area={area} />
-          ))}
-        </View>
+        {/* Conteúdo: Áreas Técnicas */}
+        {areas.length > 0 && (
+          <>
+            <View style={styles.sectionTitle}>
+              <Text>Áreas Técnicas</Text>
+            </View>
+            <View style={styles.gridContainer}>
+              {areas.map((area: any, index: number) => (
+                <CardArea key={`area-${index}`} area={area} />
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* Checklist da Ronda (itens do app mobile) */}
+        {ronda.checklistItems && ronda.checklistItems.length > 0 && (
+          <>
+            <View style={[styles.sectionTitle, { marginTop: areas.length > 0 ? 20 : 0 }]}>
+              <Text>Checklist da Ronda</Text>
+            </View>
+            <View style={styles.gridContainer}>
+              {ronda.checklistItems.map((item: any, index: number) => (
+                <CardChecklist
+                  key={`checklist-${index}`}
+                  item={{
+                    id: item.id,
+                    tipo: item.tipo,
+                    local: item.local,
+                    fotos: item.fotos || [],
+                    status: item.status,
+                    observacao: item.observacao
+                  }}
+                />
+              ))}
+            </View>
+          </>
+        )}
 
         {fotosToUse.length > 0 && (
           <>
@@ -896,11 +980,63 @@ export const RelatorioPDF = ({ ronda, contrato, areas, headerImage }: { ronda: R
               </View>
             )}
 
+            {/* Checklist OK (Ronda Mobile) */}
+            {summaryData.checklistOk && summaryData.checklistOk.length > 0 && (
+              <View style={{
+                backgroundColor: '#d1fae5', // emerald-100
+                borderLeftWidth: 4,
+                borderLeftColor: '#10b981', // emerald-500
+                padding: 8,
+                borderRadius: 4,
+                marginBottom: 5
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 4 }}>
+                  <PDFIcon name="CheckCircle" color="#065f46" size={12} />
+                  <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#065f46' }}>
+                    Itens Verificados - OK
+                  </Text>
+                </View>
+                {summaryData.checklistOk.map((item: string, i: number) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 2 }}>
+                    <Text style={{ fontSize: 10, color: '#10b981', marginRight: 4 }}>•</Text>
+                    <Text style={{ fontSize: 9, color: '#047857', flex: 1 }}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Checklist NÃO OK (Ronda Mobile) */}
+            {summaryData.checklistNaoOk && summaryData.checklistNaoOk.length > 0 && (
+              <View style={{
+                backgroundColor: '#fef2f2', // red-50
+                borderLeftWidth: 4,
+                borderLeftColor: '#ef4444', // red-500
+                padding: 8,
+                borderRadius: 4,
+                marginBottom: 5
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 4 }}>
+                  <PDFIcon name="AlertCircle" color="#991b1b" size={12} />
+                  <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#991b1b' }}>
+                    Itens com Problema
+                  </Text>
+                </View>
+                {summaryData.checklistNaoOk.map((item: string, i: number) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 2 }}>
+                    <Text style={{ fontSize: 10, color: '#ef4444', marginRight: 4 }}>•</Text>
+                    <Text style={{ fontSize: 9, color: '#b91c1c', flex: 1 }}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
             {/* Estado Vazio */}
             {summaryData.equipamentosAtencao.length === 0 &&
               summaryData.equipamentosNormais.length === 0 &&
               summaryData.chamadosAbertos.length === 0 &&
-              summaryData.itensCorrigidos.length === 0 && (
+              summaryData.itensCorrigidos.length === 0 &&
+              (!summaryData.checklistOk || summaryData.checklistOk.length === 0) &&
+              (!summaryData.checklistNaoOk || summaryData.checklistNaoOk.length === 0) && (
                 <View style={{ alignItems: 'center', padding: 20 }}>
                   <PDFIcon name="Info" color="#93c5fd" size={24} />
                   <Text style={{ fontSize: 10, color: '#2563eb', marginTop: 4 }}>
@@ -1024,10 +1160,34 @@ export async function preparePdfData(ronda: Ronda, areas: AreaTecnica[]) {
     })
   );
 
+  // Processar checklist items (ronda mobile)
+  const checklistNormalized = await Promise.all(
+    (ronda.checklistItems || []).map(async (item) => {
+      try {
+        let fotos = item.fotos || [];
+
+        // Processar array de fotos
+        if (fotos.length > 0) {
+          fotos = await Promise.all(fotos.map(async (f) => await srcToDataURL(f) || ''));
+          fotos = fotos.filter(f => f !== ''); // Remover falhas
+        }
+
+        return {
+          ...item,
+          fotos
+        };
+      } catch (e) {
+        console.error('Erro ao processar item de checklist para PDF:', e);
+        return item;
+      }
+    })
+  );
+
   const rondaNormalized = {
     ...ronda,
     fotosRonda: fotosRondaNormalized as any, // Cast to any to avoid strict type check on null fotos
-    outrosItensCorrigidos: outrosItensNormalized
+    outrosItensCorrigidos: outrosItensNormalized,
+    checklistItems: checklistNormalized
   };
 
   return { rondaNormalized, areasNormalized };

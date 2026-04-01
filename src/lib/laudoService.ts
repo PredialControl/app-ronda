@@ -63,7 +63,14 @@ export const laudoService = {
                 .order('titulo');
 
             if (error) throw error;
-            return data || [];
+
+            // Se não tem nenhum ou tem menos que os padrões, garantir que todos existam
+            if (!data || data.length < DEFAULT_LAUDOS.length) {
+                const laudosCompletos = await this.ensureAllDefaults(contratoId, data || []);
+                return laudosCompletos;
+            }
+
+            return data;
         } catch (error: any) {
             console.warn('⚠️ Erro ao buscar laudos no Supabase (usando fallback local):', error.message);
 
@@ -71,13 +78,67 @@ export const laudoService = {
             const localLaudos = getLocalLaudos();
             const laudosDoContrato = localLaudos.filter(l => l.contrato_id === contratoId);
 
-            // Se não tiver localmente também, inicializa defaults na memória/local
-            if (laudosDoContrato.length === 0) {
-                return await this.initializeDefaults(contratoId, true);
+            // Garantir que todos os padrões existam
+            if (laudosDoContrato.length < DEFAULT_LAUDOS.length) {
+                return await this.ensureAllDefaults(contratoId, laudosDoContrato, true);
             }
 
             return laudosDoContrato.sort((a, b) => a.titulo.localeCompare(b.titulo));
         }
+    },
+
+    // Garantir que todos os laudos padrão existam
+    async ensureAllDefaults(contratoId: string, existingLaudos: Laudo[], forceLocal = false): Promise<Laudo[]> {
+        const existingTitles = existingLaudos.map(l => l.titulo);
+        const missingLaudos = DEFAULT_LAUDOS.filter(def => !existingTitles.includes(def.titulo));
+
+        if (missingLaudos.length === 0) {
+            return existingLaudos.sort((a, b) => a.titulo.localeCompare(b.titulo));
+        }
+
+        console.log(`📋 Adicionando ${missingLaudos.length} laudos faltantes...`);
+
+        const ontem = new Date();
+        ontem.setDate(ontem.getDate() - 1);
+        const dataVencimento = ontem.toISOString().split('T')[0];
+
+        const laudosParaCriar = missingLaudos.map(def => ({
+            contrato_id: contratoId,
+            titulo: def.titulo,
+            periodicidade: def.periodicidade,
+            status: 'vencidos' as const,
+            data_vencimento: dataVencimento,
+        }));
+
+        if (!forceLocal) {
+            try {
+                const { data, error } = await supabase
+                    .from('laudos')
+                    .insert(laudosParaCriar)
+                    .select();
+
+                if (error) throw error;
+
+                const todosLaudos = [...existingLaudos, ...(data || [])];
+                return todosLaudos.sort((a, b) => a.titulo.localeCompare(b.titulo));
+            } catch (error) {
+                console.warn('⚠️ Falha ao criar laudos faltantes no banco:', error);
+            }
+        }
+
+        // Fallback Local
+        const novosLaudosLocais: Laudo[] = laudosParaCriar.map(l => ({
+            ...l,
+            id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }));
+
+        const todosLocais = getLocalLaudos();
+        saveLocalLaudos([...todosLocais, ...novosLaudosLocais]);
+
+        const todosLaudos = [...existingLaudos, ...novosLaudosLocais];
+        return todosLaudos.sort((a, b) => a.titulo.localeCompare(b.titulo));
     },
 
     // Inicializar laudos padrão para um contrato
@@ -93,8 +154,6 @@ export const laudoService = {
             periodicidade: def.periodicidade,
             status: 'vencidos' as const,
             data_vencimento: dataVencimento,
-            // Data de emissão vazia ou antiga? Vamos deixar vazia por enquanto ou igual vencimento - 1 ano
-            // data_emissao: ...
         }));
 
         if (!forceLocal) {

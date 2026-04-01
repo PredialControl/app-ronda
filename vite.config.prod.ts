@@ -5,13 +5,17 @@ import path from 'path'
 // Configuração para produção (Vercel)
 export default defineConfig({
   plugins: [react()],
-  
+
   // Configurações para produção
   build: {
     outDir: 'dist',
     sourcemap: false,
     minify: true,
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        supervisor: path.resolve(__dirname, 'supervisor.html'),
+      },
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],

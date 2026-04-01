@@ -12,6 +12,7 @@ import { ItensCompilados } from '@/components/ItensCompilados';
 import { FotoRondaModal } from '@/components/FotoRondaModal';
 import { TabelaRondas } from '@/components/TabelaRondas';
 import { VisualizarRonda } from '@/components/VisualizarRonda';
+import { RondasPendentes } from '@/components/RondasPendentes';
 import { OutroItemCorrigidoModal } from '@/components/OutroItemCorrigidoModal';
 import { OutroItemModal } from '@/components/OutroItemModal';
 import { EditarRondaModal } from '@/components/EditarRondaModal';
@@ -64,6 +65,9 @@ function App() {
   const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-inspecao' | 'usuarios' | 'menu' | 'contrato-detalhe' | 'plano-manutencao'>('menu');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
   const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
+
+  // Estado para template pré-selecionado ao iniciar ronda a partir de alerta de pendência
+  const [templateInicialRonda, setTemplateInicialRonda] = useState<'SEMANAL' | 'MENSAL' | 'BIMESTRAL' | null>(null);
 
   // Estado para o novo menu lateral
   const [menuLevel, setMenuLevel] = useState<MenuLevel>('main');
@@ -176,6 +180,12 @@ function App() {
 
   // CORREÇÃO: Garantir que `rondaSelecionada` nunca fique inválida e seja persistida
   const lastRondaId = useRef<string | null>(null);
+
+  // CORREÇÃO: Ref para preservar roteiro de rondas recém-criadas com template
+  const rondaRoteiroRef = useRef<{ id: string; roteiro: string[]; templateRonda?: string } | null>(null);
+
+  // CORREÇÃO: Flag para pular reload após criação de ronda
+  const skipNextReloadRef = useRef<boolean>(false);
 
   useEffect(() => {
     // Evitar execução desnecessária se o ID não mudou
@@ -477,13 +487,49 @@ function App() {
     if (viewMode === 'visualizar' && rondaSelecionada) {
       const recarregarDadosRonda = async () => {
         try {
+          // CORREÇÃO: Verificar se devemos pular o reload (ronda acabou de ser criada)
+          if (skipNextReloadRef.current) {
+            console.log('🚫 PULANDO RELOAD - ronda acabou de ser criada!');
+            console.log('🚫 rondaSelecionada atual:', {
+              id: rondaSelecionada.id,
+              nome: rondaSelecionada.nome,
+              roteiro: rondaSelecionada.roteiro?.length || 0,
+              templateRonda: rondaSelecionada.templateRonda
+            });
+            // Resetar o flag após pular
+            skipNextReloadRef.current = false;
+            return;
+          }
+
           console.log('🔄 Recarregando dados da ronda para modo visualizar:', rondaSelecionada.id);
           console.log('🔄 Estado atual da ronda antes de recarregar:', {
             id: rondaSelecionada.id,
             nome: rondaSelecionada.nome,
             fotosRonda: rondaSelecionada.fotosRonda?.length || 0,
-            areasTecnicas: rondaSelecionada.areasTecnicas?.length || 0
+            areasTecnicas: rondaSelecionada.areasTecnicas?.length || 0,
+            roteiro: rondaSelecionada.roteiro?.length || 0
           });
+
+          // CORREÇÃO: Verificar se há roteiro guardado na ref (ronda recém-criada com template)
+          const roteiroFromRef = rondaRoteiroRef.current;
+          if (roteiroFromRef && roteiroFromRef.id === rondaSelecionada.id) {
+            console.log('📋 Roteiro encontrado na ref! Restaurando...', roteiroFromRef);
+
+            // Atualizar a ronda com o roteiro da ref
+            const rondaComRoteiroRef = {
+              ...rondaSelecionada,
+              roteiro: roteiroFromRef.roteiro,
+              templateRonda: roteiroFromRef.templateRonda
+            };
+
+            setRondaSelecionada(rondaComRoteiroRef);
+            setRondas(prev => prev.map(r => r.id === rondaComRoteiroRef.id ? rondaComRoteiroRef : r));
+
+            // Limpar a ref depois de usar
+            rondaRoteiroRef.current = null;
+            console.log('✅ Roteiro restaurado da ref com sucesso!', rondaComRoteiroRef.roteiro?.length, 'itens');
+            return;
+          }
 
           // Verificar se é uma ronda local (não está no banco)
           if (rondaSelecionada.id.startsWith('local-')) {
@@ -494,6 +540,13 @@ function App() {
           // Verificar se a ronda já tem fotos carregadas
           if (rondaSelecionada.fotosRonda && rondaSelecionada.fotosRonda.length > 0) {
             console.log('📸 Ronda já tem fotos carregadas, não recarregando:', rondaSelecionada.fotosRonda.length);
+            return;
+          }
+
+          // IMPORTANTE: Se a ronda já tem roteiro, não recarregar do banco
+          // (rondas criadas com template já vêm com o roteiro preenchido)
+          if (rondaSelecionada.roteiro && rondaSelecionada.roteiro.length > 0) {
+            console.log('📋 Ronda já tem roteiro no estado, não recarregando do banco:', rondaSelecionada.roteiro.length, 'itens');
             return;
           }
 
@@ -511,15 +564,32 @@ function App() {
             console.log('📸 Fotos encontradas:', rondaAtualizada.fotosRonda?.length || 0);
             console.log('🔧 Áreas técnicas encontradas:', rondaAtualizada.areasTecnicas?.length || 0);
 
-            // Atualizar estado local com dados frescos do banco
-            setRondaSelecionada(rondaAtualizada);
-            setRondas(prev => prev.map(r => r.id === rondaAtualizada.id ? rondaAtualizada : r));
+            // IMPORTANTE: Preservar roteiro e checklistItems do estado atual ou da ref
+            // pois podem não estar salvos no banco ainda
+            const roteiroPreservado = rondaAtualizada.roteiro ||
+                                       rondaSelecionada.roteiro ||
+                                       (roteiroFromRef?.id === rondaSelecionada.id ? roteiroFromRef.roteiro : []);
+
+            const rondaComRoteiro = {
+              ...rondaAtualizada,
+              roteiro: roteiroPreservado,
+              templateRonda: rondaAtualizada.templateRonda || rondaSelecionada.templateRonda || roteiroFromRef?.templateRonda,
+              checklistItems: rondaAtualizada.checklistItems || rondaSelecionada.checklistItems || []
+            };
+
+            console.log('✅ Roteiro preservado:', rondaComRoteiro.roteiro);
+            console.log('✅ ChecklistItems preservados:', rondaComRoteiro.checklistItems?.length || 0);
+
+            // Atualizar estado local com dados frescos do banco + dados preservados
+            setRondaSelecionada(rondaComRoteiro);
+            setRondas(prev => prev.map(r => r.id === rondaComRoteiro.id ? rondaComRoteiro : r));
 
             console.log('✅ Estado atualizado após recarregar:', {
-              id: rondaAtualizada.id,
-              nome: rondaAtualizada.nome,
-              fotosRonda: rondaAtualizada.fotosRonda?.length || 0,
-              areasTecnicas: rondaAtualizada.areasTecnicas?.length || 0
+              id: rondaComRoteiro.id,
+              nome: rondaComRoteiro.nome,
+              fotosRonda: rondaComRoteiro.fotosRonda?.length || 0,
+              areasTecnicas: rondaComRoteiro.areasTecnicas?.length || 0,
+              roteiro: rondaComRoteiro.roteiro?.length || 0
             });
           } else {
             console.warn('⚠️ Ronda não encontrada no banco, mantendo estado atual');
@@ -562,7 +632,19 @@ function App() {
       alert('Por favor, selecione um contrato primeiro');
       return;
     }
-    // Abrir modal de nova ronda diretamente
+    // Limpar template inicial antes de abrir nova ronda manual
+    setTemplateInicialRonda(null);
+    setViewMode('nova');
+  };
+
+  // Handler para iniciar ronda a partir do alerta de pendência
+  const handleIniciarRondaPendente = (template: 'SEMANAL' | 'MENSAL' | 'BIMESTRAL') => {
+    if (!contratoSelecionado) {
+      alert('Por favor, selecione um contrato primeiro');
+      return;
+    }
+    // Definir template inicial e abrir tela de nova ronda
+    setTemplateInicialRonda(template);
     setViewMode('nova');
   };
 
@@ -572,10 +654,17 @@ function App() {
     hora: string;
     observacoesGerais?: string;
     tipoVisita?: 'RONDA' | 'REUNIAO' | 'OUTROS';
+    templateRonda?: string;
+    roteiro?: string[];
+    areasTecnicasSugeridas?: string[];
+    objetivoRelatorio?: string;
   }) => {
     try {
       console.log('🔄 Iniciando criação de nova ronda:', rondaData);
       console.log('🔄 Contrato selecionado:', contratoSelecionado);
+      console.log('🔄 Template:', rondaData.templateRonda);
+      console.log('🔄 Roteiro:', rondaData.roteiro);
+      console.log('🔄 Objetivo:', rondaData.objetivoRelatorio?.substring(0, 50) + '...');
 
       // Criar ronda básica no banco (sem áreas técnicas primeiro)
       const rondaBasica = await rondaService.create({
@@ -584,22 +673,47 @@ function App() {
         data: rondaData.data,
         hora: rondaData.hora,
         tipoVisita: rondaData.tipoVisita || 'RONDA',
+        templateRonda: rondaData.templateRonda,
+        roteiro: rondaData.roteiro || [],
+        objetivoRelatorio: rondaData.objetivoRelatorio,
         responsavel: 'Ricardo Oliveira',
         observacoesGerais: rondaData.observacoesGerais,
         areasTecnicas: [], // Criar sem áreas primeiro
+        checklistItems: [], // Checklist vazio para começar
         fotosRonda: [],
         outrosItensCorrigidos: []
       });
 
       console.log('✅ Ronda básica criada no banco:', rondaBasica);
 
-      // Criar a ronda final SEM áreas técnicas (usuário adiciona manualmente)
+      // Criar a ronda final com roteiro e objetivo
       const rondaFinal = {
         ...rondaBasica,
-        areasTecnicas: [] // Começar vazio, usuário adiciona manualmente
+        areasTecnicas: [], // Começar vazio, usuário adiciona manualmente
+        roteiro: rondaData.roteiro || [],
+        templateRonda: rondaData.templateRonda,
+        objetivoRelatorio: rondaData.objetivoRelatorio,
+        checklistItems: []
       };
 
       console.log('✅ Ronda final criada:', rondaFinal);
+      console.log('✅ Roteiro incluído:', rondaFinal.roteiro);
+
+      // IMPORTANTE: Pular o próximo reload do useEffect
+      // A ronda acabou de ser criada, não precisa recarregar do banco
+      skipNextReloadRef.current = true;
+      console.log('🚫 skipNextReloadRef setado para TRUE');
+
+      // IMPORTANTE: Guardar roteiro na ref ANTES de setar o estado
+      // Isso evita que o useEffect de reload perca o roteiro
+      if (rondaFinal.roteiro && rondaFinal.roteiro.length > 0) {
+        rondaRoteiroRef.current = {
+          id: rondaFinal.id,
+          roteiro: rondaFinal.roteiro,
+          templateRonda: rondaFinal.templateRonda
+        };
+        console.log('📋 Roteiro salvo na ref para proteção:', rondaRoteiroRef.current);
+      }
 
       // Atualizar estado local
       setRondas(prev => [...prev, rondaFinal]);
@@ -611,7 +725,10 @@ function App() {
         id: rondaFinal.id,
         nome: rondaFinal.nome,
         idType: typeof rondaFinal.id,
-        idLength: rondaFinal.id?.length
+        idLength: rondaFinal.id?.length,
+        roteiro: rondaFinal.roteiro,
+        roteiroLength: rondaFinal.roteiro?.length || 0,
+        templateRonda: rondaFinal.templateRonda
       });
     } catch (error) {
       console.error('❌ Erro ao criar ronda no banco:', error);
@@ -1869,6 +1986,12 @@ function App() {
             {/* Conteúdo baseado no modo de visualização - Navegação via Sidebar */}
             {viewMode === 'tabela' && (
               <>
+                {/* Alertas de Rondas Pendentes por Periodicidade */}
+                <RondasPendentes
+                  rondas={rondasCompletas}
+                  onIniciarRonda={handleIniciarRondaPendente}
+                />
+
                 {/* Tabela de Rondas */}
                 <div className="mb-8">
                   <TabelaRondas
@@ -1933,8 +2056,12 @@ function App() {
             {viewMode === 'nova' && contratoSelecionado && (
               <NovaRondaScreen
                 contrato={contratoSelecionado}
-                onVoltar={() => setViewMode('tabela')}
+                onVoltar={() => {
+                  setTemplateInicialRonda(null); // Limpar template ao voltar
+                  setViewMode('tabela');
+                }}
                 onSalvar={handleSaveRonda}
+                templateInicial={templateInicialRonda || undefined}
               />
             )}
 

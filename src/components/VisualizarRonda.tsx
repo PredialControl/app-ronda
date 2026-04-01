@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { AreaTecnica, Ronda, Contrato, SecaoRonda } from '@/types';
+import { AreaTecnica, Ronda, Contrato, SecaoRonda, ChecklistItem } from '@/types';
 import { downloadRelatorioPDF } from '@/lib/pdfReact';
 import { rondaService } from '@/lib/supabaseService';
 import {
@@ -22,8 +22,11 @@ import {
   CheckCircle,
   Save,
   X,
+  ClipboardList,
 } from 'lucide-react';
 import { AreaTecnicaCard } from './AreaTecnicaCard';
+import { ChecklistRondaCard } from './ChecklistRondaCard';
+import { ChecklistItemModal } from './ChecklistItemModal';
 
 interface VisualizarRondaProps {
   ronda: Ronda;
@@ -48,11 +51,22 @@ interface VisualizarRondaProps {
 function SecoesRelatorio({ ronda }: { ronda: Ronda }) {
   const numerosRomanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'];
 
+  // Objetivo padrão (quando não tem objetivo específico do template)
+  const objetivoPadrao = 'O presente relatório tem como finalidade apresentar de forma clara, técnica e organizada o status atual dos equipamentos e das áreas comuns do empreendimento. Seu intuito é fornecer uma visão consolidada das condições operacionais, de conservação e de segurança de cada sistema inspecionado, permitindo identificar pendências, riscos potenciais e necessidades de manutenção preventiva ou corretiva.\n\nAlém de registrar as constatações verificadas durante a vistoria, este relatório busca auxiliar a gestão predial no planejamento das ações necessárias, apoiando a tomada de decisão e garantindo maior controle sobre o desempenho e a vida útil dos equipamentos. Dessa forma, o documento contribui para a manutenção da qualidade, segurança e funcionalidade das instalações, promovendo a continuidade das operações e o bem-estar dos usuários.';
+
+  // Título dinâmico baseado no tipo de ronda
+  const getTituloObjetivo = () => {
+    if (ronda.templateRonda === 'SEMANAL') return 'Objetivo do Relatório de Vistoria Semanal de Equipamentos';
+    if (ronda.templateRonda === 'MENSAL') return 'Objetivo do Relatório de Inspeção de Sistemas de Incêndio';
+    if (ronda.templateRonda === 'BIMESTRAL') return 'Objetivo do Relatório de Vistoria das Áreas Comuns';
+    return 'Objetivo do Relatório de Status de Equipamentos e Áreas Comuns';
+  };
+
   const secoesPadrao: SecaoRonda[] = [{
     id: 'objetivo-default',
     ordem: 1,
-    titulo: 'Objetivo do Relatório de Status de Equipamentos e Áreas Comuns',
-    conteudo: 'O presente relatório tem como finalidade apresentar de forma clara, técnica e organizada o status atual dos equipamentos e das áreas comuns do empreendimento. Seu intuito é fornecer uma visão consolidada das condições operacionais, de conservação e de segurança de cada sistema inspecionado, permitindo identificar pendências, riscos potenciais e necessidades de manutenção preventiva ou corretiva.\n\nAlém de registrar as constatações verificadas durante a vistoria, este relatório busca auxiliar a gestão predial no planejamento das ações necessárias, apoiando a tomada de decisão e garantindo maior controle sobre o desempenho e a vida útil dos equipamentos. Dessa forma, o documento contribui para a manutenção da qualidade, segurança e funcionalidade das instalações, promovendo a continuidade das operações e o bem-estar dos usuários.'
+    titulo: getTituloObjetivo(),
+    conteudo: ronda.objetivoRelatorio || objetivoPadrao
   }];
 
   const [secoes, setSecoes] = useState<SecaoRonda[]>(() => {
@@ -484,6 +498,88 @@ export function VisualizarRonda({
     }
   }, [headerImage]);
 
+  // ---------- DEBUG: Log quando ronda muda ----------
+  useEffect(() => {
+    console.log('🔍 VisualizarRonda RENDER - ronda props:', {
+      id: ronda.id,
+      nome: ronda.nome,
+      templateRonda: ronda.templateRonda,
+      roteiro: ronda.roteiro,
+      roteiroLength: ronda.roteiro?.length || 0
+    });
+  }, [ronda.id, ronda.roteiro]);
+
+  // ---------- Checklist State ----------
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>(ronda.checklistItems || []);
+  const [checklistModalOpen, setChecklistModalOpen] = useState(false);
+  const [editingChecklistItem, setEditingChecklistItem] = useState<ChecklistItem | null>(null);
+
+  // Atualizar checklist quando ronda mudar
+  useEffect(() => {
+    setChecklistItems(ronda.checklistItems || []);
+  }, [ronda.checklistItems]);
+
+  // Salvar checklist item
+  const handleSaveChecklistItem = async (item: ChecklistItem) => {
+    const updatedItem = { ...item, rondaId: ronda.id };
+    let novaLista: ChecklistItem[];
+
+    if (editingChecklistItem) {
+      novaLista = checklistItems.map(i => i.id === item.id ? updatedItem : i);
+    } else {
+      novaLista = [...checklistItems, updatedItem];
+    }
+
+    setChecklistItems(novaLista);
+
+    // Salvar no Supabase ou localStorage
+    try {
+      if (!ronda.id.startsWith('local-')) {
+        await rondaService.update(ronda.id, { checklistItems: novaLista });
+      } else {
+        const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
+        const index = rondas.findIndex((r: Ronda) => r.id === ronda.id);
+        if (index !== -1) {
+          rondas[index] = { ...rondas[index], checklistItems: novaLista };
+          localStorage.setItem('rondas', JSON.stringify(rondas));
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao salvar checklist:', error);
+    }
+
+    setEditingChecklistItem(null);
+  };
+
+  // Deletar checklist item
+  const handleDeleteChecklistItem = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este registro?')) return;
+
+    const novaLista = checklistItems.filter(i => i.id !== id);
+    setChecklistItems(novaLista);
+
+    try {
+      if (!ronda.id.startsWith('local-')) {
+        await rondaService.update(ronda.id, { checklistItems: novaLista });
+      } else {
+        const rondas = JSON.parse(localStorage.getItem('rondas') || '[]');
+        const index = rondas.findIndex((r: Ronda) => r.id === ronda.id);
+        if (index !== -1) {
+          rondas[index] = { ...rondas[index], checklistItems: novaLista };
+          localStorage.setItem('rondas', JSON.stringify(rondas));
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao deletar item do checklist:', error);
+    }
+  };
+
+  // Editar item existente
+  const handleEditChecklistItem = (item: ChecklistItem) => {
+    setEditingChecklistItem(item);
+    setChecklistModalOpen(true);
+  };
+
   // ---------- Executive Summary Logic ----------
   const resumoExecutivo = useMemo(() => {
     const equipamentosAtencao: string[] = [];
@@ -625,8 +721,19 @@ export function VisualizarRonda({
                 <div className="text-lg font-semibold">{ronda.responsavel || 'Ricardo Oliveira'}</div>
               </div>
               <div>
-                <div className="text-sm font-medium text-gray-500">Áreas Verificadas</div>
-                <div className="text-lg font-semibold text-blue-600">{areasTecnicas.length}</div>
+                {ronda.roteiro && ronda.roteiro.length > 0 ? (
+                  <>
+                    <div className="text-sm font-medium text-gray-500">Itens do Checklist</div>
+                    <div className="text-lg font-semibold text-emerald-600">
+                      {checklistItems.filter(i => i.status === 'OK').length}/{ronda.roteiro.length}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm font-medium text-gray-500">Áreas Verificadas</div>
+                    <div className="text-lg font-semibold text-blue-600">{areasTecnicas.length}</div>
+                  </>
+                )}
               </div>
             </div>
             {ronda.observacoesGerais && (
@@ -641,54 +748,117 @@ export function VisualizarRonda({
         {/* Seções do Relatório */}
         <SecoesRelatorio ronda={ronda} />
 
-        {/* Áreas Técnicas */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-green-600" />
-                Áreas Técnicas Verificadas
-              </CardTitle>
-              <Button onClick={onAdicionarArea} className="bg-green-600 hover:bg-green-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Adicionar Área
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {areasTecnicas.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">Nenhuma área técnica verificada ainda.</p>
+        {/* Áreas Técnicas - NÃO mostrar quando ronda tem roteiro/template */}
+        {!(ronda.roteiro && ronda.roteiro.length > 0) && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-green-600" />
+                  Áreas Técnicas Verificadas
+                </CardTitle>
+                <Button onClick={onAdicionarArea} className="bg-green-600 hover:bg-green-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Área
+                </Button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 print-grid-2-per-page">
-                {areasTecnicas.map(area => (
-                  <AreaTecnicaCard
-                    key={area.id}
-                    areaTecnica={area}
-                    onEdit={() => onEditarArea(area)}
-                    onDelete={() => onDeletarArea(area.id)}
-                    isPrintMode={false}
-                  />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              {areasTecnicas.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">Nenhuma área técnica verificada ainda.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 print-grid-2-per-page">
+                  {areasTecnicas.map(area => (
+                    <AreaTecnicaCard
+                      key={area.id}
+                      areaTecnica={area}
+                      onEdit={() => onEditarArea(area)}
+                      onDelete={() => onDeletarArea(area.id)}
+                      isPrintMode={false}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Itens Abertura de Chamado */}
-        <div className="my-12 border-t-2 border-gray-300">
-          <div className="flex items-center justify-center -mt-3">
-            <div className="bg-white px-6 py-2">
-              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                <AlertTriangle className="w-8 h-8 text-orange-600" />
-                Itens Abertura de Chamado
-              </h2>
+        {/* Checklist da Ronda (se tem roteiro) */}
+        {ronda.roteiro && ronda.roteiro.length > 0 && (
+          <Card className="glass-card">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <ClipboardList className="w-5 h-5 text-emerald-400" />
+                  Checklist da Ronda
+                  <Badge className="ml-2 bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                    {checklistItems.length} registros
+                  </Badge>
+                </CardTitle>
+                <Button
+                  onClick={() => {
+                    setEditingChecklistItem(null);
+                    setChecklistModalOpen(true);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {checklistItems.length === 0 ? (
+                <div className="text-center py-12">
+                  <ClipboardList className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400 mb-2">Nenhum registro ainda</p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Clique em "Adicionar" para registrar extintores, mangueiras, hidrantes...
+                  </p>
+                  <Button
+                    onClick={() => {
+                      setEditingChecklistItem(null);
+                      setChecklistModalOpen(true);
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Primeiro Registro
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {checklistItems.map(item => (
+                    <ChecklistRondaCard
+                      key={item.id}
+                      item={item}
+                      onEdit={handleEditChecklistItem}
+                      onDelete={handleDeleteChecklistItem}
+                    />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Itens Abertura de Chamado - NÃO mostrar quando ronda tem roteiro/template */}
+        {!(ronda.roteiro && ronda.roteiro.length > 0) && (
+          <>
+            <div className="my-12 border-t-2 border-gray-300">
+              <div className="flex items-center justify-center -mt-3">
+                <div className="bg-white px-6 py-2">
+                  <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                    <AlertTriangle className="w-8 h-8 text-orange-600" />
+                    Itens Abertura de Chamado
+                  </h2>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <Card className="print-section avoid-break">
+            <Card className="print-section avoid-break">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
@@ -797,6 +967,8 @@ export function VisualizarRonda({
             })()}
           </CardContent >
         </Card >
+          </>
+        )}
 
         {/* Itens Corrigidos */}
         {
@@ -895,6 +1067,18 @@ export function VisualizarRonda({
           </CardContent>
         </Card>
       </div >
+
+      {/* Modal do Checklist */}
+      <ChecklistItemModal
+        isOpen={checklistModalOpen}
+        onClose={() => {
+          setChecklistModalOpen(false);
+          setEditingChecklistItem(null);
+        }}
+        item={editingChecklistItem}
+        roteiro={ronda.roteiro || []}
+        onSave={handleSaveChecklistItem}
+      />
     </>
   );
 }

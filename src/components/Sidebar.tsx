@@ -126,17 +126,23 @@ export function Sidebar({
         key={item.id}
         onClick={() => onNavigate(item.id)}
         className={cn(
-          "w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
-          "hover:bg-white/10 hover:translate-x-1",
+          "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300",
+          "hover:bg-white/10 hover:translate-x-1 hover:scale-[1.02]",
           isActive
-            ? "bg-gradient-to-r from-emerald-500/20 to-emerald-600/10 text-emerald-400 border-l-4 border-emerald-500"
-            : "text-gray-300 hover:text-white",
+            ? "bg-gradient-to-r from-emerald-500/25 to-emerald-600/15 text-emerald-400 border-l-4 border-emerald-500 shadow-lg shadow-emerald-500/20"
+            : "text-gray-300 hover:text-white border-l-4 border-transparent",
           collapsed && "justify-center px-2"
         )}
       >
-        <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-emerald-400")} />
+        <Icon className={cn(
+          "w-5 h-5 flex-shrink-0 transition-all duration-300",
+          isActive ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" : ""
+        )} />
         {!collapsed && (
-          <span className="truncate font-medium">{item.label}</span>
+          <span className={cn(
+            "truncate font-medium transition-all duration-300",
+            isActive && "text-emerald-300"
+          )}>{item.label}</span>
         )}
       </button>
     );
@@ -232,14 +238,16 @@ export function Sidebar({
       {/* Sidebar - Mobile */}
       <aside
         className={cn(
-          "lg:hidden fixed top-0 left-0 h-full z-50 bg-[#1a2f2a] shadow-2xl transition-transform duration-300",
+          "lg:hidden fixed top-0 left-0 h-full z-50 transition-transform duration-300",
+          "bg-[rgba(15,23,42,0.85)] backdrop-blur-xl shadow-2xl",
+          "border-r border-white/10",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
           "w-72"
         )}
       >
         <button
           onClick={() => setMobileOpen(false)}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white"
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
@@ -249,7 +257,9 @@ export function Sidebar({
       {/* Sidebar - Desktop */}
       <aside
         className={cn(
-          "hidden lg:flex flex-col h-screen bg-[#1a2f2a] border-r border-white/10 transition-all duration-300",
+          "hidden lg:flex flex-col h-screen transition-all duration-300",
+          "bg-[rgba(15,23,42,0.7)] backdrop-blur-xl",
+          "border-r border-white/10",
           collapsed ? "w-20" : "w-64"
         )}
       >

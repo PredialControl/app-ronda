@@ -669,20 +669,26 @@ export const rondaService = {
       console.log('✅ Ronda básica encontrada no banco:', data);
 
       // Carregar dados relacionados separadamente
-      const rondaBasica = {
+      const rondaBasica: Ronda = {
         id: data.id ? data.id.toString() : '',
         nome: data.nome || '',
         contrato: data.contrato || '',
         data: data.data || '',
         hora: data.hora || '',
         tipoVisita: (data.tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || 'RONDA',
+        templateRonda: data.template_ronda || undefined,
+        roteiro: data.roteiro ? (typeof data.roteiro === 'string' ? JSON.parse(data.roteiro) : data.roteiro) : [],
         responsavel: data.responsavel || '',
         observacoesGerais: data.observacoes_gerais || '',
         secoes: data.secoes ? (typeof data.secoes === 'string' ? JSON.parse(data.secoes) : data.secoes) : undefined,
         areasTecnicas: [],
+        checklistItems: data.checklist_items ? (typeof data.checklist_items === 'string' ? JSON.parse(data.checklist_items) : data.checklist_items) : [],
         fotosRonda: [],
         outrosItensCorrigidos: []
       };
+
+      console.log('✅ Roteiro carregado:', rondaBasica.roteiro);
+      console.log('✅ ChecklistItems carregado:', rondaBasica.checklistItems);
 
       // Usar loadCompleteRonda para carregar dados relacionados apenas se o ID for válido
       const rondaCompleta = rondaBasica.id && rondaBasica.id.trim() !== ''
@@ -709,6 +715,8 @@ export const rondaService = {
       const novoId = crypto.randomUUID();
       console.log('🔑 UUID gerado no cliente:', novoId);
 
+      // Nota: template_ronda, roteiro e checklist_items são mantidos apenas em memória
+      // pois o banco Supabase não tem essas colunas
       const { data, error } = await supabase
         .from('rondas')
         .insert([{
@@ -736,21 +744,25 @@ export const rondaService = {
       console.log('🔍 Debug - rondaData extraído:', rondaData);
 
       // Usar o ID que geramos, não o retornado pelo Supabase
-      const rondaCriada = {
+      const rondaCriada: Ronda = {
         id: novoId, // Usar o ID que geramos
         nome: rondaData?.nome || ronda.nome,
         contrato: rondaData?.contrato || ronda.contrato,
         data: rondaData?.data || ronda.data,
         hora: rondaData?.hora || ronda.hora,
         tipoVisita: (rondaData?.tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || ronda.tipoVisita || 'RONDA',
+        templateRonda: ronda.templateRonda,
+        roteiro: ronda.roteiro || [],
         responsavel: rondaData?.responsavel || ronda.responsavel,
         observacoesGerais: rondaData?.observacoes_gerais || ronda.observacoesGerais || '',
         areasTecnicas: [],
+        checklistItems: ronda.checklistItems || [],
         fotosRonda: [],
         outrosItensCorrigidos: []
       };
 
       console.log('✅ Ronda criada com sucesso no Supabase:', rondaCriada);
+      console.log('✅ Roteiro incluído:', rondaCriada.roteiro);
       return rondaCriada;
     } catch (error) {
       console.error('❌ Erro ao criar ronda:', error);
@@ -778,6 +790,8 @@ export const rondaService = {
         updateData.secoes = JSON.stringify(updates.secoes);
         console.log('🔄 Seções stringificadas:', updateData.secoes);
       }
+      // Nota: checklistItems, roteiro e templateRonda são mantidos apenas em memória/localStorage
+      // pois o banco Supabase não tem essas colunas
 
       console.log('🔄 Dados a enviar para Supabase:', updateData);
 
@@ -814,7 +828,10 @@ export const rondaService = {
         responsavel: data.responsavel,
         observacoesGerais: data.observacoes_gerais,
         tipoVisita: data.tipo_visita,
+        templateRonda: data.template_ronda || updates.templateRonda,
+        roteiro: data.roteiro ? (typeof data.roteiro === 'string' ? JSON.parse(data.roteiro) : data.roteiro) : updates.roteiro || [],
         areasTecnicas: updates.areasTecnicas || [],
+        checklistItems: data.checklist_items ? (typeof data.checklist_items === 'string' ? JSON.parse(data.checklist_items) : data.checklist_items) : updates.checklistItems || [],
         fotosRonda: updates.fotosRonda || [],
         outrosItensCorrigidos: updates.outrosItensCorrigidos || []
       };

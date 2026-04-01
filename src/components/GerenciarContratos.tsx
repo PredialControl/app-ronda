@@ -85,21 +85,21 @@ export function GerenciarContratos({
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
+      <header className="glass-nav sticky top-0 z-10">
         <div className="w-full mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14 sm:h-16 gap-2">
-            <h1 className="text-base sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2 min-w-0 truncate">
-              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+            <h1 className="text-base sm:text-2xl font-bold text-white flex items-center gap-2 min-w-0 truncate">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400 flex-shrink-0" />
               <span className="truncate">Contratos</span>
             </h1>
             <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
-              <Button onClick={() => setIsGoogleScriptModalOpen(true)} variant="outline" className="text-gray-600 dark:text-gray-300 px-2 sm:px-3" size="sm">
+              <Button onClick={() => setIsGoogleScriptModalOpen(true)} variant="outline" className="glass-button px-2 sm:px-3" size="sm">
                 <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline ml-2">Configurar Email</span>
               </Button>
-              <Button onClick={handleAddContrato} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 px-2 sm:px-3" size="sm">
+              <Button onClick={handleAddContrato} className="bg-emerald-600 hover:bg-emerald-700 px-2 sm:px-3" size="sm">
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline ml-2">Novo Contrato</span>
               </Button>
@@ -111,57 +111,58 @@ export function GerenciarContratos({
       {/* Main Content */}
       <main className="w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Info Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3">Visão Geral</h2>
+        <div className="glass-card p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-semibold text-white mb-3">Visão Geral</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 text-sm">
-            <div className="text-center p-4 bg-blue-600 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
-              <div className="text-3xl font-bold text-white mb-1">{contratos.length}</div>
-              <div className="text-blue-100 font-medium">Total de Contratos</div>
+            <div className="text-center p-4 glass rounded-xl border-blue-500/30 hover:border-blue-500/50 transition-all">
+              <div className="text-3xl font-bold text-blue-400 mb-1">{contratos.length}</div>
+              <div className="text-gray-300 font-medium">Total de Contratos</div>
             </div>
-            <div className="text-center p-4 bg-emerald-600 rounded-lg shadow-md hover:bg-emerald-700 transition-colors">
-              <div className="text-3xl font-bold text-white mb-1">
+            <div className="text-center p-4 glass rounded-xl border-emerald-500/30 hover:border-emerald-500/50 transition-all">
+              <div className="text-3xl font-bold text-emerald-400 mb-1">
                 {contratos.filter(c => c.periodicidade === 'SEMANAL').length}
               </div>
-              <div className="text-emerald-100 font-medium">Semanais</div>
+              <div className="text-gray-300 font-medium">Semanais</div>
             </div>
-            <div className="text-center p-4 bg-amber-600 rounded-lg shadow-md hover:bg-amber-700 transition-colors">
-              <div className="text-3xl font-bold text-white mb-1">
+            <div className="text-center p-4 glass rounded-xl border-amber-500/30 hover:border-amber-500/50 transition-all">
+              <div className="text-3xl font-bold text-amber-400 mb-1">
                 {contratos.filter(c => c.periodicidade === 'QUINZENAL').length}
               </div>
-              <div className="text-amber-100 font-medium">Quinzenais</div>
+              <div className="text-gray-300 font-medium">Quinzenais</div>
             </div>
-            <div className="text-center p-4 bg-purple-600 rounded-lg shadow-md hover:bg-purple-700 transition-colors">
-              <div className="text-3xl font-bold text-white mb-1">
+            <div className="text-center p-4 glass rounded-xl border-purple-500/30 hover:border-purple-500/50 transition-all">
+              <div className="text-3xl font-bold text-purple-400 mb-1">
                 {contratos.filter(c => c.periodicidade === 'MENSAL').length}
               </div>
-              <div className="text-purple-100 font-medium">Mensais</div>
+              <div className="text-gray-300 font-medium">Mensais</div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="glass-card p-4 sm:p-6 mb-4 sm:mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Search className="w-4 h-4 inline mr-2" />
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                <Search className="w-4 h-4 inline mr-2 text-emerald-400" />
                 Buscar
               </label>
               <Input
                 placeholder="Nome, síndico ou endereço..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                className="glass-input"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Filter className="w-4 h-4 inline mr-2" />
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                <Filter className="w-4 h-4 inline mr-2 text-emerald-400" />
                 Periodicidade
               </label>
               <select
                 value={periodicidadeFilter}
                 onChange={(e) => setPeriodicidadeFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="glass-input w-full px-3 py-2"
               >
                 {getPeriodicidadeOptions().map(option => (
                   <option key={option.value} value={option.value}>
@@ -171,14 +172,14 @@ export function GerenciarContratos({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Filter className="w-4 h-4 inline mr-2" />
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                <Filter className="w-4 h-4 inline mr-2 text-emerald-400" />
                 Status
               </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="glass-input w-full px-3 py-2"
               >
                 <option value="TODOS">Todos os Status</option>
                 <option value="IMPLANTADO">Implantado</option>

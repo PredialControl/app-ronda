@@ -1287,7 +1287,7 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
 
         <div className="flex items-center gap-3">
           {/* Filtro de Categoria */}
-          <div className="flex items-center gap-2 bg-white p-1 rounded-md border border-gray-200 shadow-sm">
+          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md p-1 rounded-md border border-white/20 shadow-lg">
             <Filter className="w-4 h-4 text-gray-500 ml-2" />
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="w-[200px] border-0 focus:ring-0 h-8">
@@ -1318,19 +1318,19 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
       </div>
 
       {/* Summary */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h3 className="font-semibold text-gray-900 mb-3">Resumo do Progresso {selectedCategory !== 'TODOS' && `(${Object.values(CATEGORIES).find(c => c.id === selectedCategory)?.label})`}</h3>
+      <div className="glass-card p-4">
+        <h3 className="font-semibold text-white mb-3">Resumo do Progresso {selectedCategory !== 'TODOS' && `(${Object.values(CATEGORIES).find(c => c.id === selectedCategory)?.label})`}</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {getColumns().map((column) => {
             const Icon = column.icon;
             return (
-              <div key={column.id} className="text-center">
+              <div key={column.id} className="text-center glass p-3 rounded-xl">
                 <div className="flex items-center justify-center gap-2 mb-1">
-                  <Icon className="w-4 h-4" />
-                  <span className="text-sm font-medium text-gray-700">{column.title}</span>
+                  <Icon className="w-4 h-4 text-emerald-400" />
+                  <span className="text-sm font-medium text-gray-300">{column.title}</span>
                 </div>
                 <div className="text-2xl font-bold text-white">{column.items.length}</div>
-                <div className="text-xs text-gray-500">itens</div>
+                <div className="text-xs text-gray-400">itens</div>
               </div>
             );
           })}
@@ -1344,7 +1344,7 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
           return (
             <div
               key={column.id}
-              className="flex flex-col border-2 border-dashed border-gray-200 rounded-lg"
+              className="flex flex-col glass-kanban-column"
               style={{ height: 'calc(100vh - 350px)', minHeight: '700px' }}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
@@ -1364,7 +1364,7 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                   {column.items.map((item) => (
                     <Card
                       key={item.id}
-                      className={`cursor-move hover:shadow-md transition-shadow bg-white border-l-4 ${getCategoryColor(item.category)}`}
+                      className={`cursor-move hover:shadow-lg transition-all glass-kanban-card border-l-4 ${getCategoryColor(item.category)}`}
                       draggable
                       onDragStart={() => handleDragStart(item)}
                       onClick={() => handleShowCardDetails(item)}
@@ -1390,7 +1390,7 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                                 e.stopPropagation();
                                 handleRemoveItem(item.id);
                               }}
-                              className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-1 h-6 w-6"
+                              className="text-gray-400 hover:text-red-400 hover:bg-red-500/20 p-1 h-6 w-6"
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
@@ -1402,7 +1402,7 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                                 e.stopPropagation();
                                 handleEditStatus(item);
                               }}
-                              className="text-gray-400 hover:text-blue-500 hover:bg-blue-50 p-1 h-6 w-6"
+                              className="text-gray-400 hover:text-blue-400 hover:bg-blue-500/20 p-1 h-6 w-6"
                             >
                               <Edit className="w-3 h-3" />
                             </Button>
@@ -1487,21 +1487,21 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
       {/* Modal para Data */}
       {
         showDateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-modal p-6 w-96 max-w-md mx-4">
               <div className="flex items-center gap-2 mb-4">
-                <Calendar className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">
+                <Calendar className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-lg font-semibold text-white">
                   {pendingMove?.newStatus === 'finalizado' ? 'Data de Recebimento' : 'Data de Vistoria'}
                 </h3>
               </div>
 
-              <p className="text-gray-600 mb-4">
-                Informe a data {pendingMove?.newStatus === 'finalizado' ? 'de recebimento' : 'de vistoria'} para o item: <strong>{pendingMove?.item.title}</strong>
+              <p className="text-gray-300 mb-4">
+                Informe a data {pendingMove?.newStatus === 'finalizado' ? 'de recebimento' : 'de vistoria'} para o item: <strong className="text-white">{pendingMove?.item.title}</strong>
               </p>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   {pendingMove?.newStatus === 'finalizado' ? 'Data de Recebimento' : 'Data de Vistoria'}
                 </label>
                 <input
@@ -1514,7 +1514,7 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                       setVistoriaDate(e.target.value);
                     }
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="glass-input w-full px-3 py-2"
                   max={new Date().toISOString().split('T')[0]}
                 />
               </div>
@@ -1523,14 +1523,14 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                 <Button
                   variant="outline"
                   onClick={handleCancelModal}
-                  className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                  className="text-gray-300 border-white/20 hover:bg-white/10"
                 >
                   Cancelar
                 </Button>
                 <Button
                   onClick={pendingMove?.newStatus === 'finalizado' ? handleConfirmRecebimento : handleConfirmVistoria}
                   disabled={pendingMove?.newStatus === 'finalizado' ? !recebimentoDate : !vistoriaDate}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300"
+                  className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600"
                 >
                   {pendingMove?.newStatus === 'finalizado' ? 'Confirmar Recebimento' : 'Confirmar Vistoria'}
                 </Button>
@@ -1543,24 +1543,24 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
       {/* Modal para Novo Item */}
       {
         showNewItemModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-modal p-6 w-96 max-w-md mx-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-blue-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">Novo Item</h3>
+                  <Plus className="w-5 h-5 text-emerald-400" />
+                  <h3 className="text-lg font-semibold text-white">Novo Item</h3>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleCancelNewItem}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-white hover:bg-white/10"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
 
-              <p className="text-gray-600 mb-4">
+              <p className="text-gray-300 mb-4">
                 Crie um novo item que será adicionado automaticamente na coluna "AG Vistoria".
               </p>
 
@@ -1602,14 +1602,14 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                 <Button
                   variant="outline"
                   onClick={handleCancelNewItem}
-                  className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                  className="text-gray-300 border-white/20 hover:bg-white/10"
                 >
                   Cancelar
                 </Button>
                 <Button
                   onClick={handleCreateNewItem}
                   disabled={!newItemTitle.trim()}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300"
+                  className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600"
                 >
                   Criar Item
                 </Button>
@@ -1622,40 +1622,40 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
       {/* Modal para Correção */}
       {
         showCorrecaoModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-modal p-6 w-96 max-w-md mx-4">
               <div className="flex items-center gap-2 mb-4">
-                <Wrench className="w-5 h-5 text-orange-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Qual correção?</h3>
+                <Wrench className="w-5 h-5 text-orange-400" />
+                <h3 className="text-lg font-semibold text-white">Qual correção?</h3>
               </div>
 
-              <p className="text-gray-600 mb-4">
-                Descreva qual correção precisa ser feita no item: <strong>{pendingMove?.item.title}</strong>
+              <p className="text-gray-300 mb-4">
+                Descreva qual correção precisa ser feita no item: <strong className="text-white">{pendingMove?.item.title}</strong>
               </p>
 
               <div className="mb-4 space-y-4">
                 <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Label className="block text-sm font-medium text-gray-300 mb-2">
                     Data da Correção
                   </Label>
                   <input
                     type="date"
                     value={vistoriaDate}
                     onChange={(e) => setVistoriaDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="glass-input w-full px-3 py-2"
                     max={new Date().toISOString().split('T')[0]}
                   />
                 </div>
 
                 <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Label className="block text-sm font-medium text-gray-300 mb-2">
                     Motivo da Correção
                   </Label>
                   <textarea
                     value={correcaoText}
                     onChange={(e) => setCorrecaoText(e.target.value)}
                     placeholder="Descreva qual correção precisa ser feita..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent h-32 resize-none"
+                    className="glass-input w-full px-3 py-2 h-32 resize-none"
                   />
                 </div>
               </div>
@@ -1664,14 +1664,14 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                 <Button
                   variant="outline"
                   onClick={handleCancelCorrecao}
-                  className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                  className="text-gray-300 border-white/20 hover:bg-white/10"
                 >
                   Cancelar
                 </Button>
                 <Button
                   onClick={handleConfirmCorrecao}
                   disabled={!correcaoText.trim() || !vistoriaDate}
-                  className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300"
+                  className="bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600"
                 >
                   Confirmar Correção
                 </Button>
@@ -1684,40 +1684,40 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
       {/* Modal para "Em Andamento" (O que falta?) */}
       {
         showAndamentoModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 max-w-md mx-4">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-modal p-6 w-96 max-w-md mx-4">
               <div className="flex items-center gap-2 mb-4">
-                <Wrench className="w-5 h-5 text-yellow-600" />
-                <h3 className="text-lg font-semibold text-gray-900">O que falta?</h3>
+                <Wrench className="w-5 h-5 text-yellow-400" />
+                <h3 className="text-lg font-semibold text-white">O que falta?</h3>
               </div>
 
-              <p className="text-gray-600 mb-4">
-                Descreva o que falta para concluir o item: <strong>{pendingMove?.item.title}</strong>
+              <p className="text-gray-300 mb-4">
+                Descreva o que falta para concluir o item: <strong className="text-white">{pendingMove?.item.title}</strong>
               </p>
 
               <div className="mb-4 space-y-4">
                 <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Label className="block text-sm font-medium text-gray-300 mb-2">
                     Data
                   </Label>
                   <input
                     type="date"
                     value={dataAndamento}
                     onChange={(e) => setDataAndamento(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="glass-input w-full px-3 py-2"
                     max={new Date().toISOString().split('T')[0]}
                   />
                 </div>
 
                 <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Label className="block text-sm font-medium text-gray-300 mb-2">
                     O que falta para concluir?
                   </Label>
                   <textarea
                     value={oQueFaltaText}
                     onChange={(e) => setOQueFaltaText(e.target.value)}
                     placeholder="Descreva o que ainda falta fazer..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent h-32 resize-none"
+                    className="glass-input w-full px-3 py-2 h-32 resize-none"
                   />
                 </div>
               </div>
@@ -1726,14 +1726,14 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
                 <Button
                   variant="outline"
                   onClick={handleCancelAndamento}
-                  className="text-gray-600 border-gray-300 hover:bg-gray-50"
+                  className="text-gray-300 border-white/20 hover:bg-white/10"
                 >
                   Cancelar
                 </Button>
                 <Button
                   onClick={handleConfirmAndamento}
                   disabled={!oQueFaltaText.trim() || !dataAndamento}
-                  className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-300"
+                  className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600"
                 >
                   Confirmar
                 </Button>
@@ -1746,9 +1746,9 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
       {/* Modal de Detalhes do Card */}
       {
         showCardDetails && selectedCard && (
-          <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
-            <div className="bg-black rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col border-2 border-gray-700">
-              <div className={`p-4 ${getCategoryColor(selectedCard.category).replace('border-l-4', 'border-l-8')} border-l-solid bg-gray-900 flex justify-between items-start shrink-0`}>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="glass-modal w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+              <div className={`p-4 ${getCategoryColor(selectedCard.category).replace('border-l-4', 'border-l-8')} border-l-solid bg-white/5 flex justify-between items-start shrink-0`}>
                 <div>
                   <div className="mb-2">
                     {getCategoryBadge(selectedCard.category)}

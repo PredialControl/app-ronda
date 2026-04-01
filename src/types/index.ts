@@ -72,7 +72,11 @@ export interface Ronda {
   data: string;
   hora: string;
   tipoVisita?: 'RONDA' | 'REUNIAO' | 'OUTROS'; // Tipo de visita
+  templateRonda?: string; // ID do template usado (SEMANAL, MENSAL, BIMESTRAL, PERSONALIZADA)
+  roteiro?: string[]; // Itens do roteiro da ronda
+  objetivoRelatorio?: string; // Texto do objetivo específico para o tipo de ronda
   areasTecnicas: AreaTecnica[];
+  checklistItems?: ChecklistItem[]; // Itens do checklist (card simples)
   fotosRonda: FotoRonda[];
   outrosItensCorrigidos: OutroItemCorrigido[];
   observacoesGerais?: string;
@@ -214,5 +218,19 @@ export interface RelatorioPendencia {
   data_recebimento?: string; // Data de recebimento (quando adiciona foto depois)
   status?: 'PENDENTE' | 'RECEBIDO' | 'NAO_FARAO'; // Status da pendência
   created_at: string;
+}
+
+// Checklist Item para Rondas (card simples)
+export interface ChecklistItem {
+  id: string;
+  rondaId: string;
+  tipo: string; // Tipo do item (Extintor, Mangueira, Hidrante, Hall, Escadaria, etc.)
+  objetivo: string; // O item do roteiro original (ex: "Verificar extintores")
+  local: string; // Ex: "3º Andar", "Hall B", "Escada A"
+  fotos: string[]; // Array de fotos (múltiplas)
+  status: 'OK' | 'NAO_OK';
+  observacao?: string; // Observação opcional (só se precisar)
+  data: string;
+  hora: string;
 }
 

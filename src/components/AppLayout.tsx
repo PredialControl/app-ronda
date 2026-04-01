@@ -45,22 +45,28 @@ export function AppLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-hidden">
-      {/* Sidebar */}
-      <Sidebar
-        currentLevel={menuLevel}
-        contratoNome={contratoNome}
-        activeItem={activeMenuItem}
-        onNavigate={onNavigate}
-        onBack={onBack}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-      />
+    <div className="flex h-screen overflow-hidden relative">
+      {/* Background com gradiente para glassmorphism */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#0a1f1a] via-[#0d1b2a] to-[#1a1f2e]" />
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMiI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyem0wLTRWMjhIMjR2Mmgxem0tMiA4djJoLTh2LTJoOHptNC0yNHYySDI2VjEyaDEyem0tMiA0djJoLTh2LTJoOHptLTQgMjR2Mmgtdjjtmi0yaDF6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header */}
-        <header className="bg-[rgba(26,47,42,0.95)] backdrop-blur-lg border-b border-white/10 px-4 lg:px-6 py-3 flex-shrink-0">
+      {/* Content wrapper */}
+      <div className="relative flex w-full h-full">
+        {/* Sidebar */}
+        <Sidebar
+          currentLevel={menuLevel}
+          contratoNome={contratoNome}
+          activeItem={activeMenuItem}
+          onNavigate={onNavigate}
+          onBack={onBack}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Top Header */}
+          <header className="bg-[rgba(15,23,42,0.6)] backdrop-blur-xl border-b border-white/10 px-4 lg:px-6 py-3 flex-shrink-0">
           <div className="flex items-center justify-between">
             {/* Left - Breadcrumb */}
             <div className="flex items-center gap-4 min-w-0 pl-12 lg:pl-0">
@@ -132,6 +138,7 @@ export function AppLayout({
             </div>
           )}
         </main>
+        </div>
       </div>
     </div>
   );

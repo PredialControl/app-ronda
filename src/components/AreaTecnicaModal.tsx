@@ -217,18 +217,18 @@ export function AreaTecnicaModal({
   console.log('Modal está aberto, renderizando...');
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[9999] p-4">
-      <div className="bg-white rounded-lg w-full max-w-md max-h-[95vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+      <div className="glass-modal w-full max-w-md max-h-[95vh] overflow-y-auto">
         {/* Header fixo */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 rounded-t-lg">
+        <div className="sticky top-0 bg-white/5 backdrop-blur-lg border-b border-white/10 px-4 py-3 rounded-t-lg">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Wrench className="w-5 h-5" />
+            <h2 className="text-lg font-semibold flex items-center gap-2 text-white">
+              <Wrench className="w-5 h-5 text-emerald-400" />
               {areaTecnica ? 'Editar Área Técnica' : 'Adicionar Áreas com Fotos'}
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100"
+              className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -240,8 +240,8 @@ export function AreaTecnicaModal({
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!areaTecnica && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                <p className="text-sm text-blue-800">
+              <div className="glass p-3 mb-4 border-emerald-500/30">
+                <p className="text-sm text-emerald-300">
                   💡 <strong>Dica:</strong> Selecione a área técnica primeiro, depois escolha várias fotos.
                   Todas as fotos terão o mesmo nome de área que você escolher aqui!
                 </p>
@@ -249,11 +249,11 @@ export function AreaTecnicaModal({
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-1">Área Técnica *</label>
+              <label className="block text-sm font-medium mb-1 text-gray-300">Área Técnica *</label>
               <select
                 value={formData.nome}
                 onChange={(e) => handleInputChange('nome', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="glass-input w-full p-3"
                 required
               >
                 <option value="">Selecione a área técnica</option>
@@ -266,11 +266,11 @@ export function AreaTecnicaModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Status *</label>
+              <label className="block text-sm font-medium mb-1 text-gray-300">Status *</label>
               <select
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="glass-input w-full p-3"
                 required
               >
                 <option value="ATIVO">Ativo</option>
@@ -280,14 +280,14 @@ export function AreaTecnicaModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Status do Teste *</label>
+              <label className="block text-sm font-medium mb-1 text-gray-300">Status do Teste *</label>
               <select
                 value={formData.testeStatus || 'TESTADO'}
                 onChange={(e) => {
                   console.log('⚠️⚠️⚠️ STATUS DE TESTE MUDOU PARA:', e.target.value);
                   handleInputChange('testeStatus', e.target.value);
                 }}
-                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="glass-input w-full p-3"
                 required
               >
                 <option value="TESTADO">✅ Feito teste de funcionamento do ativo</option>
@@ -296,13 +296,13 @@ export function AreaTecnicaModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Contrato</label>
+              <label className="block text-sm font-medium mb-1 text-gray-300">Contrato</label>
               <Input
                 value={contratoRonda}
                 readOnly
-                className="bg-gray-100"
+                className="glass-input opacity-70"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-400 mt-1">
                 Preenchido automaticamente da ronda
               </p>
             </div>

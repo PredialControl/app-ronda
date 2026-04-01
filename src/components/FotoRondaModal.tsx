@@ -196,21 +196,21 @@ export function FotoRondaModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-      <div className="bg-black border-2 border-gray-700 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="glass-modal p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold flex items-center gap-2 text-white">
-            <AlertTriangle className="w-5 h-5 text-orange-500" />
+            <AlertTriangle className="w-5 h-5 text-orange-400" />
             {fotoRonda ? 'Editar Item de Chamado' : 'Novo Item de Chamado'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-gray-400 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Upload de Fotos */}
-          <div className="space-y-4 border-2 border-gray-600 rounded-lg p-4 bg-gray-900">
+          <div className="space-y-4 glass p-4">
             <PhotoUpload
               photos={formData.fotos || []}
               onPhotosChange={(novasFotos) => {
@@ -234,7 +234,7 @@ export function FotoRondaModal({
               onChange={(e) => handleInputChange('local', e.target.value)}
               placeholder="Local onde a foto foi tirada"
               required
-              className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
+              className="glass-input"
             />
           </div>
 
@@ -246,7 +246,7 @@ export function FotoRondaModal({
               onChange={(e) => handleInputChange('pendencia', e.target.value)}
               placeholder="Ex.: Pintura de parede, troca de lâmpada..."
               required
-              className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
+              className="glass-input"
             />
           </div>
 
@@ -257,7 +257,7 @@ export function FotoRondaModal({
               value={formData.observacoes}
               onChange={(e) => handleInputChange('observacoes', e.target.value)}
               placeholder="Observações adicionais (opcional)"
-              className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
+              className="glass-input"
             />
           </div>
 
