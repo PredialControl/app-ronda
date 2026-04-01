@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preview – Recebimento Áreas Comuns</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #111; font-family: Arial, sans-serif; display: flex; justify-content: center; padding: 32px 16px; }
+  input[type=checkbox] { accent-color: #22c55e; width: 20px; height: 20px; cursor: pointer; }
+  input[type=date] { color-scheme: dark; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+const AREAS_PADRAO = [
+  'Academia', 'Churrasqueira', 'Espaço Gourmet', 'Salão de Festas',
+  'Playground', 'Piscina', 'Quadra Esportiva', 'Sauna',
+  'Brinquedoteca', 'Salão de Jogos'
+];
+
+function App() {
+  const [areas, setAreas] = useState(
+    AREAS_PADRAO.map((nome, i) => ({ id: String(i), nome, status: 'pendente', data: '' }))
+  );
+
+  const toggleArea = (index) => {
+    setAreas(prev => {
+      const arr = [...prev];
+      const hoje = new Date().toISOString().split('T')[0];
+      const novoStatus = arr[index].status === 'recebido' ? 'pendente' : 'recebido';
+      arr[index] = {
+        ...arr[index],
+        status: novoStatus,
+        data: novoStatus === 'recebido' ? (arr[index].data || hoje) : arr[index].data
+      };
+      return arr;
+    });
+  };
+
+  const updateData = (index, data) => {
+    setAreas(prev => { const arr = [...prev]; arr[index] = { ...arr[index], data }; return arr; });
+  };
+
+  const removeArea = (index) => setAreas(prev => prev.filter((_, i) => i !== index));
+
+  const addArea = () => {
+    const nome = window.prompt('Nome da nova área:');
+    if (nome && nome.trim()) {
+      setAreas(prev => [...prev, { id: Date.now().toString(), nome: nome.trim(), status: 'pendente', data: '' }]);
+    }
+  };
+
+  const recebidas = areas.filter(a => a.status === 'recebido').length;
+  const todasRecebidas = areas.length > 0 && recebidas === areas.length;
+
+  return (
+    <div style={{ width: '100%', maxWidth: 540 }}>
+      {/* Cabeçalho */}
+      <div style={{ background: '#000', border: '1px solid #555', borderRadius: 10, padding: 16, marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <span style={{ fontSize: 13, fontWeight: 'bold', color: '#fff' }}>RECEBIMENTO ÁREAS COMUNS</span>
+          <span style={{ background: '#ca8a04', color: '#fff', fontSize: 10, padding: '2px 8px', borderRadius: 4, fontWeight: 'bold' }}>AMARELO</span>
+        </div>
+        <div style={{ fontSize: 11, color: '#aaa' }}>ID: 7 &nbsp;|&nbsp; 14/01/2024</div>
+      </div>
+
+      {/* Card principal */}
+      <div style={{ background: '#000', border: '2px solid #eab308', borderRadius: 10, padding: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#eab308" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+            <span style={{ color: '#eab308', fontWeight: 'bold', fontSize: 13 }}>Lista das Áreas do Condomínio</span>
+          </div>
+          <span style={{ fontSize: 11, color: '#9ca3af' }}>{recebidas}/{areas.length} recebidas</span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {areas.map((area, index) => (
+            <div
+              key={area.id}
+              style={{
+                background: area.status === 'recebido' ? 'rgba(21,128,61,0.2)' : '#1a1a1a',
+                border: `1px solid ${area.status === 'recebido' ? '#16a34a' : '#374151'}`,
+                borderRadius: 8, padding: '8px 12px',
+                display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                transition: 'all 0.2s'
+              }}
+            >
+              {/* Checkbox */}
+              <input
+                type="checkbox"
+                checked={area.status === 'recebido'}
+                onChange={() => toggleArea(index)}
+              />
+
+              {/* Nome — clicável */}
+              <span
+                onClick={() => toggleArea(index)}
+                style={{
+                  flex: 1, minWidth: 80, fontSize: 13, fontWeight: '600', cursor: 'pointer',
+                  color: area.status === 'recebido' ? '#4ade80' : '#fff',
+                  textDecoration: area.status === 'recebido' ? 'line-through' : 'none',
+                  userSelect: 'none'
+                }}
+              >
+                {area.nome}
+              </span>
+
+              {/* Badge status */}
+              <span style={{
+                fontSize: 11, fontWeight: 'bold', padding: '2px 8px', borderRadius: 4,
+                background: area.status === 'recebido' ? '#16a34a' : '#374151',
+                color: area.status === 'recebido' ? '#fff' : '#9ca3af'
+              }}>
+                {area.status === 'recebido' ? '✓ Recebido' : 'Pendente'}
+              </span>
+
+              {/* Data */}
+              <input
+                type="date"
+                value={area.data || ''}
+                onChange={e => updateData(index, e.target.value)}
+                style={{
+                  fontSize: 11, padding: '2px 4px', border: '1px solid #eab308',
+                  borderRadius: 4, background: '#000', color: '#fff', width: 115
+                }}
+              />
+
+              {/* Remover */}
+              <button
+                onClick={() => removeArea(index)}
+                style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: 16 }}
+              >✕</button>
+            </div>
+          ))}
+        </div>
+
+        {/* Adicionar */}
+        <button
+          onClick={addArea}
+          style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#4ade80' }}
+        >
+          <span style={{ width: 24, height: 24, background: '#16a34a', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 20, fontWeight: 'bold' }}>+</span>
+          <span style={{ fontSize: 13, fontWeight: 'bold' }}>Adicionar área</span>
+        </button>
+
+        {todasRecebidas && (
+          <div style={{ marginTop: 12, background: '#16a34a', color: '#fff', border: '2px solid #22c55e', padding: '6px 12px', borderRadius: 6, fontSize: 12, fontWeight: 'bold' }}>
+            ✅ Todas as áreas recebidas
+          </div>
+        )}
+      </div>
+
+      <p style={{ color: '#6b7280', fontSize: 11, marginTop: 10, textAlign: 'center' }}>
+        Clique no ✓ ou no nome da área para marcar como recebida
+      </p>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

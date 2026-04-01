@@ -1065,19 +1065,29 @@ export function SupervisorApp() {
       <div className="min-h-screen bg-slate-900 flex flex-col">
         {/* Header */}
         <div className="bg-slate-800 p-4 border-b border-slate-700">
-          <h1 className="text-lg font-bold text-white">{config.nome}</h1>
-          <p className="text-sm text-gray-400">Revisão Final</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setViewMode('ronda')}
+              className="p-2 -ml-2 text-gray-400 hover:text-white"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-lg font-bold text-white">Pré-visualização</h1>
+              <p className="text-sm text-gray-400">{config.nome} - {checklistItems.length} itens</p>
+            </div>
+          </div>
         </div>
 
         {/* Resumo */}
         <div className="p-4">
-          <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+          <div className="bg-gradient-to-r from-emerald-500/20 to-red-500/20 rounded-xl p-4 border border-slate-700">
             <div className="grid grid-cols-2 gap-4 text-center">
-              <div>
+              <div className="bg-slate-800/50 rounded-lg p-3">
                 <div className="text-3xl font-bold text-emerald-400">{itensOk}</div>
                 <div className="text-sm text-gray-400">OK</div>
               </div>
-              <div>
+              <div className="bg-slate-800/50 rounded-lg p-3">
                 <div className="text-3xl font-bold text-red-400">{itensNaoOk}</div>
                 <div className="text-sm text-gray-400">NÃO OK</div>
               </div>
@@ -1085,45 +1095,84 @@ export function SupervisorApp() {
           </div>
         </div>
 
-        {/* Lista de itens */}
-        <div className="flex-1 overflow-auto px-4 space-y-2">
-          {checklistItems.map((item, idx) => (
-            <div
-              key={item.id}
-              className={`rounded-lg p-3 border ${
-                item.status === 'OK'
-                  ? 'bg-emerald-500/10 border-emerald-500/30'
-                  : 'bg-red-500/10 border-red-500/30'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                {item.status === 'OK' ? (
-                  <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-white truncate">{item.tipo}</div>
-                  <div className="text-sm text-gray-400">{item.local}</div>
-                  {item.observacao && (
-                    <div className={`text-xs mt-1 ${item.status === 'NAO_OK' ? 'text-red-300' : 'text-gray-500'}`}>
-                      {item.observacao}
+        {/* Lista de itens como cards com fotos */}
+        <div className="flex-1 overflow-auto px-4 pb-4">
+          <div className="grid grid-cols-1 gap-4">
+            {checklistItems.map((item) => (
+              <div
+                key={item.id}
+                className={`rounded-xl overflow-hidden border-2 ${
+                  item.status === 'OK'
+                    ? 'border-emerald-500/50 bg-slate-800'
+                    : 'border-red-500/50 bg-slate-800'
+                }`}
+              >
+                {/* Foto do item */}
+                {item.fotos.length > 0 ? (
+                  <div className="aspect-video bg-slate-700 relative">
+                    <img
+                      src={item.fotos[0]}
+                      alt={item.tipo}
+                      className="w-full h-full object-cover"
+                    />
+                    {item.fotos.length > 1 && (
+                      <div className="absolute top-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">
+                        +{item.fotos.length - 1} fotos
+                      </div>
+                    )}
+                    {/* Badge de status sobre a foto */}
+                    <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
+                      item.status === 'OK'
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-red-500 text-white'
+                    }`}>
+                      {item.status === 'OK' ? 'OK' : 'NÃO OK'}
                     </div>
-                  )}
-                </div>
-                {item.fotos.length > 0 && (
-                  <div className="text-xs text-gray-500 flex items-center gap-1">
-                    <Camera className="w-3 h-3" />
-                    {item.fotos.length}
+                  </div>
+                ) : (
+                  <div className="aspect-video bg-slate-700 flex items-center justify-center relative">
+                    <Camera className="w-12 h-12 text-slate-600" />
+                    <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-bold ${
+                      item.status === 'OK'
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-red-500 text-white'
+                    }`}>
+                      {item.status === 'OK' ? 'OK' : 'NÃO OK'}
+                    </div>
                   </div>
                 )}
+
+                {/* Informações do item */}
+                <div className="p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-bold text-white">{item.tipo}</h3>
+                    {item.status === 'OK' ? (
+                      <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    ) : (
+                      <AlertCircle className="w-5 h-5 text-red-400" />
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-400 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {item.local}
+                  </p>
+                  {item.observacao && (
+                    <p className={`text-sm mt-2 p-2 rounded ${
+                      item.status === 'NAO_OK'
+                        ? 'bg-red-500/20 text-red-300'
+                        : 'bg-slate-700 text-gray-300'
+                    }`}>
+                      {item.observacao}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
-        {/* Botões */}
-        <div className="p-4 bg-slate-800 border-t border-slate-700 space-y-3">
+        {/* Botão Finalizar */}
+        <div className="p-4 bg-slate-800 border-t border-slate-700">
           <button
             onClick={handleFinalizarRonda}
             disabled={syncing}
@@ -1134,16 +1183,13 @@ export function SupervisorApp() {
             ) : (
               <>
                 <Save className="w-5 h-5" />
-                Finalizar e Enviar
+                Confirmar e Salvar Ronda
               </>
             )}
           </button>
-          <button
-            onClick={() => setViewMode('ronda')}
-            className="w-full bg-slate-700 py-3 rounded-xl font-medium text-gray-300"
-          >
-            Voltar e Editar
-          </button>
+          <p className="text-center text-xs text-gray-500 mt-2">
+            Revise os itens acima antes de salvar
+          </p>
         </div>
       </div>
     );
