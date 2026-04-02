@@ -18,7 +18,8 @@ import {
   CheckCircle,
   Menu,
   X,
-  Home
+  Home,
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -80,6 +81,7 @@ export function Sidebar({
   // Menu de Supervisão
   const supervisaoMenuItems: SidebarItem[] = [
     { id: 'rondas-supervisao', label: 'Rondas de Supervisão', icon: Search },
+    { id: 'itens-relevantes', label: 'Itens Relevantes', icon: AlertTriangle },
     { id: 'parecer-tecnico', label: 'Parecer Técnico', icon: ClipboardList },
     { id: 'documentos-condominio', label: 'Documentos do Condomínio', icon: FolderOpen },
     { id: 'verificar-preventivas', label: 'Verificar Preventivas', icon: CheckCircle },

@@ -54,6 +54,9 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
       return match;
     });
 
+    // Ordenar por data mais recente primeiro
+    resultado.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
     console.log('🔍 FILTRO - Rondas filtradas:', resultado.length);
     console.log('🔍 FILTRO - Rondas do mês:', resultado.map(r => ({nome: r.nome, data: r.data, areas: r.areasTecnicas?.length})));
     return resultado;

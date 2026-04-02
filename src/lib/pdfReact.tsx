@@ -716,18 +716,20 @@ export const RelatorioPDF = ({ ronda, contrato, areas, headerImage }: { ronda: R
       }
     });
 
-    // Processar Checklist Items (Ronda Mobile)
+    // Processar Checklist Items (Ronda Mobile) - Filtrar itens com testeFuncionamento = 'NAO'
     const checklistOk: string[] = [];
     const checklistNaoOk: string[] = [];
 
-    (ronda.checklistItems || []).forEach(item => {
-      const text = `${item.tipo} (${item.local})${item.observacao ? ': ' + item.observacao : ''}`;
-      if (item.status === 'OK') {
-        checklistOk.push(text);
-      } else {
-        checklistNaoOk.push(text);
-      }
-    });
+    (ronda.checklistItems || [])
+      .filter(item => item.testeFuncionamento !== 'NAO') // Não mostrar itens não feitos
+      .forEach(item => {
+        const text = `${item.tipo} (${item.local})${item.observacao ? ': ' + item.observacao : ''}`;
+        if (item.status === 'OK') {
+          checklistOk.push(text);
+        } else {
+          checklistNaoOk.push(text);
+        }
+      });
 
     return { equipamentosAtencao, equipamentosNormais, chamadosAbertos, itensCorrigidos, checklistOk, checklistNaoOk };
   })();
@@ -810,26 +812,28 @@ export const RelatorioPDF = ({ ronda, contrato, areas, headerImage }: { ronda: R
           </>
         )}
 
-        {/* Checklist da Ronda (itens do app mobile) */}
-        {ronda.checklistItems && ronda.checklistItems.length > 0 && (
+        {/* Checklist da Ronda (itens do app mobile) - Filtrar itens não feitos */}
+        {ronda.checklistItems && ronda.checklistItems.filter((i: any) => i.testeFuncionamento !== 'NAO').length > 0 && (
           <>
             <View style={[styles.sectionTitle, { marginTop: areas.length > 0 ? 20 : 0 }]}>
               <Text>Checklist da Ronda</Text>
             </View>
             <View style={styles.gridContainer}>
-              {ronda.checklistItems.map((item: any, index: number) => (
-                <CardChecklist
-                  key={`checklist-${index}`}
-                  item={{
-                    id: item.id,
-                    tipo: item.tipo,
-                    local: item.local,
-                    fotos: item.fotos || [],
-                    status: item.status,
-                    observacao: item.observacao
-                  }}
-                />
-              ))}
+              {ronda.checklistItems
+                .filter((item: any) => item.testeFuncionamento !== 'NAO')
+                .map((item: any, index: number) => (
+                  <CardChecklist
+                    key={`checklist-${index}`}
+                    item={{
+                      id: item.id,
+                      tipo: item.tipo,
+                      local: item.local,
+                      fotos: item.fotos || [],
+                      status: item.status,
+                      observacao: item.observacao
+                    }}
+                  />
+                ))}
             </View>
           </>
         )}
@@ -1160,27 +1164,29 @@ export async function preparePdfData(ronda: Ronda, areas: AreaTecnica[]) {
     })
   );
 
-  // Processar checklist items (ronda mobile)
+  // Processar checklist items (ronda mobile) - Filtrar itens não feitos
   const checklistNormalized = await Promise.all(
-    (ronda.checklistItems || []).map(async (item) => {
-      try {
-        let fotos = item.fotos || [];
+    (ronda.checklistItems || [])
+      .filter(item => item.testeFuncionamento !== 'NAO') // Não incluir itens não feitos
+      .map(async (item) => {
+        try {
+          let fotos = item.fotos || [];
 
-        // Processar array de fotos
-        if (fotos.length > 0) {
-          fotos = await Promise.all(fotos.map(async (f) => await srcToDataURL(f) || ''));
-          fotos = fotos.filter(f => f !== ''); // Remover falhas
+          // Processar array de fotos
+          if (fotos.length > 0) {
+            fotos = await Promise.all(fotos.map(async (f) => await srcToDataURL(f) || ''));
+            fotos = fotos.filter(f => f !== ''); // Remover falhas
+          }
+
+          return {
+            ...item,
+            fotos
+          };
+        } catch (e) {
+          console.error('Erro ao processar item de checklist para PDF:', e);
+          return item;
         }
-
-        return {
-          ...item,
-          fotos
-        };
-      } catch (e) {
-        console.error('Erro ao processar item de checklist para PDF:', e);
-        return item;
-      }
-    })
+      })
   );
 
   const rondaNormalized = {

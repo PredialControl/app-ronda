@@ -22,11 +22,13 @@ export function TabelaRondas({ rondas, contrato, onSelectRonda, onNovaRonda, onD
   const [mesSelecionado, setMesSelecionado] = useState<number>(mesAtual);
   const [anoSelecionado, setAnoSelecionado] = useState<number>(anoAtual);
 
-  // Filtrar rondas pelo mês/ano selecionado
-  const rondasFiltradas = rondas.filter(ronda => {
-    const dataRonda = new Date(ronda.data + 'T00:00:00');
-    return dataRonda.getMonth() === mesSelecionado && dataRonda.getFullYear() === anoSelecionado;
-  });
+  // Filtrar rondas pelo mês/ano selecionado e ordenar por data mais recente
+  const rondasFiltradas = rondas
+    .filter(ronda => {
+      const dataRonda = new Date(ronda.data + 'T00:00:00');
+      return dataRonda.getMonth() === mesSelecionado && dataRonda.getFullYear() === anoSelecionado;
+    })
+    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
 
   const getStatusColor = (status: string) => {

@@ -9,28 +9,26 @@ export interface LaudoEmail {
 
 class FormSubmitService {
     // Enviar email usando FormSubmit.co
+    // NOTA: FormSubmit sempre mostra formato de formulário. Para email limpo use EmailJS.
     async enviarEmail(
         destinatario: string,
-        nomeDestinatario: string,
+        _nomeDestinatario: string,
         assunto: string,
         corpo: string,
-        dadosEstruturados: any = {}
+        _dadosEstruturados: any = {}
     ): Promise<boolean> {
         try {
             console.log('📧 Enviando email via FormSubmit para:', destinatario);
 
-            // Preparar dados para envio
+            // Enviar apenas o essencial - sem template de tabela
             const data = {
                 _subject: assunto,
-                _template: 'table', // Usa um template de tabela bonito
-                _captcha: 'false',  // Desativa captcha
-                _honey: '',         // Campo honeypot para spam
-                nome_destinatario: nomeDestinatario,
-                mensagem: corpo,
-                ...dadosEstruturados
+                _captcha: 'false',
+                _honey: '',
+                _autoresponse: corpo, // Isso envia como autoresposta limpa
+                message: corpo
             };
 
-            // Enviar requisição POST
             const response = await fetch(`https://formsubmit.co/ajax/${destinatario}`, {
                 method: 'POST',
                 headers: {

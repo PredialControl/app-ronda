@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Contrato, Ronda, AreaTecnica, FotoRonda, OutroItemCorrigido, AgendaItem } from '@/types';
+import { Contrato, Ronda, AreaTecnica, FotoRonda, OutroItemCorrigido, AgendaItem, ItemRelevante } from '@/types';
 
 // Serviços para Contratos
 export const contratoService = {
@@ -259,7 +259,7 @@ export const rondaService = {
 
       const { data, error } = await supabase
         .from('rondas')
-        .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais, tipo_visita')
+        .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais, tipo_visita, template_ronda, roteiro, checklist_items')
         .eq('contrato', contratoNome)
         .order('data', { ascending: false })
         .limit(50);
@@ -271,7 +271,7 @@ export const rondaService = {
 
       console.log(`✅ ${data?.length || 0} rondas encontradas para "${contratoNome}"`);
 
-      // Retornar rondas básicas SEM carregar dados completos
+      // Retornar rondas com checklistItems incluídos
       return (data || []).map(row => ({
         id: row.id?.toString() || '',
         nome: row.nome || 'Ronda sem nome',
@@ -279,6 +279,9 @@ export const rondaService = {
         data: row.data || new Date().toISOString().split('T')[0],
         hora: row.hora || '00:00',
         tipoVisita: ((row as any).tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || 'RONDA',
+        templateRonda: (row as any).template_ronda || undefined,
+        roteiro: (row as any).roteiro ? (typeof (row as any).roteiro === 'string' ? JSON.parse((row as any).roteiro) : (row as any).roteiro) : [],
+        checklistItems: (row as any).checklist_items ? (typeof (row as any).checklist_items === 'string' ? JSON.parse((row as any).checklist_items) : (row as any).checklist_items) : [],
         responsavel: row.responsavel || '',
         observacoesGerais: row.observacoes_gerais || '',
         areasTecnicas: [], // Será carregado quando clicar na ronda
@@ -298,7 +301,7 @@ export const rondaService = {
 
       const { data, error } = await supabase
         .from('rondas')
-        .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais, tipo_visita')
+        .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais, tipo_visita, template_ronda, roteiro, checklist_items')
         .order('data', { ascending: false })
         .limit(100);
 
@@ -307,9 +310,9 @@ export const rondaService = {
         return [];
       }
 
-      console.log(`✅ ${data?.length || 0} rondas carregadas (básicas)`);
+      console.log(`✅ ${data?.length || 0} rondas carregadas`);
 
-      // Retornar rondas básicas SEM carregar dados completos
+      // Retornar rondas com checklistItems incluídos
       return (data || []).map(row => ({
         id: row.id?.toString() || '',
         nome: row.nome || 'Ronda sem nome',
@@ -317,6 +320,9 @@ export const rondaService = {
         data: row.data || new Date().toISOString().split('T')[0],
         hora: row.hora || '00:00',
         tipoVisita: ((row as any).tipo_visita as 'RONDA' | 'REUNIAO' | 'OUTROS') || 'RONDA',
+        templateRonda: (row as any).template_ronda || undefined,
+        roteiro: (row as any).roteiro ? (typeof (row as any).roteiro === 'string' ? JSON.parse((row as any).roteiro) : (row as any).roteiro) : [],
+        checklistItems: (row as any).checklist_items ? (typeof (row as any).checklist_items === 'string' ? JSON.parse((row as any).checklist_items) : (row as any).checklist_items) : [],
         responsavel: row.responsavel || '',
         observacoesGerais: row.observacoes_gerais || '',
         areasTecnicas: [],
@@ -715,20 +721,35 @@ export const rondaService = {
       const novoId = crypto.randomUUID();
       console.log('🔑 UUID gerado no cliente:', novoId);
 
-      // Nota: template_ronda, roteiro e checklist_items são mantidos apenas em memória
-      // pois o banco Supabase não tem essas colunas
+      // Salvar tudo de uma vez no INSERT
+      const dadosInsert: any = {
+        id: novoId,
+        nome: ronda.nome,
+        contrato: ronda.contrato,
+        data: ronda.data,
+        hora: ronda.hora,
+        tipo_visita: ronda.tipoVisita || 'RONDA',
+        responsavel: ronda.responsavel,
+        observacoes_gerais: ronda.observacoesGerais
+      };
+
+      // Adicionar campos novos se existirem dados
+      if (ronda.templateRonda) {
+        dadosInsert.template_ronda = ronda.templateRonda;
+      }
+      if (ronda.roteiro && ronda.roteiro.length > 0) {
+        dadosInsert.roteiro = ronda.roteiro;
+      }
+      if (ronda.checklistItems && ronda.checklistItems.length > 0) {
+        dadosInsert.checklist_items = ronda.checklistItems;
+        console.log('📸 Incluindo checklistItems no INSERT:', ronda.checklistItems.length, 'itens');
+      }
+
+      console.log('🔄 Dados a inserir:', Object.keys(dadosInsert));
+
       const { data, error } = await supabase
         .from('rondas')
-        .insert([{
-          id: novoId, // Enviar o ID gerado pelo cliente
-          nome: ronda.nome,
-          contrato: ronda.contrato,
-          data: ronda.data,
-          hora: ronda.hora,
-          tipo_visita: ronda.tipoVisita || 'RONDA',
-          responsavel: ronda.responsavel,
-          observacoes_gerais: ronda.observacoesGerais
-        }])
+        .insert([dadosInsert])
         .select();
 
       console.log('🔍 Debug - Resposta do Supabase:', { data, error });
@@ -790,8 +811,17 @@ export const rondaService = {
         updateData.secoes = JSON.stringify(updates.secoes);
         console.log('🔄 Seções stringificadas:', updateData.secoes);
       }
-      // Nota: checklistItems, roteiro e templateRonda são mantidos apenas em memória/localStorage
-      // pois o banco Supabase não tem essas colunas
+      // Salvar checklistItems, roteiro e templateRonda (JSONB aceita objetos diretamente)
+      if (updates.checklistItems !== undefined) {
+        updateData.checklist_items = updates.checklistItems;
+        console.log('🔄 ChecklistItems a salvar:', updateData.checklist_items);
+      }
+      if (updates.roteiro !== undefined) {
+        updateData.roteiro = updates.roteiro;
+      }
+      if (updates.templateRonda !== undefined) {
+        updateData.template_ronda = updates.templateRonda;
+      }
 
       console.log('🔄 Dados a enviar para Supabase:', updateData);
 
@@ -1726,6 +1756,91 @@ export const agendaService = {
       if (error) throw error;
     } catch (error) {
       console.error('Erro ao limpar itens cancelados:', error);
+      throw error;
+    }
+  }
+};
+
+// Serviços para Itens Relevantes (Kanban)
+export const itemRelevanteService = {
+  // Buscar todos os itens de um contrato
+  async getByContrato(contratoNome: string): Promise<ItemRelevante[]> {
+    try {
+      const { data, error } = await supabase
+        .from('itens_relevantes')
+        .select('*')
+        .eq('contrato_nome', contratoNome)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar itens relevantes:', error);
+      throw error;
+    }
+  },
+
+  // Criar novo item
+  async create(item: Omit<ItemRelevante, 'id' | 'created_at' | 'updated_at'>): Promise<ItemRelevante> {
+    try {
+      const { data, error } = await supabase
+        .from('itens_relevantes')
+        .insert([item])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao criar item relevante:', error);
+      throw error;
+    }
+  },
+
+  // Atualizar item
+  async update(id: string, updates: Partial<ItemRelevante>): Promise<ItemRelevante> {
+    try {
+      const { data, error } = await supabase
+        .from('itens_relevantes')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao atualizar item relevante:', error);
+      throw error;
+    }
+  },
+
+  // Atualizar status (mover no Kanban)
+  async updateStatus(id: string, status: 'pendente' | 'em_andamento' | 'concluido'): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('itens_relevantes')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      throw error;
+    }
+  },
+
+  // Deletar item
+  async delete(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('itens_relevantes')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erro ao deletar item relevante:', error);
       throw error;
     }
   }

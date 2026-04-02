@@ -15,7 +15,8 @@
       "Bash(node fix-duplicacao-pendencias.mjs:*)",
       "Bash(node fix-duplicacao-casa-jau.mjs:*)",
       "Bash(npm run:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

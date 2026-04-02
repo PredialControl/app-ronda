@@ -220,6 +220,22 @@ export interface RelatorioPendencia {
   created_at: string;
 }
 
+// Item Relevante (Kanban de pendências)
+export interface ItemRelevante {
+  id: string;
+  contrato_nome: string;
+  titulo: string;
+  local?: string;
+  foto_url?: string;
+  data_abertura: string;
+  responsabilidade: 'condominio' | 'construtora' | 'a_definir';
+  status: 'pendente' | 'em_andamento' | 'concluido';
+  parecer?: string;
+  ronda_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Checklist Item para Rondas (card simples)
 export interface ChecklistItem {
   id: string;
@@ -230,6 +246,7 @@ export interface ChecklistItem {
   fotos: string[]; // Array de fotos (múltiplas)
   status: 'OK' | 'NAO_OK';
   observacao?: string; // Observação opcional (só se precisar)
+  testeFuncionamento?: 'SIM' | 'NAO'; // Se teste foi feito - NAO = não aparece no relatório
   data: string;
   hora: string;
 }

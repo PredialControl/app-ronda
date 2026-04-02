@@ -3713,7 +3713,7 @@ export function ColetaLite({ onVoltar, onLogout, usuario }: ColetaLiteProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {rondas.map(ronda => (
+              {[...rondas].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map(ronda => (
                 <div
                   key={ronda.id}
                   onClick={() => {

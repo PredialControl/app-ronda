@@ -22,16 +22,17 @@ import { GerenciarUsuarios } from '@/components/GerenciarUsuarios';
 import { AppLayout } from '@/components/AppLayout';
 import { MenuLevel } from '@/components/Sidebar';
 import { BreadcrumbItem } from '@/components/Breadcrumb';
-import { AreaTecnica, Ronda, Contrato, FotoRonda, OutroItemCorrigido, UsuarioAutorizado } from '@/types';
+import { AreaTecnica, Ronda, Contrato, FotoRonda, OutroItemCorrigido, UsuarioAutorizado, ItemRelevante } from '@/types';
 import { FileText, Building2, BarChart3, LogOut, User, Kanban, FileCheck, ArrowLeft, Hammer, Shield } from 'lucide-react';
 
-import { contratoService, rondaService, areaTecnicaService, fotoRondaService, outroItemService } from '@/lib/supabaseService';
+import { contratoService, rondaService, areaTecnicaService, fotoRondaService, outroItemService, itemRelevanteService } from '@/lib/supabaseService';
 import { supabase } from '@/lib/supabase';
 import { authService } from '@/lib/auth';
 import { syncService } from '@/lib/syncService';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { ColetaOffline } from '@/components/ColetaOffline';
 import { ColetaInspecao } from '@/components/ColetaInspecao';
+import { ItensRelevantesView } from '@/components/ItensRelevantesView';
 import { setupIOSStyles } from '@/lib/iosHelpers';
 
 
@@ -62,9 +63,10 @@ function App() {
   const [mainSection, setMainSection] = useState<'contratos' | 'agenda' | 'chamados' | 'dashboard'>('contratos');
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-inspecao' | 'usuarios' | 'menu' | 'contrato-detalhe' | 'plano-manutencao'>('menu');
+  const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-inspecao' | 'usuarios' | 'menu' | 'contrato-detalhe' | 'plano-manutencao' | 'itens-relevantes'>('menu');
   const [rondaSelecionada, setRondaSelecionada] = useState<Ronda | null>(null);
   const [rondasCompletas, setRondasCompletas] = useState<Ronda[]>([]);
+  const [itensRelevantes, setItensRelevantes] = useState<ItemRelevante[]>([]);
 
   // Estado para template pré-selecionado ao iniciar ronda a partir de alerta de pendência
   const [templateInicialRonda, setTemplateInicialRonda] = useState<'SEMANAL' | 'MENSAL' | 'BIMESTRAL' | null>(null);
@@ -436,6 +438,16 @@ function App() {
       console.error(`❌ Erro ao carregar rondas do contrato "${contratoNome}":`, error);
     } finally {
       setLoadingContrato(null);
+    }
+  };
+
+  // Função para carregar itens relevantes de um contrato
+  const carregarItensRelevantes = async (contratoNome: string) => {
+    try {
+      const itens = await itemRelevanteService.getByContrato(contratoNome);
+      setItensRelevantes(itens);
+    } catch (error) {
+      console.error('Erro ao carregar itens relevantes:', error);
     }
   };
 
@@ -1407,6 +1419,7 @@ function App() {
       'documentacao-tecnica': 'laudos',
       'plano-manutencao': 'plano-manutencao',
       'rondas-supervisao': 'tabela',
+      'itens-relevantes': 'itens-relevantes',
       'parecer-tecnico': 'parecer',
       'documentos-condominio': 'laudos',
       'verificar-preventivas': 'laudos',
@@ -1706,8 +1719,9 @@ function App() {
                   setContratoSelecionado(contrato);
                   setViewMode('contrato-detalhe');
                   setMenuLevel('contrato');
-                  // LAZY LOADING: Carregar rondas do contrato selecionado
+                  // LAZY LOADING: Carregar rondas e itens relevantes do contrato selecionado
                   await carregarRondasDoContrato(contrato.nome);
+                  await carregarItensRelevantes(contrato.nome);
                 }}
                 onSaveContrato={async (contrato: Contrato) => {
                   try {
@@ -1871,6 +1885,13 @@ function App() {
                   titulo: 'Rondas de Supervisão',
                   cor: 'border-emerald-500/40 hover:border-emerald-400',
                   descricao: 'Registre e acompanhe as rondas de supervisão realizadas no condomínio. Documente inspeções, ocorrências e conformidades observadas durante as visitas técnicas.'
+                },
+                {
+                  key: 'itens-relevantes',
+                  icon: '⚠️',
+                  titulo: 'Itens Relevantes',
+                  cor: 'border-orange-500/40 hover:border-orange-400',
+                  descricao: 'Gerencie os itens que precisam de atenção especial. Acompanhe pendências, defina responsabilidades e monitore o progresso das correções através do quadro Kanban.'
                 },
                 {
                   key: 'parecer-tecnico',
@@ -2076,6 +2097,14 @@ function App() {
             {viewMode === 'parecer' && contratoSelecionado && (
               <ParecerTecnico
                 contratoSelecionado={contratoSelecionado}
+              />
+            )}
+
+            {viewMode === 'itens-relevantes' && contratoSelecionado && (
+              <ItensRelevantesView
+                contratoNome={contratoSelecionado.nome}
+                itens={itensRelevantes}
+                onRefresh={() => carregarItensRelevantes(contratoSelecionado.nome)}
               />
             )}
 

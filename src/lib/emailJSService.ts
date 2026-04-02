@@ -14,6 +14,14 @@ export interface LaudoEmail {
   diasVencimento: number;
 }
 
+// Configuração padrão do EmailJS (Manutenção Predial)
+const DEFAULT_CONFIG: EmailConfig = {
+  serviceId: 'service_zewggu8',
+  templateId: 'template_drrf5qw',
+  publicKey: 'L5fzuU73RYBtcInnO',
+  ativo: true
+};
+
 class EmailJSService {
   private config: EmailConfig | null = null;
   private emailjsLoaded = false;
@@ -25,15 +33,29 @@ class EmailJSService {
 
   // Carregar EmailJS dinamicamente
   private async carregarEmailJS() {
-    if (this.emailjsLoaded) return;
-    
+    if (this.emailjsLoaded || (window as any).emailjs) {
+      this.emailjsLoaded = true;
+      return;
+    }
+
     try {
+      // Verificar se já existe o script
+      const existingScript = document.querySelector('script[src*="emailjs"]');
+      if (existingScript) {
+        this.emailjsLoaded = true;
+        return;
+      }
+
       // Carregar EmailJS via CDN
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
+      script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+      script.async = true;
       script.onload = () => {
         this.emailjsLoaded = true;
         console.log('✅ EmailJS carregado com sucesso');
+      };
+      script.onerror = () => {
+        console.error('❌ Erro ao carregar script EmailJS');
       };
       document.head.appendChild(script);
     } catch (error) {
@@ -41,16 +63,21 @@ class EmailJSService {
     }
   }
 
-  // Carregar configuração salva
+  // Carregar configuração salva (ou usar padrão)
   private carregarConfiguracao() {
     try {
       const saved = localStorage.getItem('emailjs_config');
       if (saved) {
         this.config = JSON.parse(saved);
-        console.log('✅ Configuração EmailJS carregada');
+        console.log('✅ Configuração EmailJS carregada do localStorage');
+      } else {
+        // Usar configuração padrão
+        this.config = DEFAULT_CONFIG;
+        console.log('✅ Usando configuração EmailJS padrão');
       }
     } catch (error) {
-      console.error('❌ Erro ao carregar configuração:', error);
+      console.error('❌ Erro ao carregar configuração, usando padrão:', error);
+      this.config = DEFAULT_CONFIG;
     }
   }
 
@@ -83,7 +110,7 @@ class EmailJSService {
   // Enviar email usando EmailJS
   async enviarEmail(
     destinatario: string,
-    nomeDestinatario: string,
+    _nomeDestinatario: string,
     assunto: string,
     corpo: string
   ): Promise<boolean> {
@@ -92,33 +119,32 @@ class EmailJSService {
       return false;
     }
 
-    if (!this.emailjsLoaded) {
-      console.error('❌ EmailJS não carregado');
-      return false;
-    }
-
     try {
-      // Aguardar EmailJS estar disponível
+      // Tentar carregar EmailJS se ainda não carregou
+      if (!window.emailjs) {
+        await this.carregarEmailJS();
+      }
+
+      // Aguardar EmailJS estar disponível (até 15 segundos no mobile)
       let attempts = 0;
-      while (!window.emailjs && attempts < 10) {
+      while (!window.emailjs && attempts < 30) {
         await new Promise(resolve => setTimeout(resolve, 500));
         attempts++;
       }
 
       if (!window.emailjs) {
         console.error('❌ EmailJS não disponível após tentativas');
-        return false;
+        throw new Error('EmailJS não carregado');
       }
 
       // Inicializar EmailJS
       window.emailjs.init(this.config.publicKey);
 
+      // Parâmetros alinhados com o template do EmailJS
       const templateParams = {
-        to_email: destinatario,
-        to_name: nomeDestinatario,
-        subject: assunto,
-        message: corpo,
-        from_name: 'Sistema de Laudos'
+        assunto: assunto,
+        mensagem: corpo,
+        to_email: destinatario
       };
 
       console.log('📧 Enviando email via EmailJS:', { destinatario, assunto });
@@ -132,8 +158,11 @@ class EmailJSService {
       console.log('✅ Email enviado com sucesso via EmailJS:', response);
       return true;
 
-    } catch (error) {
-      console.error('❌ Erro ao enviar email via EmailJS:', error);
+    } catch (error: any) {
+      const errorMsg = error?.text || error?.message || JSON.stringify(error);
+      console.error('❌ Erro ao enviar email via EmailJS:', errorMsg);
+      // Salvar último erro para exibição
+      (window as any).__lastEmailError = errorMsg;
       return false;
     }
   }
