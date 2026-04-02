@@ -1846,6 +1846,139 @@ export const itemRelevanteService = {
   }
 };
 
+// Tipo para Visita Realizada
+export interface VisitaRealizada {
+  id: string;
+  contrato_nome: string;
+  usuario_login: string;
+  data: string;
+  tipo: string;
+  descricao: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Serviços para Visitas Realizadas (Agenda)
+export const visitaService = {
+  // Buscar todas as visitas
+  async getAll(): Promise<VisitaRealizada[]> {
+    try {
+      const { data, error } = await supabase
+        .from('visitas_realizadas')
+        .select('*')
+        .order('data', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar visitas:', error);
+      throw error;
+    }
+  },
+
+  // Buscar visitas por contrato
+  async getByContrato(contratoNome: string): Promise<VisitaRealizada[]> {
+    try {
+      const { data, error } = await supabase
+        .from('visitas_realizadas')
+        .select('*')
+        .eq('contrato_nome', contratoNome)
+        .order('data', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar visitas do contrato:', error);
+      throw error;
+    }
+  },
+
+  // Buscar visitas por usuário
+  async getByUsuario(usuarioLogin: string): Promise<VisitaRealizada[]> {
+    try {
+      const { data, error } = await supabase
+        .from('visitas_realizadas')
+        .select('*')
+        .eq('usuario_login', usuarioLogin)
+        .order('data', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar visitas do usuário:', error);
+      throw error;
+    }
+  },
+
+  // Buscar visitas por período
+  async getByPeriodo(dataInicio: string, dataFim: string): Promise<VisitaRealizada[]> {
+    try {
+      const { data, error } = await supabase
+        .from('visitas_realizadas')
+        .select('*')
+        .gte('data', dataInicio)
+        .lte('data', dataFim)
+        .order('data', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar visitas por período:', error);
+      throw error;
+    }
+  },
+
+  // Criar nova visita
+  async create(visita: Omit<VisitaRealizada, 'id' | 'created_at' | 'updated_at'>): Promise<VisitaRealizada> {
+    try {
+      const { data, error } = await supabase
+        .from('visitas_realizadas')
+        .insert([visita])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao criar visita:', error);
+      throw error;
+    }
+  },
+
+  // Atualizar visita
+  async update(id: string, updates: Partial<VisitaRealizada>): Promise<VisitaRealizada> {
+    try {
+      const { data, error } = await supabase
+        .from('visitas_realizadas')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Erro ao atualizar visita:', error);
+      throw error;
+    }
+  },
+
+  // Deletar visita
+  async delete(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('visitas_realizadas')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erro ao deletar visita:', error);
+      throw error;
+    }
+  }
+};
+
 // Função para migrar dados do localStorage para o banco
 export const migrateFromLocalStorage = async (): Promise<void> => {
   try {

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { authService } from '@/lib/auth';
-import { contratoService, rondaService, itemRelevanteService } from '@/lib/supabaseService';
+import { contratoService, rondaService, itemRelevanteService, visitaService, VisitaRealizada } from '@/lib/supabaseService';
 import { Contrato, Ronda, ChecklistItem, UsuarioAutorizado, ItemRelevante } from '@/types';
 import { AREAS_TECNICAS_PREDEFINIDAS } from '@/data/areasTecnicas';
 import { emailService, EmailDestinatario } from '@/lib/emailService';
@@ -16,6 +16,7 @@ import {
   LogOut,
   Building2,
   ChevronRight,
+  ChevronLeft,
   AlertTriangle,
   PlayCircle,
   Camera,
@@ -41,7 +42,9 @@ import {
   Plus,
   Trash2,
   Settings,
-  History
+  History,
+  Calendar,
+  Edit3
 } from 'lucide-react';
 
 // Função para comprimir imagem
@@ -168,7 +171,7 @@ const CONFIG_RONDAS = {
 };
 
 type TemplateKey = keyof typeof CONFIG_RONDAS;
-type ViewMode = 'login' | 'contratos' | 'contrato' | 'ronda' | 'addItem' | 'checklist' | 'batchPhotos' | 'editarRonda' | 'itensRelevantes';
+type ViewMode = 'login' | 'contratos' | 'contrato' | 'ronda' | 'addItem' | 'checklist' | 'batchPhotos' | 'editarRonda' | 'itensRelevantes' | 'agenda';
 
 interface RondaPendente {
   tipo: TemplateKey;
@@ -412,7 +415,23 @@ export function SupervisorApp() {
   const [itensRelevantes, setItensRelevantes] = useState<ItemRelevante[]>([]);
   const [itemRelevanteEditando, setItemRelevanteEditando] = useState<ItemRelevante | null>(null);
   const [showModalItemRelevante, setShowModalItemRelevante] = useState(false);
+  const [showModalVisita, setShowModalVisita] = useState(false);
+  const [visitaDescricao, setVisitaDescricao] = useState('');
+  const [visitaData, setVisitaData] = useState(new Date().toISOString().split('T')[0]);
+  const [visitaTipo, setVisitaTipo] = useState('Vistoria Técnica');
+  const [salvandoVisita, setSalvandoVisita] = useState(false);
+  const [visitas, setVisitas] = useState<VisitaRealizada[]>([]);
   const [filtroKanban, setFiltroKanban] = useState<'dia' | 'mes' | 'ano'>('mes');
+
+  // Estados do calendário/agenda
+  const [mesAtual, setMesAtual] = useState(new Date());
+  const [filtroAgenda, setFiltroAgenda] = useState<'todos' | 'implantacao' | 'supervisao'>('todos');
+  const [showModalEvento, setShowModalEvento] = useState(false);
+  const [eventoData, setEventoData] = useState(new Date().toISOString().split('T')[0]);
+  const [eventoTitulo, setEventoTitulo] = useState('');
+  const [eventoDescricao, setEventoDescricao] = useState('');
+  const [todasRondas, setTodasRondas] = useState<Ronda[]>([]);
+  const [todosItensRelevantes, setTodosItensRelevantes] = useState<ItemRelevante[]>([]);
 
   // Estados de navegação
   const [viewMode, setViewMode] = useState<ViewMode>('login');
@@ -475,6 +494,13 @@ export function SupervisorApp() {
     checkAuth();
   }, []);
 
+  // Carregar dados da agenda quando entrar na aba
+  useEffect(() => {
+    if (viewMode === 'agenda' && usuario) {
+      loadDadosAgenda();
+    }
+  }, [viewMode]);
+
   const checkAuth = async () => {
     try {
       // Tentar restaurar sessão do localStorage
@@ -485,6 +511,7 @@ export function SupervisorApp() {
           setUsuario(usuarioAtual);
           setViewMode('contratos');
           await loadContratos();
+          await loadVisitas();
         }
       }
     } catch (error) {
@@ -506,6 +533,7 @@ export function SupervisorApp() {
         setUsuario(resultado.usuario);
         setViewMode('contratos');
         await loadContratos();
+        await loadVisitas();
       } else {
         setLoginError(resultado.erro || 'Erro ao fazer login');
       }
@@ -550,6 +578,92 @@ export function SupervisorApp() {
     } catch (error) {
       console.error('Erro ao carregar itens relevantes:', error);
     }
+  };
+
+  const loadVisitas = async () => {
+    try {
+      const data = await visitaService.getAll();
+      setVisitas(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar visitas:', error);
+    }
+  };
+
+  // Carregar todos os dados para a agenda (rondas e itens de todos os contratos)
+  const loadDadosAgenda = async () => {
+    try {
+      // Carregar todas as rondas
+      const rondasData = await rondaService.getAll();
+      setTodasRondas(rondasData || []);
+
+      // Carregar itens relevantes de todos os contratos
+      const contratosData = await contratoService.getAll();
+      const todosItens: ItemRelevante[] = [];
+      for (const contrato of contratosData) {
+        const itens = await itemRelevanteService.getByContrato(contrato.nome);
+        todosItens.push(...itens);
+      }
+      setTodosItensRelevantes(todosItens);
+    } catch (error) {
+      console.error('Erro ao carregar dados da agenda:', error);
+    }
+  };
+
+  const handleSalvarVisita = async () => {
+    if (!contratoSelecionado || !usuario) return;
+    if (!visitaDescricao.trim()) {
+      alert('Informe a descrição da visita');
+      return;
+    }
+
+    setSalvandoVisita(true);
+    try {
+      await visitaService.create({
+        contrato_nome: contratoSelecionado.nome,
+        usuario_login: usuario.nome,
+        data: visitaData,
+        tipo: visitaTipo,
+        descricao: visitaDescricao.trim()
+      });
+
+      setShowModalVisita(false);
+      setVisitaDescricao('');
+      setVisitaData(new Date().toISOString().split('T')[0]);
+      setVisitaTipo('Vistoria Técnica');
+      await loadVisitas();
+      alert('Visita registrada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar visita:', error);
+      alert('Erro ao salvar visita');
+    } finally {
+      setSalvandoVisita(false);
+    }
+  };
+
+  const handleDeletarVisita = async (id: string) => {
+    if (confirm('Excluir esta visita?')) {
+      try {
+        await visitaService.delete(id);
+        await loadVisitas();
+      } catch (error) {
+        console.error('Erro ao deletar visita:', error);
+      }
+    }
+  };
+
+  // Cores por usuário para a agenda
+  const CORES_USUARIOS: { [key: string]: string } = {
+    'tiago': 'bg-blue-500',
+    'ricardo': 'bg-emerald-500',
+    'joao': 'bg-purple-500',
+    'maria': 'bg-pink-500',
+    'pedro': 'bg-orange-500',
+    'default': 'bg-gray-500'
+  };
+
+  const getCorUsuario = (login: string) => {
+    const loginLower = login.toLowerCase();
+    return CORES_USUARIOS[loginLower] || CORES_USUARIOS['default'];
   };
 
   const calcularRondasPendentes = (rondasData: Ronda[]) => {
@@ -1233,10 +1347,434 @@ export function SupervisorApp() {
           )}
         </div>
 
-        {/* Status */}
-        <div className={`p-2 text-center text-xs ${isOnline ? 'bg-emerald-500/10 text-emerald-300' : 'bg-red-500/10 text-red-300'}`}>
-          {isOnline ? 'Online' : 'Offline - dados podem estar desatualizados'}
+        {/* Bottom Navigation */}
+        <div className="bg-slate-800 border-t border-slate-700">
+          {/* Status */}
+          <div className={`p-1 text-center text-xs ${isOnline ? 'bg-emerald-500/10 text-emerald-300' : 'bg-red-500/10 text-red-300'}`}>
+            {isOnline ? 'Online' : 'Offline'}
+          </div>
+          {/* Tabs */}
+          <div className="flex">
+            <button
+              onClick={() => setViewMode('contratos')}
+              className="flex-1 py-3 flex flex-col items-center gap-1 text-emerald-400 border-t-2 border-emerald-400"
+            >
+              <Building2 className="w-5 h-5" />
+              <span className="text-xs font-medium">Contratos</span>
+            </button>
+            <button
+              onClick={() => setViewMode('agenda')}
+              className="flex-1 py-3 flex flex-col items-center gap-1 text-gray-400 hover:text-white"
+            >
+              <Calendar className="w-5 h-5" />
+              <span className="text-xs">Agenda</span>
+            </button>
+          </div>
         </div>
+      </div>
+    );
+  }
+
+  // Tela de Agenda - Calendário Mensal
+  if (viewMode === 'agenda') {
+    // Funções auxiliares do calendário
+    const getDiasDoMes = (data: Date) => {
+      const ano = data.getFullYear();
+      const mes = data.getMonth();
+      const primeiroDia = new Date(ano, mes, 1);
+      const ultimoDia = new Date(ano, mes + 1, 0);
+      const dias: Date[] = [];
+
+      // Dias do mês anterior para preencher a primeira semana
+      const diaSemanaInicio = primeiroDia.getDay();
+      for (let i = diaSemanaInicio - 1; i >= 0; i--) {
+        dias.push(new Date(ano, mes, -i));
+      }
+
+      // Dias do mês atual
+      for (let i = 1; i <= ultimoDia.getDate(); i++) {
+        dias.push(new Date(ano, mes, i));
+      }
+
+      // Dias do próximo mês para completar a última semana
+      const diasRestantes = 42 - dias.length; // 6 semanas completas
+      for (let i = 1; i <= diasRestantes; i++) {
+        dias.push(new Date(ano, mes + 1, i));
+      }
+
+      return dias;
+    };
+
+    const formatarDataKey = (data: Date) => {
+      return data.toISOString().split('T')[0];
+    };
+
+    const isMesmoMes = (data: Date) => {
+      return data.getMonth() === mesAtual.getMonth() && data.getFullYear() === mesAtual.getFullYear();
+    };
+
+    const isHoje = (data: Date) => {
+      const hoje = new Date();
+      return data.toDateString() === hoje.toDateString();
+    };
+
+    // Interface para eventos do calendário
+    interface EventoCalendario {
+      id: string;
+      titulo: string;
+      tipo: 'kanban' | 'ronda' | 'visita' | 'manual';
+      executado: boolean;
+      contrato?: string;
+    }
+
+    // Agrupar eventos por data
+    const getEventosDoDia = (data: Date): EventoCalendario[] => {
+      const dataKey = formatarDataKey(data);
+      const eventos: EventoCalendario[] = [];
+
+      // Filtrar por tipo de agenda
+      const mostrarImplantacao = filtroAgenda === 'todos' || filtroAgenda === 'implantacao';
+      const mostrarSupervisao = filtroAgenda === 'todos' || filtroAgenda === 'supervisao';
+
+      // 1. Itens do Kanban (implantação) - AZUL
+      if (mostrarImplantacao) {
+        todosItensRelevantes.forEach(item => {
+          // Usar data_abertura como data do evento
+          if (item.data_abertura === dataKey) {
+            eventos.push({
+              id: `kanban-${item.id}`,
+              titulo: item.titulo.length > 15 ? item.titulo.substring(0, 15) + '...' : item.titulo,
+              tipo: 'kanban',
+              executado: item.status === 'concluido',
+              contrato: item.contrato_nome
+            });
+          }
+        });
+      }
+
+      // 2. Rondas (supervisão) - AMARELO
+      if (mostrarSupervisao) {
+        todasRondas.forEach(ronda => {
+          if (ronda.data === dataKey) {
+            eventos.push({
+              id: `ronda-${ronda.id}`,
+              titulo: ronda.templateRonda ? `Ronda ${ronda.templateRonda}` : 'Ronda',
+              tipo: 'ronda',
+              executado: true, // Rondas salvas já foram executadas
+              contrato: ronda.contrato
+            });
+          }
+        });
+      }
+
+      // 3. Visitas manuais - VERDE (supervisão)
+      if (mostrarSupervisao) {
+        visitas.forEach(visita => {
+          if (visita.data === dataKey) {
+            eventos.push({
+              id: `visita-${visita.id}`,
+              titulo: visita.tipo.length > 15 ? visita.tipo.substring(0, 15) + '...' : visita.tipo,
+              tipo: 'visita',
+              executado: true,
+              contrato: visita.contrato_nome
+            });
+          }
+        });
+      }
+
+      return eventos;
+    };
+
+    const diasDoMes = getDiasDoMes(mesAtual);
+    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+    const navegarMes = (direcao: number) => {
+      setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() + direcao, 1));
+    };
+
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col">
+        {/* Header */}
+        <div className="bg-slate-800 p-4 border-b border-slate-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-bold text-white">Agenda</h1>
+              <p className="text-xs text-gray-400">{usuario?.nome}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-gray-400 hover:text-white"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Navegação do Mês */}
+        <div className="bg-slate-800 px-4 py-2 flex items-center justify-between border-b border-slate-700">
+          <button
+            onClick={() => navegarMes(-1)}
+            className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <span className="text-white font-semibold">
+            {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+          </span>
+          <button
+            onClick={() => navegarMes(1)}
+            className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Filtros */}
+        <div className="bg-slate-800 px-4 py-2 flex gap-2 border-b border-slate-700 overflow-x-auto">
+          <button
+            onClick={() => setFiltroAgenda('todos')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              filtroAgenda === 'todos'
+                ? 'bg-white text-slate-900'
+                : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+            }`}
+          >
+            Todos
+          </button>
+          <button
+            onClick={() => setFiltroAgenda('implantacao')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              filtroAgenda === 'implantacao'
+                ? 'bg-blue-500 text-white'
+                : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+            }`}
+          >
+            Implantacao
+          </button>
+          <button
+            onClick={() => setFiltroAgenda('supervisao')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              filtroAgenda === 'supervisao'
+                ? 'bg-yellow-500 text-slate-900'
+                : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
+            }`}
+          >
+            Supervisao
+          </button>
+        </div>
+
+        {/* Legenda */}
+        <div className="bg-slate-800 px-4 py-2 flex gap-4 text-xs border-b border-slate-700 flex-wrap">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-blue-500 rounded" />
+            <span className="text-gray-400">Kanban</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-yellow-500 rounded" />
+            <span className="text-gray-400">Ronda</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-emerald-500 rounded" />
+            <span className="text-gray-400">Visita</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 border-2 border-gray-400 rounded" />
+            <span className="text-gray-400">Programado</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-gray-400 rounded" />
+            <span className="text-gray-400">Executado</span>
+          </div>
+        </div>
+
+        {/* Calendário */}
+        <div className="flex-1 overflow-auto p-2">
+          {/* Cabeçalho dos dias da semana */}
+          <div className="grid grid-cols-7 gap-1 mb-1">
+            {diasSemana.map(dia => (
+              <div key={dia} className="text-center text-xs font-medium text-gray-500 py-1">
+                {dia}
+              </div>
+            ))}
+          </div>
+
+          {/* Grid do calendário */}
+          <div className="grid grid-cols-7 gap-1">
+            {diasDoMes.map((dia, index) => {
+              const eventos = getEventosDoDia(dia);
+              const eMesAtual = isMesmoMes(dia);
+              const eHoje = isHoje(dia);
+
+              return (
+                <div
+                  key={index}
+                  className={`min-h-[70px] p-1 rounded border ${
+                    eMesAtual
+                      ? eHoje
+                        ? 'bg-emerald-500/20 border-emerald-500'
+                        : 'bg-slate-800 border-slate-700'
+                      : 'bg-slate-900 border-slate-800 opacity-50'
+                  }`}
+                >
+                  <div className={`text-xs font-medium mb-1 ${
+                    eHoje ? 'text-emerald-400' : eMesAtual ? 'text-gray-300' : 'text-gray-600'
+                  }`}>
+                    {dia.getDate()}
+                  </div>
+                  <div className="space-y-0.5">
+                    {eventos.slice(0, 3).map(evento => (
+                      <div
+                        key={evento.id}
+                        className={`text-[9px] px-1 py-0.5 rounded truncate ${
+                          evento.tipo === 'kanban'
+                            ? evento.executado
+                              ? 'bg-blue-500 text-white'
+                              : 'border border-blue-500 text-blue-400 bg-transparent'
+                            : evento.tipo === 'ronda'
+                            ? evento.executado
+                              ? 'bg-yellow-500 text-slate-900'
+                              : 'border border-yellow-500 text-yellow-400 bg-transparent'
+                            : evento.tipo === 'visita'
+                            ? evento.executado
+                              ? 'bg-emerald-500 text-white'
+                              : 'border border-emerald-500 text-emerald-400 bg-transparent'
+                            : evento.executado
+                            ? 'bg-red-500 text-white'
+                            : 'border border-red-500 text-red-400 bg-transparent'
+                        }`}
+                        title={`${evento.titulo}${evento.contrato ? ` - ${evento.contrato}` : ''}`}
+                      >
+                        {evento.titulo}
+                      </div>
+                    ))}
+                    {eventos.length > 3 && (
+                      <div className="text-[9px] text-gray-500 text-center">
+                        +{eventos.length - 3}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Botão Adicionar Evento */}
+        <div className="p-4 bg-slate-800 border-t border-slate-700">
+          <button
+            onClick={() => {
+              setEventoData(new Date().toISOString().split('T')[0]);
+              setEventoTitulo('');
+              setEventoDescricao('');
+              setShowModalEvento(true);
+            }}
+            className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors"
+          >
+            Adicionar Evento
+          </button>
+        </div>
+
+        {/* Bottom Navigation */}
+        <div className="bg-slate-800 border-t border-slate-700">
+          {/* Status */}
+          <div className={`p-1 text-center text-xs ${isOnline ? 'bg-emerald-500/10 text-emerald-300' : 'bg-red-500/10 text-red-300'}`}>
+            {isOnline ? 'Online' : 'Offline'}
+          </div>
+          {/* Tabs */}
+          <div className="flex">
+            <button
+              onClick={() => setViewMode('contratos')}
+              className="flex-1 py-3 flex flex-col items-center gap-1 text-gray-400 hover:text-white"
+            >
+              <Building2 className="w-5 h-5" />
+              <span className="text-xs">Contratos</span>
+            </button>
+            <button
+              onClick={() => setViewMode('agenda')}
+              className="flex-1 py-3 flex flex-col items-center gap-1 text-emerald-400 border-t-2 border-emerald-400"
+            >
+              <Calendar className="w-5 h-5" />
+              <span className="text-xs font-medium">Agenda</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Modal Adicionar Evento */}
+        {showModalEvento && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl w-full max-w-sm">
+              <div className="p-4 border-b-2 border-slate-300 flex items-center justify-between">
+                <h2 className="text-slate-900 font-bold text-lg m-0">Adicionar Evento</h2>
+                <button onClick={() => setShowModalEvento(false)} className="p-1 bg-transparent border-none">
+                  <X size={20} className="text-slate-700" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                {/* Data */}
+                <div>
+                  <label className="text-slate-700 font-bold text-sm block mb-2">DATA *</label>
+                  <input
+                    type="date"
+                    value={eventoData}
+                    onChange={(e) => setEventoData(e.target.value)}
+                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 box-border"
+                  />
+                </div>
+                {/* Título */}
+                <div>
+                  <label className="text-slate-700 font-bold text-sm block mb-2">TITULO *</label>
+                  <input
+                    type="text"
+                    value={eventoTitulo}
+                    onChange={(e) => setEventoTitulo(e.target.value)}
+                    placeholder="Ex: Reuniao com sindico"
+                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 box-border"
+                  />
+                </div>
+                {/* Descrição */}
+                <div>
+                  <label className="text-slate-700 font-bold text-sm block mb-2">DESCRICAO</label>
+                  <textarea
+                    value={eventoDescricao}
+                    onChange={(e) => setEventoDescricao(e.target.value)}
+                    placeholder="Detalhes do evento..."
+                    rows={3}
+                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 resize-none box-border"
+                  />
+                </div>
+              </div>
+              <div className="p-4 border-t-2 border-slate-200">
+                <button
+                  onClick={async () => {
+                    if (!eventoTitulo.trim()) {
+                      alert('Informe o titulo do evento');
+                      return;
+                    }
+                    // Salvar como visita manual
+                    try {
+                      await visitaService.create({
+                        contrato_nome: 'Evento Manual',
+                        usuario_login: usuario?.nome || '',
+                        data: eventoData,
+                        tipo: eventoTitulo,
+                        descricao: eventoDescricao
+                      });
+                      setShowModalEvento(false);
+                      await loadVisitas();
+                      alert('Evento adicionado!');
+                    } catch (error) {
+                      console.error('Erro ao salvar evento:', error);
+                      alert('Erro ao salvar evento');
+                    }
+                  }}
+                  className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg transition-colors"
+                >
+                  Salvar Evento
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1885,6 +2423,32 @@ export function SupervisorApp() {
             </div>
           </button>
 
+          {/* Botão Registrar Visita */}
+          <button
+            onClick={() => {
+              setVisitaData(new Date().toISOString().split('T')[0]);
+              setVisitaTipo('Vistoria Técnica');
+              setVisitaDescricao('');
+              setShowModalVisita(true);
+            }}
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-4 text-left hover:from-blue-500 hover:to-indigo-500 transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                  <Edit3 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <span className="font-semibold text-white">Registrar Visita</span>
+                  <p className="text-sm text-white/80">
+                    Reunião, vistoria, conferência...
+                  </p>
+                </div>
+              </div>
+              <Plus className="w-5 h-5 text-white/80" />
+            </div>
+          </button>
+
           {/* Alertas de Rondas Pendentes */}
           <div className="space-y-3">
             <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wide">Rondas Programadas</h2>
@@ -2024,6 +2588,68 @@ export function SupervisorApp() {
             </div>
           </div>
         </div>
+
+        {/* Modal Registrar Visita */}
+        {showModalVisita && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl w-full max-w-sm">
+              <div className="p-4 border-b-2 border-slate-300 flex items-center justify-between">
+                <h2 className="text-slate-900 font-bold text-lg m-0">Registrar Visita</h2>
+                <button onClick={() => setShowModalVisita(false)} className="p-1 bg-transparent border-none">
+                  <X size={20} className="text-slate-700" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                {/* Data */}
+                <div>
+                  <label className="text-slate-700 font-bold text-sm block mb-2">DATA *</label>
+                  <input
+                    type="date"
+                    value={visitaData}
+                    onChange={(e) => setVisitaData(e.target.value)}
+                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 box-border"
+                  />
+                </div>
+                {/* Tipo */}
+                <div>
+                  <label className="text-slate-700 font-bold text-sm block mb-2">TIPO *</label>
+                  <select
+                    value={visitaTipo}
+                    onChange={(e) => setVisitaTipo(e.target.value)}
+                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 box-border bg-white"
+                  >
+                    <option value="Vistoria Técnica">Vistoria Técnica</option>
+                    <option value="Reunião">Reunião</option>
+                    <option value="Conferência de Chamados">Conferência de Chamados</option>
+                    <option value="Acompanhamento de Obra">Acompanhamento de Obra</option>
+                    <option value="Treinamento">Treinamento</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                </div>
+                {/* Descrição */}
+                <div>
+                  <label className="text-slate-700 font-bold text-sm block mb-2">DESCRIÇÃO *</label>
+                  <textarea
+                    value={visitaDescricao}
+                    onChange={(e) => setVisitaDescricao(e.target.value)}
+                    placeholder="Descreva o que foi feito..."
+                    rows={4}
+                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 resize-none box-border"
+                  />
+                </div>
+              </div>
+              <div className="p-4 border-t-2 border-slate-200">
+                <button
+                  onClick={handleSalvarVisita}
+                  disabled={salvandoVisita}
+                  className="w-full bg-blue-600 text-white p-3.5 rounded-lg font-bold text-base border-none disabled:opacity-50"
+                >
+                  {salvandoVisita ? 'SALVANDO...' : 'REGISTRAR VISITA'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
