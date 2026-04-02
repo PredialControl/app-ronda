@@ -17,6 +17,7 @@ import { OutroItemCorrigidoModal } from '@/components/OutroItemCorrigidoModal';
 import { OutroItemModal } from '@/components/OutroItemModal';
 import { EditarRondaModal } from '@/components/EditarRondaModal';
 import { Dashboard } from '@/components/Dashboard';
+import { AgendaCalendario } from '@/components/AgendaCalendario';
 import { LoginScreen } from '@/components/LoginScreen';
 import { GerenciarUsuarios } from '@/components/GerenciarUsuarios';
 import { AppLayout } from '@/components/AppLayout';
@@ -1777,6 +1778,17 @@ function App() {
                 }}
               />
             </div>
+        )}
+
+        {/* AGENDA - Calendário quando está na seção agenda */}
+        {!contratoSelecionado && viewMode === 'menu' && mainSection === 'agenda' && (
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-4">Agenda</h2>
+            <AgendaCalendario
+              rondas={rondasCompletas}
+              contratos={contratos}
+            />
+          </div>
         )}
 
         {/* Tela de seleção - quando contrato selecionado mas ainda não escolheu Implantação/Supervisão */}
