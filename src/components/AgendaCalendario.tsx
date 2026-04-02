@@ -25,7 +25,7 @@ interface Evento {
   id: string;
   data: string;
   usuario: string;
-  tipo: 'ronda' | 'implantacao' | 'visita';
+  tipo: 'supervisao' | 'implantacao';
   descricao: string;
   contrato: string;
 }
@@ -69,21 +69,21 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
   useEffect(() => {
     const listaEventos: Evento[] = [];
 
-    // Adicionar rondas
+    // Adicionar rondas (SUPERVISÃO)
     rondas.forEach(ronda => {
       if (ronda.data) {
         listaEventos.push({
           id: `ronda-${ronda.id}`,
           data: ronda.data,
           usuario: ronda.responsavel || 'Sistema',
-          tipo: 'ronda',
+          tipo: 'supervisao',
           descricao: `Ronda ${ronda.templateRonda || ''}`,
           contrato: ronda.contrato
         });
       }
     });
 
-    // Adicionar itens relevantes (implantação)
+    // Adicionar itens relevantes (IMPLANTAÇÃO - Kanban)
     todosItensRelevantes.forEach(item => {
       if (item.data_abertura) {
         listaEventos.push({
@@ -97,13 +97,13 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
       }
     });
 
-    // Adicionar visitas
+    // Adicionar visitas (SUPERVISÃO)
     visitas.forEach(visita => {
       listaEventos.push({
         id: `visita-${visita.id}`,
         data: visita.data,
         usuario: visita.usuario_login,
-        tipo: 'visita',
+        tipo: 'supervisao',
         descricao: visita.tipo,
         contrato: visita.contrato_nome
       });
@@ -115,7 +115,7 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
   // Filtrar eventos
   const eventosFiltrados = eventos.filter(e => {
     if (filtroTipo === 'implantacao') return e.tipo === 'implantacao';
-    if (filtroTipo === 'supervisao') return e.tipo === 'ronda' || e.tipo === 'visita';
+    if (filtroTipo === 'supervisao') return e.tipo === 'supervisao';
     return true;
   });
 
