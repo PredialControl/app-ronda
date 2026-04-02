@@ -422,6 +422,8 @@ export function SupervisorApp() {
   const [salvandoVisita, setSalvandoVisita] = useState(false);
   const [visitas, setVisitas] = useState<VisitaRealizada[]>([]);
   const [filtroKanban, setFiltroKanban] = useState<'dia' | 'mes' | 'ano'>('mes');
+  const [filtroStatusItens, setFiltroStatusItens] = useState<'todos' | 'pendente' | 'concluido'>('todos');
+  const [filtroMesItens, setFiltroMesItens] = useState<string>('todos');
 
   // Estados do calendário/agenda
   const [mesAtual, setMesAtual] = useState(new Date());
@@ -1876,9 +1878,6 @@ export function SupervisorApp() {
 
   // Tela de Itens Relevantes (Lista simplificada)
   if (viewMode === 'itensRelevantes' && contratoSelecionado) {
-    const [filtroStatusLocal, setFiltroStatusLocal] = useState<'todos' | 'pendente' | 'concluido'>('todos');
-    const [filtroMesLocal, setFiltroMesLocal] = useState<string>('todos');
-
     // Pegar meses únicos
     const mesesDisponiveis = [...new Set(itensRelevantes.map(item => {
       const data = new Date(item.data_abertura);
@@ -1887,8 +1886,8 @@ export function SupervisorApp() {
 
     // Filtrar itens
     const itensFiltrados = itensRelevantes.filter(item => {
-      const passaStatus = filtroStatusLocal === 'todos' || item.status === filtroStatusLocal;
-      const passaMes = filtroMesLocal === 'todos' || item.data_abertura.startsWith(filtroMesLocal);
+      const passaStatus = filtroStatusItens === 'todos' || item.status === filtroStatusItens;
+      const passaMes = filtroMesItens === 'todos' || item.data_abertura.startsWith(filtroMesItens);
       return passaStatus && passaMes;
     }).sort((a, b) => new Date(b.data_abertura).getTime() - new Date(a.data_abertura).getTime());
 
@@ -1986,8 +1985,8 @@ export function SupervisorApp() {
         {/* Filtros */}
         <div className="flex gap-2 px-4 pb-4 pt-2">
           <select
-            value={filtroStatusLocal}
-            onChange={(e) => setFiltroStatusLocal(e.target.value as any)}
+            value={filtroStatusItens}
+            onChange={(e) => setFiltroStatusItens(e.target.value as any)}
             className="flex-1 p-3 rounded-lg font-semibold text-sm filtro-select"
           >
             <option value="todos">Todos</option>
@@ -1995,8 +1994,8 @@ export function SupervisorApp() {
             <option value="concluido">Concluídos</option>
           </select>
           <select
-            value={filtroMesLocal}
-            onChange={(e) => setFiltroMesLocal(e.target.value)}
+            value={filtroMesItens}
+            onChange={(e) => setFiltroMesItens(e.target.value)}
             className="flex-1 p-3 rounded-lg font-semibold text-sm filtro-select"
           >
             <option value="todos">Todos Meses</option>
