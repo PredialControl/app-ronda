@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ItemRelevante } from '@/types';
 import { itemRelevanteService } from '@/lib/supabaseService';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Trash2 } from 'lucide-react';
 
 interface ItensRelevantesViewProps {
   contratoNome: string;
@@ -83,16 +83,16 @@ export function ItensRelevantesView({ contratoNome, itens, onRefresh }: ItensRel
   const totalConcluidos = itens.filter(i => i.status === 'concluido').length;
 
   return (
-    <div className="p-6 bg-white min-h-screen">
+    <div className="p-6 bg-white min-h-screen itens-relevantes-page">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-slate-900 text-2xl font-bold m-0">Itens Relevantes</h1>
-          <p className="text-slate-600 text-sm mt-1 m-0">{contratoNome}</p>
+          <h1 className="text-2xl font-bold m-0" style={{color: '#000000'}}>Itens Relevantes</h1>
+          <p className="text-sm mt-1 m-0" style={{color: '#374151'}}>{contratoNome}</p>
         </div>
         <button
           onClick={handleNovoItem}
-          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg font-bold text-sm cursor-pointer border-none hover:bg-blue-700"
+          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 rounded-lg font-bold text-sm cursor-pointer border-none hover:bg-blue-700 texto-branco"
         >
           <Plus size={20} />
           Novo Item
@@ -101,21 +101,21 @@ export function ItensRelevantesView({ contratoNome, itens, onRefresh }: ItensRel
 
       {/* Resumo */}
       <div className="flex gap-4 mb-6">
-        <div className="px-5 py-3 bg-red-600 rounded-lg">
-          <span className="text-white font-bold text-base">{totalPendentes} PENDENTES</span>
+        <div className="px-5 py-3 bg-red-600 rounded-lg texto-branco">
+          <span className="font-bold text-base">{totalPendentes} PENDENTES</span>
         </div>
-        <div className="px-5 py-3 bg-green-600 rounded-lg">
-          <span className="text-white font-bold text-base">{totalConcluidos} CONCLUÍDOS</span>
+        <div className="px-5 py-3 bg-green-600 rounded-lg texto-branco">
+          <span className="font-bold text-base">{totalConcluidos} CONCLUÍDOS</span>
         </div>
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-100 rounded-lg border-2 border-slate-300">
-        <span className="text-slate-700 font-semibold text-base flex items-center">FILTROS:</span>
+      <div className="flex flex-wrap gap-4 mb-6 p-4 rounded-lg" style={{backgroundColor: '#f0f9ff', border: '2px solid #1e3a5f'}}>
+        <span className="font-bold text-base flex items-center filtro-label">FILTROS:</span>
         <select
           value={filtroStatus}
           onChange={(e) => setFiltroStatus(e.target.value as any)}
-          className="px-4 py-2.5 border-2 border-slate-400 rounded-lg font-semibold text-sm bg-white text-slate-900"
+          className="px-4 py-2.5 rounded-lg font-semibold text-sm filtro-select"
         >
           <option value="todos">Todos Status</option>
           <option value="pendente">Pendentes</option>
@@ -124,7 +124,7 @@ export function ItensRelevantesView({ contratoNome, itens, onRefresh }: ItensRel
         <select
           value={filtroMes}
           onChange={(e) => setFiltroMes(e.target.value)}
-          className="px-4 py-2.5 border-2 border-slate-400 rounded-lg font-semibold text-sm bg-white text-slate-900"
+          className="px-4 py-2.5 rounded-lg font-semibold text-sm filtro-select"
         >
           <option value="todos">Todos os Meses</option>
           {mesesDisponiveis.map(mes => (
@@ -136,7 +136,7 @@ export function ItensRelevantesView({ contratoNome, itens, onRefresh }: ItensRel
       {/* Lista de Cards */}
       <div>
         {itensFiltrados.length === 0 ? (
-          <div className="text-center py-12 text-slate-600 text-base">
+          <div className="text-center py-12 text-base" style={{color: '#374151'}}>
             Nenhum item encontrado
           </div>
         ) : (
@@ -144,34 +144,51 @@ export function ItensRelevantesView({ contratoNome, itens, onRefresh }: ItensRel
             <div
               key={item.id}
               onClick={() => handleEditarItem(item)}
-              className={`rounded-lg p-4 mb-3 cursor-pointer ${
-                item.status === 'pendente'
-                  ? 'bg-red-50 border-4 border-red-600'
-                  : 'bg-green-50 border-4 border-green-600'
-              }`}
+              className="rounded-xl p-4 mb-3 cursor-pointer bg-slate-800 border border-slate-700 hover:border-emerald-500/50 transition-all"
+              style={{
+                borderLeft: item.status === 'pendente' ? '6px solid #dc2626' : '6px solid #16a34a'
+              }}
             >
               <div className="flex justify-between items-start gap-4">
                 <div className="flex-1">
-                  <h3 className="text-slate-900 font-bold text-lg m-0 mb-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                      item.status === 'pendente'
+                        ? 'bg-red-500/20 text-red-300'
+                        : 'bg-green-500/20 text-green-300'
+                    }`}>
+                      {item.status === 'pendente' ? 'PENDENTE' : 'CONCLUÍDO'}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-white text-lg m-0 mb-2">
                     {item.titulo}
                   </h3>
                   {item.parecer && (
-                    <p className="text-slate-700 text-base m-0 mb-2">
+                    <p className="text-gray-400 text-sm m-0 mb-2">
                       {item.parecer}
                     </p>
                   )}
-                  <span className="text-slate-500 text-sm font-semibold">
+                  <span className="text-gray-500 text-xs">
                     {new Date(item.data_abertura).toLocaleDateString('pt-BR')}
                   </span>
                 </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleAlterarStatus(item); }}
-                  className={`px-5 py-3 rounded-lg font-bold text-sm border-none cursor-pointer whitespace-nowrap text-white ${
-                    item.status === 'pendente' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
-                  }`}
-                >
-                  {item.status === 'pendente' ? 'CONCLUIR' : 'REABRIR'}
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleAlterarStatus(item); }}
+                    className={`px-4 py-2 rounded-lg font-bold text-xs border-none cursor-pointer whitespace-nowrap text-white ${
+                      item.status === 'pendente' ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'
+                    }`}
+                  >
+                    {item.status === 'pendente' ? 'CONCLUIR' : 'REABRIR'}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDeletarItem(item.id); }}
+                    className="px-4 py-2 rounded-lg font-bold text-xs border-none cursor-pointer bg-red-600/20 text-red-400 hover:bg-red-600/40 flex items-center justify-center gap-1"
+                  >
+                    <Trash2 size={14} />
+                    EXCLUIR
+                  </button>
+                </div>
               </div>
             </div>
           ))
@@ -183,16 +200,16 @@ export function ItensRelevantesView({ contratoNome, itens, onRefresh }: ItensRel
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-md">
             <div className="p-4 border-b-2 border-slate-300 flex justify-between items-center">
-              <h2 className="text-slate-900 font-bold text-xl m-0">
+              <h2 className="font-bold text-xl m-0" style={{color: '#000000'}}>
                 {itemEditando ? 'Editar Item' : 'Novo Item'}
               </h2>
               <button onClick={() => setShowModal(false)} className="bg-transparent border-none cursor-pointer p-1">
-                <X size={24} className="text-slate-700" />
+                <X size={24} color="#000000" />
               </button>
             </div>
             <div className="p-4">
               <div className="mb-4">
-                <label className="text-slate-700 font-bold text-base block mb-2">
+                <label className="font-bold text-base block mb-2" style={{color: '#000000'}}>
                   TÍTULO *
                 </label>
                 <input
@@ -200,11 +217,12 @@ export function ItensRelevantesView({ contratoNome, itens, onRefresh }: ItensRel
                   id="titulo-desktop"
                   defaultValue={itemEditando?.titulo || ''}
                   placeholder="Digite o título..."
-                  className="w-full border-2 border-slate-400 rounded-lg p-3.5 text-base text-slate-900 box-border focus:border-blue-500 focus:outline-none"
+                  className="w-full border-2 border-slate-400 rounded-lg p-3.5 text-base box-border focus:border-blue-500 focus:outline-none"
+                  style={{color: '#000000'}}
                 />
               </div>
               <div>
-                <label className="text-slate-700 font-bold text-base block mb-2">
+                <label className="font-bold text-base block mb-2" style={{color: '#000000'}}>
                   OBSERVAÇÃO
                 </label>
                 <textarea
@@ -212,7 +230,8 @@ export function ItensRelevantesView({ contratoNome, itens, onRefresh }: ItensRel
                   defaultValue={itemEditando?.parecer || ''}
                   placeholder="Digite a observação..."
                   rows={4}
-                  className="w-full border-2 border-slate-400 rounded-lg p-3.5 text-base text-slate-900 resize-none box-border focus:border-blue-500 focus:outline-none"
+                  className="w-full border-2 border-slate-400 rounded-lg p-3.5 text-base resize-none box-border focus:border-blue-500 focus:outline-none"
+                  style={{color: '#000000'}}
                 />
               </div>
             </div>
@@ -224,7 +243,7 @@ export function ItensRelevantesView({ contratoNome, itens, onRefresh }: ItensRel
                   if (!titulo?.trim()) { alert('Informe o título'); return; }
                   handleSalvarItem({ titulo, parecer });
                 }}
-                className="w-full bg-blue-600 text-white p-4 rounded-lg font-bold text-base border-none cursor-pointer mb-2 hover:bg-blue-700"
+                className="w-full bg-blue-600 p-4 rounded-lg font-bold text-base border-none cursor-pointer mb-2 hover:bg-blue-700 texto-branco"
               >
                 {itemEditando ? 'SALVAR' : 'CRIAR ITEM'}
               </button>

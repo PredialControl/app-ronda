@@ -1671,12 +1671,12 @@ export function SupervisorApp() {
     };
 
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="min-h-screen bg-white flex flex-col itens-relevantes-page">
         {/* Header */}
-        <div className="bg-slate-800 p-4 border-b-2 border-slate-700">
+        <div className="bg-slate-800 p-4 border-b-2 border-slate-700 texto-branco">
           <div className="flex items-center gap-3">
-            <button onClick={() => setViewMode('contrato')} className="p-2 bg-transparent border-none">
-              <ArrowLeft size={20} className="text-white" />
+            <button onClick={() => setViewMode('contrato')} className="p-2 bg-transparent border-none texto-branco">
+              <ArrowLeft size={20} />
             </button>
             <div className="flex-1">
               <h1 className="text-white text-lg font-bold m-0">Itens Relevantes</h1>
@@ -1703,7 +1703,7 @@ export function SupervisorApp() {
           <select
             value={filtroStatusLocal}
             onChange={(e) => setFiltroStatusLocal(e.target.value as any)}
-            className="flex-1 p-3 rounded-lg border-2 border-slate-400 font-semibold text-sm bg-white text-slate-900"
+            className="flex-1 p-3 rounded-lg font-semibold text-sm filtro-select"
           >
             <option value="todos">Todos</option>
             <option value="pendente">Pendentes</option>
@@ -1712,7 +1712,7 @@ export function SupervisorApp() {
           <select
             value={filtroMesLocal}
             onChange={(e) => setFiltroMesLocal(e.target.value)}
-            className="flex-1 p-3 rounded-lg border-2 border-slate-400 font-semibold text-sm bg-white text-slate-900"
+            className="flex-1 p-3 rounded-lg font-semibold text-sm filtro-select"
           >
             <option value="todos">Todos Meses</option>
             {mesesDisponiveis.map(mes => (
@@ -1730,30 +1730,47 @@ export function SupervisorApp() {
               <div
                 key={item.id}
                 onClick={() => handleEditarItem(item)}
-                className={`rounded-lg p-3.5 mb-3 cursor-pointer ${
-                  item.status === 'pendente'
-                    ? 'bg-red-50 border-4 border-red-600'
-                    : 'bg-green-50 border-4 border-green-600'
-                }`}
+                className="rounded-xl p-3.5 mb-3 cursor-pointer bg-slate-800 border border-slate-700"
+                style={{
+                  borderLeft: item.status === 'pendente' ? '6px solid #dc2626' : '6px solid #16a34a'
+                }}
               >
                 <div className="flex justify-between items-start gap-3">
                   <div className="flex-1">
-                    <h3 className="text-slate-900 font-bold text-base m-0 mb-2">{item.titulo}</h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                        item.status === 'pendente'
+                          ? 'bg-red-500/20 text-red-300'
+                          : 'bg-green-500/20 text-green-300'
+                      }`}>
+                        {item.status === 'pendente' ? 'PENDENTE' : 'CONCLUÍDO'}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-white text-base m-0 mb-2">{item.titulo}</h3>
                     {item.parecer && (
-                      <p className="text-slate-700 text-sm m-0 mb-2">{item.parecer}</p>
+                      <p className="text-gray-400 text-sm m-0 mb-2">{item.parecer}</p>
                     )}
-                    <span className="text-slate-500 text-xs font-semibold">
+                    <span className="text-gray-500 text-xs">
                       {new Date(item.data_abertura).toLocaleDateString('pt-BR')}
                     </span>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleAlterarStatus(item); }}
-                    className={`px-3.5 py-2.5 rounded-md font-bold text-xs border-none whitespace-nowrap text-white ${
-                      item.status === 'pendente' ? 'bg-green-600' : 'bg-red-600'
-                    }`}
-                  >
-                    {item.status === 'pendente' ? 'CONCLUIR' : 'REABRIR'}
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAlterarStatus(item); }}
+                      className={`px-3.5 py-2 rounded-lg font-bold text-xs border-none whitespace-nowrap text-white ${
+                        item.status === 'pendente' ? 'bg-green-600' : 'bg-amber-600'
+                      }`}
+                    >
+                      {item.status === 'pendente' ? 'CONCLUIR' : 'REABRIR'}
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeletarItem(item.id); }}
+                      className="px-3.5 py-2 rounded-lg font-bold text-xs border-none cursor-pointer bg-red-600/20 text-red-400 flex items-center justify-center gap-1"
+                    >
+                      <Trash2 size={12} />
+                      EXCLUIR
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
