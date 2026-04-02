@@ -10,10 +10,13 @@ interface AgendaCalendarioProps {
 
 // Cores por usuário
 const CORES_USUARIOS: { [key: string]: { bg: string; text: string; border: string } } = {
-  'tiago': { bg: 'bg-blue-500', text: 'text-blue-400', border: 'border-blue-500' },
-  'ricardo': { bg: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-500' },
+  'tiago': { bg: 'bg-purple-500', text: 'text-purple-400', border: 'border-purple-500' },
   'jessica': { bg: 'bg-pink-500', text: 'text-pink-400', border: 'border-pink-500' },
-  'admin': { bg: 'bg-purple-500', text: 'text-purple-400', border: 'border-purple-500' },
+  'jéssica': { bg: 'bg-pink-500', text: 'text-pink-400', border: 'border-pink-500' },
+  'felipe': { bg: 'bg-blue-500', text: 'text-blue-400', border: 'border-blue-500' },
+  'ricardo': { bg: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-500' },
+  'admin': { bg: 'bg-gray-500', text: 'text-gray-400', border: 'border-gray-500' },
+  'implantacao': { bg: 'bg-orange-500', text: 'text-orange-400', border: 'border-orange-500' },
 };
 
 const getCorUsuario = (nome: string) => {
@@ -72,12 +75,16 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
     // Adicionar rondas (SUPERVISÃO)
     rondas.forEach(ronda => {
       if (ronda.data) {
+        // Pegar o primeiro nome do responsável
+        const nomeResponsavel = ronda.responsavel
+          ? ronda.responsavel.split(' ')[0]
+          : 'Desconhecido';
         listaEventos.push({
           id: `ronda-${ronda.id}`,
           data: ronda.data,
-          usuario: ronda.responsavel || 'Sistema',
+          usuario: nomeResponsavel,
           tipo: 'supervisao',
-          descricao: `Ronda ${ronda.templateRonda || ''}`,
+          descricao: `Ronda ${ronda.templateRonda || ''} - ${ronda.contrato}`,
           contrato: ronda.contrato
         });
       }
@@ -91,7 +98,7 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
           data: item.data_abertura,
           usuario: 'Implantacao',
           tipo: 'implantacao',
-          descricao: item.titulo,
+          descricao: `${item.titulo} - ${item.contrato_nome}`,
           contrato: item.contrato_nome
         });
       }
@@ -99,12 +106,15 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
 
     // Adicionar visitas (SUPERVISÃO)
     visitas.forEach(visita => {
+      const nomeUsuario = visita.usuario_login
+        ? visita.usuario_login.split(' ')[0]
+        : 'Desconhecido';
       listaEventos.push({
         id: `visita-${visita.id}`,
         data: visita.data,
-        usuario: visita.usuario_login,
+        usuario: nomeUsuario,
         tipo: 'supervisao',
-        descricao: visita.tipo,
+        descricao: `${visita.tipo} - ${visita.contrato_nome}`,
         contrato: visita.contrato_nome
       });
     });
