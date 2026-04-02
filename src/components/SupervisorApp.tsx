@@ -1377,112 +1377,6 @@ export function SupervisorApp() {
 
   // Tela de Agenda - Calendário Mensal
   if (viewMode === 'agenda') {
-    // Funções auxiliares do calendário
-    const getDiasDoMes = (data: Date) => {
-      const ano = data.getFullYear();
-      const mes = data.getMonth();
-      const primeiroDia = new Date(ano, mes, 1);
-      const ultimoDia = new Date(ano, mes + 1, 0);
-      const dias: Date[] = [];
-
-      // Dias do mês anterior para preencher a primeira semana
-      const diaSemanaInicio = primeiroDia.getDay();
-      for (let i = diaSemanaInicio - 1; i >= 0; i--) {
-        dias.push(new Date(ano, mes, -i));
-      }
-
-      // Dias do mês atual
-      for (let i = 1; i <= ultimoDia.getDate(); i++) {
-        dias.push(new Date(ano, mes, i));
-      }
-
-      // Dias do próximo mês para completar a última semana
-      const diasRestantes = 42 - dias.length; // 6 semanas completas
-      for (let i = 1; i <= diasRestantes; i++) {
-        dias.push(new Date(ano, mes + 1, i));
-      }
-
-      return dias;
-    };
-
-    const formatarDataKey = (data: Date) => {
-      return data.toISOString().split('T')[0];
-    };
-
-    const isMesmoMes = (data: Date) => {
-      return data.getMonth() === mesAtual.getMonth() && data.getFullYear() === mesAtual.getFullYear();
-    };
-
-    const isHoje = (data: Date) => {
-      const hoje = new Date();
-      return data.toDateString() === hoje.toDateString();
-    };
-
-    // Agrupar eventos por data
-    const getEventosDoDia = (data: Date): { id: string; titulo: string; tipo: 'kanban' | 'ronda' | 'visita' | 'manual'; executado: boolean; contrato?: string }[] => {
-      const dataKey = formatarDataKey(data);
-      const eventos: { id: string; titulo: string; tipo: 'kanban' | 'ronda' | 'visita' | 'manual'; executado: boolean; contrato?: string }[] = [];
-
-      // Filtrar por tipo de agenda
-      const mostrarImplantacao = filtroAgenda === 'todos' || filtroAgenda === 'implantacao';
-      const mostrarSupervisao = filtroAgenda === 'todos' || filtroAgenda === 'supervisao';
-
-      // 1. Itens do Kanban (implantação) - AZUL
-      if (mostrarImplantacao) {
-        todosItensRelevantes.forEach(item => {
-          // Usar data_abertura como data do evento
-          if (item.data_abertura === dataKey) {
-            eventos.push({
-              id: `kanban-${item.id}`,
-              titulo: item.titulo.length > 15 ? item.titulo.substring(0, 15) + '...' : item.titulo,
-              tipo: 'kanban',
-              executado: item.status === 'concluido',
-              contrato: item.contrato_nome
-            });
-          }
-        });
-      }
-
-      // 2. Rondas (supervisão) - AMARELO
-      if (mostrarSupervisao) {
-        todasRondas.forEach(ronda => {
-          if (ronda.data === dataKey) {
-            eventos.push({
-              id: `ronda-${ronda.id}`,
-              titulo: ronda.templateRonda ? `Ronda ${ronda.templateRonda}` : 'Ronda',
-              tipo: 'ronda',
-              executado: true, // Rondas salvas já foram executadas
-              contrato: ronda.contrato
-            });
-          }
-        });
-      }
-
-      // 3. Visitas manuais - VERDE (supervisão)
-      if (mostrarSupervisao) {
-        visitas.forEach(visita => {
-          if (visita.data === dataKey) {
-            eventos.push({
-              id: `visita-${visita.id}`,
-              titulo: visita.tipo.length > 15 ? visita.tipo.substring(0, 15) + '...' : visita.tipo,
-              tipo: 'visita',
-              executado: true,
-              contrato: visita.contrato_nome
-            });
-          }
-        });
-      }
-
-      return eventos;
-    };
-
-    const diasDoMes = getDiasDoMes(mesAtual);
-    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-
-    const navegarMes = (direcao: number) => {
-      setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() + direcao, 1));
-    };
-
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col">
         {/* Header */}
@@ -1492,276 +1386,138 @@ export function SupervisorApp() {
               <h1 className="text-lg font-bold text-white">Agenda</h1>
               <p className="text-xs text-gray-400">{usuario?.nome}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="p-2 text-gray-400 hover:text-white"
-            >
+            <button onClick={handleLogout} className="p-2 text-gray-400 hover:text-white">
               <LogOut className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         {/* Navegação do Mês */}
-        <div className="bg-slate-800 px-4 py-2 flex items-center justify-between border-b border-slate-700">
-          <button
-            onClick={() => navegarMes(-1)}
-            className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded"
-          >
+        <div className="bg-slate-800 px-4 py-3 flex items-center justify-between border-b border-slate-700">
+          <button onClick={() => setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() - 1, 1))} className="p-2 text-white bg-slate-700 rounded">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="text-white font-semibold">
+          <span className="text-white font-bold text-lg">
             {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
           </span>
-          <button
-            onClick={() => navegarMes(1)}
-            className="p-2 text-gray-400 hover:text-white hover:bg-slate-700 rounded"
-          >
+          <button onClick={() => setMesAtual(new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 1))} className="p-2 text-white bg-slate-700 rounded">
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
 
         {/* Filtros */}
-        <div className="bg-slate-800 px-4 py-2 flex gap-2 border-b border-slate-700 overflow-x-auto">
-          <button
-            onClick={() => setFiltroAgenda('todos')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-              filtroAgenda === 'todos'
-                ? 'bg-white text-slate-900'
-                : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
-            }`}
-          >
+        <div className="bg-slate-800 px-4 py-3 flex gap-2 border-b border-slate-700">
+          <button onClick={() => setFiltroAgenda('todos')} className={`px-4 py-2 rounded-lg font-medium ${filtroAgenda === 'todos' ? 'bg-white text-black' : 'bg-slate-700 text-white'}`}>
             Todos
           </button>
-          <button
-            onClick={() => setFiltroAgenda('implantacao')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-              filtroAgenda === 'implantacao'
-                ? 'bg-blue-500 text-white'
-                : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
-            }`}
-          >
+          <button onClick={() => setFiltroAgenda('implantacao')} className={`px-4 py-2 rounded-lg font-medium ${filtroAgenda === 'implantacao' ? 'bg-blue-500 text-white' : 'bg-slate-700 text-white'}`}>
             Implantacao
           </button>
-          <button
-            onClick={() => setFiltroAgenda('supervisao')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-              filtroAgenda === 'supervisao'
-                ? 'bg-yellow-500 text-slate-900'
-                : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
-            }`}
-          >
+          <button onClick={() => setFiltroAgenda('supervisao')} className={`px-4 py-2 rounded-lg font-medium ${filtroAgenda === 'supervisao' ? 'bg-yellow-500 text-black' : 'bg-slate-700 text-white'}`}>
             Supervisao
           </button>
         </div>
 
-        {/* Legenda */}
-        <div className="bg-slate-800 px-4 py-2 flex gap-4 text-xs border-b border-slate-700 flex-wrap">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-blue-500 rounded" />
-            <span className="text-gray-400">Kanban</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-yellow-500 rounded" />
-            <span className="text-gray-400">Ronda</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-emerald-500 rounded" />
-            <span className="text-gray-400">Visita</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 border-2 border-gray-400 rounded" />
-            <span className="text-gray-400">Programado</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-gray-400 rounded" />
-            <span className="text-gray-400">Executado</span>
-          </div>
-        </div>
-
-        {/* Calendário */}
-        <div className="flex-1 overflow-auto p-2">
-          {/* Cabeçalho dos dias da semana */}
-          <div className="grid grid-cols-7 gap-1 mb-1">
-            {diasSemana.map(dia => (
-              <div key={dia} className="text-center text-xs font-medium text-gray-500 py-1">
-                {dia}
-              </div>
+        {/* Calendário Simples */}
+        <div className="flex-1 overflow-auto p-4">
+          {/* Dias da semana */}
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'].map(d => (
+              <div key={d} className="text-center text-sm text-gray-400 py-2">{d}</div>
             ))}
           </div>
 
           {/* Grid do calendário */}
           <div className="grid grid-cols-7 gap-1">
-            {diasDoMes.map((dia, index) => {
-              const eventos = getEventosDoDia(dia);
-              const eMesAtual = isMesmoMes(dia);
-              const eHoje = isHoje(dia);
+            {(() => {
+              const ano = mesAtual.getFullYear();
+              const mes = mesAtual.getMonth();
+              const primeiroDia = new Date(ano, mes, 1).getDay();
+              const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+              const hoje = new Date();
+              const cells = [];
 
-              return (
-                <div
-                  key={index}
-                  className={`min-h-[70px] p-1 rounded border ${
-                    eMesAtual
-                      ? eHoje
-                        ? 'bg-emerald-500/20 border-emerald-500'
-                        : 'bg-slate-800 border-slate-700'
-                      : 'bg-slate-900 border-slate-800 opacity-50'
-                  }`}
-                >
-                  <div className={`text-xs font-medium mb-1 ${
-                    eHoje ? 'text-emerald-400' : eMesAtual ? 'text-gray-300' : 'text-gray-600'
-                  }`}>
-                    {dia.getDate()}
+              // Células vazias antes do primeiro dia
+              for (let i = 0; i < primeiroDia; i++) {
+                cells.push(<div key={`empty-${i}`} className="h-16 bg-slate-900 rounded" />);
+              }
+
+              // Dias do mês
+              for (let dia = 1; dia <= ultimoDia; dia++) {
+                const dataAtual = new Date(ano, mes, dia);
+                const isHoje = dataAtual.toDateString() === hoje.toDateString();
+                const dataStr = `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+
+                // Contar eventos do dia
+                const eventosRonda = todasRondas.filter(r => r.data === dataStr).length;
+                const eventosVisita = visitas.filter(v => v.data === dataStr).length;
+                const eventosKanban = todosItensRelevantes.filter(i => i.data_abertura === dataStr).length;
+
+                cells.push(
+                  <div key={dia} className={`h-16 p-1 rounded border ${isHoje ? 'bg-emerald-500/30 border-emerald-500' : 'bg-slate-800 border-slate-700'}`}>
+                    <div className={`text-sm font-bold ${isHoje ? 'text-emerald-400' : 'text-white'}`}>{dia}</div>
+                    <div className="flex gap-0.5 mt-1 flex-wrap">
+                      {eventosRonda > 0 && <div className="w-2 h-2 bg-yellow-500 rounded-full" title={`${eventosRonda} ronda(s)`} />}
+                      {eventosVisita > 0 && <div className="w-2 h-2 bg-emerald-500 rounded-full" title={`${eventosVisita} visita(s)`} />}
+                      {eventosKanban > 0 && <div className="w-2 h-2 bg-blue-500 rounded-full" title={`${eventosKanban} kanban`} />}
+                    </div>
                   </div>
-                  <div className="space-y-0.5">
-                    {eventos.slice(0, 3).map(evento => (
-                      <div
-                        key={evento.id}
-                        className={`text-[9px] px-1 py-0.5 rounded truncate ${
-                          evento.tipo === 'kanban'
-                            ? evento.executado
-                              ? 'bg-blue-500 text-white'
-                              : 'border border-blue-500 text-blue-400 bg-transparent'
-                            : evento.tipo === 'ronda'
-                            ? evento.executado
-                              ? 'bg-yellow-500 text-slate-900'
-                              : 'border border-yellow-500 text-yellow-400 bg-transparent'
-                            : evento.tipo === 'visita'
-                            ? evento.executado
-                              ? 'bg-emerald-500 text-white'
-                              : 'border border-emerald-500 text-emerald-400 bg-transparent'
-                            : evento.executado
-                            ? 'bg-red-500 text-white'
-                            : 'border border-red-500 text-red-400 bg-transparent'
-                        }`}
-                        title={`${evento.titulo}${evento.contrato ? ` - ${evento.contrato}` : ''}`}
-                      >
-                        {evento.titulo}
-                      </div>
-                    ))}
-                    {eventos.length > 3 && (
-                      <div className="text-[9px] text-gray-500 text-center">
-                        +{eventos.length - 3}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              }
+
+              return cells;
+            })()}
+          </div>
+
+          {/* Legenda */}
+          <div className="mt-4 flex gap-4 text-sm">
+            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-yellow-500 rounded-full" /><span className="text-gray-400">Rondas</span></div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500 rounded-full" /><span className="text-gray-400">Visitas</span></div>
+            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-blue-500 rounded-full" /><span className="text-gray-400">Kanban</span></div>
           </div>
         </div>
 
-        {/* Botão Adicionar Evento */}
+        {/* Botão Adicionar */}
         <div className="p-4 bg-slate-800 border-t border-slate-700">
-          <button
-            onClick={() => {
-              setEventoData(new Date().toISOString().split('T')[0]);
-              setEventoTitulo('');
-              setEventoDescricao('');
-              setShowModalEvento(true);
-            }}
-            className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors"
-          >
+          <button onClick={() => setShowModalEvento(true)} className="w-full py-3 bg-orange-500 text-white font-bold rounded-lg">
             Adicionar Evento
           </button>
         </div>
 
         {/* Bottom Navigation */}
         <div className="bg-slate-800 border-t border-slate-700">
-          {/* Status */}
           <div className={`p-1 text-center text-xs ${isOnline ? 'bg-emerald-500/10 text-emerald-300' : 'bg-red-500/10 text-red-300'}`}>
             {isOnline ? 'Online' : 'Offline'}
           </div>
-          {/* Tabs */}
           <div className="flex">
-            <button
-              onClick={() => setViewMode('contratos')}
-              className="flex-1 py-3 flex flex-col items-center gap-1 text-gray-400 hover:text-white"
-            >
+            <button onClick={() => setViewMode('contratos')} className="flex-1 py-3 flex flex-col items-center gap-1 text-gray-400">
               <Building2 className="w-5 h-5" />
               <span className="text-xs">Contratos</span>
             </button>
-            <button
-              onClick={() => setViewMode('agenda')}
-              className="flex-1 py-3 flex flex-col items-center gap-1 text-emerald-400 border-t-2 border-emerald-400"
-            >
+            <button onClick={() => setViewMode('agenda')} className="flex-1 py-3 flex flex-col items-center gap-1 text-emerald-400 border-t-2 border-emerald-400">
               <Calendar className="w-5 h-5" />
               <span className="text-xs font-medium">Agenda</span>
             </button>
           </div>
         </div>
 
-        {/* Modal Adicionar Evento */}
+        {/* Modal */}
         {showModalEvento && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl w-full max-w-sm">
-              <div className="p-4 border-b-2 border-slate-300 flex items-center justify-between">
-                <h2 className="text-slate-900 font-bold text-lg m-0">Adicionar Evento</h2>
-                <button onClick={() => setShowModalEvento(false)} className="p-1 bg-transparent border-none">
-                  <X size={20} className="text-slate-700" />
-                </button>
-              </div>
-              <div className="p-4 space-y-4">
-                {/* Data */}
-                <div>
-                  <label className="text-slate-700 font-bold text-sm block mb-2">DATA *</label>
-                  <input
-                    type="date"
-                    value={eventoData}
-                    onChange={(e) => setEventoData(e.target.value)}
-                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 box-border"
-                  />
-                </div>
-                {/* Título */}
-                <div>
-                  <label className="text-slate-700 font-bold text-sm block mb-2">TITULO *</label>
-                  <input
-                    type="text"
-                    value={eventoTitulo}
-                    onChange={(e) => setEventoTitulo(e.target.value)}
-                    placeholder="Ex: Reuniao com sindico"
-                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 box-border"
-                  />
-                </div>
-                {/* Descrição */}
-                <div>
-                  <label className="text-slate-700 font-bold text-sm block mb-2">DESCRICAO</label>
-                  <textarea
-                    value={eventoDescricao}
-                    onChange={(e) => setEventoDescricao(e.target.value)}
-                    placeholder="Detalhes do evento..."
-                    rows={3}
-                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 resize-none box-border"
-                  />
-                </div>
-              </div>
-              <div className="p-4 border-t-2 border-slate-200">
-                <button
-                  onClick={async () => {
-                    if (!eventoTitulo.trim()) {
-                      alert('Informe o titulo do evento');
-                      return;
-                    }
-                    // Salvar como visita manual
-                    try {
-                      await visitaService.create({
-                        contrato_nome: 'Evento Manual',
-                        usuario_login: usuario?.nome || '',
-                        data: eventoData,
-                        tipo: eventoTitulo,
-                        descricao: eventoDescricao
-                      });
-                      setShowModalEvento(false);
-                      await loadVisitas();
-                      alert('Evento adicionado!');
-                    } catch (error) {
-                      console.error('Erro ao salvar evento:', error);
-                      alert('Erro ao salvar evento');
-                    }
-                  }}
-                  className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg transition-colors"
-                >
-                  Salvar Evento
-                </button>
+            <div className="bg-white rounded-xl w-full max-w-sm p-4">
+              <h2 className="text-lg font-bold mb-4">Adicionar Evento</h2>
+              <input type="date" value={eventoData} onChange={e => setEventoData(e.target.value)} className="w-full border p-2 rounded mb-2" />
+              <input type="text" value={eventoTitulo} onChange={e => setEventoTitulo(e.target.value)} placeholder="Titulo" className="w-full border p-2 rounded mb-2" />
+              <textarea value={eventoDescricao} onChange={e => setEventoDescricao(e.target.value)} placeholder="Descricao" className="w-full border p-2 rounded mb-4" rows={3} />
+              <div className="flex gap-2">
+                <button onClick={() => setShowModalEvento(false)} className="flex-1 py-2 bg-gray-300 rounded">Cancelar</button>
+                <button onClick={async () => {
+                  if (!eventoTitulo.trim()) { alert('Informe o titulo'); return; }
+                  await visitaService.create({ contrato_nome: 'Evento Manual', usuario_login: usuario?.nome || '', data: eventoData, tipo: eventoTitulo, descricao: eventoDescricao });
+                  setShowModalEvento(false);
+                  await loadVisitas();
+                  alert('Evento adicionado!');
+                }} className="flex-1 py-2 bg-orange-500 text-white rounded">Salvar</button>
               </div>
             </div>
           </div>
