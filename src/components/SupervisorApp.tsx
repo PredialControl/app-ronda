@@ -1418,19 +1418,10 @@ export function SupervisorApp() {
       return data.toDateString() === hoje.toDateString();
     };
 
-    // Interface para eventos do calendário
-    interface EventoCalendario {
-      id: string;
-      titulo: string;
-      tipo: 'kanban' | 'ronda' | 'visita' | 'manual';
-      executado: boolean;
-      contrato?: string;
-    }
-
     // Agrupar eventos por data
-    const getEventosDoDia = (data: Date): EventoCalendario[] => {
+    const getEventosDoDia = (data: Date): { id: string; titulo: string; tipo: 'kanban' | 'ronda' | 'visita' | 'manual'; executado: boolean; contrato?: string }[] => {
       const dataKey = formatarDataKey(data);
-      const eventos: EventoCalendario[] = [];
+      const eventos: { id: string; titulo: string; tipo: 'kanban' | 'ronda' | 'visita' | 'manual'; executado: boolean; contrato?: string }[] = [];
 
       // Filtrar por tipo de agenda
       const mostrarImplantacao = filtroAgenda === 'todos' || filtroAgenda === 'implantacao';
