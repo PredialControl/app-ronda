@@ -1115,13 +1115,20 @@ export function SupervisorApp() {
     });
   };
 
-  // Handler para fotos em lote - NÃO processa todas, só guarda os arquivos
+  // Handler para fotos em lote - LIMITA A 3 FOTOS para não travar celular
   const handleBatchPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // Guardar os arquivos originais (não ocupa muita memória)
-    const arquivos = Array.from(files);
+    // Limitar a 3 fotos por vez para não travar o celular
+    const MAX_FOTOS = 3;
+    let arquivos = Array.from(files);
+
+    if (arquivos.length > MAX_FOTOS) {
+      alert(`⚠️ Limite de ${MAX_FOTOS} fotos por vez!\n\nVocê selecionou ${arquivos.length} fotos.\nApenas as primeiras ${MAX_FOTOS} serão processadas.\n\nDepois de salvar, você pode adicionar mais.`);
+      arquivos = arquivos.slice(0, MAX_FOTOS);
+    }
+
     setArquivosOriginais(arquivos);
     setFotoAtualIndex(0);
     setFotosPendentes([]); // Limpar fotos antigas
