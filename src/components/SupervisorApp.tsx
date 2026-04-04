@@ -1096,43 +1096,44 @@ export function SupervisorApp() {
     }
   };
 
-  // Estado para arquivos pendentes (não carregados em memória)
-  const [arquivosPendentes, setArquivosPendentes] = useState<File[]>([]);
-
-  // Handler para fotos em lote - OTIMIZADO para celular
+  // Handler para fotos em lote - processa uma por vez para não sobrecarregar memória
   const handleBatchPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // Guardar apenas os arquivos, não processar tudo de uma vez
-    const arquivos = Array.from(files);
-    setArquivosPendentes(arquivos);
-    setFotoAtualIndex(0);
+    const novasFotos: string[] = [];
 
-    // Processar apenas a primeira foto
-    const primeiraFoto = await processarFotoIndividual(arquivos[0]);
-    setFotosPendentes([primeiraFoto]);
-    setFormItem(prev => ({ ...prev, fotos: [primeiraFoto], local: '', status: 'OK', observacao: '', testeFuncionamento: 'SIM' }));
+    // Processar fotos uma por vez com compressão agressiva
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        // Compressão mais agressiva para celular: 600px e qualidade 0.5
+        const compressed = await comprimirImagem(base64, 600, 0.5);
+        novasFotos.push(compressed);
+      } catch (err) {
+        console.error('Erro ao processar foto:', err);
+      }
+    }
+
+    if (novasFotos.length === 0) {
+      alert('Não foi possível processar as fotos. Tente novamente.');
+      return;
+    }
+
+    setFotosPendentes(novasFotos);
+    setFotoAtualIndex(0);
+    setFormItem(prev => ({ ...prev, fotos: [novasFotos[0]], local: '', status: 'OK', observacao: '', testeFuncionamento: 'SIM' }));
     setViewMode('batchPhotos');
 
     if (batchFileInputRef.current) {
       batchFileInputRef.current.value = '';
     }
-  };
-
-  // Processar uma foto individual - compressão agressiva para celular
-  const processarFotoIndividual = async (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = reader.result as string;
-        // Compressão mais agressiva: 600px e qualidade 0.5
-        const compressed = await comprimirImagem(base64, 600, 0.5);
-        resolve(compressed);
-      };
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
-    });
   };
 
   // Salvar foto do lote e ir para próxima
@@ -1160,23 +1161,13 @@ export function SupervisorApp() {
     setChecklistItems(prev => [...prev, novoItem]);
 
     // Próxima foto ou voltar
-    if (fotoAtualIndex < arquivosPendentes.length - 1) {
+    if (fotoAtualIndex < fotosPendentes.length - 1) {
       const nextIndex = fotoAtualIndex + 1;
       setFotoAtualIndex(nextIndex);
-
-      // Processar a próxima foto sob demanda (não carregar tudo na memória)
-      processarFotoIndividual(arquivosPendentes[nextIndex]).then(fotoProcessada => {
-        setFotosPendentes(prev => {
-          const novas = [...prev];
-          novas[nextIndex] = fotoProcessada;
-          return novas;
-        });
-        setFormItem(prev => ({ ...prev, fotos: [fotoProcessada], local: '', observacao: '' }));
-      });
+      setFormItem(prev => ({ ...prev, fotos: [fotosPendentes[nextIndex]], local: '', observacao: '' }));
     } else {
       // Terminou todas as fotos
       setFotosPendentes([]);
-      setArquivosPendentes([]);
       setFotoAtualIndex(0);
       resetFormItem();
       setViewMode('ronda');
@@ -3287,7 +3278,7 @@ export function SupervisorApp() {
   }
 
   // Tela de Processamento de Fotos em Lote
-  if (viewMode === 'batchPhotos' && arquivosPendentes.length > 0) {
+  if (viewMode === 'batchPhotos' && fotosPendentes.length > 0) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col">
         {/* Header */}
@@ -3306,10 +3297,10 @@ export function SupervisorApp() {
             </button>
             <div className="flex-1">
               <h1 className="text-lg font-bold text-white">Processar Fotos</h1>
-              <p className="text-xs text-gray-400">Foto {fotoAtualIndex + 1} de {arquivosPendentes.length}</p>
+              <p className="text-xs text-gray-400">Foto {fotoAtualIndex + 1} de {fotosPendentes.length}</p>
             </div>
             <div className="bg-blue-600 px-3 py-1 rounded-full text-sm font-bold text-white">
-              {fotoAtualIndex + 1}/{arquivosPendentes.length}
+              {fotoAtualIndex + 1}/{fotosPendentes.length}
             </div>
           </div>
         </div>
@@ -3400,8 +3391,8 @@ export function SupervisorApp() {
             }`}
           >
             <Save className="w-5 h-5" />
-            {fotoAtualIndex < arquivosPendentes.length - 1 ? (
-              <>Salvar e Próxima Foto ({fotoAtualIndex + 2}/{arquivosPendentes.length})</>
+            {fotoAtualIndex < fotosPendentes.length - 1 ? (
+              <>Salvar e Próxima Foto ({fotoAtualIndex + 2}/{fotosPendentes.length})</>
             ) : (
               <>Salvar e Finalizar</>
             )}
