@@ -1096,39 +1096,40 @@ export function SupervisorApp() {
     }
   };
 
-  // Handler para fotos em lote - processa uma por vez para não sobrecarregar memória
+  // Estado para guardar os arquivos originais (não processados)
+  const [arquivosOriginais, setArquivosOriginais] = useState<File[]>([]);
+  const [fotoAtualProcessada, setFotoAtualProcessada] = useState<string>('');
+
+  // Função para processar UMA foto por vez (economia de memória)
+  const processarFotoAtual = async (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        // Compressão MUITO agressiva: 500px e qualidade 0.4
+        const compressed = await comprimirImagem(base64, 500, 0.4);
+        resolve(compressed);
+      };
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handler para fotos em lote - NÃO processa todas, só guarda os arquivos
   const handleBatchPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const novasFotos: string[] = [];
-
-    // Processar fotos uma por vez com compressão agressiva
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      try {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        // Compressão mais agressiva para celular: 600px e qualidade 0.5
-        const compressed = await comprimirImagem(base64, 600, 0.5);
-        novasFotos.push(compressed);
-      } catch (err) {
-        console.error('Erro ao processar foto:', err);
-      }
-    }
-
-    if (novasFotos.length === 0) {
-      alert('Não foi possível processar as fotos. Tente novamente.');
-      return;
-    }
-
-    setFotosPendentes(novasFotos);
+    // Guardar os arquivos originais (não ocupa muita memória)
+    const arquivos = Array.from(files);
+    setArquivosOriginais(arquivos);
     setFotoAtualIndex(0);
-    setFormItem(prev => ({ ...prev, fotos: [novasFotos[0]], local: '', status: 'OK', observacao: '', testeFuncionamento: 'SIM' }));
+    setFotosPendentes([]); // Limpar fotos antigas
+
+    // Processar APENAS a primeira foto
+    const primeiraFoto = await processarFotoAtual(arquivos[0]);
+    setFotoAtualProcessada(primeiraFoto);
+    setFormItem(prev => ({ ...prev, fotos: [primeiraFoto], local: '', status: 'OK', observacao: '', testeFuncionamento: 'SIM' }));
     setViewMode('batchPhotos');
 
     if (batchFileInputRef.current) {
@@ -1137,7 +1138,7 @@ export function SupervisorApp() {
   };
 
   // Salvar foto do lote e ir para próxima
-  const handleSalvarFotoLote = () => {
+  const handleSalvarFotoLote = async () => {
     if (!formItem.local.trim()) {
       alert('Informe o local');
       return;
@@ -1150,7 +1151,7 @@ export function SupervisorApp() {
       tipo: formItem.local, // Usar local como tipo para simplificar
       objetivo: templateSelecionado === 'MANUAL' ? 'Registro de pendência' : 'Registro fotográfico',
       local: formItem.local,
-      fotos: [fotosPendentes[fotoAtualIndex]],
+      fotos: [fotoAtualProcessada], // Usar a foto processada atual
       status: templateSelecionado === 'MANUAL' ? 'NAO_OK' : formItem.status, // MANUAL sempre é pendência
       observacao: formItem.observacao || undefined,
       testeFuncionamento: formItem.testeFuncionamento,
@@ -1161,12 +1162,19 @@ export function SupervisorApp() {
     setChecklistItems(prev => [...prev, novoItem]);
 
     // Próxima foto ou voltar
-    if (fotoAtualIndex < fotosPendentes.length - 1) {
+    if (fotoAtualIndex < arquivosOriginais.length - 1) {
       const nextIndex = fotoAtualIndex + 1;
       setFotoAtualIndex(nextIndex);
-      setFormItem(prev => ({ ...prev, fotos: [fotosPendentes[nextIndex]], local: '', observacao: '' }));
+
+      // Processar a próxima foto AGORA (libera memória da anterior)
+      setFotoAtualProcessada(''); // Limpar anterior
+      const proximaFoto = await processarFotoAtual(arquivosOriginais[nextIndex]);
+      setFotoAtualProcessada(proximaFoto);
+      setFormItem(prev => ({ ...prev, fotos: [proximaFoto], local: '', observacao: '' }));
     } else {
-      // Terminou todas as fotos
+      // Terminou todas as fotos - limpar tudo
+      setArquivosOriginais([]);
+      setFotoAtualProcessada('');
       setFotosPendentes([]);
       setFotoAtualIndex(0);
       resetFormItem();
@@ -3278,7 +3286,7 @@ export function SupervisorApp() {
   }
 
   // Tela de Processamento de Fotos em Lote
-  if (viewMode === 'batchPhotos' && fotosPendentes.length > 0) {
+  if (viewMode === 'batchPhotos' && arquivosOriginais.length > 0) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col">
         {/* Header */}
@@ -3286,6 +3294,8 @@ export function SupervisorApp() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
+                setArquivosOriginais([]);
+                setFotoAtualProcessada('');
                 setFotosPendentes([]);
                 setFotoAtualIndex(0);
                 resetFormItem();
@@ -3297,10 +3307,10 @@ export function SupervisorApp() {
             </button>
             <div className="flex-1">
               <h1 className="text-lg font-bold text-white">Processar Fotos</h1>
-              <p className="text-xs text-gray-400">Foto {fotoAtualIndex + 1} de {fotosPendentes.length}</p>
+              <p className="text-xs text-gray-400">Foto {fotoAtualIndex + 1} de {arquivosOriginais.length}</p>
             </div>
             <div className="bg-blue-600 px-3 py-1 rounded-full text-sm font-bold text-white">
-              {fotoAtualIndex + 1}/{fotosPendentes.length}
+              {fotoAtualIndex + 1}/{arquivosOriginais.length}
             </div>
           </div>
         </div>
@@ -3308,11 +3318,20 @@ export function SupervisorApp() {
         {/* Foto atual */}
         <div className="p-4">
           <div className="aspect-video rounded-xl overflow-hidden bg-slate-800 border-2 border-blue-500/50">
-            <img
-              src={fotosPendentes[fotoAtualIndex]}
-              alt={`Foto ${fotoAtualIndex + 1}`}
-              className="w-full h-full object-cover"
-            />
+            {fotoAtualProcessada ? (
+              <img
+                src={fotoAtualProcessada}
+                alt={`Foto ${fotoAtualIndex + 1}`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                <div className="text-center">
+                  <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                  <p>Carregando foto...</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -3386,13 +3405,14 @@ export function SupervisorApp() {
         <div className="p-4 bg-slate-800 border-t border-slate-700">
           <button
             onClick={handleSalvarFotoLote}
+            disabled={!fotoAtualProcessada}
             className={`w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 ${
-              templateSelecionado === 'MANUAL' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'
+              !fotoAtualProcessada ? 'bg-gray-600 cursor-not-allowed' : (templateSelecionado === 'MANUAL' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700')
             }`}
           >
             <Save className="w-5 h-5" />
-            {fotoAtualIndex < fotosPendentes.length - 1 ? (
-              <>Salvar e Próxima Foto ({fotoAtualIndex + 2}/{fotosPendentes.length})</>
+            {fotoAtualIndex < arquivosOriginais.length - 1 ? (
+              <>Salvar e Próxima Foto ({fotoAtualIndex + 2}/{arquivosOriginais.length})</>
             ) : (
               <>Salvar e Finalizar</>
             )}
