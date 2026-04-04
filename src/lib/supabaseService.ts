@@ -1854,6 +1854,9 @@ export interface VisitaRealizada {
   data: string;
   tipo: string;
   descricao: string;
+  local?: string;
+  problema?: string;
+  fotos?: string[];
   created_at?: string;
   updated_at?: string;
 }

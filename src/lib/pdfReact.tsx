@@ -767,16 +767,36 @@ export const RelatorioPDF = ({ ronda, contrato, areas, headerImage }: { ronda: R
         {/* Seções Dinâmicas do Relatório */}
         {(() => {
           console.log('🔍 PDF - Seções da ronda:', ronda.secoes);
+          console.log('🔍 PDF - Template da ronda:', ronda.templateRonda);
+          console.log('🔍 PDF - Roteiro da ronda:', ronda.roteiro);
 
-          // Se não existem seções customizadas, mostrar o objetivo padrão
-          const secoes = ronda.secoes && ronda.secoes.length > 0
-            ? ronda.secoes.sort((a, b) => a.ordem - b.ordem)
-            : [{
+          // Se for Relatório Manual, usar o objetivo digitado pelo usuário (salvo no roteiro)
+          const isRelatorioManual = ronda.templateRonda === 'MANUAL';
+          const objetivoManual = isRelatorioManual && ronda.roteiro && ronda.roteiro.length > 0
+            ? ronda.roteiro[0]
+            : null;
+
+          // Se não existem seções customizadas, mostrar o objetivo adequado
+          let secoes;
+          if (ronda.secoes && ronda.secoes.length > 0) {
+            secoes = ronda.secoes.sort((a, b) => a.ordem - b.ordem);
+          } else if (objetivoManual) {
+            // Relatório Manual - usar objetivo digitado pelo usuário
+            secoes = [{
+              id: 'objetivo-manual',
+              ordem: 1,
+              titulo: 'Objetivo',
+              conteudo: objetivoManual
+            }];
+          } else {
+            // Ronda normal - usar objetivo padrão
+            secoes = [{
                 id: 'objetivo-default',
                 ordem: 1,
                 titulo: 'Objetivo do Relatório de Status de Equipamentos e Áreas Comuns',
                 conteudo: 'O presente relatório tem como finalidade apresentar de forma clara, técnica e organizada o status atual dos equipamentos e das áreas comuns do empreendimento. Seu intuito é fornecer uma visão consolidada das condições operacionais, de conservação e de segurança de cada sistema inspecionado, permitindo identificar pendências, riscos potenciais e necessidades de manutenção preventiva ou corretiva.\n\nAlém de registrar as constatações verificadas durante a vistoria, este relatório busca auxiliar a gestão predial no planejamento das ações necessárias, apoiando a tomada de decisão e garantindo maior controle sobre o desempenho e a vida útil dos equipamentos. Dessa forma, o documento contribui para a manutenção da qualidade, segurança e funcionalidade das instalações, promovendo a continuidade das operações e o bem-estar dos usuários.'
               }];
+          }
 
           console.log('📋 PDF - Total de seções a renderizar:', secoes.length);
 

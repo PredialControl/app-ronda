@@ -11,8 +11,8 @@ interface AgendaCalendarioProps {
 // Cores por usuário
 const CORES_USUARIOS: { [key: string]: { bg: string; text: string; border: string } } = {
   'tiago': { bg: 'bg-purple-500', text: 'text-purple-400', border: 'border-purple-500' },
-  'jessica': { bg: 'bg-pink-500', text: 'text-pink-400', border: 'border-pink-500' },
-  'jéssica': { bg: 'bg-pink-500', text: 'text-pink-400', border: 'border-pink-500' },
+  'gessica': { bg: 'bg-pink-500', text: 'text-pink-400', border: 'border-pink-500' },
+  'géssica': { bg: 'bg-pink-500', text: 'text-pink-400', border: 'border-pink-500' },
   'felipe': { bg: 'bg-blue-500', text: 'text-blue-400', border: 'border-blue-500' },
   'ricardo': { bg: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-500' },
   'admin': { bg: 'bg-gray-500', text: 'text-gray-400', border: 'border-gray-500' },

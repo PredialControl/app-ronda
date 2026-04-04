@@ -10,6 +10,7 @@ import { emailService, EmailDestinatario } from '@/lib/emailService';
 import { emailJSService } from '@/lib/emailJSService';
 import { supabase } from '@/lib/supabase';
 import { RelatorioPDF, preparePdfData } from '@/lib/pdfReact';
+import { PhotoUpload } from '@/components/PhotoUpload';
 import { pdf } from '@react-pdf/renderer';
 import {
   LogIn,
@@ -167,11 +168,19 @@ const CONFIG_RONDAS = {
       'Corrimãos e guarda-corpos',
       'Pisos e revestimentos'
     ]
+  },
+  MANUAL: {
+    nome: 'Relatório Manual',
+    icon: Camera,
+    cor: 'blue',
+    periodicidadeDias: 0,
+    descricao: 'Relatório Fotográfico',
+    roteiro: [] as string[]
   }
 };
 
 type TemplateKey = keyof typeof CONFIG_RONDAS;
-type ViewMode = 'login' | 'contratos' | 'contrato' | 'ronda' | 'addItem' | 'checklist' | 'batchPhotos' | 'editarRonda' | 'itensRelevantes' | 'agenda';
+type ViewMode = 'login' | 'contratos' | 'contrato' | 'ronda' | 'addItem' | 'checklist' | 'batchPhotos' | 'editarRonda' | 'itensRelevantes' | 'visitas' | 'agenda';
 
 interface RondaPendente {
   tipo: TemplateKey;
@@ -419,6 +428,10 @@ export function SupervisorApp() {
   const [visitaDescricao, setVisitaDescricao] = useState('');
   const [visitaData, setVisitaData] = useState(new Date().toISOString().split('T')[0]);
   const [visitaTipo, setVisitaTipo] = useState('Vistoria Técnica');
+  const [visitaLocal, setVisitaLocal] = useState('');
+  const [visitaProblema, setVisitaProblema] = useState('');
+  const [visitaFotos, setVisitaFotos] = useState<string[]>([]);
+  const [uploadandoFotoVisita, setUploadandoFotoVisita] = useState(false);
   const [salvandoVisita, setSalvandoVisita] = useState(false);
   const [visitas, setVisitas] = useState<VisitaRealizada[]>([]);
   const [filtroKanban, setFiltroKanban] = useState<'dia' | 'mes' | 'ano'>('mes');
@@ -438,6 +451,7 @@ export function SupervisorApp() {
   // Estados de navegação
   const [viewMode, setViewMode] = useState<ViewMode>('login');
   const [templateSelecionado, setTemplateSelecionado] = useState<TemplateKey | null>(null);
+  const [objetivoManual, setObjetivoManual] = useState('');
 
   // Estados da ronda em execução
   const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
@@ -612,9 +626,20 @@ export function SupervisorApp() {
   };
 
   const handleSalvarVisita = async () => {
-    if (!contratoSelecionado || !usuario) return;
-    if (!visitaDescricao.trim()) {
-      alert('Informe a descrição da visita');
+    if (!contratoSelecionado) {
+      alert('Selecione um contrato antes de registrar a visita');
+      return;
+    }
+    if (!usuario) {
+      alert('Erro: usuário não identificado. Faça login novamente.');
+      return;
+    }
+    if (!visitaLocal.trim() || !visitaProblema.trim()) {
+      alert('Preencha o Local e o Problema');
+      return;
+    }
+    if (visitaFotos.length === 0) {
+      alert('Adicione pelo menos uma foto');
       return;
     }
 
@@ -623,17 +648,23 @@ export function SupervisorApp() {
       await visitaService.create({
         contrato_nome: contratoSelecionado.nome,
         usuario_login: usuario.nome,
-        data: visitaData,
-        tipo: visitaTipo,
-        descricao: visitaDescricao.trim()
+        data: new Date().toISOString().split('T')[0],
+        tipo: 'Ocorrência',
+        descricao: visitaProblema.trim(),
+        local: visitaLocal.trim(),
+        problema: visitaProblema.trim(),
+        fotos: visitaFotos
       });
 
       setShowModalVisita(false);
       setVisitaDescricao('');
       setVisitaData(new Date().toISOString().split('T')[0]);
       setVisitaTipo('Vistoria Técnica');
+      setVisitaLocal('');
+      setVisitaProblema('');
+      setVisitaFotos([]);
       await loadVisitas();
-      alert('Visita registrada com sucesso!');
+      alert('Ocorrência registrada!');
     } catch (error) {
       console.error('Erro ao salvar visita:', error);
       alert('Erro ao salvar visita');
@@ -673,6 +704,9 @@ export function SupervisorApp() {
     const resultado: RondaPendente[] = [];
 
     (Object.keys(CONFIG_RONDAS) as TemplateKey[]).forEach(tipo => {
+      // Pular MANUAL - não é obrigatório e tem seu próprio botão
+      if (tipo === 'MANUAL') return;
+
       const config = CONFIG_RONDAS[tipo];
       const rondasDoTipo = rondasData
         .filter(r => r.templateRonda === tipo)
@@ -847,57 +881,81 @@ export function SupervisorApp() {
       // ========== GERAR PDF ==========
       let pdfUrl = '';
 
-      if (rondaEditando) {
-        try {
-          console.log('📄 Gerando PDF do relatório...');
+      try {
+        console.log('📄 Gerando PDF do relatório...');
 
-          // Criar ronda completa para o PDF
-          const rondaCompleta: Ronda = {
-            ...rondaEditando,
-            checklistItems: checklistItems,
-            areasTecnicas: [],
-            fotosRonda: [],
-            outrosItensCorrigidos: []
-          };
+        // Criar ronda completa para o PDF (funciona tanto para edição quanto nova ronda)
+        const now = new Date();
+        const nomeRonda = templateSelecionado === 'MANUAL' && objetivoManual.trim()
+          ? `${objetivoManual.trim()} - ${now.toLocaleDateString('pt-BR')}`
+          : `${configRonda.nome} - ${now.toLocaleDateString('pt-BR')}`;
 
-          // Preparar dados do PDF
-          const { rondaNormalized, areasNormalized } = await preparePdfData(rondaCompleta, []);
+        const rondaCompleta: Ronda = rondaEditando ? {
+          ...rondaEditando,
+          checklistItems: checklistItems,
+          areasTecnicas: [],
+          fotosRonda: [],
+          outrosItensCorrigidos: []
+        } : {
+          id: `temp-${Date.now()}`,
+          nome: nomeRonda,
+          contrato: contratoSelecionado.nome,
+          data: now.toISOString().split('T')[0],
+          hora: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          tipoVisita: 'RONDA',
+          templateRonda: templateSelecionado,
+          roteiro: templateSelecionado === 'MANUAL' ? [objetivoManual.trim() || 'Relatório Manual'] : configRonda.roteiro,
+          checklistItems: checklistItems,
+          areasTecnicas: [],
+          fotosRonda: [],
+          outrosItensCorrigidos: [],
+          responsavel: usuario?.nome
+        };
 
-          // Gerar blob do PDF
-          const pdfBlob = await pdf(
-            <RelatorioPDF
-              ronda={rondaNormalized}
-              contrato={contratoSelecionado}
-              areas={areasNormalized}
-            />
-          ).toBlob();
+        // Preparar dados do PDF
+        const { rondaNormalized, areasNormalized } = await preparePdfData(rondaCompleta, []);
 
-          // Upload para Supabase Storage
-          const timestamp = Date.now();
-          const nomeArquivo = `relatorios-email/${contratoSelecionado.id}/${timestamp}_${configRonda.nome.replace(/\s+/g, '_')}.pdf`;
+        // Gerar blob do PDF
+        const pdfBlob = await pdf(
+          <RelatorioPDF
+            ronda={rondaNormalized}
+            contrato={contratoSelecionado}
+            areas={areasNormalized}
+          />
+        ).toBlob();
 
-          const { error: uploadError } = await supabase.storage
+        // Upload para Supabase Storage
+        const timestamp = Date.now();
+        // Limpar nome removendo acentos e caracteres especiais
+        const nomeLimpo = configRonda.nome
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove acentos
+          .replace(/[^a-zA-Z0-9]/g, '_') // Substitui caracteres especiais por _
+          .replace(/_+/g, '_'); // Remove underscores duplicados
+        const nomeArquivo = `relatorios-email/${contratoSelecionado.id}/${timestamp}_${nomeLimpo}.pdf`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('app-ronda')
+          .upload(nomeArquivo, pdfBlob, {
+            contentType: 'application/pdf',
+            upsert: true
+          });
+
+        if (uploadError) {
+          console.error('❌ Erro ao fazer upload do PDF:', uploadError);
+          alert('Erro no upload do PDF: ' + uploadError.message);
+        } else {
+          // Obter URL pública
+          const { data: urlData } = supabase.storage
             .from('app-ronda')
-            .upload(nomeArquivo, pdfBlob, {
-              contentType: 'application/pdf',
-              upsert: true
-            });
+            .getPublicUrl(nomeArquivo);
 
-          if (uploadError) {
-            console.error('❌ Erro ao fazer upload do PDF:', uploadError);
-          } else {
-            // Obter URL pública
-            const { data: urlData } = supabase.storage
-              .from('app-ronda')
-              .getPublicUrl(nomeArquivo);
-
-            pdfUrl = urlData.publicUrl;
-            console.log('✅ PDF enviado para:', pdfUrl);
-          }
-        } catch (pdfError) {
-          console.error('❌ Erro ao gerar PDF:', pdfError);
-          // Continua sem PDF se der erro
+          pdfUrl = urlData.publicUrl;
+          console.log('✅ PDF enviado para:', pdfUrl);
         }
+      } catch (pdfError) {
+        console.error('❌ Erro ao gerar PDF:', pdfError);
+        alert('Erro ao gerar PDF: ' + (pdfError instanceof Error ? pdfError.message : String(pdfError)));
+        // Continua sem PDF se der erro
       }
 
       // ========== MONTAR EMAIL PROFISSIONAL ==========
@@ -1001,20 +1059,36 @@ export function SupervisorApp() {
 
   const handleAddPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
+
+    // Processar todas as fotos de forma sequencial
+    const novasFotos: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        // Comprimir a imagem antes de adicionar
-        const compressed = await comprimirImagem(reader.result as string);
-        setFormItem(prev => ({
-          ...prev,
-          fotos: [...prev.fotos, compressed]
-        }));
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Converter para base64
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        // Comprimir a imagem
+        const compressed = await comprimirImagem(base64);
+        novasFotos.push(compressed);
+      } catch (error) {
+        console.error('Erro ao processar foto:', error);
+      }
+    }
+
+    // Adicionar todas as fotos de uma vez
+    if (novasFotos.length > 0) {
+      setFormItem(prev => ({
+        ...prev,
+        fotos: [...prev.fotos, ...novasFotos]
+      }));
     }
 
     if (fileInputRef.current) {
@@ -1022,33 +1096,43 @@ export function SupervisorApp() {
     }
   };
 
-  // Handler para fotos em lote
+  // Estado para arquivos pendentes (não carregados em memória)
+  const [arquivosPendentes, setArquivosPendentes] = useState<File[]>([]);
+
+  // Handler para fotos em lote - OTIMIZADO para celular
   const handleBatchPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const novasFotos: string[] = [];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const base64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-      // Comprimir cada foto antes de adicionar
-      const compressed = await comprimirImagem(base64);
-      novasFotos.push(compressed);
-    }
-
-    setFotosPendentes(novasFotos);
+    // Guardar apenas os arquivos, não processar tudo de uma vez
+    const arquivos = Array.from(files);
+    setArquivosPendentes(arquivos);
     setFotoAtualIndex(0);
-    setFormItem(prev => ({ ...prev, fotos: [novasFotos[0]], local: '', status: 'OK', observacao: '', testeFuncionamento: 'SIM' }));
+
+    // Processar apenas a primeira foto
+    const primeiraFoto = await processarFotoIndividual(arquivos[0]);
+    setFotosPendentes([primeiraFoto]);
+    setFormItem(prev => ({ ...prev, fotos: [primeiraFoto], local: '', status: 'OK', observacao: '', testeFuncionamento: 'SIM' }));
     setViewMode('batchPhotos');
 
     if (batchFileInputRef.current) {
       batchFileInputRef.current.value = '';
     }
+  };
+
+  // Processar uma foto individual - compressão agressiva para celular
+  const processarFotoIndividual = async (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        // Compressão mais agressiva: 600px e qualidade 0.5
+        const compressed = await comprimirImagem(base64, 600, 0.5);
+        resolve(compressed);
+      };
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
   };
 
   // Salvar foto do lote e ir para próxima
@@ -1063,10 +1147,10 @@ export function SupervisorApp() {
       id: `item-${Date.now()}-${fotoAtualIndex}`,
       rondaId: '',
       tipo: formItem.local, // Usar local como tipo para simplificar
-      objetivo: 'Registro fotográfico',
+      objetivo: templateSelecionado === 'MANUAL' ? 'Registro de pendência' : 'Registro fotográfico',
       local: formItem.local,
       fotos: [fotosPendentes[fotoAtualIndex]],
-      status: formItem.status,
+      status: templateSelecionado === 'MANUAL' ? 'NAO_OK' : formItem.status, // MANUAL sempre é pendência
       observacao: formItem.observacao || undefined,
       testeFuncionamento: formItem.testeFuncionamento,
       data: now.toISOString().split('T')[0],
@@ -1076,13 +1160,23 @@ export function SupervisorApp() {
     setChecklistItems(prev => [...prev, novoItem]);
 
     // Próxima foto ou voltar
-    if (fotoAtualIndex < fotosPendentes.length - 1) {
+    if (fotoAtualIndex < arquivosPendentes.length - 1) {
       const nextIndex = fotoAtualIndex + 1;
       setFotoAtualIndex(nextIndex);
-      setFormItem(prev => ({ ...prev, fotos: [fotosPendentes[nextIndex]], local: '', observacao: '' }));
+
+      // Processar a próxima foto sob demanda (não carregar tudo na memória)
+      processarFotoIndividual(arquivosPendentes[nextIndex]).then(fotoProcessada => {
+        setFotosPendentes(prev => {
+          const novas = [...prev];
+          novas[nextIndex] = fotoProcessada;
+          return novas;
+        });
+        setFormItem(prev => ({ ...prev, fotos: [fotoProcessada], local: '', observacao: '' }));
+      });
     } else {
       // Terminou todas as fotos
       setFotosPendentes([]);
+      setArquivosPendentes([]);
       setFotoAtualIndex(0);
       resetFormItem();
       setViewMode('ronda');
@@ -1113,10 +1207,10 @@ export function SupervisorApp() {
       id: `item-${Date.now()}`,
       rondaId: '',
       tipo: tipoItemSelecionado,
-      objetivo: `Verificar ${tipoItemSelecionado.toLowerCase()}`,
+      objetivo: templateSelecionado === 'MANUAL' ? 'Registro de pendência' : `Verificar ${tipoItemSelecionado.toLowerCase()}`,
       local: formItem.local,
       fotos: formItem.fotos,
-      status: formItem.status,
+      status: templateSelecionado === 'MANUAL' ? 'NAO_OK' : formItem.status, // MANUAL sempre é pendência
       observacao: formItem.observacao || undefined,
       testeFuncionamento: formItem.testeFuncionamento,
       data: now.toISOString().split('T')[0],
@@ -1151,14 +1245,18 @@ export function SupervisorApp() {
         alert('Ronda atualizada com sucesso!');
       } else {
         // Criando nova ronda
+        const nomeRonda = templateSelecionado === 'MANUAL' && objetivoManual.trim()
+          ? `${objetivoManual.trim()} - ${now.toLocaleDateString('pt-BR')}`
+          : `${config.nome} - ${now.toLocaleDateString('pt-BR')}`;
+
         const novaRonda: Omit<Ronda, 'id'> = {
-          nome: `${config.nome} - ${now.toLocaleDateString('pt-BR')}`,
+          nome: nomeRonda,
           contrato: contratoSelecionado.nome,
           data: now.toISOString().split('T')[0],
           hora: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
           tipoVisita: 'RONDA',
           templateRonda: templateSelecionado,
-          roteiro: config.roteiro,
+          roteiro: templateSelecionado === 'MANUAL' ? [objetivoManual.trim() || 'Relatório Manual'] : config.roteiro,
           checklistItems: checklistItems,
           areasTecnicas: [],
           fotosRonda: [],
@@ -1167,7 +1265,27 @@ export function SupervisorApp() {
         };
 
         await rondaService.create(novaRonda as Ronda);
-        alert('Ronda salva com sucesso!');
+
+        // Se for MANUAL, também salvar como visita no histórico
+        if (templateSelecionado === 'MANUAL') {
+          const visita: Omit<VisitaRealizada, 'id'> = {
+            contrato_nome: contratoSelecionado.nome,
+            usuario_login: usuario?.email || usuario?.nome || 'supervisor',
+            data: now.toISOString().split('T')[0],
+            tipo: 'Relatório Manual',
+            descricao: objetivoManual.trim() || 'Relatório Manual',
+            local: checklistItems.length > 0 ? checklistItems.map(i => i.local).join(', ') : undefined,
+            problema: checklistItems.length > 0 ? checklistItems.map(i => (i as any).pendencia || i.observacao).filter(Boolean).join('; ') : undefined
+          };
+          try {
+            await visitaService.create(visita as VisitaRealizada);
+          } catch (e) {
+            console.log('Visita salva junto com a ronda');
+          }
+        }
+
+        alert('Relatório salvo com sucesso!');
+        setObjetivoManual('');
       }
 
       // Recarregar rondas e voltar
@@ -1876,6 +1994,183 @@ export function SupervisorApp() {
     );
   }
 
+  // Tela de Visitas/Ocorrências
+  if (viewMode === 'visitas' && contratoSelecionado) {
+    const visitasDoContrato = visitas.filter(v => v.contrato_nome === contratoSelecionado.nome)
+      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
+    const handleNovaVisita = () => {
+      setVisitaData(new Date().toISOString().split('T')[0]);
+      setVisitaTipo('Vistoria Técnica');
+      setVisitaLocal('');
+      setVisitaProblema('');
+      setVisitaFotos([]);
+      setShowModalVisita(true);
+    };
+
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col">
+        {/* Header */}
+        <div className="bg-slate-800 p-4 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setViewMode('contrato')} className="p-2 bg-transparent border-none text-white">
+              <ArrowLeft size={20} />
+            </button>
+            <div className="flex-1">
+              <h1 className="text-white text-lg font-bold m-0">Visitas / Ocorrências</h1>
+              <p className="text-slate-400 text-xs mt-1 m-0">{contratoSelecionado.nome}</p>
+            </div>
+            <button onClick={handleNovaVisita} className="p-2.5 bg-blue-600 rounded-lg border-none">
+              <Plus size={20} className="text-white" />
+            </button>
+          </div>
+        </div>
+
+        {/* Resumo */}
+        <div className="flex gap-2 p-4 pb-2">
+          <div className="flex-1 flex justify-center p-2.5 bg-blue-600 rounded-lg">
+            <span className="text-white font-bold text-sm">{visitasDoContrato.length} REGISTROS</span>
+          </div>
+        </div>
+
+        {/* Lista de Cards */}
+        <div className="flex-1 overflow-y-auto px-4 pb-4 pt-2">
+          {visitasDoContrato.length === 0 ? (
+            <div className="text-center py-12 text-slate-500 text-base">
+              Nenhuma visita registrada
+            </div>
+          ) : (
+            visitasDoContrato.map(visita => (
+              <div
+                key={visita.id}
+                className="rounded-xl p-4 mb-3 bg-slate-800 border border-slate-700"
+              >
+                {/* Cabeçalho com data e tipo */}
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <span className="text-blue-400 text-xs font-semibold">{visita.tipo}</span>
+                    <p className="text-slate-400 text-xs mt-1">
+                      {new Date(visita.data).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeletarVisita(visita.id)}
+                    className="p-2 bg-red-500/20 rounded-lg border-none"
+                  >
+                    <Trash2 size={16} className="text-red-400" />
+                  </button>
+                </div>
+
+                {/* Local */}
+                {visita.local && (
+                  <div className="mb-2">
+                    <span className="text-slate-500 text-xs">LOCAL:</span>
+                    <p className="text-white font-semibold text-sm m-0">{visita.local}</p>
+                  </div>
+                )}
+
+                {/* Problema */}
+                {visita.problema && (
+                  <div className="mb-3">
+                    <span className="text-slate-500 text-xs">PROBLEMA:</span>
+                    <p className="text-slate-300 text-sm m-0">{visita.problema}</p>
+                  </div>
+                )}
+
+                {/* Fotos */}
+                {visita.fotos && visita.fotos.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mt-3">
+                    {visita.fotos.map((foto, index) => (
+                      <img
+                        key={index}
+                        src={foto}
+                        alt={`Foto ${index + 1}`}
+                        className="w-full aspect-square object-cover rounded-lg"
+                        onClick={() => window.open(foto, '_blank')}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Modal Registrar Visita - Padrão FotoRondaModal */}
+        {showModalVisita && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="glass-modal p-6 w-full max-w-md max-h-[90vh] overflow-y-auto mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold flex items-center gap-2 text-white">
+                  <Camera className="w-5 h-5 text-blue-400" />
+                  Nova Ocorrência
+                </h2>
+                <button onClick={() => setShowModalVisita(false)} className="text-gray-400 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Upload de Fotos - Igual FotoRondaModal */}
+                <div className="space-y-4 glass p-4">
+                  <PhotoUpload
+                    photos={visitaFotos}
+                    onPhotosChange={(novasFotos) => setVisitaFotos(novasFotos)}
+                    maxPhotos={40}
+                    label="📸 Fotos"
+                    showCounter={true}
+                  />
+                </div>
+
+                {/* Local */}
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Local *</label>
+                  <input
+                    type="text"
+                    value={visitaLocal}
+                    onChange={(e) => setVisitaLocal(e.target.value)}
+                    placeholder="Ex: Bomba, Caixa d'água, Portaria..."
+                    className="glass-input w-full"
+                  />
+                </div>
+
+                {/* Problema/Pendência */}
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Problema / Pendência *</label>
+                  <input
+                    type="text"
+                    value={visitaProblema}
+                    onChange={(e) => setVisitaProblema(e.target.value)}
+                    placeholder="Ex: Vazamento, lâmpada queimada..."
+                    className="glass-input w-full"
+                  />
+                </div>
+
+                {/* Botões */}
+                <div className="flex gap-2 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowModalVisita(false)}
+                    className="flex-1 bg-gray-800 border border-gray-600 text-white hover:bg-gray-700 py-3 px-4 rounded-lg font-medium"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSalvarVisita}
+                    disabled={salvandoVisita}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium disabled:opacity-50"
+                  >
+                    {salvandoVisita ? 'Salvando...' : 'Registrar'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // Tela de Itens Relevantes (Lista simplificada)
   if (viewMode === 'itensRelevantes' && contratoSelecionado) {
     // Pegar meses únicos
@@ -1955,7 +2250,7 @@ export function SupervisorApp() {
     };
 
     return (
-      <div className="min-h-screen bg-white flex flex-col itens-relevantes-page">
+      <div className="min-h-screen bg-slate-900 flex flex-col itens-relevantes-page">
         {/* Header */}
         <div className="bg-slate-800 p-4 border-b-2 border-slate-700 texto-branco">
           <div className="flex items-center gap-3">
@@ -2062,40 +2357,41 @@ export function SupervisorApp() {
         </div>
 
         {/* Modal simplificado */}
+        {/* Modal Itens Relevantes - Estilo escuro */}
         {showModalItemRelevante && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl w-full max-w-sm">
-              <div className="p-4 border-b-2 border-slate-300 flex items-center justify-between">
-                <h2 className="text-slate-900 font-bold text-lg m-0">
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 rounded-2xl w-full max-w-sm">
+              <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+                <h2 className="text-white font-bold text-lg m-0">
                   {itemRelevanteEditando ? 'Editar Item' : 'Novo Item'}
                 </h2>
-                <button onClick={() => setShowModalItemRelevante(false)} className="p-1 bg-transparent border-none">
-                  <X size={20} className="text-slate-700" />
+                <button onClick={() => setShowModalItemRelevante(false)} className="p-2 bg-slate-700 rounded-full border-none">
+                  <X size={18} className="text-white" />
                 </button>
               </div>
-              <div className="p-4">
-                <div className="mb-4">
-                  <label className="text-slate-700 font-bold text-sm block mb-2">TÍTULO *</label>
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="text-slate-300 font-semibold text-sm block mb-2">TÍTULO *</label>
                   <input
                     type="text"
                     defaultValue={itemRelevanteEditando?.titulo || ''}
                     id="titulo-input"
                     placeholder="Digite o título..."
-                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 box-border"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-xl p-3 text-base text-white placeholder-slate-400"
                   />
                 </div>
                 <div>
-                  <label className="text-slate-700 font-bold text-sm block mb-2">OBSERVAÇÃO</label>
+                  <label className="text-slate-300 font-semibold text-sm block mb-2">OBSERVAÇÃO</label>
                   <textarea
                     defaultValue={itemRelevanteEditando?.parecer || ''}
                     id="obs-input"
                     placeholder="Digite a observação..."
                     rows={4}
-                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 resize-none box-border"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-xl p-3 text-base text-white placeholder-slate-400 resize-none"
                   />
                 </div>
               </div>
-              <div className="p-4 border-t-2 border-slate-200">
+              <div className="p-4 border-t border-slate-700 space-y-2">
                 <button
                   onClick={() => {
                     const titulo = (document.getElementById('titulo-input') as HTMLInputElement)?.value;
@@ -2103,14 +2399,14 @@ export function SupervisorApp() {
                     if (!titulo?.trim()) { alert('Informe o título'); return; }
                     handleSalvarItem({ titulo, parecer });
                   }}
-                  className="w-full bg-blue-600 text-white p-3.5 rounded-lg font-bold text-base border-none mb-2"
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 rounded-xl font-bold text-base border-none shadow-lg"
                 >
                   {itemRelevanteEditando ? 'SALVAR' : 'CRIAR ITEM'}
                 </button>
                 {itemRelevanteEditando && (
                   <button
                     onClick={() => handleDeletarItem(itemRelevanteEditando.id)}
-                    className="w-full bg-red-50 text-red-600 p-3.5 rounded-lg font-bold text-base border-2 border-red-600"
+                    className="w-full bg-red-500/20 text-red-400 p-4 rounded-xl font-bold text-base border border-red-500/50"
                   >
                     EXCLUIR
                   </button>
@@ -2166,32 +2462,6 @@ export function SupervisorApp() {
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-white/80" />
-            </div>
-          </button>
-
-          {/* Botão Registrar Visita */}
-          <button
-            onClick={() => {
-              setVisitaData(new Date().toISOString().split('T')[0]);
-              setVisitaTipo('Vistoria Técnica');
-              setVisitaDescricao('');
-              setShowModalVisita(true);
-            }}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-4 text-left hover:from-blue-500 hover:to-indigo-500 transition-all"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
-                  <Edit3 className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <span className="font-semibold text-white">Registrar Visita</span>
-                  <p className="text-sm text-white/80">
-                    Reunião, vistoria, conferência...
-                  </p>
-                </div>
-              </div>
-              <Plus className="w-5 h-5 text-white/80" />
             </div>
           </button>
 
@@ -2262,6 +2532,28 @@ export function SupervisorApp() {
                 </div>
               );
             })}
+
+            {/* Botão Relatório Manual */}
+            <div
+              className="rounded-xl p-4 border bg-gradient-to-r from-blue-600/20 to-indigo-600/20 border-blue-500/30 cursor-pointer hover:border-blue-400/50 transition-all"
+              onClick={() => handleIniciarRonda('MANUAL')}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-500/20">
+                    <Camera className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <span className="font-medium text-white">Relatório Manual</span>
+                    <p className="text-sm text-blue-300">Relatório fotográfico livre</p>
+                  </div>
+                </div>
+                <button className="px-4 py-2 rounded-lg font-medium text-white bg-blue-600 flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Criar
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Histórico recente */}
@@ -2335,34 +2627,34 @@ export function SupervisorApp() {
           </div>
         </div>
 
-        {/* Modal Registrar Visita */}
+        {/* Modal Registrar Visita - Estilo escuro */}
         {showModalVisita && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl w-full max-w-sm">
-              <div className="p-4 border-b-2 border-slate-300 flex items-center justify-between">
-                <h2 className="text-slate-900 font-bold text-lg m-0">Registrar Visita</h2>
-                <button onClick={() => setShowModalVisita(false)} className="p-1 bg-transparent border-none">
-                  <X size={20} className="text-slate-700" />
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto">
+              <div className="p-4 border-b border-slate-700 flex items-center justify-between sticky top-0 bg-slate-800 z-10">
+                <h2 className="text-white font-bold text-lg m-0">Registrar Visita</h2>
+                <button onClick={() => setShowModalVisita(false)} className="p-2 bg-slate-700 rounded-full border-none">
+                  <X size={18} className="text-white" />
                 </button>
               </div>
               <div className="p-4 space-y-4">
                 {/* Data */}
                 <div>
-                  <label className="text-slate-700 font-bold text-sm block mb-2">DATA *</label>
+                  <label className="text-slate-300 font-semibold text-sm block mb-2">DATA</label>
                   <input
                     type="date"
                     value={visitaData}
                     onChange={(e) => setVisitaData(e.target.value)}
-                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 box-border"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-xl p-3 text-base text-white"
                   />
                 </div>
                 {/* Tipo */}
                 <div>
-                  <label className="text-slate-700 font-bold text-sm block mb-2">TIPO *</label>
+                  <label className="text-slate-300 font-semibold text-sm block mb-2">TIPO</label>
                   <select
                     value={visitaTipo}
                     onChange={(e) => setVisitaTipo(e.target.value)}
-                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 box-border bg-white"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-xl p-3 text-base text-white"
                   >
                     <option value="Vistoria Técnica">Vistoria Técnica</option>
                     <option value="Reunião">Reunião</option>
@@ -2372,23 +2664,130 @@ export function SupervisorApp() {
                     <option value="Outro">Outro</option>
                   </select>
                 </div>
-                {/* Descrição */}
+                {/* Local */}
                 <div>
-                  <label className="text-slate-700 font-bold text-sm block mb-2">DESCRIÇÃO *</label>
-                  <textarea
-                    value={visitaDescricao}
-                    onChange={(e) => setVisitaDescricao(e.target.value)}
-                    placeholder="Descreva o que foi feito..."
-                    rows={4}
-                    className="w-full border-2 border-slate-400 rounded-lg p-3 text-base text-slate-900 resize-none box-border"
+                  <label className="text-slate-300 font-semibold text-sm block mb-2">LOCAL</label>
+                  <input
+                    type="text"
+                    value={visitaLocal}
+                    onChange={(e) => setVisitaLocal(e.target.value)}
+                    placeholder="Ex: Portaria, Área comum..."
+                    className="w-full bg-slate-700 border border-slate-600 rounded-xl p-3 text-base text-white placeholder-slate-400"
                   />
                 </div>
+                {/* Problema */}
+                <div>
+                  <label className="text-slate-300 font-semibold text-sm block mb-2">PROBLEMA / DESCRIÇÃO</label>
+                  <textarea
+                    value={visitaProblema}
+                    onChange={(e) => setVisitaProblema(e.target.value)}
+                    placeholder="Descreva o problema ou situação encontrada..."
+                    rows={3}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-xl p-3 text-base text-white placeholder-slate-400 resize-none"
+                  />
+                </div>
+                {/* Fotos */}
+                <div>
+                  <label className="text-slate-300 font-semibold text-sm block mb-2">
+                    FOTOS {visitaFotos.length > 0 && <span className="text-blue-400">({visitaFotos.length})</span>}
+                  </label>
+                  {/* Grid de fotos já adicionadas */}
+                  {visitaFotos.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      {visitaFotos.map((foto, index) => (
+                        <div key={index} className="relative aspect-square">
+                          <img src={foto} alt={`Foto ${index + 1}`} className="w-full h-full object-cover rounded-lg" />
+                          <button
+                            onClick={() => setVisitaFotos(prev => prev.filter((_, i) => i !== index))}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-lg"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Botão para adicionar mais fotos */}
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setUploadandoFotoVisita(true);
+                        try {
+                          // Comprimir imagem antes do upload para evitar crash
+                          const reader = new FileReader();
+                          reader.onload = async (event) => {
+                            try {
+                              const base64 = event.target?.result as string;
+                              const comprimida = await comprimirImagem(base64, 800, 0.6);
+
+                              // Converter base64 para blob
+                              const response = await fetch(comprimida);
+                              const blob = await response.blob();
+
+                              const fileName = `visitas/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`;
+                              const { error } = await supabase.storage
+                                .from('fotos-rondas')
+                                .upload(fileName, blob, {
+                                  contentType: 'image/jpeg',
+                                  upsert: true
+                                });
+                              if (error) {
+                                console.error('Erro upload:', error);
+                                alert(`Erro ao enviar: ${error.message}`);
+                                return;
+                              }
+                              const { data: urlData } = supabase.storage.from('fotos-rondas').getPublicUrl(fileName);
+                              setVisitaFotos(prev => [...prev, urlData.publicUrl]);
+                            } catch (err: any) {
+                              console.error('Erro ao processar foto:', err);
+                              alert(`Erro: ${err?.message || 'Erro desconhecido'}`);
+                            } finally {
+                              setUploadandoFotoVisita(false);
+                            }
+                          };
+                          reader.onerror = () => {
+                            alert('Erro ao ler a foto');
+                            setUploadandoFotoVisita(false);
+                          };
+                          reader.readAsDataURL(file);
+                        } catch (err: any) {
+                          console.error('Erro ao fazer upload:', err);
+                          alert(`Erro: ${err?.message || 'Erro desconhecido'}`);
+                          setUploadandoFotoVisita(false);
+                        }
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                      id="foto-visita-input"
+                    />
+                    <label
+                      htmlFor="foto-visita-input"
+                      className="flex items-center justify-center gap-2 w-full border-2 border-dashed border-slate-600 rounded-xl p-4 cursor-pointer hover:bg-slate-700/50 transition-colors"
+                    >
+                      {uploadandoFotoVisita ? (
+                        <span className="text-slate-400">Enviando...</span>
+                      ) : (
+                        <>
+                          <Camera size={20} className="text-blue-400" />
+                          <span className="text-slate-300">
+                            {visitaFotos.length > 0 ? 'Adicionar mais fotos' : 'Tirar foto ou selecionar'}
+                          </span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                </div>
               </div>
-              <div className="p-4 border-t-2 border-slate-200">
+              <div className="p-4 border-t border-slate-700 sticky bottom-0 bg-slate-800">
                 <button
                   onClick={handleSalvarVisita}
-                  disabled={salvandoVisita}
-                  className="w-full bg-blue-600 text-white p-3.5 rounded-lg font-bold text-base border-none disabled:opacity-50"
+                  disabled={salvandoVisita || uploadandoFotoVisita}
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white p-4 rounded-xl font-bold text-base border-none disabled:opacity-50 shadow-lg"
                 >
                   {salvandoVisita ? 'SALVANDO...' : 'REGISTRAR VISITA'}
                 </button>
@@ -2458,37 +2857,67 @@ export function SupervisorApp() {
 
         {/* Conteúdo */}
         <div className="flex-1 overflow-auto p-4 space-y-4">
-          {/* Tipos de itens para adicionar */}
-          <div>
-            <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-3">
-              Adicionar Item
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              {tiposDisponiveis.map((tipo, idx) => {
-                const count = contarItensPorTipo(tipo);
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => handleAdicionarItem(tipo)}
-                    className="bg-slate-800 border border-slate-700 rounded-xl p-4 text-left hover:border-emerald-500/50 transition-all"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-white font-medium text-sm">{tipo}</span>
-                      {count > 0 && (
-                        <span className="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-0.5 rounded-full">
-                          {count}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-emerald-400 text-xs flex items-center gap-1">
-                      <PlayCircle className="w-3 h-3" />
-                      Adicionar
-                    </span>
-                  </button>
-                );
-              })}
+          {/* Campo Objetivo - só para MANUAL */}
+          {templateSelecionado === 'MANUAL' && (
+            <div className="glass p-4 rounded-xl">
+              <label className="block text-sm font-medium mb-2 text-gray-300">Objetivo do Relatório</label>
+              <input
+                type="text"
+                value={objetivoManual}
+                onChange={(e) => setObjetivoManual(e.target.value)}
+                placeholder="Ex: Vistoria das escadarias, Verificação de vazamentos..."
+                className="glass-input w-full"
+              />
             </div>
-          </div>
+          )}
+
+          {/* Tipos de itens para adicionar - só mostra se NÃO for MANUAL */}
+          {templateSelecionado !== 'MANUAL' && (
+            <div>
+              <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-3">
+                Adicionar Item
+              </h2>
+              <div className="grid grid-cols-2 gap-3">
+                {tiposDisponiveis.map((tipo, idx) => {
+                  const count = contarItensPorTipo(tipo);
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => handleAdicionarItem(tipo)}
+                      className="bg-slate-800 border border-slate-700 rounded-xl p-4 text-left hover:border-emerald-500/50 transition-all"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-white font-medium text-sm">{tipo}</span>
+                        {count > 0 && (
+                          <span className="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-0.5 rounded-full">
+                            {count}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-emerald-400 text-xs flex items-center gap-1">
+                        <PlayCircle className="w-3 h-3" />
+                        Adicionar
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Botão Adicionar Item - para MANUAL */}
+          {templateSelecionado === 'MANUAL' && (
+            <button
+              onClick={() => handleAdicionarItem('Item')}
+              className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-3 shadow-lg"
+            >
+              <Plus className="w-6 h-6" />
+              <div className="text-left">
+                <div>Adicionar Item</div>
+                <div className="text-xs font-normal opacity-80">Fotos + Local + Pendência</div>
+              </div>
+            </button>
+          )}
 
           {/* Botão de Adicionar Várias Fotos */}
           <div className="mt-6">
@@ -2566,17 +2995,28 @@ export function SupervisorApp() {
         <div className="p-4 bg-slate-800 border-t border-slate-700">
           <button
             onClick={() => {
-              if (checklistItems.length === 0) {
-                alert('Adicione pelo menos um item antes de finalizar');
-                return;
+              // Para MANUAL, permite salvar só com objetivo (sem itens)
+              if (templateSelecionado === 'MANUAL') {
+                if (!objetivoManual.trim() && checklistItems.length === 0) {
+                  alert('Escreva o objetivo ou adicione pelo menos um item');
+                  return;
+                }
+              } else {
+                if (checklistItems.length === 0) {
+                  alert('Adicione pelo menos um item antes de finalizar');
+                  return;
+                }
               }
               setViewMode('checklist');
             }}
-            disabled={checklistItems.length === 0}
+            disabled={templateSelecionado === 'MANUAL' ? (!objetivoManual.trim() && checklistItems.length === 0) : checklistItems.length === 0}
             className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:text-gray-500 py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2"
           >
             <Save className="w-5 h-5" />
-            Finalizar Ronda ({checklistItems.length} itens)
+            {templateSelecionado === 'MANUAL'
+              ? `Finalizar Relatório${checklistItems.length > 0 ? ` (${checklistItems.length} itens)` : ''}`
+              : `Finalizar Ronda (${checklistItems.length} itens)`
+            }
           </button>
         </div>
       </div>
@@ -2677,22 +3117,50 @@ export function SupervisorApp() {
           <div>
             <label className="block text-sm text-gray-400 mb-2 flex items-center gap-2">
               <Camera className="w-4 h-4 text-blue-400" />
-              Fotos
+              Fotos {formItem.fotos.length > 0 && <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">{formItem.fotos.length}</span>}
             </label>
 
             {formItem.fotos.length > 0 && (
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                {formItem.fotos.map((foto, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-lg overflow-hidden">
-                    <img src={foto} alt="" className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => handleRemovePhoto(idx)}
-                      className="absolute top-1 right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center"
-                    >
-                      <X className="w-3 h-3 text-white" />
-                    </button>
+              <div className="space-y-2 mb-3">
+                {/* Preview grande da primeira foto */}
+                <div className="relative rounded-xl overflow-hidden bg-slate-800 border border-slate-600">
+                  <img
+                    src={formItem.fotos[0]}
+                    alt="Preview"
+                    className="w-full h-48 object-cover"
+                  />
+                  <button
+                    onClick={() => handleRemovePhoto(0)}
+                    className="absolute top-2 right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center shadow-lg"
+                  >
+                    <X className="w-4 h-4 text-white" />
+                  </button>
+                  {formItem.fotos.length > 1 && (
+                    <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                      1 de {formItem.fotos.length}
+                    </div>
+                  )}
+                </div>
+
+                {/* Miniaturas das outras fotos */}
+                {formItem.fotos.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {formItem.fotos.slice(1).map((foto, idx) => (
+                      <div key={idx + 1} className="relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border border-slate-600">
+                        <img src={foto} alt="" className="w-full h-full object-cover" />
+                        <button
+                          onClick={() => handleRemovePhoto(idx + 1)}
+                          className="absolute top-1 right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs text-center py-0.5">
+                          {idx + 2}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             )}
 
@@ -2710,41 +3178,43 @@ export function SupervisorApp() {
               className="w-full bg-slate-800 border border-slate-600 border-dashed rounded-lg py-4 text-gray-400 flex items-center justify-center gap-2"
             >
               <Camera className="w-5 h-5" />
-              {formItem.fotos.length > 0 ? 'Adicionar mais fotos' : 'Tirar foto'}
+              {formItem.fotos.length > 0 ? `Adicionar mais fotos (${formItem.fotos.length})` : 'Tirar foto'}
             </button>
           </div>
 
-          {/* Status */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Status</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setFormItem(prev => ({ ...prev, status: 'OK' }))}
-                className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 ${
-                  formItem.status === 'OK'
-                    ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
-                    : 'border-slate-600 bg-slate-800 text-gray-400'
-                }`}
-              >
-                <CheckCircle className="w-8 h-8" />
-                <span className="font-medium">OK</span>
-              </button>
-              <button
-                onClick={() => setFormItem(prev => ({ ...prev, status: 'NAO_OK' }))}
-                className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 ${
-                  formItem.status === 'NAO_OK'
-                    ? 'border-red-500 bg-red-500/20 text-red-400'
-                    : 'border-slate-600 bg-slate-800 text-gray-400'
-                }`}
-              >
-                <AlertCircle className="w-8 h-8" />
-                <span className="font-medium">NÃO OK</span>
-              </button>
+          {/* Status - NÃO mostrar para Relatório Manual (já é pendência por padrão) */}
+          {templateSelecionado !== 'MANUAL' && (
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Status</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setFormItem(prev => ({ ...prev, status: 'OK' }))}
+                  className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 ${
+                    formItem.status === 'OK'
+                      ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
+                      : 'border-slate-600 bg-slate-800 text-gray-400'
+                  }`}
+                >
+                  <CheckCircle className="w-8 h-8" />
+                  <span className="font-medium">OK</span>
+                </button>
+                <button
+                  onClick={() => setFormItem(prev => ({ ...prev, status: 'NAO_OK' }))}
+                  className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 ${
+                    formItem.status === 'NAO_OK'
+                      ? 'border-red-500 bg-red-500/20 text-red-400'
+                      : 'border-slate-600 bg-slate-800 text-gray-400'
+                  }`}
+                >
+                  <AlertCircle className="w-8 h-8" />
+                  <span className="font-medium">NÃO OK</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Teste de Funcionamento - Só para equipamentos */}
-          {tipoItemSelecionado && EQUIPAMENTOS_COM_TESTE.includes(tipoItemSelecionado) && (
+          {/* Teste de Funcionamento - Só para equipamentos (não para MANUAL) */}
+          {templateSelecionado !== 'MANUAL' && tipoItemSelecionado && EQUIPAMENTOS_COM_TESTE.includes(tipoItemSelecionado) && (
             <div>
               <label className="block text-sm text-gray-400 mb-2">
                 Teste de Funcionamento
@@ -2781,20 +3251,20 @@ export function SupervisorApp() {
             </div>
           )}
 
-          {/* Observação */}
+          {/* Observação/Problema */}
           <div>
             <label className={`block text-sm mb-2 ${
-              formItem.status === 'NAO_OK' ? 'text-red-400' : 'text-gray-400'
+              templateSelecionado === 'MANUAL' ? 'text-orange-400' : (formItem.status === 'NAO_OK' ? 'text-red-400' : 'text-gray-400')
             }`}>
-              Observação {formItem.status === 'NAO_OK' && '(descreva o problema)'}
+              {templateSelecionado === 'MANUAL' ? 'Problema / Pendência' : `Observação ${formItem.status === 'NAO_OK' ? '(descreva o problema)' : ''}`}
             </label>
             <textarea
               value={formItem.observacao}
               onChange={(e) => setFormItem(prev => ({ ...prev, observacao: e.target.value }))}
-              placeholder={formItem.status === 'NAO_OK' ? 'Descreva o problema encontrado...' : 'Opcional'}
+              placeholder={templateSelecionado === 'MANUAL' ? 'Descreva o problema ou pendência...' : (formItem.status === 'NAO_OK' ? 'Descreva o problema encontrado...' : 'Opcional')}
               rows={3}
               className={`w-full bg-slate-800 border rounded-lg px-4 py-3 text-white focus:outline-none ${
-                formItem.status === 'NAO_OK' ? 'border-red-500/50 focus:border-red-500' : 'border-slate-600 focus:border-emerald-500'
+                templateSelecionado === 'MANUAL' ? 'border-orange-500/50 focus:border-orange-500' : (formItem.status === 'NAO_OK' ? 'border-red-500/50 focus:border-red-500' : 'border-slate-600 focus:border-emerald-500')
               }`}
             />
           </div>
@@ -2805,7 +3275,7 @@ export function SupervisorApp() {
           <button
             onClick={handleSalvarItem}
             className={`w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 ${
-              formItem.status === 'OK' ? 'bg-emerald-600' : 'bg-red-600'
+              templateSelecionado === 'MANUAL' ? 'bg-orange-600' : (formItem.status === 'OK' ? 'bg-emerald-600' : 'bg-red-600')
             }`}
           >
             <Save className="w-5 h-5" />
@@ -2817,7 +3287,7 @@ export function SupervisorApp() {
   }
 
   // Tela de Processamento de Fotos em Lote
-  if (viewMode === 'batchPhotos' && fotosPendentes.length > 0) {
+  if (viewMode === 'batchPhotos' && arquivosPendentes.length > 0) {
     return (
       <div className="min-h-screen bg-slate-900 flex flex-col">
         {/* Header */}
@@ -2836,10 +3306,10 @@ export function SupervisorApp() {
             </button>
             <div className="flex-1">
               <h1 className="text-lg font-bold text-white">Processar Fotos</h1>
-              <p className="text-xs text-gray-400">Foto {fotoAtualIndex + 1} de {fotosPendentes.length}</p>
+              <p className="text-xs text-gray-400">Foto {fotoAtualIndex + 1} de {arquivosPendentes.length}</p>
             </div>
             <div className="bg-blue-600 px-3 py-1 rounded-full text-sm font-bold text-white">
-              {fotoAtualIndex + 1}/{fotosPendentes.length}
+              {fotoAtualIndex + 1}/{arquivosPendentes.length}
             </div>
           </div>
         </div>
@@ -2873,44 +3343,50 @@ export function SupervisorApp() {
             />
           </div>
 
-          {/* Status */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Status</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setFormItem(prev => ({ ...prev, status: 'OK' }))}
-                className={`p-3 rounded-xl border-2 flex items-center justify-center gap-2 ${
-                  formItem.status === 'OK'
-                    ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
-                    : 'border-slate-600 bg-slate-800 text-gray-400'
-                }`}
-              >
-                <CheckCircle className="w-5 h-5" />
-                <span className="font-medium">OK</span>
-              </button>
-              <button
-                onClick={() => setFormItem(prev => ({ ...prev, status: 'NAO_OK' }))}
-                className={`p-3 rounded-xl border-2 flex items-center justify-center gap-2 ${
-                  formItem.status === 'NAO_OK'
-                    ? 'border-red-500 bg-red-500/20 text-red-400'
-                    : 'border-slate-600 bg-slate-800 text-gray-400'
-                }`}
-              >
-                <AlertCircle className="w-5 h-5" />
-                <span className="font-medium">NÃO OK</span>
-              </button>
+          {/* Status - NÃO mostrar para Relatório Manual */}
+          {templateSelecionado !== 'MANUAL' && (
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Status</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setFormItem(prev => ({ ...prev, status: 'OK' }))}
+                  className={`p-3 rounded-xl border-2 flex items-center justify-center gap-2 ${
+                    formItem.status === 'OK'
+                      ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
+                      : 'border-slate-600 bg-slate-800 text-gray-400'
+                  }`}
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  <span className="font-medium">OK</span>
+                </button>
+                <button
+                  onClick={() => setFormItem(prev => ({ ...prev, status: 'NAO_OK' }))}
+                  className={`p-3 rounded-xl border-2 flex items-center justify-center gap-2 ${
+                    formItem.status === 'NAO_OK'
+                      ? 'border-red-500 bg-red-500/20 text-red-400'
+                      : 'border-slate-600 bg-slate-800 text-gray-400'
+                  }`}
+                >
+                  <AlertCircle className="w-5 h-5" />
+                  <span className="font-medium">NÃO OK</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Observação */}
+          {/* Problema/Pendência (para MANUAL) ou Observação (para outros) */}
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Observação</label>
+            <label className={`block text-sm mb-2 ${templateSelecionado === 'MANUAL' ? 'text-orange-400' : 'text-gray-400'}`}>
+              {templateSelecionado === 'MANUAL' ? 'Problema / Pendência' : 'Observação'}
+            </label>
             <textarea
               value={formItem.observacao}
               onChange={(e) => setFormItem(prev => ({ ...prev, observacao: e.target.value }))}
-              placeholder="Opcional..."
+              placeholder={templateSelecionado === 'MANUAL' ? 'Descreva o problema ou pendência...' : 'Opcional...'}
               rows={2}
-              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+              className={`w-full bg-slate-800 border rounded-lg px-4 py-3 text-white focus:outline-none ${
+                templateSelecionado === 'MANUAL' ? 'border-orange-500/50 focus:border-orange-500' : 'border-slate-600 focus:border-blue-500'
+              }`}
             />
           </div>
         </div>
@@ -2919,11 +3395,13 @@ export function SupervisorApp() {
         <div className="p-4 bg-slate-800 border-t border-slate-700">
           <button
             onClick={handleSalvarFotoLote}
-            className="w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2"
+            className={`w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 ${
+              templateSelecionado === 'MANUAL' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'
+            }`}
           >
             <Save className="w-5 h-5" />
-            {fotoAtualIndex < fotosPendentes.length - 1 ? (
-              <>Salvar e Próxima Foto ({fotoAtualIndex + 2}/{fotosPendentes.length})</>
+            {fotoAtualIndex < arquivosPendentes.length - 1 ? (
+              <>Salvar e Próxima Foto ({fotoAtualIndex + 2}/{arquivosPendentes.length})</>
             ) : (
               <>Salvar e Finalizar</>
             )}
