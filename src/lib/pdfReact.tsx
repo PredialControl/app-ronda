@@ -590,7 +590,8 @@ const CardChecklist: React.FC<{ item: PdfChecklistItem }> = ({ item }) => {
   return (
     <View style={[styles.card, { borderColor: borderColor, borderWidth: 2 }]} wrap={false}>
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{item.tipo}</Text>
+        {/* Local em cima do card */}
+        <Text style={styles.cardTitle}>{item.local}</Text>
         <View style={[styles.badge, {
           backgroundColor: item.status === 'OK' ? '#dcfce7' : '#fee2e2'
         }]}>
@@ -610,17 +611,13 @@ const CardChecklist: React.FC<{ item: PdfChecklistItem }> = ({ item }) => {
         </View>
       )}
 
-      <View style={styles.cardFooter}>
-        <Text style={styles.label}>Local:</Text>
-        <Text style={styles.value}>{item.local}</Text>
-
-        {item.observacao ? (
-          <>
-            <Text style={styles.label}>Observação:</Text>
-            <Text style={styles.value}>{item.observacao}</Text>
-          </>
-        ) : null}
-      </View>
+      {/* Só mostra observação/pendência embaixo (sem repetir local) */}
+      {item.observacao ? (
+        <View style={styles.cardFooter}>
+          <Text style={styles.label}>Pendência:</Text>
+          <Text style={styles.value}>{item.observacao}</Text>
+        </View>
+      ) : null}
     </View>
   );
 };
