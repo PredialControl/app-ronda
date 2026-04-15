@@ -1116,6 +1116,18 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         pendenciaLabel: string;
     } | null>(null);
 
+    // ============================================
+    // Transformar constatação em pendência
+    // ============================================
+    const [constatacaoParaTransformar, setConstatacaoParaTransformar] = useState<{
+        secaoTempId: string;
+        subsecaoTempId: string;
+        fotoIndex: number;
+        fotoUrl: string;
+        legenda: string;
+        descricao: string;
+    } | null>(null);
+
     const handleMoverPendencia = (destinoSecaoTempId: string, destinoSubTempId?: string) => {
         if (!pendenciaParaMover) return;
         const { secaoTempId: origemSecao, subsecaoTempId: origemSub, pendenciaTempId } = pendenciaParaMover;
@@ -1171,6 +1183,72 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         });
 
         setPendenciaParaMover(null);
+    };
+
+    // Transformar constatação em pendência e mover para destino
+    const handleTransformarConstatacaoEmPendencia = (destinoSecaoTempId: string, destinoSubTempId?: string) => {
+        if (!constatacaoParaTransformar) return;
+        const { secaoTempId, subsecaoTempId, fotoIndex, fotoUrl, legenda, descricao } = constatacaoParaTransformar;
+
+        setSecoes(prev => {
+            // 1. Remover a foto da constatação original
+            const semFoto = prev.map(s => {
+                if (s.tempId !== secaoTempId) return s;
+                return {
+                    ...s,
+                    subsecoes: (s.subsecoes || []).map(sub => {
+                        if (sub.tempId !== subsecaoTempId) return sub;
+                        const newFiles = [...(sub.fotos_constatacao_files || [])];
+                        const newPreviews = [...(sub.fotos_constatacao_previews || [])];
+                        const newUrls = [...(sub.fotos_constatacao || [])];
+                        const newLegendas = [...(sub.legendas_constatacao || [])];
+
+                        newFiles.splice(fotoIndex, 1);
+                        newPreviews.splice(fotoIndex, 1);
+                        if (newUrls.length > fotoIndex) newUrls.splice(fotoIndex, 1);
+                        if (newLegendas.length > fotoIndex) newLegendas.splice(fotoIndex, 1);
+
+                        return {
+                            ...sub,
+                            fotos_constatacao_files: newFiles,
+                            fotos_constatacao_previews: newPreviews,
+                            fotos_constatacao: newUrls,
+                            legendas_constatacao: newLegendas,
+                        };
+                    }),
+                };
+            });
+
+            // 2. Criar nova pendência com a foto
+            const novaPendencia: PendenciaLocal = {
+                tempId: `pend-constatacao-${Date.now()}`,
+                ordem: 0,
+                local: legenda || '',
+                descricao: descricao || '',
+                foto_url: fotoUrl.startsWith('http') ? fotoUrl : undefined,
+                foto_depois_url: undefined,
+                preview: fotoUrl,
+            };
+
+            // 3. Inserir no destino
+            return semFoto.map(s => {
+                if (s.tempId !== destinoSecaoTempId) return s;
+                if (destinoSubTempId) {
+                    return {
+                        ...s,
+                        subsecoes: (s.subsecoes || []).map(sub => {
+                            if (sub.tempId !== destinoSubTempId) return sub;
+                            const newPend = { ...novaPendencia, ordem: sub.pendencias.length };
+                            return { ...sub, pendencias: [...sub.pendencias, newPend] };
+                        }),
+                    };
+                }
+                const newPend = { ...novaPendencia, ordem: s.pendencias.length };
+                return { ...s, pendencias: [...s.pendencias, newPend] };
+            });
+        });
+
+        setConstatacaoParaTransformar(null);
     };
 
     // ============================================
@@ -3146,6 +3224,22 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                     />
                                                                                     <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                                         <Button
+                                                                                            onClick={() => setConstatacaoParaTransformar({
+                                                                                                secaoTempId: secao.tempId,
+                                                                                                subsecaoTempId: subsecao.tempId,
+                                                                                                fotoIndex: idx,
+                                                                                                fotoUrl: preview,
+                                                                                                legenda: (subsecao.legendas_constatacao || [])[idx] || '',
+                                                                                                descricao: subsecao.descricao_constatacao || '',
+                                                                                            })}
+                                                                                            variant="ghost"
+                                                                                            size="sm"
+                                                                                            className="h-6 w-6 p-0 bg-blue-600/80 hover:bg-blue-600 text-white"
+                                                                                            title="Transformar em pendência"
+                                                                                        >
+                                                                                            <MoveRight className="w-3.5 h-3.5" />
+                                                                                        </Button>
+                                                                                        <Button
                                                                                             onClick={() => handleOpenImageEditorConstatacao(secao.tempId, subsecao.tempId, idx, preview)}
                                                                                             variant="ghost"
                                                                                             size="sm"
@@ -3572,6 +3666,71 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                             >
                                                                 {String.fromCharCode(65 + subIdx)}. {sub.titulo || 'Sem título'}
                                                                 {isOrigemSub && <span className="text-xs ml-2 text-gray-500">(atual)</span>}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Transformar Constatação em Pendência */}
+            {constatacaoParaTransformar && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center" style={{ zIndex: 99999 }} onClick={() => { setConstatacaoParaTransformar(null); }}>
+                    <div className="bg-gray-800 border-2 border-amber-500 rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-amber-300 font-semibold text-lg">
+                                Transformar em Pendência
+                            </h3>
+                            <button onClick={() => setConstatacaoParaTransformar(null)} className="text-gray-400 hover:text-white">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="mb-4">
+                            <img
+                                src={constatacaoParaTransformar.fotoUrl}
+                                alt="Foto da constatação"
+                                className="w-full h-32 object-cover rounded-md border border-amber-700/50"
+                            />
+                            {constatacaoParaTransformar.legenda && (
+                                <p className="text-amber-200 text-xs mt-1">Legenda: {constatacaoParaTransformar.legenda}</p>
+                            )}
+                        </div>
+                        <p className="text-gray-500 text-xs mb-3">Selecione o destino da nova pendência:</p>
+                        <div className="space-y-2">
+                            {secoes.map(secao => {
+                                return (
+                                    <div key={secao.tempId}>
+                                        {/* Seção como destino (se não tem subseções) */}
+                                        {!secao.tem_subsecoes && (
+                                            <button
+                                                onClick={() => handleTransformarConstatacaoEmPendencia(secao.tempId)}
+                                                className="w-full text-left px-3 py-2 rounded-md text-sm transition-all bg-gray-700/50 text-white hover:bg-amber-900/40 hover:border-amber-500 border border-transparent"
+                                            >
+                                                <span className="font-medium">VIII.{secao.ordem + 1}</span> - {secao.titulo_principal || 'Sem título'}
+                                            </button>
+                                        )}
+                                        {/* Seção com subseções */}
+                                        {secao.tem_subsecoes && (
+                                            <div>
+                                                <p className="text-gray-400 text-xs font-semibold px-3 py-1.5 bg-gray-900/50 rounded-t-md">
+                                                    VIII.{secao.ordem + 1} - {secao.titulo_principal || 'Sem título'}
+                                                </p>
+                                                <div className="pl-4 space-y-1 py-1">
+                                                    {(secao.subsecoes || []).filter(sub => sub.tipo !== 'CONSTATACAO').map((sub, subIdx) => {
+                                                        return (
+                                                            <button
+                                                                key={sub.tempId}
+                                                                onClick={() => handleTransformarConstatacaoEmPendencia(secao.tempId, sub.tempId)}
+                                                                className="w-full text-left px-3 py-1.5 rounded-md text-sm transition-all bg-gray-700/30 text-gray-300 hover:bg-amber-900/30 hover:text-white border border-transparent"
+                                                            >
+                                                                {String.fromCharCode(65 + subIdx)}. {sub.titulo || 'Sem título'}
                                                             </button>
                                                         );
                                                     })}
