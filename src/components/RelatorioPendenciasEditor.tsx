@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -3681,9 +3682,9 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
             )}
 
             {/* Modal Transformar Constatação em Pendência */}
-            {constatacaoParaTransformar && (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center" style={{ zIndex: 99999 }} onClick={() => { setConstatacaoParaTransformar(null); }}>
-                    <div className="bg-gray-800 border-2 border-amber-500 rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+            {constatacaoParaTransformar && createPortal(
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4" style={{ zIndex: 99999 }} onClick={() => { setConstatacaoParaTransformar(null); }}>
+                    <div className="bg-gray-800 border-2 border-amber-500 rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-amber-300 font-semibold text-lg">
                                 Transformar em Pendência
@@ -3741,7 +3742,8 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                             })}
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div >
     );
