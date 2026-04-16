@@ -3705,37 +3705,36 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                         <p className="text-gray-500 text-xs mb-3">Selecione o destino da nova pendência:</p>
                         <div className="space-y-2">
                             {secoes.map(secao => {
+                                const subsecoesManual = (secao.subsecoes || []).filter(sub => sub.tipo !== 'CONSTATACAO');
                                 return (
                                     <div key={secao.tempId}>
-                                        {/* Seção como destino (se não tem subseções) */}
-                                        {!secao.tem_subsecoes && (
-                                            <button
-                                                onClick={() => handleTransformarConstatacaoEmPendencia(secao.tempId)}
-                                                className="w-full text-left px-3 py-2 rounded-md text-sm transition-all bg-gray-700/50 text-white hover:bg-amber-900/40 hover:border-amber-500 border border-transparent"
-                                            >
-                                                <span className="font-medium">VIII.{secao.ordem + 1}</span> - {secao.titulo_principal || 'Sem título'}
-                                            </button>
-                                        )}
-                                        {/* Seção com subseções */}
-                                        {secao.tem_subsecoes && (
-                                            <div>
-                                                <p className="text-gray-400 text-xs font-semibold px-3 py-1.5 bg-gray-900/50 rounded-t-md">
+                                        {/* Seção com subseções manuais */}
+                                        {secao.tem_subsecoes && subsecoesManual.length > 0 && (
+                                            <div className="border border-gray-700 rounded-md overflow-hidden">
+                                                <p className="text-gray-400 text-xs font-semibold px-3 py-1.5 bg-gray-900/50">
                                                     VIII.{secao.ordem + 1} - {secao.titulo_principal || 'Sem título'}
                                                 </p>
                                                 <div className="pl-4 space-y-1 py-1">
-                                                    {(secao.subsecoes || []).filter(sub => sub.tipo !== 'CONSTATACAO').map((sub, subIdx) => {
-                                                        return (
-                                                            <button
-                                                                key={sub.tempId}
-                                                                onClick={() => handleTransformarConstatacaoEmPendencia(secao.tempId, sub.tempId)}
-                                                                className="w-full text-left px-3 py-1.5 rounded-md text-sm transition-all bg-gray-700/30 text-gray-300 hover:bg-amber-900/30 hover:text-white border border-transparent"
-                                                            >
-                                                                {String.fromCharCode(65 + subIdx)}. {sub.titulo || 'Sem título'}
-                                                            </button>
-                                                        );
-                                                    })}
+                                                    {subsecoesManual.map((sub, subIdx) => (
+                                                        <button
+                                                            key={sub.tempId}
+                                                            onClick={() => handleTransformarConstatacaoEmPendencia(secao.tempId, sub.tempId)}
+                                                            className="w-full text-left px-3 py-1.5 rounded-md text-sm transition-all bg-gray-700/30 text-gray-300 hover:bg-amber-900/30 hover:text-white border border-transparent"
+                                                        >
+                                                            {String.fromCharCode(65 + subIdx)}. {sub.titulo || 'Sem título'}
+                                                        </button>
+                                                    ))}
                                                 </div>
                                             </div>
+                                        )}
+                                        {/* Seção sem subseções OU só com constatações - pode receber pendências diretamente */}
+                                        {(!secao.tem_subsecoes || subsecoesManual.length === 0) && (
+                                            <button
+                                                onClick={() => handleTransformarConstatacaoEmPendencia(secao.tempId)}
+                                                className="w-full text-left px-3 py-2 rounded-md text-sm transition-all bg-gray-700/50 text-white hover:bg-amber-900/40 border border-gray-600 hover:border-amber-500"
+                                            >
+                                                <span className="font-medium">VIII.{secao.ordem + 1}</span> - {secao.titulo_principal || 'Sem título'}
+                                            </button>
                                         )}
                                     </div>
                                 );
