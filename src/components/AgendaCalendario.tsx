@@ -27,10 +27,10 @@ interface AgendaEvento {
 }
 
 const CORES = {
-  kanban:  { solid: 'bg-blue-600 text-white',     outline: 'border-blue-500 text-blue-300',     dot: 'bg-blue-600',   label: 'Kanban (Implantação)' },
-  ronda:   { solid: 'bg-yellow-500 text-black',   outline: 'border-yellow-400 text-yellow-300', dot: 'bg-yellow-500', label: 'Ronda (Supervisão)' },
-  parecer: { solid: 'bg-green-600 text-white',    outline: 'border-green-500 text-green-300',   dot: 'bg-green-600',  label: 'Parecer Técnico (Supervisão)' },
-  manual:  { solid: 'bg-red-600 text-white',      outline: 'border-red-500 text-red-300',       dot: 'bg-red-600',    label: 'Manual' },
+  kanban:  { solid: 'bg-blue-600 text-white font-semibold',      outline: 'border-blue-500 text-blue-200 font-semibold',     dot: 'bg-blue-600',   label: 'Kanban (Implantação)' },
+  ronda:   { solid: 'bg-yellow-500 text-black font-bold',        outline: 'border-yellow-400 text-yellow-100 font-bold',     dot: 'bg-yellow-500', label: 'Ronda (Supervisão)' },
+  parecer: { solid: 'bg-green-600 text-white font-semibold',     outline: 'border-green-500 text-green-200 font-semibold',   dot: 'bg-green-600',  label: 'Parecer Técnico (Supervisão)' },
+  manual:  { solid: 'bg-red-600 text-white font-semibold',       outline: 'border-red-500 text-red-200 font-semibold',       dot: 'bg-red-600',    label: 'Manual' },
 } as const;
 
 const NOMES_MES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -56,6 +56,7 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
   });
 
   const [selectedEvento, setSelectedEvento] = useState<AgendaEvento | null>(null);
+  const [diaSelecionado, setDiaSelecionado] = useState<string | null>(null);
 
   const carregarEventos = async () => {
     setLoading(true);
@@ -337,7 +338,8 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
           return (
             <div
               key={dataStr}
-              className={`min-h-[110px] bg-gray-900 rounded p-1.5 border ${hoje ? 'border-orange-500' : 'border-gray-700'}`}
+              onClick={() => { if (eventosDia.length > 0) setDiaSelecionado(dataStr); }}
+              className={`min-h-[110px] bg-gray-900 rounded p-1.5 border cursor-pointer transition-colors hover:border-orange-400 ${hoje ? 'border-orange-500' : 'border-gray-700'}`}
             >
               <div className={`text-xs font-semibold mb-1 ${hoje ? 'text-orange-400' : 'text-gray-400'}`}>
                 {d.getDate()}
@@ -495,6 +497,74 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
           </div>
         </div>
       )}
+
+      {/* Modal do Dia: lista tudo maior */}
+      {diaSelecionado && (() => {
+        const lista = eventosPorDia[diaSelecionado] || [];
+        const dataObj = new Date(diaSelecionado + 'T00:00:00');
+        const weekday = dataObj.toLocaleDateString('pt-BR', { weekday: 'long' });
+        const dataStr = dataObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+        return (
+          <div
+            className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
+            onClick={() => setDiaSelecionado(null)}
+          >
+            <div
+              className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto border border-gray-600 shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-start mb-5 gap-3 pb-3 border-b border-gray-700">
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{weekday}</div>
+                  <h3 className="text-2xl font-bold text-white">{dataStr}</h3>
+                  <div className="text-sm text-gray-400 mt-1">{lista.length} {lista.length === 1 ? 'evento' : 'eventos'}</div>
+                </div>
+                <button onClick={() => setDiaSelecionado(null)} className="text-gray-400 hover:text-white">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="space-y-3">
+                {lista.length === 0 && (
+                  <div className="text-center text-gray-500 py-8">Nenhum evento neste dia</div>
+                )}
+                {lista.map(ev => {
+                  const cor = CORES[ev.fonte];
+                  const exec = ev.status === 'executado';
+                  return (
+                    <div
+                      key={ev.id}
+                      onClick={() => { setSelectedEvento(ev); setDiaSelecionado(null); }}
+                      className={`rounded-lg p-4 cursor-pointer transition-all hover:ring-2 hover:ring-white ${
+                        exec ? cor.solid : `bg-transparent border-2 ${cor.outline}`
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-base font-bold break-words">{ev.titulo}</div>
+                          {ev.descricao && (
+                            <div className="text-sm mt-1 opacity-90">{ev.descricao}</div>
+                          )}
+                          {ev.contrato && !ev.descricao?.includes(ev.contrato) && (
+                            <div className="text-xs mt-1 opacity-75">Contrato: {ev.contrato}</div>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <span className="text-[10px] uppercase font-bold tracking-wider opacity-80">{cor.label}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            exec ? 'bg-black/30' : 'bg-white/10'
+                          }`}>
+                            {exec ? '✓ Executado' : '○ Programado'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
