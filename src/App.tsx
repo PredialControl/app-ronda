@@ -18,6 +18,7 @@ import { OutroItemModal } from '@/components/OutroItemModal';
 import { EditarRondaModal } from '@/components/EditarRondaModal';
 import { Dashboard } from '@/components/Dashboard';
 import { AgendaCalendario } from '@/components/AgendaCalendario';
+import { ChamadosMenu } from '@/components/ChamadosMenu';
 import { LoginScreen } from '@/components/LoginScreen';
 import { GerenciarUsuarios } from '@/components/GerenciarUsuarios';
 import { AppLayout } from '@/components/AppLayout';
@@ -1800,6 +1801,11 @@ function App() {
           </div>
         )}
 
+        {/* CHAMADOS - iframe do registro-de-chamados (independe de ter contrato selecionado) */}
+        {viewMode === 'menu' && mainSection === 'chamados' && (
+          <ChamadosMenu onNavigate={handleSidebarNavigate} />
+        )}
+
         {/* Tela de seleção - quando contrato selecionado mas ainda não escolheu Implantação/Supervisão */}
         {contratoSelecionado && viewMode === 'contrato-detalhe' && menuLevel === 'contrato' && (
           <div className="text-center py-12">
@@ -2012,7 +2018,7 @@ function App() {
               setCurrentView('contratos');
             }}
           />
-        ) : !contratoSelecionado && viewMode !== 'dashboard' ? (
+        ) : !contratoSelecionado && viewMode !== 'dashboard' && mainSection !== 'agenda' && mainSection !== 'chamados' ? (
           <div className="text-center py-12">
             <h2 className="text-2xl font-semibold text-gray-900 mb-4">Selecione um Contrato</h2>
             <p className="text-gray-600 text-lg mb-8">
