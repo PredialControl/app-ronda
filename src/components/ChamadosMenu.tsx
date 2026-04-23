@@ -228,6 +228,7 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
   //   'painel'       = lista/gestao dos chamados ja registrados (is_registered=true)
   const [subView, setSubView] = useState<'abrir' | 'solicitacoes' | 'painel'>('solicitacoes');
   const [registrarFor, setRegistrarFor] = useState<Chamado | null>(null);
+  const [predioSolicitacoes, setPredioSolicitacoes] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -527,38 +528,101 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
         </button>
       </div>
 
-      {/* View: Painel de Solicitacoes — pendentes is_registered=false */}
-      {subView === 'solicitacoes' && (
+      {/* View: Painel de Solicitacoes — grid de predios com pendentes piscando */}
+      {subView === 'solicitacoes' && !predioSolicitacoes && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+              Solicitações aguardando registro
+            </h3>
+            <span className="text-xs text-gray-400">
+              {solicitacoesPendentes.length} pendente(s) em {contratos.filter(ct => solicitacoesPendentes.some(s => s.contratoId === ct.id)).length} prédio(s)
+            </span>
+          </div>
+          {solicitacoesPendentes.length === 0 ? (
+            <div className="bg-gray-900 rounded-xl border border-gray-800 p-10 text-center">
+              <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-3" />
+              <p className="text-lg font-semibold text-white">Nenhuma solicitação pendente</p>
+              <p className="text-sm text-gray-400 mt-1">Todos os chamados foram registrados na construtora.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {contratos
+                .map(ct => ({
+                  ct,
+                  pendentes: solicitacoesPendentes.filter(s => s.contratoId === ct.id).length,
+                  total: chamados.filter(c => c.contratoId === ct.id).length,
+                }))
+                .filter(x => x.pendentes > 0)
+                .sort((a, b) => b.pendentes - a.pendentes)
+                .map(({ ct, pendentes, total }) => (
+                  <button
+                    key={ct.id}
+                    onClick={() => setPredioSolicitacoes(ct.id)}
+                    className="bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-red-500 rounded-xl p-5 text-left transition-all group"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="p-2 bg-gray-800 group-hover:bg-red-600/20 rounded-lg transition-colors">
+                        <Building2 className="w-6 h-6 text-gray-400 group-hover:text-red-400" />
+                      </div>
+                    </div>
+                    <div className="flex justify-center py-3">
+                      <div className="flex items-center gap-2 px-5 py-2 bg-red-500/15 text-red-400 rounded-2xl border-2 border-red-500/60 shadow-lg shadow-red-500/20 animate-pulse">
+                        <AlertCircle className="w-6 h-6" />
+                        <span className="text-2xl font-black uppercase tracking-tighter italic">
+                          {pendentes} {pendentes === 1 ? 'PENDENTE' : 'PENDENTES'}
+                        </span>
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-bold text-white line-clamp-2 mt-2">{ct.nome}</h3>
+                    <div className="mt-3 flex justify-between items-center">
+                      <span className="text-[11px] font-medium text-gray-400">
+                        Total: <span className="text-white font-bold">{total}</span>
+                      </span>
+                      <span className="text-[11px] font-bold text-red-400 group-hover:translate-x-1 transition-transform">
+                        REGISTRAR →
+                      </span>
+                    </div>
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* View: Painel de Solicitacoes — lista dos pendentes de um predio */}
+      {subView === 'solicitacoes' && predioSolicitacoes && (
         <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-          <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-red-400" />
-                Solicitações aguardando registro
-              </h3>
-              <p className="text-xs text-gray-400 mt-1">
-                {solicitacoesPendentes.length} chamado(s) abertos por usuários aguardando a MP registrar na construtora
+          <div className="p-4 border-b border-gray-800 flex items-center justify-between gap-3 flex-wrap">
+            <button onClick={() => setPredioSolicitacoes(null)}
+              className="flex items-center gap-2 text-sm text-gray-300 hover:text-white font-semibold">
+              <ChevronLeft className="w-5 h-5" /> Voltar para lista de prédios
+            </button>
+            <div className="text-right">
+              <h3 className="text-lg font-bold text-white">{contratoNome(predioSolicitacoes)}</h3>
+              <p className="text-xs text-gray-400">
+                {solicitacoesPendentes.filter(s => s.contratoId === predioSolicitacoes).length} solicitação(ões) pendente(s)
               </p>
             </div>
           </div>
-          {solicitacoesPendentes.length === 0 ? (
+          {solicitacoesPendentes.filter(s => s.contratoId === predioSolicitacoes).length === 0 ? (
             <div className="p-10 text-center text-gray-400">
               <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-3" />
-              <p className="text-base font-semibold text-white">Nenhuma solicitação pendente</p>
-              <p className="text-sm mt-1">Todos os chamados foram registrados.</p>
+              <p className="text-base font-semibold text-white">Este prédio não tem mais solicitações pendentes</p>
+              <button onClick={() => setPredioSolicitacoes(null)} className="text-blue-400 text-sm mt-2 underline">
+                Voltar para lista de prédios
+              </button>
             </div>
           ) : (
             <div className="divide-y divide-gray-800">
-              {solicitacoesPendentes.map(c => (
+              {solicitacoesPendentes
+                .filter(s => s.contratoId === predioSolicitacoes)
+                .map(c => (
                 <div key={c.id} className="p-4 hover:bg-gray-800/50 transition-colors">
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="text-xs text-gray-400">
-                          <Building2 className="w-3 h-3 inline mr-1" />
-                          {contratoNome(c.contratoId)}
-                        </span>
-                        <span className="text-gray-500">·</span>
                         <span className="text-xs text-gray-400">
                           <UserIcon className="w-3 h-3 inline mr-1" />
                           {c.criadoPorNome || 'N/A'}
@@ -570,7 +634,7 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
                         </span>
                       </div>
                       <p className="text-sm font-semibold text-white mb-1">{c.local}</p>
-                      <p className="text-sm text-gray-300 line-clamp-2">{c.descricao}</p>
+                      <p className="text-sm text-gray-300 whitespace-pre-wrap">{c.descricao}</p>
                       {c.fotoUrls.length > 0 && (
                         <span className="inline-flex items-center gap-1 mt-2 text-xs text-gray-400">
                           <Camera className="w-3 h-3" /> {c.fotoUrls.length} foto(s)
