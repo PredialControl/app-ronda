@@ -604,7 +604,94 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     addLine(`- Laudos Em Dia: ${laudosStats.emDia}`);
     y += 4;
 
+    // === Grafico: Status do Kanban ===
+    if (y > 220) { doc.addPage(); y = 20; }
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+    doc.text('Grafico: Status do Kanban', 14, y); y += 6;
+    doc.setFont('helvetica', 'normal');
+    {
+      const kMax = Math.max(kanbanStats.aguardando, kanbanStats.emAndamento, kanbanStats.emCorrecao, kanbanStats.finalizados, 1);
+      const barHeight = 6; const barMaxW = 100;
+      const kbars: Array<{label: string; val: number; rgb: [number, number, number]}> = [
+        { label: 'Aguardando', val: kanbanStats.aguardando, rgb: [160, 160, 160] },
+        { label: 'Em Andamento', val: kanbanStats.emAndamento, rgb: [230, 180, 0] },
+        { label: 'Em Correcao', val: kanbanStats.emCorrecao, rgb: [220, 100, 20] },
+        { label: 'Finalizados', val: kanbanStats.finalizados, rgb: [40, 180, 40] },
+      ];
+      kbars.forEach(b => {
+        if (y > 275) { doc.addPage(); y = 20; }
+        doc.setFontSize(8);
+        doc.text(b.label, 14, y + 4);
+        doc.setDrawColor(180); doc.setFillColor(235, 235, 235);
+        doc.rect(55, y, barMaxW, barHeight, 'FD');
+        const w = (b.val / kMax) * barMaxW;
+        doc.setFillColor(b.rgb[0], b.rgb[1], b.rgb[2]);
+        if (w > 0) doc.rect(55, y, w, barHeight, 'F');
+        doc.setTextColor(0);
+        doc.text(String(b.val), 55 + barMaxW + 3, y + 4);
+        y += barHeight + 2;
+      });
+      y += 2;
+      // Proporcao 100%
+      const ktot = kanbanStats.aguardando + kanbanStats.emAndamento + kanbanStats.emCorrecao + kanbanStats.finalizados;
+      if (ktot > 0) {
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.setFontSize(9);
+        doc.text('Proporcao (100%):', 14, y + 4);
+        let xx = 55;
+        kbars.forEach(b => {
+          const w = (b.val / ktot) * barMaxW;
+          if (w > 0) {
+            doc.setFillColor(b.rgb[0], b.rgb[1], b.rgb[2]);
+            doc.rect(xx, y, w, barHeight, 'F');
+            if (w > 12) {
+              doc.setTextColor(255); doc.setFontSize(7);
+              doc.text(`${Math.round(b.val/ktot*100)}%`, xx + 2, y + 4);
+            }
+            xx += w;
+          }
+        });
+        doc.setTextColor(0);
+        y += barHeight + 6;
+      }
+      y += 4;
+    }
+
+    // === Grafico: Documentos (Laudos) ===
+    if (y > 240) { doc.addPage(); y = 20; }
+    doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+    doc.text('Grafico: Documentos (Laudos)', 14, y); y += 6;
+    doc.setFont('helvetica', 'normal');
+    {
+      const barHeight = 6; const barMaxW = 100;
+      const lMax = Math.max(laudosStats.vencidos, laudosStats.emAnalise, laudosStats.emDia, 1);
+      const lbars: Array<{label: string; val: number; rgb: [number, number, number]}> = [
+        { label: 'Vencidos', val: laudosStats.vencidos, rgb: [220, 50, 50] },
+        { label: 'Em Analise', val: laudosStats.emAnalise, rgb: [100, 80, 200] },
+        { label: 'Em Dia', val: laudosStats.emDia, rgb: [40, 180, 80] },
+      ];
+      lbars.forEach(b => {
+        if (y > 275) { doc.addPage(); y = 20; }
+        doc.setFontSize(8);
+        doc.text(b.label, 14, y + 4);
+        doc.setDrawColor(180); doc.setFillColor(235, 235, 235);
+        doc.rect(55, y, barMaxW, barHeight, 'FD');
+        const w = (b.val / lMax) * barMaxW;
+        doc.setFillColor(b.rgb[0], b.rgb[1], b.rgb[2]);
+        if (w > 0) doc.rect(55, y, w, barHeight, 'F');
+        doc.setTextColor(0);
+        doc.text(String(b.val), 55 + barMaxW + 3, y + 4);
+        y += barHeight + 2;
+      });
+      y += 6;
+    }
+
     // === Cards do Kanban detalhados ===
+    if (kanbanItemsList.length === 0) {
+      addSection('CARDS DO KANBAN', [50, 50, 150]);
+      addLine('(Sem cards cadastrados no Kanban deste contrato, ou os dados ainda nao foram sincronizados neste navegador.)');
+      y += 4;
+    }
     if (kanbanItemsList.length > 0) {
       const agrupados: Record<string, any[]> = {
         aguardando: [], em_andamento: [], em_correcao: [], finalizado: []
@@ -663,6 +750,36 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
       rondasMes.forEach((r: any) => {
         const dt = new Date(r.data + 'T00:00:00').toLocaleDateString('pt-BR');
         addLine(`${dt} - ${r.nome || 'Sem nome'} (${r.responsavel || '-'})`);
+      });
+      y += 4;
+      if (y > 220) { doc.addPage(); y = 20; }
+      doc.setFontSize(11); doc.setFont('helvetica', 'bold');
+      doc.text('Evolucao de Visitas (por semana)', 14, y); y += 6;
+      doc.setFont('helvetica', 'normal');
+      const porSemana: Record<string, number> = {};
+      rondasMes.forEach((r: any) => {
+        const d = new Date(r.data + 'T00:00:00');
+        const dow = d.getDay();
+        const ini = new Date(d); ini.setDate(d.getDate() - dow);
+        const key = ini.toISOString().split('T')[0];
+        porSemana[key] = (porSemana[key] || 0) + 1;
+      });
+      const entries = Object.entries(porSemana).sort((a, b) => a[0].localeCompare(b[0]));
+      const evMax = Math.max(...entries.map(e => e[1]), 1);
+      entries.forEach(([k, v]) => {
+        if (y > 275) { doc.addPage(); y = 20; }
+        const d = new Date(k + 'T00:00:00');
+        const lbl = `${d.toLocaleDateString('pt-BR')}`;
+        doc.setFontSize(8);
+        doc.text(lbl, 14, y + 4);
+        doc.setDrawColor(180); doc.setFillColor(235, 235, 235);
+        doc.rect(55, y, 100, 6, 'FD');
+        const w = (v / evMax) * 100;
+        doc.setFillColor(0, 120, 200);
+        if (w > 0) doc.rect(55, y, w, 6, 'F');
+        doc.setTextColor(0);
+        doc.text(String(v), 158, y + 4);
+        y += 8;
       });
       y += 4;
     }
