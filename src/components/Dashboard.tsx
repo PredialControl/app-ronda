@@ -103,6 +103,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     finalizados: 0,
   });
   const [laudosStats, setLaudosStats] = useState({ total: 0, vencidos: 0, emAnalise: 0, emDia: 0 });
+  const [kanbanItemsList, setKanbanItemsList] = useState<any[]>([]);
   const [loadingCount, setLoadingCount] = useState(0);
 
   // Load de Itens Relevantes da aba Supervisão
@@ -521,81 +522,169 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     }
   };
 
-  const handleExportarPDF = () => {
+  const handleExportarPDF = async () => {
     const doc = new jsPDF();
-    let y = 18;
-    doc.setFontSize(18);
-    doc.text('Dashboard - ' + (contrato?.nome || ''), 14, y); y += 8;
-    doc.setFontSize(10);
-    const dtIni = new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR');
-    const dtFim = new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR');
-    doc.text(`Periodo: ${dtIni} ate ${dtFim}`, 14, y); y += 6;
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, y); y += 10;
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-    doc.setFontSize(14);
-    doc.setTextColor(0, 128, 0);
-    doc.text('INDICADORES DE SUPERVISAO', 14, y); y += 7;
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.text(`- Total de Visitas: ${metricas.totalRondasMes}`, 14, y); y += 5;
-    doc.text(`- Itens Criticos: ${metricas.itensCriticos}`, 14, y); y += 5;
-    doc.text(`- Itens de Atencao: ${metricas.itensAtencao}`, 14, y); y += 5;
-    doc.text(`- Responsavel (Construtora): ${metricas.contagemResponsavel.construtora}`, 14, y); y += 5;
-    doc.text(`- Responsavel (Condominio): ${metricas.contagemResponsavel.condominio}`, 14, y); y += 5;
-    doc.text(`- Responsavel (Outros): ${metricas.contagemResponsavel.outros}`, 14, y); y += 10;
+    // Header com logo + titulo + info (replicando o padrao dos outros PDFs)
+    const drawHeader = async () => {
+      const headerH = 22;
+      const logoW = pageWidth * 0.15;
+      const titleW = pageWidth * 0.55;
+      // Bordas
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.3);
+      doc.rect(10, 10, pageWidth - 20, headerH);
+      doc.line(10 + logoW, 10, 10 + logoW, 10 + headerH);
+      doc.line(10 + logoW + titleW, 10, 10 + logoW + titleW, 10 + headerH);
+      // Tentar carregar logo
+      try {
+        const resp = await fetch('/logo-header.png');
+        if (resp.ok) {
+          const blob = await resp.blob();
+          const dataUrl: string = await new Promise((res) => {
+            const r = new FileReader(); r.onloadend = () => res(r.result as string); r.readAsDataURL(blob);
+          });
+          doc.addImage(dataUrl, 'PNG', 12, 12, logoW - 4, headerH - 4);
+        }
+      } catch {}
+      // Titulo central
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DASHBOARD - RELATORIO GERENCIAL', 10 + logoW + titleW / 2, 22, { align: 'center' });
+      // Info direita
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Condominio', 10 + logoW + titleW + 3, 14);
+      doc.setFont('helvetica', 'normal');
+      doc.text((contrato?.nome || '—').substring(0, 35), 10 + logoW + titleW + 3, 19);
+      doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 10 + logoW + titleW + 3, 24);
+      doc.text(`Periodo: ${new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR')}`, 10 + logoW + titleW + 3, 29);
+    };
+    await drawHeader();
 
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 200);
-    doc.text('INDICADORES DE IMPLANTACAO', 14, y); y += 7;
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.text(`- Kanban - Aguardando: ${kanbanStats.aguardando}`, 14, y); y += 5;
-    doc.text(`- Kanban - Em Andamento: ${kanbanStats.emAndamento}`, 14, y); y += 5;
-    doc.text(`- Kanban - Em Correcao: ${kanbanStats.emCorrecao}`, 14, y); y += 5;
-    doc.text(`- Kanban - Finalizados: ${kanbanStats.finalizados}`, 14, y); y += 5;
-    doc.text(`- Laudos Vencidos: ${laudosStats.vencidos} de ${laudosStats.total}`, 14, y); y += 5;
-    doc.text(`- Laudos Em Analise: ${laudosStats.emAnalise}`, 14, y); y += 5;
-    doc.text(`- Laudos Em Dia: ${laudosStats.emDia}`, 14, y); y += 10;
+    let y = 38;
+    const addSection = (titulo: string, cor: [number, number, number]) => {
+      if (y > 265) { doc.addPage(); y = 20; }
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(cor[0], cor[1], cor[2]);
+      doc.text(titulo, 14, y); y += 6;
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+    };
+    const addLine = (texto: string) => {
+      if (y > 275) { doc.addPage(); y = 20; }
+      doc.text(texto, 14, y); y += 4.5;
+    };
+    const addLines = (texto: string, maxWidth = 180) => {
+      const linhas = doc.splitTextToSize(texto, maxWidth);
+      linhas.forEach((ln: string) => addLine(ln));
+    };
 
+    // === Supervisao ===
+    addSection('INDICADORES DE SUPERVISAO', [0, 128, 0]);
+    addLine(`- Total de Visitas: ${metricas.totalRondasMes}`);
+    addLine(`- Itens Criticos: ${metricas.itensCriticos}`);
+    addLine(`- Itens de Atencao: ${metricas.itensAtencao}`);
+    addLine(`- Responsavel Construtora: ${metricas.contagemResponsavel.construtora}`);
+    addLine(`- Responsavel Condominio: ${metricas.contagemResponsavel.condominio}`);
+    addLine(`- Responsavel Outros: ${metricas.contagemResponsavel.outros}`);
+    y += 4;
+
+    // === Implantacao ===
+    addSection('INDICADORES DE IMPLANTACAO', [0, 0, 200]);
+    addLine(`- Kanban - Aguardando: ${kanbanStats.aguardando}`);
+    addLine(`- Kanban - Em Andamento: ${kanbanStats.emAndamento}`);
+    addLine(`- Kanban - Em Correcao: ${kanbanStats.emCorrecao}`);
+    addLine(`- Kanban - Finalizados: ${kanbanStats.finalizados}`);
+    addLine(`- Laudos Vencidos: ${laudosStats.vencidos} de ${laudosStats.total}`);
+    addLine(`- Laudos Em Analise: ${laudosStats.emAnalise}`);
+    addLine(`- Laudos Em Dia: ${laudosStats.emDia}`);
+    y += 4;
+
+    // === Cards do Kanban detalhados ===
+    if (kanbanItemsList.length > 0) {
+      const agrupados: Record<string, any[]> = {
+        aguardando: [], em_andamento: [], em_correcao: [], finalizado: []
+      };
+      kanbanItemsList.forEach(it => {
+        const key = (it.status || 'aguardando') as string;
+        if (!agrupados[key]) agrupados[key] = [];
+        agrupados[key].push(it);
+      });
+      const labels: Record<string, string> = {
+        aguardando: 'AGUARDANDO (VISTORIAS/EQUIPAMENTOS FALTANTES)',
+        em_andamento: 'EM ANDAMENTO',
+        em_correcao: 'EM CORRECAO',
+        finalizado: 'FINALIZADOS (JA VISTORIADOS)',
+      };
+      const cores: Record<string, [number, number, number]> = {
+        aguardando: [200, 100, 0], em_andamento: [200, 150, 0], em_correcao: [200, 50, 50], finalizado: [0, 150, 0]
+      };
+      ['aguardando', 'em_andamento', 'em_correcao', 'finalizado'].forEach(key => {
+        const lista = agrupados[key] || [];
+        if (lista.length === 0) return;
+        addSection(`${labels[key]} (${lista.length})`, cores[key]);
+        // ordenar alfabetico por title
+        lista.sort((a: any, b: any) => (a.title || '').localeCompare(b.title || ''));
+        lista.forEach((it: any) => {
+          const cat = it.category || '-';
+          addLines(`  - [${cat}] ${it.title || 'Sem titulo'}`);
+          const datas: string[] = [];
+          if (it.dataVistoria) datas.push('Vistoria: ' + new Date(it.dataVistoria + 'T00:00:00').toLocaleDateString('pt-BR'));
+          if (it.dataRecebimento) datas.push('Recebimento: ' + new Date(it.dataRecebimento + 'T00:00:00').toLocaleDateString('pt-BR'));
+          if (it.dataAndamento) datas.push('Andamento: ' + new Date(it.dataAndamento + 'T00:00:00').toLocaleDateString('pt-BR'));
+          if (it.dataCorrecao) datas.push('Correcao: ' + new Date(it.dataCorrecao + 'T00:00:00').toLocaleDateString('pt-BR'));
+          if (datas.length > 0) {
+            doc.setFontSize(8);
+            addLines('     ' + datas.join(' | '), 175);
+            doc.setFontSize(9);
+          }
+          if (it.oQueFalta) {
+            doc.setFontSize(8);
+            addLines(`     O que falta: ${it.oQueFalta}`, 175);
+            doc.setFontSize(9);
+          }
+          if (it.pendencias && it.pendencias.length > 0) {
+            doc.setFontSize(8);
+            addLine(`     Pendencias: ${it.pendencias.length}`);
+            doc.setFontSize(9);
+          }
+        });
+        y += 3;
+      });
+    }
+
+    // === Visitas do periodo ===
     if (rondasMes.length > 0) {
-      if (y > 240) { doc.addPage(); y = 20; }
-      doc.setFontSize(14);
-      doc.text('VISITAS DO PERIODO', 14, y); y += 7;
-      doc.setFontSize(9);
+      addSection('VISITAS DO PERIODO', [0, 100, 100]);
       rondasMes.forEach((r: any) => {
-        if (y > 275) { doc.addPage(); y = 20; }
         const dt = new Date(r.data + 'T00:00:00').toLocaleDateString('pt-BR');
-        doc.text(`${dt} - ${r.nome || 'Sem nome'} (${r.responsavel || '-'})`, 14, y); y += 5;
+        addLine(`${dt} - ${r.nome || 'Sem nome'} (${r.responsavel || '-'})`);
       });
-      y += 5;
+      y += 4;
     }
 
+    // === Status equipamentos ===
     if (metricas.statusEquipamentos && metricas.statusEquipamentos.length > 0) {
-      if (y > 240) { doc.addPage(); y = 20; }
-      doc.setFontSize(14);
-      doc.text('STATUS ULTIMA VISITA - AREAS TECNICAS', 14, y); y += 7;
-      doc.setFontSize(9);
+      addSection('STATUS ULTIMA VISITA - AREAS TECNICAS', [100, 0, 100]);
       metricas.statusEquipamentos.forEach((at: any) => {
-        if (y > 275) { doc.addPage(); y = 20; }
         const dt = at.ultimaVisita ? new Date(at.ultimaVisita + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
-        doc.text(`${at.nome || '-'} | ${dt} | ${at.statusUltimaVisita || '-'}`, 14, y); y += 5;
+        addLine(`${at.nome || '-'} | ${dt} | ${at.statusUltimaVisita || '-'}`);
       });
-      y += 5;
+      y += 4;
     }
 
+    // === Itens relevantes ===
     if (itensRelevantesSupervisor.length > 0) {
-      if (y > 240) { doc.addPage(); y = 20; }
-      doc.setFontSize(14);
-      doc.text('ITENS RELEVANTES (SUPERVISAO)', 14, y); y += 7;
-      doc.setFontSize(9);
+      addSection('ITENS RELEVANTES (SUPERVISAO)', [80, 0, 150]);
       itensRelevantesSupervisor.forEach((it: any) => {
-        if (y > 275) { doc.addPage(); y = 20; }
         const dt = it.data_abertura ? new Date(it.data_abertura + 'T00:00:00').toLocaleDateString('pt-BR') : (it.created_at ? new Date(it.created_at).toLocaleDateString('pt-BR') : '-');
         const st = it.status === 'concluido' ? 'CONCLUIDO' : it.status === 'em_andamento' ? 'EM ANDAMENTO' : 'PENDENTE';
         const desc = it.descricao || it.titulo || '-';
-        const linhas = doc.splitTextToSize(`${dt} [${st}] ${desc}`, 180);
-        doc.text(linhas, 14, y);
-        y += linhas.length * 4 + 1;
+        addLines(`${dt} [${st}] ${desc}`, 180);
       });
     }
 

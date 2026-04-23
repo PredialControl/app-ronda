@@ -708,8 +708,9 @@ export function SupervisorApp() {
       if (tipo === 'MANUAL') return;
 
       const config = CONFIG_RONDAS[tipo];
+      // Ronda manual também conta como cumprimento (substitui a periódica)
       const rondasDoTipo = rondasData
-        .filter(r => r.templateRonda === tipo)
+        .filter(r => r.templateRonda === tipo || r.templateRonda === 'MANUAL' || !r.templateRonda)
         .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
       const ultimaRonda = rondasDoTipo[0];
