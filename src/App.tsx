@@ -1443,8 +1443,12 @@ function App() {
   const handleSidebarNavigate = (destination: string) => {
     console.log('📍 Sidebar navegando para:', destination);
 
-    // Menu principal
-    if (menuLevel === 'main') {
+    // Menu principal — qualquer uma destas destinations é global, independente do menuLevel
+    const mainDestinations = ['contratos', 'agenda', 'chamados', 'dashboard'];
+    if (mainDestinations.includes(destination)) {
+      // Sempre resetar pro menu principal — evita ficar preso em submenus
+      setMenuLevel('main');
+      setSubMenuType(null);
       if (destination === 'contratos') {
         setMainSection('contratos');
         setViewMode('menu');
@@ -1784,8 +1788,8 @@ function App() {
             </div>
         )}
 
-        {/* AGENDA - Calendário quando está na seção agenda */}
-        {!contratoSelecionado && viewMode === 'menu' && mainSection === 'agenda' && (
+        {/* AGENDA - Calendário quando está na seção agenda (independe de ter contrato selecionado) */}
+        {viewMode === 'menu' && mainSection === 'agenda' && (
           <div>
             <h2 className="text-2xl font-bold text-white mb-4">Agenda</h2>
             <AgendaCalendario
