@@ -113,6 +113,7 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
   const [addUpdateFor, setAddUpdateFor] = useState<Chamado | null>(null);
   const [reprogramarFor, setReprogramarFor] = useState<Chamado | null>(null);
   const [showHistorico, setShowHistorico] = useState<Chamado | null>(null);
+  const [galeriaFotos, setGaleriaFotos] = useState<Chamado | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -472,24 +473,24 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
         </div>
       </div>
 
-      {/* Tabela */}
+      {/* Tabela — mesma disposição do registro-de-chamados */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr className="text-left text-xs font-medium text-gray-600 uppercase">
-                <th className="px-3 py-2">Nº</th>
-                <th className="px-3 py-2">Data</th>
-                <th className="px-3 py-2">Prédio</th>
-                <th className="px-3 py-2">Local</th>
-                <th className="px-3 py-2">Descrição</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">Resp.</th>
-                <th className="px-3 py-2">Prazo</th>
-                <th className="px-3 py-2"></th>
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-3 py-3 text-center font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Nº</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Local</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Descrição</th>
+                <th className="px-3 py-3 text-center font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Foto</th>
+                <th className="px-3 py-3 text-left font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Criado Por</th>
+                <th className="px-3 py-3 text-center font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Abertura</th>
+                <th className="px-3 py-3 text-center font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Responsável</th>
+                <th className="px-3 py-3 text-center font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Status</th>
+                <th className="px-3 py-3 text-center font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Ações</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr><td colSpan={9} className="text-center py-10 text-gray-500">
                   <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" /> Carregando...
@@ -504,24 +505,88 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
                   const cfg = STATUS_CONFIG[c.status];
                   const vencido = isVencido(c);
                   return (
-                    <tr key={c.id} className={`border-b border-gray-100 hover:bg-orange-50/30 cursor-pointer ${vencido ? 'bg-red-50/40' : ''}`} onClick={() => setDetalhe(c)}>
-                      <td className="px-3 py-2 font-mono text-xs text-gray-600">{c.numeroTicket || '—'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 whitespace-nowrap">{new Date(c.createdAt).toLocaleDateString('pt-BR')}</td>
-                      <td className="px-3 py-2 text-xs text-gray-900 max-w-[180px] truncate">{contratoNome(c.contratoId)}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 max-w-[140px] truncate">{c.local}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900 max-w-[360px] truncate">{c.descricao}</td>
-                      <td className="px-3 py-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.bg} ${cfg.text}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}></span>{cfg.label}
+                    <tr
+                      key={c.id}
+                      className={`hover:bg-gray-50 transition-colors cursor-pointer bg-white ${
+                        vencido ? 'border-l-4 border-l-red-600 bg-red-50/30' : ''
+                      }`}
+                      onClick={() => setDetalhe(c)}
+                    >
+                      {/* Nº */}
+                      <td className="px-3 py-3 text-center border-x border-gray-200">
+                        <div className="text-gray-900 text-xs font-bold">{c.numeroTicket || '-'}</div>
+                      </td>
+                      {/* Local */}
+                      <td className="px-3 py-3 border-x border-gray-200">
+                        <div className="text-gray-900 text-xs truncate max-w-[150px]" title={c.local}>{c.local}</div>
+                      </td>
+                      {/* Descrição */}
+                      <td className="px-3 py-3 border-x border-gray-200">
+                        <div className="text-gray-600 text-xs line-clamp-2 max-w-[250px]" title={c.descricao}>{c.descricao}</div>
+                      </td>
+                      {/* Foto */}
+                      <td className="px-3 py-3 text-center border-x border-gray-200" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-center">
+                          <button
+                            className="relative w-12 h-12 rounded-md border border-gray-300 cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all flex items-center justify-center bg-gray-100 hover:bg-gray-200 overflow-hidden"
+                            onClick={() => setGaleriaFotos(c)}
+                            title="Clique para ver as fotos"
+                          >
+                            {c.fotoUrls.length > 0 ? (
+                              <>
+                                <img src={c.fotoUrls[0]} className="w-full h-full object-cover" />
+                                {c.fotoUrls.length > 1 && (
+                                  <span className="absolute bottom-0 right-0 bg-black/70 text-white text-[9px] px-1 rounded-tl">
+                                    {c.fotoUrls.length}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <Camera className="w-5 h-5 text-gray-500" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                      {/* Criado Por */}
+                      <td className="px-3 py-3 text-xs border-x border-gray-200">
+                        <div className="text-gray-900 font-medium truncate max-w-[120px]" title={c.usuarioId || 'N/A'}>
+                          {c.usuarioId ? (c.usuarioId.substring(0, 8) + '...') : 'N/A'}
+                        </div>
+                      </td>
+                      {/* Abertura */}
+                      <td className="px-3 py-3 text-center text-gray-500 text-xs border-x border-gray-200">
+                        <span>{new Date(c.createdAt).toLocaleDateString('pt-BR')}</span>
+                      </td>
+                      {/* Responsável */}
+                      <td className="px-3 py-3 text-center border-x border-gray-200">
+                        <div className="text-xs font-medium">{c.responsavel || 'Construtora'}</div>
+                      </td>
+                      {/* Status */}
+                      <td className="px-3 py-3 text-center border-x border-gray-200">
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${cfg.bg} ${cfg.text}`}>
+                          {cfg.label}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-xs">{c.responsavel || '—'}</td>
-                      <td className={`px-3 py-2 text-xs whitespace-nowrap ${vencido ? 'text-red-700 font-bold' : 'text-gray-700'}`}>
-                        {c.prazo ? new Date(c.prazo + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
-                        {vencido && <AlertCircle className="w-3 h-3 inline ml-1" />}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <Eye className="w-4 h-4 text-gray-400 inline" />
+                      {/* Ações */}
+                      <td className="px-3 py-3 border-x border-gray-200" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-center gap-1">
+                          <button
+                            onClick={() => setDetalhe(c)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Ver detalhes"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => excluirChamado(c.id)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -530,8 +595,6 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
             </tbody>
           </table>
         </div>
-
-        {/* Paginação */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-gray-50 text-xs">
             <span className="text-gray-600">
@@ -549,6 +612,11 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
           </div>
         )}
       </div>
+
+      {/* Galeria de Fotos */}
+      {galeriaFotos && (
+        <GaleriaFotosModal chamado={galeriaFotos} onClose={() => setGaleriaFotos(null)} />
+      )}
 
       {/* Modais */}
       {showNovo && (
@@ -935,7 +1003,7 @@ function ReprogramarModal({ chamado, onClose, onSalvar }: {
           <div>
             <label className="text-sm font-medium text-gray-700 mb-1 block">Motivo *</label>
             <textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3}
-              placeholder="Por que o prazo está sendo reprogramado?"
+              placeholder="Por que o prazo esta sendo reprogramado?"
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
           </div>
         </div>
@@ -956,12 +1024,12 @@ function HistoricoModal({ chamado, onClose }: { chamado: Chamado; onClose: () =>
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white">
-          <h3 className="text-lg font-bold text-gray-900">Histórico de reprogramações</h3>
+          <h3 className="text-lg font-bold text-gray-900">Historico de reprogramacoes</h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5 text-gray-500" /></button>
         </div>
         <div className="p-4 space-y-2">
           {chamado.historicoReprogramacao.length === 0 ? (
-            <p className="text-sm text-gray-500 italic">Nenhuma reprogramação registrada.</p>
+            <p className="text-sm text-gray-500 italic">Nenhuma reprogramacao registrada.</p>
           ) : (
             chamado.historicoReprogramacao.map((h, i) => (
               <div key={i} className="p-3 rounded-md border border-orange-200 bg-orange-50">
@@ -978,6 +1046,68 @@ function HistoricoModal({ chamado, onClose }: { chamado: Chamado; onClose: () =>
             ))
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function GaleriaFotosModal({ chamado, onClose }: { chamado: Chamado; onClose: () => void }) {
+  const [indiceAtual, setIndiceAtual] = useState(0);
+  const fotos = chamado.fotoUrls || [];
+  if (fotos.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[80] p-4" onClick={onClose}>
+        <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+          <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+          <p className="text-gray-700">Este chamado nao possui fotos.</p>
+          <Button variant="outline" className="mt-4" onClick={onClose}>Fechar</Button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[80] p-4" onClick={onClose}>
+      <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} className="absolute top-2 right-2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full z-10">
+          <X className="w-5 h-5" />
+        </button>
+        <div className="text-white text-sm mb-2">
+          Foto {indiceAtual + 1} de {fotos.length}
+        </div>
+        <div className="relative w-full flex items-center justify-center">
+          {fotos.length > 1 && (
+            <button
+              onClick={() => setIndiceAtual(i => (i - 1 + fotos.length) % fotos.length)}
+              className="absolute left-0 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full z-10"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          <img src={fotos[indiceAtual]} className="max-w-full max-h-[70vh] object-contain rounded" />
+          {fotos.length > 1 && (
+            <button
+              onClick={() => setIndiceAtual(i => (i + 1) % fotos.length)}
+              className="absolute right-0 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full z-10"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          )}
+        </div>
+        <div className="mt-3 flex gap-2 flex-wrap justify-center">
+          {fotos.map((f, i) => (
+            <button key={i} onClick={() => setIndiceAtual(i)} className={`w-16 h-16 rounded overflow-hidden border-2 ${i === indiceAtual ? 'border-blue-500' : 'border-transparent'}`}>
+              <img src={f} className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+        <a
+          href={fotos[indiceAtual]}
+          download={`chamado_${chamado.numeroTicket || chamado.id}_${indiceAtual + 1}.jpg`}
+          className="mt-3 inline-flex items-center gap-1 bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded text-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Download className="w-4 h-4" /> Baixar foto atual
+        </a>
       </div>
     </div>
   );
