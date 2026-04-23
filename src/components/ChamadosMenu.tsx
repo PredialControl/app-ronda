@@ -21,13 +21,14 @@ import ExcelJS from 'exceljs';
 
 type StatusFilter = ChamadoStatus | 'todos';
 
+// Badges estilo outline: borda + texto colorido, fundo transparente (igual o outro app)
 const STATUS_CONFIG: Record<ChamadoStatus, { label: string; bg: string; text: string; dot: string; chart: string }> = {
-  itens_apontados:     { label: 'Itens Apontados',     bg: 'bg-blue-50',    text: 'text-blue-700',    dot: 'bg-blue-500',    chart: '#3b82f6' },
-  em_andamento:        { label: 'Em andamento',        bg: 'bg-yellow-50',  text: 'text-yellow-700',  dot: 'bg-yellow-500',  chart: '#eab308' },
-  improcedente:        { label: 'Improcedente',        bg: 'bg-orange-50',  text: 'text-orange-700',  dot: 'bg-orange-500',  chart: '#f97316' },
-  aguardando_vistoria: { label: 'Aguardando vistoria', bg: 'bg-purple-50',  text: 'text-purple-700',  dot: 'bg-purple-500',  chart: '#a855f7' },
-  concluido:           { label: 'Concluído',           bg: 'bg-green-50',   text: 'text-green-700',   dot: 'bg-green-500',   chart: '#22c55e' },
-  f_indevido:          { label: 'F. Indevido',         bg: 'bg-red-50',     text: 'text-red-700',     dot: 'bg-red-500',     chart: '#ef4444' },
+  itens_apontados:     { label: 'Itens Apontados',     bg: 'bg-transparent border border-blue-400',   text: 'text-blue-400',   dot: 'bg-blue-400',   chart: '#3b82f6' },
+  em_andamento:        { label: 'Em andamento',        bg: 'bg-transparent border border-yellow-400', text: 'text-yellow-400', dot: 'bg-yellow-400', chart: '#eab308' },
+  improcedente:        { label: 'Improcedente',        bg: 'bg-transparent border border-orange-400', text: 'text-orange-400', dot: 'bg-orange-400', chart: '#f97316' },
+  aguardando_vistoria: { label: 'Aguardando vistoria', bg: 'bg-transparent border border-purple-400', text: 'text-purple-400', dot: 'bg-purple-400', chart: '#a855f7' },
+  concluido:           { label: 'Concluído',           bg: 'bg-transparent border border-green-400',  text: 'text-green-400',  dot: 'bg-green-400',  chart: '#22c55e' },
+  f_indevido:          { label: 'F. Indevido',         bg: 'bg-transparent border border-red-400',    text: 'text-red-400',    dot: 'bg-red-400',    chart: '#ef4444' },
 };
 
 const UPDATE_TYPE_CONFIG: Record<ChamadoUpdateType, { label: string; icon: string; cls: string }> = {
@@ -599,31 +600,31 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
         </div>
       </div>
 
-      {/* Tabela — mesma disposição do registro-de-chamados */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {/* Tabela — tema escuro igual ao outro app */}
+      <div className="rounded-xl border border-gray-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-3 py-3 text-center font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Nº</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Local</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Descrição</th>
-                <th className="px-3 py-3 text-center font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Foto</th>
-                <th className="px-3 py-3 text-left font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Criado Por</th>
-                <th className="px-3 py-3 text-center font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Abertura</th>
-                <th className="px-3 py-3 text-center font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Responsável</th>
-                <th className="px-3 py-3 text-center font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Status</th>
-                <th className="px-3 py-3 text-center font-bold text-gray-800 uppercase text-xs tracking-wider border-x border-gray-200">Ações</th>
+              <tr className="bg-gray-900 border-b border-gray-700">
+                <th className="px-3 py-3 text-center font-bold text-white uppercase text-xs tracking-wider border-x border-gray-800">Nº</th>
+                <th className="px-3 py-3 text-left font-bold text-white uppercase text-xs tracking-wider border-x border-gray-800">Local</th>
+                <th className="px-3 py-3 text-left font-bold text-white uppercase text-xs tracking-wider border-x border-gray-800">Descrição</th>
+                <th className="px-3 py-3 text-center font-bold text-white uppercase text-xs tracking-wider border-x border-gray-800">Foto</th>
+                <th className="px-3 py-3 text-left font-bold text-white uppercase text-xs tracking-wider border-x border-gray-800">Criado Por</th>
+                <th className="px-3 py-3 text-center font-bold text-white uppercase text-xs tracking-wider border-x border-gray-800">Abertura</th>
+                <th className="px-3 py-3 text-center font-bold text-white uppercase text-xs tracking-wider border-x border-gray-800">Responsável</th>
+                <th className="px-3 py-3 text-center font-bold text-white uppercase text-xs tracking-wider border-x border-gray-800">Status</th>
+                <th className="px-3 py-3 text-center font-bold text-white uppercase text-xs tracking-wider border-x border-gray-800">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-800">
               {loading ? (
-                <tr><td colSpan={9} className="text-center py-10 text-gray-500">
+                <tr><td colSpan={9} className="text-center py-10 text-gray-400">
                   <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" /> Carregando...
                 </td></tr>
               ) : pagina.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-10 text-gray-500">
-                  <Filter className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                <tr><td colSpan={9} className="text-center py-10 text-gray-400">
+                  <Filter className="w-8 h-8 mx-auto text-gray-500 mb-2" />
                   Nenhum chamado encontrado com os filtros atuais.
                 </td></tr>
               ) : (
@@ -633,28 +634,28 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
                   return (
                     <tr
                       key={c.id}
-                      className={`hover:bg-gray-50 transition-colors cursor-pointer bg-white ${
-                        vencido ? 'border-l-4 border-l-red-600 bg-red-50/30' : ''
+                      className={`hover:bg-gray-800/50 transition-colors cursor-pointer ${
+                        vencido ? 'border-l-4 border-l-red-500' : ''
                       }`}
                       onClick={() => setDetalhe(c)}
                     >
                       {/* Nº */}
-                      <td className="px-3 py-3 text-center border-x border-gray-200">
-                        <div className="text-gray-900 text-xs font-bold">{c.numeroTicket || '-'}</div>
+                      <td className="px-3 py-3 text-center border-x border-gray-800">
+                        <div className="text-white text-xs font-bold">{c.numeroTicket || '-'}</div>
                       </td>
                       {/* Local */}
-                      <td className="px-3 py-3 border-x border-gray-200">
-                        <div className="text-gray-900 text-xs truncate max-w-[150px]" title={c.local}>{c.local}</div>
+                      <td className="px-3 py-3 border-x border-gray-800">
+                        <div className="text-white text-xs truncate max-w-[150px]" title={c.local}>{c.local}</div>
                       </td>
                       {/* Descrição */}
-                      <td className="px-3 py-3 border-x border-gray-200">
-                        <div className="text-gray-600 text-xs line-clamp-2 max-w-[250px]" title={c.descricao}>{c.descricao}</div>
+                      <td className="px-3 py-3 border-x border-gray-800">
+                        <div className="text-gray-300 text-xs line-clamp-2 max-w-[250px]" title={c.descricao}>{c.descricao}</div>
                       </td>
                       {/* Foto */}
-                      <td className="px-3 py-3 text-center border-x border-gray-200" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-3 py-3 text-center border-x border-gray-800" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-center">
                           <button
-                            className="relative w-12 h-12 rounded-md border border-gray-300 cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all flex items-center justify-center bg-gray-100 hover:bg-gray-200 overflow-hidden"
+                            className="relative w-12 h-12 rounded-md border border-gray-600 cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all flex items-center justify-center bg-gray-800 hover:bg-gray-700 overflow-hidden"
                             onClick={() => setGaleriaFotos(c)}
                             title="Clique para ver as fotos"
                           >
@@ -668,37 +669,37 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
                                 )}
                               </>
                             ) : (
-                              <Camera className="w-5 h-5 text-gray-500" />
+                              <Camera className="w-5 h-5 text-gray-400" />
                             )}
                           </button>
                         </div>
                       </td>
                       {/* Criado Por */}
-                      <td className="px-3 py-3 text-xs border-x border-gray-200">
-                        <div className="text-gray-900 font-medium truncate max-w-[120px]" title={c.usuarioId || 'N/A'}>
+                      <td className="px-3 py-3 text-xs border-x border-gray-800">
+                        <div className="text-white font-medium truncate max-w-[120px]" title={c.usuarioId || 'N/A'}>
                           {c.usuarioId ? (c.usuarioId.substring(0, 8) + '...') : 'N/A'}
                         </div>
                       </td>
                       {/* Abertura */}
-                      <td className="px-3 py-3 text-center text-gray-500 text-xs border-x border-gray-200">
+                      <td className="px-3 py-3 text-center text-gray-300 text-xs border-x border-gray-800">
                         <span>{new Date(c.createdAt).toLocaleDateString('pt-BR')}</span>
                       </td>
                       {/* Responsável */}
-                      <td className="px-3 py-3 text-center border-x border-gray-200">
-                        <div className="text-xs font-medium">{c.responsavel || 'Construtora'}</div>
+                      <td className="px-3 py-3 text-center border-x border-gray-800">
+                        <div className="text-xs font-medium text-white">{c.responsavel || 'Construtora'}</div>
                       </td>
                       {/* Status */}
-                      <td className="px-3 py-3 text-center border-x border-gray-200">
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${cfg.bg} ${cfg.text}`}>
+                      <td className="px-3 py-3 text-center border-x border-gray-800">
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${cfg.bg} ${cfg.text}`}>
                           {cfg.label}
                         </span>
                       </td>
                       {/* Ações */}
-                      <td className="px-3 py-3 border-x border-gray-200" onClick={(e) => e.stopPropagation()}>
+                      <td className="px-3 py-3 border-x border-gray-800" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-center gap-1">
                           <button
                             onClick={() => setDetalhe(c)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            className="p-1.5 text-blue-400 hover:bg-blue-900/30 rounded transition-colors"
                             title="Ver detalhes"
                           >
                             <Eye className="w-4 h-4" />
@@ -706,7 +707,7 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
                           {isAdmin && (
                             <button
                               onClick={() => excluirChamado(c.id)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                              className="p-1.5 text-red-400 hover:bg-red-900/30 rounded transition-colors"
                               title="Excluir"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -722,16 +723,16 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
           </table>
         </div>
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-gray-50 text-xs">
-            <span className="text-gray-600">
+          <div className="flex items-center justify-between px-3 py-2 border-t border-gray-800 bg-gray-900 text-xs">
+            <span className="text-gray-300">
               {startIdx + 1}–{Math.min(startIdx + itemsPerPage, filtrados.length)} de {filtrados.length}
             </span>
             <div className="flex items-center gap-1">
-              <Button size="sm" variant="outline" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>
+              <Button size="sm" variant="outline" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700">
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <span className="px-2 text-gray-700 font-medium">{currentPage} / {totalPages}</span>
-              <Button size="sm" variant="outline" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}>
+              <span className="px-2 text-white font-medium">{currentPage} / {totalPages}</span>
+              <Button size="sm" variant="outline" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700">
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
