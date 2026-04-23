@@ -1951,7 +1951,7 @@ function App() {
           </div>
         )}
 
-        {currentView === 'contratos' && viewMode !== 'menu' && viewMode !== 'contrato-detalhe' ? (
+        {currentView === 'contratos' && viewMode !== 'menu' && viewMode !== 'contrato-detalhe' && viewMode !== 'dashboard' ? (
           <GerenciarContratos
             contratos={contratos}
             onSelectContrato={(contrato) => {
