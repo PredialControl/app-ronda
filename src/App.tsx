@@ -2103,6 +2103,8 @@ function App() {
                 contrato={contratoSelecionado}
                 rondas={rondasCompletas}
                 areasTecnicas={areasTecnicasDoContrato}
+                contratos={contratos}
+                onSelectContrato={(c) => setContratoSelecionado(c)}
               />
             )}
 

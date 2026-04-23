@@ -3,18 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GlowingCard } from '@/components/ui/glowing-card';
 import { Badge } from '@/components/ui/badge';
 import { Ronda, Contrato, AreaTecnica } from '@/types';
-import { BarChart3, AlertTriangle, Calendar, Wrench, XCircle, User, FileText, Trash2, Plus, X } from 'lucide-react';
+import { BarChart3, AlertTriangle, Calendar, Wrench, XCircle, User, FileText, Trash2, Plus, X, Building2, Kanban as KanbanIcon, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
+import { laudoService } from '@/lib/laudoService';
+import { kanbanEventoService } from '@/lib/supabaseService';
 
 interface DashboardProps {
   contrato: Contrato;
   rondas: Ronda[];
   areasTecnicas: AreaTecnica[];
+  contratos?: Contrato[];
+  onSelectContrato?: (c: Contrato) => void;
 }
 
-export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
+export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelectContrato }: DashboardProps) {
   console.log('🔍 DEBUG DASHBOARD - Contrato:', contrato.nome);
   console.log('🔍 DEBUG DASHBOARD - Total de rondas recebidas:', rondas.length);
   console.log('🔍 DEBUG DASHBOARD - Rondas:', rondas.map(r => ({
@@ -29,6 +33,40 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  // Estados para indicadores de IMPLANTAÇÃO (kanban + laudos)
+  const [kanbanStats, setKanbanStats] = useState({ total: 0, finalizados: 0, emAndamento: 0 });
+  const [laudosStats, setLaudosStats] = useState({ total: 0, vencidos: 0, emAnalise: 0, emDia: 0 });
+
+  // Carregar dados de implantação (kanban + laudos) quando mudar contrato
+  useEffect(() => {
+    const carregarImplantacao = async () => {
+      try {
+        // Kanban — ler kanban_eventos do contrato
+        const kanbanEventos = await kanbanEventoService.getAll();
+        const doContrato = kanbanEventos.filter((ke: any) => ke.contrato_id === contrato.id);
+        setKanbanStats({
+          total: doContrato.length,
+          finalizados: doContrato.filter((ke: any) => ke.status === 'finalizado').length,
+          emAndamento: doContrato.filter((ke: any) => ke.status === 'em_andamento').length,
+        });
+      } catch (err) {
+        console.warn('Erro ao carregar kanban stats:', err);
+      }
+      try {
+        const laudos = await laudoService.getByContrato(contrato.id);
+        setLaudosStats({
+          total: laudos.length,
+          vencidos: laudos.filter(l => l.status === 'vencidos').length,
+          emAnalise: laudos.filter(l => l.status === 'em-analise').length,
+          emDia: laudos.filter(l => l.status === 'em-dia').length,
+        });
+      } catch (err) {
+        console.warn('Erro ao carregar laudos stats:', err);
+      }
+    };
+    carregarImplantacao();
+  }, [contrato.id]);
 
   // Se o mês atual não tiver rondas, usar automaticamente o mês da última ronda
   // Removido useEffect que alterava o mês automaticamente se não houvesse rondas
@@ -334,19 +372,45 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
               <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white drop-shadow-lg">Dashboard</h1>
               <p className="mt-1 sm:mt-2 text-white/90 text-sm sm:text-base truncate">{contrato.nome}</p>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-              <input
-                type="month"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="rounded-md bg-white/20 text-white placeholder-white/60 backdrop-blur px-2 sm:px-3 py-1.5 sm:py-2 text-sm ring-1 ring-white/30 focus:outline-none focus:ring-2 focus:ring-white transition-all"
-              />
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 flex-wrap">
+              {/* Filtro de Prédio (contrato) */}
+              {contratos && contratos.length > 0 && onSelectContrato && (
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <select
+                    value={contrato.id}
+                    onChange={(e) => {
+                      const alvo = contratos.find(c => c.id === e.target.value);
+                      if (alvo) onSelectContrato(alvo);
+                    }}
+                    className="rounded-md bg-white/20 text-white backdrop-blur px-2 sm:px-3 py-1.5 sm:py-2 text-sm ring-1 ring-white/30 focus:outline-none focus:ring-2 focus:ring-white transition-all max-w-[200px]"
+                  >
+                    {contratos.map(c => (
+                      <option key={c.id} value={c.id} className="bg-gray-800 text-white">{c.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {/* Filtro de Mês */}
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="rounded-md bg-white/20 text-white placeholder-white/60 backdrop-blur px-2 sm:px-3 py-1.5 sm:py-2 text-sm ring-1 ring-white/30 focus:outline-none focus:ring-2 focus:ring-white transition-all"
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* ======== SUPERVISÃO ======== */}
+      <div className="flex items-center gap-2 mt-4">
+        <div className="h-8 w-1.5 rounded bg-emerald-500" />
+        <h2 className="text-lg sm:text-xl font-bold text-gray-100">Indicadores de Supervisão</h2>
+      </div>
       {/* Cards de Métricas Principais */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <GlowingCard className="border-l-4 border-l-blue-500" glowColor="from-blue-500/50 via-cyan-500/50 to-blue-500/50">
@@ -403,6 +467,57 @@ export function Dashboard({ contrato, rondas, areasTecnicas }: DashboardProps) {
                 <span className="font-semibold text-purple-600">{metricas.contagemResponsavel.outros}</span>
               </div>
             </div>
+          </CardContent>
+        </GlowingCard>
+      </div>
+
+      {/* ======== IMPLANTAÇÃO ======== */}
+      <div className="flex items-center gap-2 mt-4">
+        <div className="h-8 w-1.5 rounded bg-blue-500" />
+        <h2 className="text-lg sm:text-xl font-bold text-gray-100">Indicadores de Implantação</h2>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <GlowingCard className="border-l-4 border-l-blue-500" glowColor="from-blue-500/50 via-cyan-500/50 to-blue-500/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Cards no Kanban</CardTitle>
+            <KanbanIcon className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{kanbanStats.total}</div>
+            <p className="text-xs text-gray-600">com data preenchida</p>
+          </CardContent>
+        </GlowingCard>
+
+        <GlowingCard className="border-l-4 border-l-green-500" glowColor="from-green-500/50 via-emerald-500/50 to-green-500/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Kanban Finalizados</CardTitle>
+            <ClipboardCheck className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{kanbanStats.finalizados}</div>
+            <p className="text-xs text-gray-600">{kanbanStats.total > 0 ? `${Math.round((kanbanStats.finalizados / kanbanStats.total) * 100)}% do total` : 'nenhum card'}</p>
+          </CardContent>
+        </GlowingCard>
+
+        <GlowingCard className="border-l-4 border-l-red-500" glowColor="from-red-500/50 via-pink-500/50 to-red-500/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Laudos Vencidos</CardTitle>
+            <XCircle className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{laudosStats.vencidos}</div>
+            <p className="text-xs text-gray-600">de {laudosStats.total} documentos</p>
+          </CardContent>
+        </GlowingCard>
+
+        <GlowingCard className="border-l-4 border-l-indigo-500" glowColor="from-indigo-500/50 via-violet-500/50 to-indigo-500/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Laudos Em Análise</CardTitle>
+            <FileText className="h-4 w-4 text-indigo-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-indigo-600">{laudosStats.emAnalise}</div>
+            <p className="text-xs text-gray-600">{laudosStats.emDia} em dia</p>
           </CardContent>
         </GlowingCard>
       </div>
