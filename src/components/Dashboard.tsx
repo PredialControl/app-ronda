@@ -12,7 +12,7 @@ import { rondaService, areaTecnicaService } from '@/lib/supabaseService';
 import { kanbanEventoService } from '@/lib/supabaseService';
 
 interface DashboardProps {
-  contrato: Contrato;
+  contrato: Contrato | null;
   rondas: Ronda[];
   areasTecnicas: AreaTecnica[];
   contratos?: Contrato[];
@@ -20,6 +20,43 @@ interface DashboardProps {
 }
 
 export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelectContrato }: DashboardProps) {
+  // Tela "selecione um prédio" quando ainda não há contrato
+  if (!contrato) {
+    return (
+      <div className="space-y-4 sm:space-y-8">
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg">
+          <div className="relative p-6 sm:p-10">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white drop-shadow-lg">Dashboard</h1>
+                <p className="mt-1 text-white/90 text-sm sm:text-base">Selecione um prédio para ver os indicadores.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    const alvo = contratos?.find(c => c.id === e.target.value);
+                    if (alvo && onSelectContrato) onSelectContrato(alvo);
+                  }}
+                  className="rounded-md bg-white/20 text-white backdrop-blur px-3 py-2 text-sm ring-1 ring-white/30 focus:outline-none focus:ring-2 focus:ring-white transition-all min-w-[260px]"
+                >
+                  <option value="" className="bg-gray-800">— Selecione o prédio —</option>
+                  {(contratos || []).map(c => (
+                    <option key={c.id} value={c.id} className="bg-gray-800 text-white">{c.nome}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="text-center py-20 text-gray-400">
+          <div className="text-6xl mb-4">🏢</div>
+          <p className="text-lg">Escolha um prédio no seletor acima</p>
+          <p className="text-sm mt-2">Os indicadores aparecerão aqui assim que um prédio for selecionado.</p>
+        </div>
+      </div>
+    );
+  }
   console.log('🔍 DEBUG DASHBOARD - Contrato:', contrato.nome);
   console.log('🔍 DEBUG DASHBOARD - Total de rondas recebidas:', rondas.length);
   console.log('🔍 DEBUG DASHBOARD - Rondas:', rondas.map(r => ({
@@ -262,8 +299,10 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
 
       // Ordenar todas as rondas do MAIS ANTIGO para o MAIS RECENTE, e sobrescrever, assim no final fica o mais recente por equipamento
       const rondasOrdenadas = [...rondasDoContrato].sort((a, b) => a.data.localeCompare(b.data));
+      console.log('[Status] Rondas ordenadas (asc):', rondasOrdenadas.map(r => ({data: r.data, areasCount: r.areasTecnicas?.length || 0})));
 
       rondasOrdenadas.forEach(r => {
+        console.log('[Status] Processando ronda', r.data, 'com', (r.areasTecnicas || []).length, 'areas');
         (r.areasTecnicas || []).forEach(at => {
           const chave = (at.nome || '').trim();
           if (!chave) return;
