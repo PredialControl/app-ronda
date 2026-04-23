@@ -264,13 +264,12 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
     return Array.from(set).sort((a, b) => b.localeCompare(a));
   }, [chamados]);
 
-  // Apenas chamados ja registrados (oficiais) vao pra listagem principal
-  const chamadosRegistrados = useMemo(() => chamados.filter(c => c.isRegistered !== false), [chamados]);
-  // Solicitacoes = chamados abertos por usuarios mas ainda nao registrados oficialmente
+  // Solicitacoes = chamados abertos por usuarios mas ainda sem numero da construtora
   const solicitacoesPendentes = useMemo(() => chamados.filter(c => c.isRegistered === false), [chamados]);
 
   const filtrados = useMemo(() => {
-    return chamadosRegistrados.filter(c => {
+    // Tabela geral mostra TODOS (inclusive pendentes de numero). Ao registrar num, sai do Painel de Solicitacoes mas fica aqui.
+    return chamados.filter(c => {
       if (contratoFiltro !== 'todos' && c.contratoId !== contratoFiltro) return false;
       if (statusFiltro !== 'todos' && c.status !== statusFiltro) return false;
       if (responsavelFiltro !== 'todos' && (c.responsavel || '') !== responsavelFiltro) return false;
@@ -285,7 +284,7 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
       }
       return true;
     });
-  }, [chamadosRegistrados, contratoFiltro, statusFiltro, responsavelFiltro, dataFiltro, mesFiltro, somenteVencidos, busca, buscaTicket]);
+  }, [chamados, contratoFiltro, statusFiltro, responsavelFiltro, dataFiltro, mesFiltro, somenteVencidos, busca, buscaTicket]);
 
   const stats = useMemo(() => {
     const base: Record<ChamadoStatus, number> = {
@@ -524,7 +523,7 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
           }`}
         >
           <ClipboardList className="w-5 h-5" />
-          Chamados Registrados
+          Todos os Chamados
         </button>
       </div>
 
