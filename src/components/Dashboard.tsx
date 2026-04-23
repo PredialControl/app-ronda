@@ -685,6 +685,114 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
       }
     };
 
+    // ===== GRAFICOS =====
+    doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0);
+    doc.text('GRAFICOS DE STATUS', 14, y); y += 6;
+    doc.setFont('helvetica', 'normal');
+
+    // Gráfico de barras — Kanban
+    {
+      doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+      doc.text('Kanban - Implantacao', 14, y); y += 5;
+      doc.setFont('helvetica', 'normal');
+      const barH = 5; const barMaxW = 120;
+      const kbars: Array<{label: string; val: number; rgb: [number,number,number]}> = [
+        { label: 'Aguardando',  val: kanbanStats.aguardando,  rgb: [220, 50, 50] },
+        { label: 'Em Andamento',val: kanbanStats.emAndamento, rgb: [230, 180, 0] },
+        { label: 'Em Correcao', val: kanbanStats.emCorrecao,  rgb: [220, 100, 20] },
+        { label: 'Finalizados', val: kanbanStats.finalizados, rgb: [40, 180, 40] },
+      ];
+      const kMax = Math.max(...kbars.map(b => b.val), 1);
+      kbars.forEach(b => {
+        doc.setFontSize(8); doc.text(b.label, 14, y + 4);
+        doc.setDrawColor(180); doc.setFillColor(240, 240, 240); doc.rect(55, y, barMaxW, barH, 'FD');
+        const w = (b.val / kMax) * barMaxW;
+        doc.setFillColor(b.rgb[0], b.rgb[1], b.rgb[2]);
+        if (w > 0) doc.rect(55, y, w, barH, 'F');
+        doc.setTextColor(0); doc.text(String(b.val), 55 + barMaxW + 3, y + 4);
+        y += barH + 1.5;
+      });
+      y += 2;
+      // Barra 100% proporcional
+      const ktot = kbars.reduce((s, b) => s + b.val, 0);
+      if (ktot > 0) {
+        doc.setFontSize(8); doc.text('% Proporcao:', 14, y + 4);
+        let xx = 55;
+        kbars.forEach(b => {
+          const w = (b.val / ktot) * barMaxW;
+          if (w > 0) {
+            doc.setFillColor(b.rgb[0], b.rgb[1], b.rgb[2]);
+            doc.rect(xx, y, w, barH, 'F');
+            if (w > 12) {
+              doc.setTextColor(255); doc.setFontSize(7);
+              doc.text(`${Math.round(b.val/ktot*100)}%`, xx + 2, y + 3.8);
+            }
+            xx += w;
+          }
+        });
+        doc.setTextColor(0);
+        y += barH + 4;
+      }
+      y += 2;
+    }
+
+    // Gráfico de barras — Laudos
+    {
+      doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+      doc.text('Documentos / Laudos', 14, y); y += 5;
+      doc.setFont('helvetica', 'normal');
+      const barH = 5; const barMaxW = 120;
+      const lbars: Array<{label: string; val: number; rgb: [number,number,number]}> = [
+        { label: 'Em Analise', val: laudosStats.emAnalise, rgb: [100, 80, 200] },
+        { label: 'Em Dia',     val: laudosStats.emDia,     rgb: [40, 180, 40] },
+        { label: 'Vencidos',   val: laudosStats.vencidos,  rgb: [220, 50, 50] },
+      ];
+      const lMax = Math.max(...lbars.map(b => b.val), 1);
+      lbars.forEach(b => {
+        doc.setFontSize(8); doc.text(b.label, 14, y + 4);
+        doc.setDrawColor(180); doc.setFillColor(240, 240, 240); doc.rect(55, y, barMaxW, barH, 'FD');
+        const w = (b.val / lMax) * barMaxW;
+        doc.setFillColor(b.rgb[0], b.rgb[1], b.rgb[2]);
+        if (w > 0) doc.rect(55, y, w, barH, 'F');
+        doc.setTextColor(0); doc.text(String(b.val), 55 + barMaxW + 3, y + 4);
+        y += barH + 1.5;
+      });
+      y += 4;
+    }
+
+    // Gráfico evolução semanal de visitas
+    if (rondasMes.length > 0) {
+      doc.setFontSize(10); doc.setFont('helvetica', 'bold');
+      doc.text('Evolucao de Visitas (por semana)', 14, y); y += 5;
+      doc.setFont('helvetica', 'normal');
+      const porSemana: Record<string, number> = {};
+      rondasMes.forEach((r: any) => {
+        const d = new Date(r.data + 'T00:00:00');
+        const dow = d.getDay();
+        const ini = new Date(d); ini.setDate(d.getDate() - dow);
+        const key = ini.toISOString().split('T')[0];
+        porSemana[key] = (porSemana[key] || 0) + 1;
+      });
+      const entries = Object.entries(porSemana).sort((a, b) => a[0].localeCompare(b[0]));
+      const eMax = Math.max(...entries.map(e => e[1]), 1);
+      entries.forEach(([k, v]) => {
+        const d = new Date(k + 'T00:00:00');
+        doc.setFontSize(8);
+        doc.text(d.toLocaleDateString('pt-BR'), 14, y + 4);
+        doc.setDrawColor(180); doc.setFillColor(240, 240, 240); doc.rect(55, y, 120, 5, 'FD');
+        const w = (v / eMax) * 120;
+        doc.setFillColor(0, 120, 200);
+        if (w > 0) doc.rect(55, y, w, 5, 'F');
+        doc.setTextColor(0); doc.text(String(v), 178, y + 4);
+        y += 6.5;
+      });
+      y += 4;
+    }
+
+    // Nova pagina pro Kanban visual
+    doc.addPage(); y = 15;
+
     // ===== KANBAN IMPLANTACAO =====
     doc.setFontSize(13); doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 180);
