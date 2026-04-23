@@ -894,14 +894,21 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
   const cfg = STATUS_CONFIG[chamado.status];
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+    <div className="fixed inset-0 bg-gray-900/95 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto border-2 border-gray-300" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b-2 border-gray-200 sticky top-0 bg-white z-10 shadow-sm">
           <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-lg font-bold text-gray-900">
+              Detalhes do Chamado
+              {chamado.numeroTicket && (
+                <span className="ml-2 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold">
+                  Nº {chamado.numeroTicket}
+                </span>
+              )}
+            </h3>
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.bg} ${cfg.text}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}></span>{cfg.label}
             </span>
-            <h3 className="text-lg font-bold text-gray-900">Chamado {chamado.numeroTicket ? `#${chamado.numeroTicket}` : ''}</h3>
           </div>
           <div className="flex items-center gap-1">
             {!editMode && (
@@ -1011,23 +1018,44 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
               </div>
             </div>
           )}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-700">Atualizações e pareceres</label>
-              <Button size="sm" variant="outline" onClick={onAddParecer}>
+          {/* Pareceres — seção destacada */}
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-base font-bold text-gray-800 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-blue-600" />
+                Pareceres / Atualizações
+                <span className="text-xs font-normal text-gray-500">
+                  ({chamado.atualizacoes.length})
+                </span>
+              </label>
+              <Button size="sm" onClick={onAddParecer} className="bg-orange-600 hover:bg-orange-700 text-white">
                 <Plus className="w-4 h-4 mr-1" /> Adicionar parecer
               </Button>
             </div>
+            {/* Botões rápidos pros 3 tipos — igual outro app */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {(Object.keys(UPDATE_TYPE_CONFIG) as ChamadoUpdateType[]).map(t => {
+                const c = UPDATE_TYPE_CONFIG[t];
+                const qtd = chamado.atualizacoes.filter(u => u.type === t).length;
+                return (
+                  <div key={t} className={`p-2 rounded-md border ${c.cls} text-center`}>
+                    <div className="text-xl">{c.icon}</div>
+                    <div className="text-xs font-bold">{c.label}</div>
+                    <div className="text-lg font-bold">{qtd}</div>
+                  </div>
+                );
+              })}
+            </div>
             {chamado.atualizacoes.length === 0 ? (
-              <p className="text-sm text-gray-500 italic">Nenhum parecer registrado.</p>
+              <p className="text-sm text-gray-500 italic text-center py-4">Nenhum parecer registrado. Clique em &quot;Adicionar parecer&quot; para registrar um retorno.</p>
             ) : (
               <div className="space-y-2">
                 {chamado.atualizacoes.map(u => {
                   const uc = UPDATE_TYPE_CONFIG[u.type];
                   return (
-                    <div key={u.id} className={`p-3 rounded-md border ${uc.cls}`}>
+                    <div key={u.id} className={`p-3 rounded-md border-2 ${uc.cls}`}>
                       <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                        <span className="text-xs font-bold flex items-center gap-1">
+                        <span className="text-sm font-bold flex items-center gap-1">
                           <span>{uc.icon}</span> {uc.label}
                         </span>
                         <span className="text-xs text-gray-600 flex items-center gap-2">
