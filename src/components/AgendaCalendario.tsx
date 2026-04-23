@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, Trash2 } from 'lucide-react';
 import { Ronda, Contrato } from '@/types';
 import { parecerService } from '@/lib/parecerService';
-import { kanbanEventoService } from '@/lib/supabaseService';
+import { kanbanEventoService, rondaService } from '@/lib/supabaseService';
 import { supabase } from '@/lib/supabase';
 
 interface AgendaCalendarioProps {
@@ -62,21 +62,25 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
     try {
       const lista: AgendaEvento[] = [];
 
-      // 1) RONDAS
-      rondas.forEach(r => {
-        if (r.data) {
+      // 1) RONDAS — buscar TODAS do banco (incluindo supervisor/outros logins), não usar o prop filtrado
+      try {
+        const todasRondas: any[] = await rondaService.getAll();
+        todasRondas.forEach((r: any) => {
+          if (!r || !r.data || !r.id) return;
           lista.push({
             id: `ronda-${r.id}`,
             data: r.data,
-            titulo: `Ronda: ${r.contrato}`,
+            titulo: `Ronda: ${r.contrato || 'Sem contrato'}`,
             descricao: r.responsavel ? `Responsável: ${r.responsavel}` : undefined,
             fonte: 'ronda',
             status: 'executado',
             contrato: r.contrato,
             sourceId: r.id,
           });
-        }
-      });
+        });
+      } catch (e) {
+        console.warn('[Agenda] falha lendo rondas:', e);
+      }
 
       // 2) KANBAN (Supabase — compartilhado entre todos os devices/logins)
       try {
@@ -155,7 +159,7 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
   useEffect(() => {
     carregarEventos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rondas, contratos]);
+  }, [contratos]);
 
   const eventosFiltrados = eventos.filter(e => {
     if (filtro === 'todos') return true;
