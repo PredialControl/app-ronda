@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GlowingCard } from '@/components/ui/glowing-card';
 import { Badge } from '@/components/ui/badge';
 import { Ronda, Contrato, AreaTecnica } from '@/types';
-import { BarChart3, AlertTriangle, Calendar, Wrench, XCircle, User, FileText, Trash2, Plus, X, Building2, Kanban as KanbanIcon, ClipboardCheck } from 'lucide-react';
+import { BarChart3, AlertTriangle, Calendar, Wrench, XCircle, User, FileText, Trash2, Plus, X, Building2, Kanban as KanbanIcon, ClipboardCheck, FileDown } from 'lucide-react';
+import jsPDF from 'jspdf';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
@@ -520,6 +521,88 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     }
   };
 
+  const handleExportarPDF = () => {
+    const doc = new jsPDF();
+    let y = 18;
+    doc.setFontSize(18);
+    doc.text('Dashboard - ' + (contrato?.nome || ''), 14, y); y += 8;
+    doc.setFontSize(10);
+    const dtIni = new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR');
+    const dtFim = new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR');
+    doc.text(`Periodo: ${dtIni} ate ${dtFim}`, 14, y); y += 6;
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, y); y += 10;
+
+    doc.setFontSize(14);
+    doc.setTextColor(0, 128, 0);
+    doc.text('INDICADORES DE SUPERVISAO', 14, y); y += 7;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.text(`- Total de Visitas: ${metricas.totalRondasMes}`, 14, y); y += 5;
+    doc.text(`- Itens Criticos: ${metricas.itensCriticos}`, 14, y); y += 5;
+    doc.text(`- Itens de Atencao: ${metricas.itensAtencao}`, 14, y); y += 5;
+    doc.text(`- Responsavel (Construtora): ${metricas.contagemResponsavel.construtora}`, 14, y); y += 5;
+    doc.text(`- Responsavel (Condominio): ${metricas.contagemResponsavel.condominio}`, 14, y); y += 5;
+    doc.text(`- Responsavel (Outros): ${metricas.contagemResponsavel.outros}`, 14, y); y += 10;
+
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 200);
+    doc.text('INDICADORES DE IMPLANTACAO', 14, y); y += 7;
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.text(`- Kanban - Aguardando: ${kanbanStats.aguardando}`, 14, y); y += 5;
+    doc.text(`- Kanban - Em Andamento: ${kanbanStats.emAndamento}`, 14, y); y += 5;
+    doc.text(`- Kanban - Em Correcao: ${kanbanStats.emCorrecao}`, 14, y); y += 5;
+    doc.text(`- Kanban - Finalizados: ${kanbanStats.finalizados}`, 14, y); y += 5;
+    doc.text(`- Laudos Vencidos: ${laudosStats.vencidos} de ${laudosStats.total}`, 14, y); y += 5;
+    doc.text(`- Laudos Em Analise: ${laudosStats.emAnalise}`, 14, y); y += 5;
+    doc.text(`- Laudos Em Dia: ${laudosStats.emDia}`, 14, y); y += 10;
+
+    if (rondasMes.length > 0) {
+      if (y > 240) { doc.addPage(); y = 20; }
+      doc.setFontSize(14);
+      doc.text('VISITAS DO PERIODO', 14, y); y += 7;
+      doc.setFontSize(9);
+      rondasMes.forEach((r: any) => {
+        if (y > 275) { doc.addPage(); y = 20; }
+        const dt = new Date(r.data + 'T00:00:00').toLocaleDateString('pt-BR');
+        doc.text(`${dt} - ${r.nome || 'Sem nome'} (${r.responsavel || '-'})`, 14, y); y += 5;
+      });
+      y += 5;
+    }
+
+    if (metricas.statusEquipamentos && metricas.statusEquipamentos.length > 0) {
+      if (y > 240) { doc.addPage(); y = 20; }
+      doc.setFontSize(14);
+      doc.text('STATUS ULTIMA VISITA - AREAS TECNICAS', 14, y); y += 7;
+      doc.setFontSize(9);
+      metricas.statusEquipamentos.forEach((at: any) => {
+        if (y > 275) { doc.addPage(); y = 20; }
+        const dt = at.ultimaVisita ? new Date(at.ultimaVisita + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
+        doc.text(`${at.nome || '-'} | ${dt} | ${at.statusUltimaVisita || '-'}`, 14, y); y += 5;
+      });
+      y += 5;
+    }
+
+    if (itensRelevantesSupervisor.length > 0) {
+      if (y > 240) { doc.addPage(); y = 20; }
+      doc.setFontSize(14);
+      doc.text('ITENS RELEVANTES (SUPERVISAO)', 14, y); y += 7;
+      doc.setFontSize(9);
+      itensRelevantesSupervisor.forEach((it: any) => {
+        if (y > 275) { doc.addPage(); y = 20; }
+        const dt = it.data_abertura ? new Date(it.data_abertura + 'T00:00:00').toLocaleDateString('pt-BR') : (it.created_at ? new Date(it.created_at).toLocaleDateString('pt-BR') : '-');
+        const st = it.status === 'concluido' ? 'CONCLUIDO' : it.status === 'em_andamento' ? 'EM ANDAMENTO' : 'PENDENTE';
+        const desc = it.descricao || it.titulo || '-';
+        const linhas = doc.splitTextToSize(`${dt} [${st}] ${desc}`, 180);
+        doc.text(linhas, 14, y);
+        y += linhas.length * 4 + 1;
+      });
+    }
+
+    const fname = `dashboard_${(contrato?.nome || 'contrato').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fname);
+  };
+
   return (
     <div className="space-y-4 sm:space-y-8">
       {/* Overlay de loading durante troca de prédio */}
@@ -608,6 +691,13 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
                   }}
                   className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30 text-white"
                 >Mês passado</button>
+                <button
+                  onClick={handleExportarPDF}
+                  className="text-xs px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white font-semibold flex items-center gap-1 ml-1"
+                  title="Baixar PDF do Dashboard com o contrato e periodo filtrados"
+                >
+                  <FileDown className="w-3.5 h-3.5" /> Exportar PDF
+                </button>
               </div>
             </div>
           </div>
@@ -963,9 +1053,9 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
                 <tbody>
                   {itensRelevantesSupervisor.map((item: any, index: number) => {
                     const statusConfig: Record<string, { label: string; cls: string }> = {
-                      pendente: { label: 'Pendente', cls: 'bg-yellow-100 text-yellow-800' },
-                      em_andamento: { label: 'Em andamento', cls: 'bg-blue-100 text-blue-800' },
-                      concluido: { label: 'Concluído', cls: 'bg-green-100 text-green-800' },
+                      pendente: { label: 'Pendente', cls: 'bg-yellow-500 text-black font-bold' },
+                      em_andamento: { label: 'Em andamento', cls: 'bg-blue-500 text-white font-bold' },
+                      concluido: { label: 'Concluído', cls: 'bg-green-500 text-black font-bold' },
                     };
                     const cfg = statusConfig[item.status as string] || { label: item.status || '—', cls: 'bg-gray-100 text-gray-700' };
                     return (
