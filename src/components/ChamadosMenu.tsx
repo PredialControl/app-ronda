@@ -1,146 +1,65 @@
-import { SectionTabs } from './SectionTabs';
 import { useState } from 'react';
-import {
-  PhoneCall,
-  Plus,
-  List,
-  Clock,
-  CheckCircle,
-  XCircle,
-  ArrowRight
-} from 'lucide-react';
-
-type SectionType = 'implantacao' | 'supervisao';
-
-interface MenuItem {
-  id: string;
-  title: string;
-  description: string;
-  icon: any;
-  onClick: () => void;
-}
+import { ExternalLink, RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
 
 interface ChamadosMenuProps {
-  onNavigate: (destination: string) => void;
+  onNavigate?: (destination: string) => void;
 }
 
-export function ChamadosMenu({ onNavigate }: ChamadosMenuProps) {
-  const [currentSection, setCurrentSection] = useState<SectionType>('implantacao');
+const CHAMADOS_URL = 'https://registro-de-chamados.vercel.app';
 
-  const implantacaoItems: MenuItem[] = [
-    {
-      id: 'novo-chamado',
-      title: 'Novo Chamado',
-      description: 'Abrir um novo chamado de implantação',
-      icon: Plus,
-      onClick: () => onNavigate('chamados-novo-implantacao')
-    },
-    {
-      id: 'listar-chamados',
-      title: 'Listar Chamados',
-      description: 'Visualizar todos os chamados de implantação',
-      icon: List,
-      onClick: () => onNavigate('chamados-lista-implantacao')
-    },
-    {
-      id: 'em-andamento',
-      title: 'Em Andamento',
-      description: 'Chamados em andamento na implantação',
-      icon: Clock,
-      onClick: () => onNavigate('chamados-andamento-implantacao')
-    },
-    {
-      id: 'concluidos',
-      title: 'Concluídos',
-      description: 'Chamados finalizados da implantação',
-      icon: CheckCircle,
-      onClick: () => onNavigate('chamados-concluidos-implantacao')
-    },
-  ];
+export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
+  const [iframeKey, setIframeKey] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
 
-  const supervisaoItems: MenuItem[] = [
-    {
-      id: 'novo-chamado',
-      title: 'Novo Chamado',
-      description: 'Abrir um novo chamado de supervisão',
-      icon: Plus,
-      onClick: () => onNavigate('chamados-novo-supervisao')
-    },
-    {
-      id: 'listar-chamados',
-      title: 'Listar Chamados',
-      description: 'Visualizar todos os chamados de supervisão',
-      icon: List,
-      onClick: () => onNavigate('chamados-lista-supervisao')
-    },
-    {
-      id: 'em-andamento',
-      title: 'Em Andamento',
-      description: 'Chamados em andamento na supervisão',
-      icon: Clock,
-      onClick: () => onNavigate('chamados-andamento-supervisao')
-    },
-    {
-      id: 'concluidos',
-      title: 'Concluídos',
-      description: 'Chamados finalizados da supervisão',
-      icon: CheckCircle,
-      onClick: () => onNavigate('chamados-concluidos-supervisao')
-    },
-    {
-      id: 'cancelados',
-      title: 'Cancelados',
-      description: 'Chamados cancelados da supervisão',
-      icon: XCircle,
-      onClick: () => onNavigate('chamados-cancelados-supervisao')
-    },
-  ];
-
-  const currentItems = currentSection === 'implantacao' ? implantacaoItems : supervisaoItems;
+  const recarregar = () => setIframeKey(k => k + 1);
+  const abrirExterno = () => window.open(CHAMADOS_URL, '_blank', 'noopener,noreferrer');
 
   return (
-    <div className="w-full">
-      <SectionTabs currentSection={currentSection} onSectionChange={setCurrentSection} />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-        {currentItems.map((item) => {
-          const Icon = item.icon;
-
-          return (
-            <button
-              key={item.id}
-              onClick={item.onClick}
-              className="group relative bg-white border-2 border-gray-200 rounded-lg p-6 text-left
-                       hover:border-orange-500 hover:shadow-lg transition-all duration-200
-                       hover:scale-105 active:scale-95"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="bg-orange-100 text-orange-600 p-3 rounded-lg group-hover:bg-orange-600
-                              group-hover:text-white transition-colors duration-200">
-                  <Icon className="w-6 h-6" />
-                </div>
-                <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-orange-600
-                                     group-hover:translate-x-1 transition-all duration-200" />
-              </div>
-
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-orange-600
-                           transition-colors duration-200">
-                {item.title}
-              </h3>
-
-              <p className="text-sm text-gray-600 line-clamp-2">
-                {item.description}
-              </p>
-            </button>
-          );
-        })}
+    <div className={`w-full flex flex-col ${fullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}>
+      {/* Barra de acoes */}
+      <div className="flex items-center justify-between gap-3 bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Registro de Chamados</h2>
+          <p className="text-xs text-gray-500">Sistema integrado — login separado do App Ronda</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={recarregar}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+            title="Recarregar"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span className="hidden sm:inline">Recarregar</span>
+          </button>
+          <button
+            onClick={() => setFullscreen(f => !f)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+            title={fullscreen ? 'Sair tela cheia' : 'Tela cheia'}
+          >
+            {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            <span className="hidden sm:inline">{fullscreen ? 'Sair' : 'Tela cheia'}</span>
+          </button>
+          <button
+            onClick={abrirExterno}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-md transition-colors"
+            title="Abrir em nova aba"
+          >
+            <ExternalLink className="w-4 h-4" />
+            <span className="hidden sm:inline">Nova aba</span>
+          </button>
+        </div>
       </div>
 
-      {currentItems.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
-          <p>Nenhum item disponível nesta seção</p>
-        </div>
-      )}
+      {/* Iframe */}
+      <div className={`flex-1 bg-gray-50 ${fullscreen ? 'h-[calc(100vh-60px)]' : 'h-[calc(100vh-180px)] min-h-[600px]'}`}>
+        <iframe
+          key={iframeKey}
+          src={CHAMADOS_URL}
+          title="Registro de Chamados"
+          className="w-full h-full border-0"
+          allow="camera; microphone; clipboard-read; clipboard-write"
+        />
+      </div>
     </div>
   );
 }
