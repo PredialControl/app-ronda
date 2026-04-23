@@ -2,6 +2,8 @@ import { supabase } from './supabase';
 import { compare } from 'bcryptjs';
 
 // Tipos para usuários autorizados
+export type PerfilUsuario = 'master' | 'implantacao' | 'supervisor' | 'gerente_predial' | 'sindico';
+
 export interface UsuarioAutorizado {
   id: string;
   email: string;
@@ -10,6 +12,7 @@ export interface UsuarioAutorizado {
   permissoes: string[];
   ativo: boolean;
   is_admin?: boolean;
+  perfil?: PerfilUsuario;
   ultimoAcesso?: string;
 }
 
@@ -107,15 +110,24 @@ export class AuthService {
         .update({ ultimo_acesso: new Date().toISOString() })
         .eq('id', usuarioDB.id);
 
-      // Criar objeto de usuário
+      // Montar permissões a partir do perfil
+      const perfil: PerfilUsuario = (usuarioDB.perfil as PerfilUsuario) || 'supervisor';
+      const permissoesPorPerfil: Record<PerfilUsuario, string[]> = {
+        master: ['admin', 'gerenciar_usuarios', 'tudo'],
+        implantacao: ['kanban_mover', 'criar_relatorio_pendencia', 'criar_parecer_tecnico', 'adicionar_agenda_manual', 'ver_tudo'],
+        supervisor: ['criar_parecer_tecnico', 'criar_relatorio_ronda', 'adicionar_agenda_manual', 'ver_tudo'],
+        gerente_predial: ['abrir_chamado', 'ver_chamados'],
+        sindico: ['abrir_chamado', 'ver_tudo'],
+      };
       const usuario: UsuarioAutorizado = {
         id: usuarioDB.id,
         email: usuarioDB.email,
         nome: usuarioDB.nome,
         cargo: usuarioDB.cargo || 'Usuário',
-        permissoes: usuarioDB.is_admin ? ['admin'] : [],
+        permissoes: permissoesPorPerfil[perfil] || [],
         ativo: usuarioDB.ativo,
-        is_admin: usuarioDB.is_admin,
+        is_admin: usuarioDB.is_admin || perfil === 'master',
+        perfil,
       };
 
       // Criar sessão

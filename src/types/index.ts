@@ -47,6 +47,8 @@ export interface OutroItemCorrigido {
   originalItemId?: string;
 }
 
+export type PerfilUsuario = 'master' | 'implantacao' | 'supervisor' | 'gerente_predial' | 'sindico';
+
 export interface UsuarioAutorizado {
   id: string;
   email: string;
@@ -54,7 +56,8 @@ export interface UsuarioAutorizado {
   cargo: string;
   permissoes: string[];
   ativo: boolean;
-  is_admin?: boolean; // Se é administrador
+  is_admin?: boolean;
+  perfil?: PerfilUsuario; // master | implantacao | supervisor | gerente_predial | sindico
   ultimoAcesso?: string;
 }
 
