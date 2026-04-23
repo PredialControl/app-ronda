@@ -286,11 +286,11 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
     return { counts: base, total: fonte.length };
   }, [chamados, contratoFiltro]);
 
-  // Dados dos gráficos — com base nos filtrados
+  // Dados dos gráficos — com base nos filtrados. "Itens Apontados" = total geral
   const chartStatusData = useMemo(() => {
     return (Object.keys(STATUS_CONFIG) as ChamadoStatus[]).map(k => ({
       label: STATUS_CONFIG[k].label,
-      value: filtrados.filter(c => c.status === k).length,
+      value: k === 'itens_apontados' ? filtrados.length : filtrados.filter(c => c.status === k).length,
       color: STATUS_CONFIG[k].chart,
     }));
   }, [filtrados]);
@@ -507,11 +507,11 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
             })}
           </div>
 
-          {/* Coluna 2: Donut chart + legenda */}
+          {/* Coluna 2: Donut chart + legenda (exclui "Itens Apontados" que é o total) */}
           <div className="flex flex-col items-center">
-            <DonutChart data={chartStatusData} size={220} thickness={36} />
+            <DonutChart data={chartStatusData.filter(d => d.label !== 'Itens Apontados')} size={220} thickness={36} />
             <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-3 text-xs">
-              {chartStatusData.filter(d => d.value > 0).map((d, i) => (
+              {chartStatusData.filter(d => d.value > 0 && d.label !== 'Itens Apontados').map((d, i) => (
                 <div key={i} className="flex items-center gap-1">
                   <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: d.color }}></span>
                   <span className="text-gray-300">{d.label}</span>
