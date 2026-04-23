@@ -3458,55 +3458,67 @@ export function SupervisorApp() {
           </div>
         </div>
 
-        {/* Resumo */}
-        <div className="p-4">
-          <div className="bg-gradient-to-r from-emerald-500/20 to-red-500/20 rounded-xl p-4 border border-slate-700">
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="bg-slate-800/50 rounded-lg p-3">
-                <div className="text-3xl font-bold text-emerald-400">{itensOk}</div>
-                <div className="text-sm text-gray-400">OK</div>
-              </div>
-              <div className="bg-slate-800/50 rounded-lg p-3">
-                <div className="text-3xl font-bold text-red-400">{itensNaoOk}</div>
-                <div className="text-sm text-gray-400">NÃO OK</div>
+        {/* Resumo — só para rondas (Semanal/Mensal/Bimestral), NAO para Relatorio Manual */}
+        {templateSelecionado !== 'MANUAL' && (
+          <div className="p-4">
+            <div className="bg-gradient-to-r from-emerald-500/20 to-red-500/20 rounded-xl p-4 border border-slate-700">
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="bg-slate-800/50 rounded-lg p-3">
+                  <div className="text-3xl font-bold text-emerald-400">{itensOk}</div>
+                  <div className="text-sm text-gray-400">OK</div>
+                </div>
+                <div className="bg-slate-800/50 rounded-lg p-3">
+                  <div className="text-3xl font-bold text-red-400">{itensNaoOk}</div>
+                  <div className="text-sm text-gray-400">NÃO OK</div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
+        {templateSelecionado === 'MANUAL' && (
+          <div className="p-4">
+            <div className="bg-gradient-to-r from-blue-500/20 to-blue-700/20 rounded-xl p-4 border border-slate-700">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-300">{checklistItems.length}</div>
+                <div className="text-sm text-gray-400">Pend&ecirc;ncias registradas</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Lista de itens como cards com fotos */}
         <div className="flex-1 overflow-auto px-4 pb-4">
           <div className="grid grid-cols-1 gap-4">
-            {checklistItems.map((item) => (
+            {checklistItems.map((item) => {
+              const isManual = templateSelecionado === 'MANUAL';
+              const ring = isManual
+                ? 'ring-2 ring-blue-500/50'
+                : (item.status === 'OK' ? 'ring-2 ring-emerald-500/50' : 'ring-2 ring-red-500/50');
+              const headerBg = isManual
+                ? 'bg-gradient-to-r from-blue-600 to-blue-700'
+                : (item.status === 'OK' ? 'bg-gradient-to-r from-emerald-600 to-emerald-700' : 'bg-gradient-to-r from-red-600 to-red-700');
+              return (
               <div
                 key={item.id}
-                className={`rounded-2xl overflow-hidden shadow-lg ${
-                  item.status === 'OK'
-                    ? 'ring-2 ring-emerald-500/50'
-                    : 'ring-2 ring-red-500/50'
-                }`}
+                className={`rounded-2xl overflow-hidden shadow-lg ${ring}`}
               >
                 {/* Header com nome do item - EM CIMA */}
-                <div className={`px-4 py-3 flex items-center justify-between ${
-                  item.status === 'OK'
-                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-700'
-                    : 'bg-gradient-to-r from-red-600 to-red-700'
-                }`}>
+                <div className={`px-4 py-3 flex items-center justify-between ${headerBg}`}>
                   <div className="flex items-center gap-2">
-                    {item.status === 'OK' ? (
+                    {isManual ? (
+                      <Camera className="w-5 h-5 text-white" />
+                    ) : item.status === 'OK' ? (
                       <CheckCircle className="w-5 h-5 text-white" />
                     ) : (
                       <AlertCircle className="w-5 h-5 text-white" />
                     )}
                     <h3 className="font-bold text-white text-lg">{item.tipo}</h3>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    item.status === 'OK'
-                      ? 'bg-white/20 text-white'
-                      : 'bg-white/20 text-white'
-                  }`}>
-                    {item.status === 'OK' ? 'OK' : 'NÃO OK'}
-                  </span>
+                  {!isManual && (
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white">
+                      {item.status === 'OK' ? 'OK' : 'NÃO OK'}
+                    </span>
+                  )}
                 </div>
 
                 {/* Foto do item */}
@@ -3538,16 +3550,19 @@ export function SupervisorApp() {
                   </p>
                   {item.observacao && (
                     <p className={`text-sm mt-3 p-3 rounded-lg ${
-                      item.status === 'NAO_OK'
-                        ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                        : 'bg-slate-700 text-gray-300'
+                      isManual
+                        ? 'bg-blue-500/15 text-blue-200 border border-blue-500/30'
+                        : (item.status === 'NAO_OK'
+                            ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                            : 'bg-slate-700 text-gray-300')
                     }`}>
                       {item.observacao}
                     </p>
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
