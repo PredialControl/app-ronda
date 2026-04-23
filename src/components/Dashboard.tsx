@@ -65,19 +65,31 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
   });
   const [laudosStats, setLaudosStats] = useState({ total: 0, vencidos: 0, emAnalise: 0, emDia: 0 });
 
-  // Carregar dados de implantação quando mudar contrato OU o período
+  // Auto-sync localStorage -> Supabase uma vez ao abrir o Dashboard
+  useEffect(() => {
+    if (!contratos || contratos.length === 0) return;
+    contratos.forEach(ct => {
+      try {
+        const raw = localStorage.getItem(`kanban_items_${ct.id}`);
+        if (!raw) return;
+        const items = JSON.parse(raw);
+        if (Array.isArray(items) && items.length > 0) {
+          kanbanEventoService.syncContrato(ct.id, ct.nome, items);
+        }
+      } catch {}
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contratos?.length]);
+
+  // Carregar dados de implantação quando mudar contrato
   useEffect(() => {
     const carregarImplantacao = async () => {
       try {
-        // Kanban — filtrar pelo contrato E pelo período (qualquer data do card dentro da faixa)
+        // Kanban — TODOS os cards do contrato (snapshot atual, sem filtro de data)
         const kanbanEventos = await kanbanEventoService.getAll();
-        const doContrato = kanbanEventos.filter((ke: any) => {
-          if (ke.contrato_id !== contrato.id) return false;
-          const datas = [ke.data_andamento, ke.data_vistoria, ke.data_recebimento, ke.data_correcao].filter(Boolean) as string[];
-          if (datas.length === 0) return false;
-          // Entra se QUALQUER data do card estiver dentro da faixa
-          return datas.some(d => d >= startDate && d <= endDate);
-        });
+        console.log('[Dashboard] kanban_eventos do Supabase:', kanbanEventos.length, 'total');
+        const doContrato = kanbanEventos.filter((ke: any) => ke.contrato_id === contrato.id);
+        console.log('[Dashboard] Cards deste contrato:', doContrato.length);
         setKanbanStats({
           total: doContrato.length,
           aguardando: doContrato.filter((ke: any) => ke.status === 'aguardando').length,
@@ -89,7 +101,6 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
         console.warn('Erro ao carregar kanban stats:', err);
       }
       try {
-        // Laudos são snapshot atual, não filtram por período
         const laudos = await laudoService.getByContrato(contrato.id);
         setLaudosStats({
           total: laudos.length,
@@ -102,7 +113,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
       }
     };
     carregarImplantacao();
-  }, [contrato.id, startDate, endDate]);
+  }, [contrato.id]);
 
   // Se o mês atual não tiver rondas, usar automaticamente o mês da última ronda
   // Removido useEffect que alterava o mês automaticamente se não houvesse rondas
@@ -537,7 +548,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-700">{kanbanStats.aguardando}</div>
-            <p className="text-xs text-gray-600">no período filtrado</p>
+            <p className="text-xs text-gray-600">cards parados</p>
           </CardContent>
         </GlowingCard>
 
@@ -548,7 +559,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">{kanbanStats.emAndamento}</div>
-            <p className="text-xs text-gray-600">no período filtrado</p>
+            <p className="text-xs text-gray-600">sendo trabalhados</p>
           </CardContent>
         </GlowingCard>
 
@@ -559,7 +570,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{kanbanStats.emCorrecao}</div>
-            <p className="text-xs text-gray-600">no período filtrado</p>
+            <p className="text-xs text-gray-600">retorno para correcao</p>
           </CardContent>
         </GlowingCard>
 
@@ -570,7 +581,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{kanbanStats.finalizados}</div>
-            <p className="text-xs text-gray-600">{kanbanStats.total > 0 ? `${Math.round((kanbanStats.finalizados / kanbanStats.total) * 100)}% do total` : 'no período filtrado'}</p>
+            <p className="text-xs text-gray-600">{kanbanStats.total > 0 ? `${Math.round((kanbanStats.finalizados / kanbanStats.total) * 100)}% do total` : 'total finalizado'}</p>
           </CardContent>
         </GlowingCard>
       </div>
