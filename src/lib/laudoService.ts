@@ -9,6 +9,7 @@ export interface Laudo {
     data_emissao?: string;
     periodicidade?: string;
     observacoes?: string;
+    link_drive?: string;
     created_at?: string;
     updated_at?: string;
 }
@@ -95,16 +96,11 @@ export const laudoService = {
 
         console.log(`📋 Adicionando ${missingLaudos.length} laudos faltantes...`);
 
-        const ontem = new Date();
-        ontem.setDate(ontem.getDate() - 1);
-        const dataVencimento = ontem.toISOString().split('T')[0];
-
         const laudosParaCriar = missingLaudos.map(def => ({
             contrato_id: contratoId,
             titulo: def.titulo,
             periodicidade: def.periodicidade,
-            status: 'vencidos' as const,
-            data_vencimento: dataVencimento,
+            status: 'em-analise' as const,
         }));
 
         if (!forceLocal) {
@@ -140,17 +136,12 @@ export const laudoService = {
 
     // Inicializar laudos padrão para um contrato
     async initializeDefaults(contratoId: string, forceLocal = false): Promise<Laudo[]> {
-        // Data de vencimento ontem (para ficar vencido)
-        const ontem = new Date();
-        ontem.setDate(ontem.getDate() - 1);
-        const dataVencimento = ontem.toISOString().split('T')[0];
-
+        // Novos laudos começam em 'Em Análise' sem data — usuário preenche conforme for verificando
         const laudosParaCriar = DEFAULT_LAUDOS.map(def => ({
             contrato_id: contratoId,
             titulo: def.titulo,
             periodicidade: def.periodicidade,
-            status: 'vencidos' as const,
-            data_vencimento: dataVencimento,
+            status: 'em-analise' as const,
         }));
 
         if (!forceLocal) {

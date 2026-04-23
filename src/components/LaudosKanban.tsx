@@ -19,7 +19,8 @@ import {
   RefreshCw,
   Mail,
   Server,
-  Clock
+  Clock,
+  ExternalLink
 } from 'lucide-react';
 import { emailService, EmailDestinatario } from '@/lib/emailService';
 import { laudoService, Laudo } from '@/lib/laudoService';
@@ -698,10 +699,12 @@ export function LaudosKanban({ contratoSelecionado }: LaudosKanbanProps) {
               <div>
                 <Label className="block text-sm font-medium text-gray-700 mb-1">Status</Label>
                 <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${selectedCard.status === 'em-dia' ? 'bg-green-600 text-white' :
+                  selectedCard.status === 'em-analise' ? 'bg-blue-600 text-white' :
                   selectedCard.status === 'proximo-vencimento' ? 'bg-yellow-500 text-black' :
                     'bg-red-600 text-white'
                   }`}>
                   {selectedCard.status === 'em-dia' ? 'Em Dia' :
+                    selectedCard.status === 'em-analise' ? 'Em Análise' :
                     selectedCard.status === 'proximo-vencimento' ? 'Próximo ao Vencimento' : 'Vencido'}
                 </span>
               </div>
@@ -734,6 +737,41 @@ export function LaudosKanban({ contratoSelecionado }: LaudosKanbanProps) {
                   <p className="text-gray-900">{selectedCard.periodicidade}</p>
                 </div>
               )}
+
+              {/* Link do Google Drive */}
+              <div className="border-t border-gray-200 pt-4">
+                <Label className="block text-sm font-medium text-gray-700 mb-2">Link do Documento (Google Drive)</Label>
+                <Input
+                  type="url"
+                  value={selectedCard.link_drive || ''}
+                  onChange={async (e) => {
+                    const novoLink = e.target.value;
+                    const updated = { ...selectedCard, link_drive: novoLink };
+                    setSelectedCard(updated);
+                    setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
+                  }}
+                  onBlur={async (e) => {
+                    if (!selectedCard) return;
+                    try {
+                      await laudoService.update(selectedCard.id, { link_drive: e.target.value });
+                    } catch (err) { console.error('Erro ao salvar link:', err); }
+                  }}
+                  placeholder="https://drive.google.com/file/d/..."
+                  className="w-full"
+                />
+                {selectedCard.link_drive && (
+                  <Button
+                    onClick={() => window.open(selectedCard.link_drive, '_blank')}
+                    className="mt-2 w-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Abrir Documento no Drive
+                  </Button>
+                )}
+                {!selectedCard.link_drive && (
+                  <p className="text-xs text-gray-500 mt-1">Cole o link do Google Drive para acessar o documento direto do kanban.</p>
+                )}
+              </div>
             </div>
 
             <div className="flex justify-end mt-6">
