@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 import { laudoService } from '@/lib/laudoService';
-import { rondaService } from '@/lib/supabaseService';
+import { rondaService, areaTecnicaService } from '@/lib/supabaseService';
 import { kanbanEventoService } from '@/lib/supabaseService';
 
 interface DashboardProps {
@@ -76,7 +76,19 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
         const nomeBusca = (contrato.nome || '').trim().toLowerCase();
         const matched = all.filter((r: any) => (r.contrato || '').trim().toLowerCase() === nomeBusca);
         console.log('[Dashboard] Rondas total no banco:', all.length, '→ do contrato', contrato.nome, ':', matched.length);
-        setRondasDoContrato(matched as Ronda[]);
+        // Carregar áreas técnicas de cada ronda em paralelo para alimentar Status de Equipamentos
+        const comAreas = await Promise.all(matched.map(async (r: any) => {
+          try {
+            const areas = await areaTecnicaService.getByRonda(r.id);
+            return { ...r, areasTecnicas: areas || [] };
+          } catch (err) {
+            console.warn('[Dashboard] falha buscando areas da ronda', r.id, err);
+            return r;
+          }
+        }));
+        console.log('[Dashboard] Rondas com areasTecnicas carregadas. Total de areas:',
+          comAreas.reduce((acc, r: any) => acc + (r.areasTecnicas?.length || 0), 0));
+        setRondasDoContrato(comAreas as Ronda[]);
       } catch (e) {
         console.warn('[Dashboard] erro ao carregar rondas direto:', e);
       }
