@@ -469,47 +469,30 @@ async function syncItemsToSupabase(
           onProgress?.(processed, pending.length, '');
         }
 
-        // 4B. Criar constatações (subseções CONSTATACAO com fotos)
+        // 4B. Criar constatações: TODAS da mesma seção vão para UMA ÚNICA subseção CONSTATAÇÃO
+        // (fotos aparecem lado a lado no grid; usuário pode splitear manualmente depois se quiser)
         if (constatacaoItems.length > 0) {
           try {
-            // Ativar tem_subsecoes na seção
             await supabase.from('relatorio_secoes').update({ tem_subsecoes: true }).eq('id', secao.id);
 
-            // Agrupar constatações - cada uma vira uma subseção separada
-            const subsecaoOrdemBase = (secao as any).subsecoes?.length || 0;
+            // 1. Upload de todas as fotos e coleta de legendas/observações
+            const fotosUrls: string[] = [];
+            const legendasNovas: string[] = [];
+            const observacoesNovas: string[] = [];
+            const itemsSincronizados: typeof constatacaoItems = [];
 
             for (let ci = 0; ci < constatacaoItems.length; ci++) {
               const item = constatacaoItems[ci];
               try {
                 onProgress?.(processed, pending.length, `Enviando constatação...`);
                 const fotoUrl = await uploadFotoItem(item, relatorioId!);
-
-                // Criar subseção CONSTATACAO
-                const letra = String.fromCharCode(65 + subsecaoOrdemBase + ci);
-                // Descrição geral + legenda da foto como JSON
-                const legendas = item.legendaFoto ? [item.legendaFoto] : [''];
-                const temLegenda = item.legendaFoto && item.legendaFoto.trim() !== '';
-                const descJson = (item.observacao || temLegenda)
-                  ? JSON.stringify({ text: item.observacao || '', legendas })
-                  : undefined;
-
-                const { error: subErr } = await supabase
-                  .from('relatorio_subsecoes')
-                  .insert([{
-                    secao_id: secao.id,
-                    ordem: subsecaoOrdemBase + ci,
-                    titulo: `${letra} - CONSTATAÇÃO`,
-                    tipo: 'CONSTATACAO',
-                    fotos_constatacao: fotoUrl ? [fotoUrl] : [],
-                    descricao_constatacao: descJson,
-                  }]);
-
-                if (subErr) {
-                  errorDetails.push(`Erro constatação: ${subErr.message}`);
-                  errorCount++;
-                } else {
-                  await dbMarkSynced(item.id);
-                  syncedCount++;
+                if (fotoUrl) {
+                  fotosUrls.push(fotoUrl);
+                  legendasNovas.push(item.legendaFoto || '');
+                  if (item.observacao && item.observacao.trim()) {
+                    observacoesNovas.push(item.observacao.trim());
+                  }
+                  itemsSincronizados.push(item);
                 }
               } catch (constErr: any) {
                 errorDetails.push(`Constatação: ${constErr.message || constErr}`);
@@ -518,10 +501,84 @@ async function syncItemsToSupabase(
               processed++;
               onProgress?.(processed, pending.length, '');
             }
+
+            if (fotosUrls.length > 0) {
+              // 2. Anexa em subseção CONSTATAÇÃO existente OU cria uma nova
+              const { data: existingSubs } = await supabase
+                .from('relatorio_subsecoes')
+                .select('id, fotos_constatacao, descricao_constatacao, ordem')
+                .eq('secao_id', secao.id)
+                .eq('tipo', 'CONSTATACAO')
+                .order('ordem', { ascending: true })
+                .limit(1);
+
+              if (existingSubs && existingSubs.length > 0) {
+                const sub = existingSubs[0];
+                let prevText = '';
+                let prevLegendas: string[] = [];
+                if (sub.descricao_constatacao) {
+                  try {
+                    const parsed = JSON.parse(sub.descricao_constatacao);
+                    prevText = parsed.text || '';
+                    prevLegendas = Array.isArray(parsed.legendas) ? parsed.legendas : [];
+                  } catch {
+                    prevText = sub.descricao_constatacao;
+                  }
+                }
+                const novasFotos = [...(sub.fotos_constatacao || []), ...fotosUrls];
+                const novasLegendas = [...prevLegendas, ...legendasNovas];
+                const textoMerged = [prevText, ...observacoesNovas].filter(Boolean).join('\n');
+                const descJson = (textoMerged || novasLegendas.some(l => l && l.trim()))
+                  ? JSON.stringify({ text: textoMerged, legendas: novasLegendas })
+                  : null;
+
+                const { error: updErr } = await supabase
+                  .from('relatorio_subsecoes')
+                  .update({ fotos_constatacao: novasFotos, descricao_constatacao: descJson })
+                  .eq('id', sub.id);
+
+                if (updErr) {
+                  errorDetails.push(`Erro ao atualizar constatação: ${updErr.message}`);
+                  errorCount += itemsSincronizados.length;
+                } else {
+                  for (const it of itemsSincronizados) {
+                    await dbMarkSynced(it.id);
+                    syncedCount++;
+                  }
+                }
+              } else {
+                const subsecaoOrdemBase = (secao as any).subsecoes?.length || 0;
+                const letra = String.fromCharCode(65 + subsecaoOrdemBase);
+                const textoMerged = observacoesNovas.join('\n');
+                const descJson = (textoMerged || legendasNovas.some(l => l && l.trim()))
+                  ? JSON.stringify({ text: textoMerged, legendas: legendasNovas })
+                  : undefined;
+
+                const { error: subErr } = await supabase
+                  .from('relatorio_subsecoes')
+                  .insert([{
+                    secao_id: secao.id,
+                    ordem: subsecaoOrdemBase,
+                    titulo: `${letra} - CONSTATAÇÃO`,
+                    tipo: 'CONSTATACAO',
+                    fotos_constatacao: fotosUrls,
+                    descricao_constatacao: descJson,
+                  }]);
+
+                if (subErr) {
+                  errorDetails.push(`Erro constatação: ${subErr.message}`);
+                  errorCount += itemsSincronizados.length;
+                } else {
+                  for (const it of itemsSincronizados) {
+                    await dbMarkSynced(it.id);
+                    syncedCount++;
+                  }
+                }
+              }
+            }
           } catch (constBlockErr: any) {
             errorDetails.push(`Bloco constatação: ${constBlockErr.message}`);
             errorCount += constatacaoItems.length;
-            processed += constatacaoItems.length;
           }
         }
       }
