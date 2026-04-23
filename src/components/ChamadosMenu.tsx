@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Plus, Search, Filter, X, Save, Trash2, Camera, MessageSquare,
-  Building2, Clock, AlertCircle, HardHat,
-  Calendar, User as UserIcon, Edit2, RefreshCw
+  Building2, Clock, AlertCircle, HardHat, FileSpreadsheet,
+  Calendar, User as UserIcon, Edit2, RefreshCw, Eye, ChevronLeft, ChevronRight,
+  History, Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,16 +17,17 @@ import {
 } from '@/lib/supabaseService';
 import type { Contrato } from '@/types';
 import { authService } from '@/lib/auth';
+import ExcelJS from 'exceljs';
 
 type StatusFilter = ChamadoStatus | 'todos';
 
-const STATUS_CONFIG: Record<ChamadoStatus, { label: string; bg: string; text: string; dot: string }> = {
-  itens_apontados:     { label: 'Itens Apontados',     bg: 'bg-blue-50',    text: 'text-blue-700',    dot: 'bg-blue-500' },
-  em_andamento:        { label: 'Em andamento',        bg: 'bg-yellow-50',  text: 'text-yellow-700',  dot: 'bg-yellow-500' },
-  improcedente:        { label: 'Improcedente',        bg: 'bg-orange-50',  text: 'text-orange-700',  dot: 'bg-orange-500' },
-  aguardando_vistoria: { label: 'Aguardando vistoria', bg: 'bg-purple-50',  text: 'text-purple-700',  dot: 'bg-purple-500' },
-  concluido:           { label: 'Concluído',           bg: 'bg-green-50',   text: 'text-green-700',   dot: 'bg-green-500' },
-  f_indevido:          { label: 'F. Indevido',         bg: 'bg-red-50',     text: 'text-red-700',     dot: 'bg-red-500' },
+const STATUS_CONFIG: Record<ChamadoStatus, { label: string; bg: string; text: string; dot: string; chart: string }> = {
+  itens_apontados:     { label: 'Itens Apontados',     bg: 'bg-blue-50',    text: 'text-blue-700',    dot: 'bg-blue-500',    chart: '#3b82f6' },
+  em_andamento:        { label: 'Em andamento',        bg: 'bg-yellow-50',  text: 'text-yellow-700',  dot: 'bg-yellow-500',  chart: '#eab308' },
+  improcedente:        { label: 'Improcedente',        bg: 'bg-orange-50',  text: 'text-orange-700',  dot: 'bg-orange-500',  chart: '#f97316' },
+  aguardando_vistoria: { label: 'Aguardando vistoria', bg: 'bg-purple-50',  text: 'text-purple-700',  dot: 'bg-purple-500',  chart: '#a855f7' },
+  concluido:           { label: 'Concluído',           bg: 'bg-green-50',   text: 'text-green-700',   dot: 'bg-green-500',   chart: '#22c55e' },
+  f_indevido:          { label: 'F. Indevido',         bg: 'bg-red-50',     text: 'text-red-700',     dot: 'bg-red-500',     chart: '#ef4444' },
 };
 
 const UPDATE_TYPE_CONFIG: Record<ChamadoUpdateType, { label: string; icon: string; cls: string }> = {
@@ -38,8 +40,58 @@ interface ChamadosMenuProps {
   onNavigate?: (destination: string) => void;
 }
 
+function PieChart({ data, size = 160 }: { data: Array<{ label: string; value: number; color: string }>; size?: number }) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+  if (total === 0) {
+    return (
+      <div className="flex items-center justify-center text-gray-400 text-sm" style={{ width: size, height: size }}>
+        Sem dados
+      </div>
+    );
+  }
+  const r = size / 2 - 10;
+  const cx = size / 2;
+  const cy = size / 2;
+  let cumulative = 0;
+  const paths = data.filter(d => d.value > 0).map((d, i) => {
+    const startAngle = (cumulative / total) * 2 * Math.PI;
+    cumulative += d.value;
+    const endAngle = (cumulative / total) * 2 * Math.PI;
+    const x1 = cx + r * Math.sin(startAngle);
+    const y1 = cy - r * Math.cos(startAngle);
+    const x2 = cx + r * Math.sin(endAngle);
+    const y2 = cy - r * Math.cos(endAngle);
+    const large = endAngle - startAngle > Math.PI ? 1 : 0;
+    const percent = Math.round((d.value / total) * 100);
+    const midAngle = (startAngle + endAngle) / 2;
+    const lx = cx + (r * 0.6) * Math.sin(midAngle);
+    const ly = cy - (r * 0.6) * Math.cos(midAngle);
+    return (
+      <g key={i}>
+        <path
+          d={`M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`}
+          fill={d.color}
+          stroke="white"
+          strokeWidth={1}
+        />
+        {percent >= 5 && (
+          <text x={lx} y={ly} textAnchor="middle" dominantBaseline="central" fill="white" fontSize="10" fontWeight="bold">
+            {percent}%
+          </text>
+        )}
+      </g>
+    );
+  });
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {paths}
+    </svg>
+  );
+}
+
 export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
   const usuario = authService.getUsuarioAtual();
+  const isAdmin = usuario?.is_admin || false;
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [chamados, setChamados] = useState<Chamado[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,11 +99,20 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
   const [contratoFiltro, setContratoFiltro] = useState<string>('todos');
   const [statusFiltro, setStatusFiltro] = useState<StatusFilter>('todos');
   const [busca, setBusca] = useState('');
+  const [buscaTicket, setBuscaTicket] = useState('');
   const [responsavelFiltro, setResponsavelFiltro] = useState<string>('todos');
+  const [dataFiltro, setDataFiltro] = useState<string>('todos');
+  const [mesFiltro, setMesFiltro] = useState<string>('todos');
+  const [somenteVencidos, setSomenteVencidos] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
 
   const [showNovo, setShowNovo] = useState(false);
   const [detalhe, setDetalhe] = useState<Chamado | null>(null);
   const [addUpdateFor, setAddUpdateFor] = useState<Chamado | null>(null);
+  const [reprogramarFor, setReprogramarFor] = useState<Chamado | null>(null);
+  const [showHistorico, setShowHistorico] = useState<Chamado | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -63,9 +124,7 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
         ]);
         setContratos(cs);
         setChamados(chs);
-      } catch (e) {
-        console.warn(e);
-      }
+      } catch (e) { console.warn(e); }
       setLoading(false);
     })();
   }, []);
@@ -79,32 +138,70 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
 
   const contratoNome = (id: string) => contratos.find(c => c.id === id)?.nome || '—';
 
+  const isVencido = (c: Chamado) =>
+    !!c.prazo && new Date(c.prazo) < new Date() && c.status !== 'concluido' && c.status !== 'f_indevido';
+
+  // Meses disponíveis
+  const mesesDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    chamados.forEach(c => { if (c.createdAt) set.add(c.createdAt.substring(0, 7)); });
+    return Array.from(set).sort((a, b) => b.localeCompare(a));
+  }, [chamados]);
+
   const filtrados = useMemo(() => {
     return chamados.filter(c => {
       if (contratoFiltro !== 'todos' && c.contratoId !== contratoFiltro) return false;
       if (statusFiltro !== 'todos' && c.status !== statusFiltro) return false;
       if (responsavelFiltro !== 'todos' && (c.responsavel || '') !== responsavelFiltro) return false;
+      if (dataFiltro !== 'todos' && c.createdAt.substring(0, 10) !== dataFiltro) return false;
+      if (mesFiltro !== 'todos' && c.createdAt.substring(0, 7) !== mesFiltro) return false;
+      if (somenteVencidos && !isVencido(c)) return false;
+      if (buscaTicket.trim() && !(c.numeroTicket || '').toLowerCase().includes(buscaTicket.trim().toLowerCase())) return false;
       if (busca.trim()) {
         const q = busca.trim().toLowerCase();
-        const hay = `${c.descricao} ${c.local} ${c.numeroTicket || ''}`.toLowerCase();
+        const hay = `${c.descricao} ${c.local}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [chamados, contratoFiltro, statusFiltro, responsavelFiltro, busca]);
+  }, [chamados, contratoFiltro, statusFiltro, responsavelFiltro, dataFiltro, mesFiltro, somenteVencidos, busca, buscaTicket]);
 
   const stats = useMemo(() => {
     const base: Record<ChamadoStatus, number> = {
       itens_apontados: 0, em_andamento: 0, improcedente: 0,
       aguardando_vistoria: 0, concluido: 0, f_indevido: 0,
     };
-    const fonte = chamados.filter(c =>
-      (contratoFiltro === 'todos' || c.contratoId === contratoFiltro)
-    );
+    const fonte = chamados.filter(c => contratoFiltro === 'todos' || c.contratoId === contratoFiltro);
     fonte.forEach(c => { base[c.status] = (base[c.status] || 0) + 1; });
     return { counts: base, total: fonte.length };
   }, [chamados, contratoFiltro]);
 
+  // Dados dos gráficos — com base nos filtrados
+  const chartStatusData = useMemo(() => {
+    return (Object.keys(STATUS_CONFIG) as ChamadoStatus[]).map(k => ({
+      label: STATUS_CONFIG[k].label,
+      value: filtrados.filter(c => c.status === k).length,
+      color: STATUS_CONFIG[k].chart,
+    }));
+  }, [filtrados]);
+
+  const chartRespData = useMemo(() => {
+    const c = filtrados.filter(x => x.responsavel === 'Construtora').length;
+    const b = filtrados.filter(x => x.responsavel === 'Condominio').length;
+    return [
+      { label: 'Construtora', value: c, color: '#f97316' },
+      { label: 'Condomínio', value: b, color: '#3b82f6' },
+    ];
+  }, [filtrados]);
+
+  // Paginação
+  const totalPages = Math.max(1, Math.ceil(filtrados.length / itemsPerPage));
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const pagina = filtrados.slice(startIdx, startIdx + itemsPerPage);
+
+  useEffect(() => { setCurrentPage(1); }, [contratoFiltro, statusFiltro, responsavelFiltro, dataFiltro, mesFiltro, somenteVencidos, busca, buscaTicket]);
+
+  // CRUD
   const criarChamado = async (dados: Partial<Chamado>) => {
     if (!dados.contratoId || !dados.descricao?.trim() || !dados.local?.trim()) {
       alert('Preencha prédio, local e descrição.');
@@ -126,9 +223,7 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
     if (novo) {
       setChamados(prev => [novo, ...prev]);
       setShowNovo(false);
-    } else {
-      alert('Erro ao criar chamado.');
-    }
+    } else alert('Erro ao criar chamado.');
   };
 
   const atualizarChamado = async (id: string, patch: Partial<Chamado>) => {
@@ -136,9 +231,7 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
     if (ok) {
       setChamados(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
       if (detalhe?.id === id) setDetalhe({ ...detalhe, ...patch });
-    } else {
-      alert('Erro ao atualizar.');
-    }
+    } else alert('Erro ao atualizar.');
   };
 
   const excluirChamado = async (id: string) => {
@@ -153,39 +246,107 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
   const adicionarParecer = async (chamadoId: string, tipo: ChamadoUpdateType, mensagem: string) => {
     if (!mensagem.trim()) return;
     const ok = await chamadoService.addUpdate(chamadoId, {
-      type: tipo,
-      message: mensagem.trim(),
-      createdBy: usuario?.nome || 'Sistema',
+      type: tipo, message: mensagem.trim(), createdBy: usuario?.nome || 'Sistema',
     });
-    if (ok) {
-      await recarregar();
-      setAddUpdateFor(null);
+    if (ok) { await recarregar(); setAddUpdateFor(null); }
+  };
+
+  const salvarReprogramacao = async (chamado: Chamado, novaData: string, motivo: string) => {
+    if (!novaData || !motivo.trim()) { alert('Preencha nova data e motivo.'); return; }
+    const hist = [...chamado.historicoReprogramacao, {
+      date: novaData, reason: motivo.trim(), updatedAt: new Date().toISOString(),
+    }];
+    await atualizarChamado(chamado.id, { prazo: novaData, reprogramacaoData: novaData, historicoReprogramacao: hist });
+    setReprogramarFor(null);
+  };
+
+  // Excel export
+  const exportarExcel = async () => {
+    try {
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Chamados');
+      ws.columns = [
+        { header: 'Nº Ticket', key: 'numero', width: 12 },
+        { header: 'Data', key: 'data', width: 12 },
+        { header: 'Prédio', key: 'predio', width: 28 },
+        { header: 'Local', key: 'local', width: 28 },
+        { header: 'Descrição', key: 'descricao', width: 50 },
+        { header: 'Status', key: 'status', width: 20 },
+        { header: 'Responsável', key: 'resp', width: 15 },
+        { header: 'Prazo', key: 'prazo', width: 12 },
+        { header: 'Atualizações', key: 'updates', width: 10 },
+      ];
+      ws.getRow(1).font = { bold: true };
+      ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } } as any;
+      ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      filtrados.forEach(c => {
+        ws.addRow({
+          numero: c.numeroTicket || '',
+          data: new Date(c.createdAt).toLocaleDateString('pt-BR'),
+          predio: contratoNome(c.contratoId),
+          local: c.local,
+          descricao: c.descricao,
+          status: STATUS_CONFIG[c.status].label,
+          resp: c.responsavel || '—',
+          prazo: c.prazo ? new Date(c.prazo + 'T00:00:00').toLocaleDateString('pt-BR') : '',
+          updates: c.atualizacoes.length,
+        });
+      });
+      const buf = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `chamados_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao exportar Excel.');
     }
   };
 
+  const predioNomeBanner = contratoFiltro === 'todos'
+    ? 'Todos os Prédios'
+    : contratoNome(contratoFiltro);
+
   return (
-    <div className="w-full">
-      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 mb-4 border border-gray-200">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Chamados</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Gerencie os chamados dos prédios — {stats.total} total.
-            </p>
+    <div className="w-full space-y-4">
+      {/* Header */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-lg">
+              <HardHat className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900 leading-none">Chamados</h1>
+              <p className="text-xs text-gray-500 leading-none mt-1">Sistema de Gestão — {stats.total} registros</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={recarregar} variant="outline" size="sm" disabled={loading}>
-              <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-              Recarregar
+            <Button onClick={exportarExcel} variant="outline" size="sm" className="gap-1 bg-green-50 hover:bg-green-100 border-green-300 text-green-700">
+              <FileSpreadsheet className="w-4 h-4" />
+              <span className="hidden sm:inline">Excel</span>
             </Button>
-            <Button onClick={() => setShowNovo(true)} className="bg-orange-600 hover:bg-orange-700 text-white" size="sm">
-              <Plus className="w-4 h-4 mr-1" /> Novo Chamado
+            <Button onClick={recarregar} variant="outline" size="sm" disabled={loading}>
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button onClick={() => setShowNovo(true)} className="bg-orange-600 hover:bg-orange-700 text-white gap-1" size="sm">
+              <Plus className="w-4 h-4" /> Novo
             </Button>
           </div>
         </div>
+
+        <div className="text-center mt-3">
+          <h2 className="text-base md:text-2xl font-black text-blue-600 uppercase tracking-tight truncate">
+            {predioNomeBanner}
+          </h2>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-4">
+      {/* Status Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
         {(Object.keys(STATUS_CONFIG) as ChamadoStatus[]).map(k => {
           const cfg = STATUS_CONFIG[k];
           const n = stats.counts[k];
@@ -210,13 +371,47 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
         })}
       </div>
 
-      <div className="bg-white rounded-xl p-3 sm:p-4 mb-4 border border-gray-200 grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div>
+      {/* Graficos Pizza */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="text-sm font-bold text-gray-800 mb-2">Distribuição por Status</h3>
+          <div className="flex items-center gap-4">
+            <PieChart data={chartStatusData} />
+            <div className="flex-1 space-y-1">
+              {chartStatusData.filter(d => d.value > 0).map((d, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: d.color }}></span>
+                  <span className="text-gray-700 flex-1">{d.label}</span>
+                  <span className="font-bold text-gray-900">{d.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="text-sm font-bold text-gray-800 mb-2">Responsabilidade</h3>
+          <div className="flex items-center gap-4">
+            <PieChart data={chartRespData} />
+            <div className="flex-1 space-y-1">
+              {chartRespData.filter(d => d.value > 0).map((d, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: d.color }}></span>
+                  <span className="text-gray-700 flex-1">{d.label}</span>
+                  <span className="font-bold text-gray-900">{d.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="bg-white rounded-xl p-3 border border-gray-200 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="lg:col-span-2">
           <label className="text-xs font-medium text-gray-600 flex items-center gap-1 mb-1">
             <Building2 className="w-3 h-3" /> Prédio
           </label>
-          <select value={contratoFiltro} onChange={(e) => setContratoFiltro(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm">
+          <select value={contratoFiltro} onChange={(e) => setContratoFiltro(e.target.value)} className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm">
             <option value="todos">Todos os prédios</option>
             {contratos.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
@@ -225,121 +420,169 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
           <label className="text-xs font-medium text-gray-600 flex items-center gap-1 mb-1">
             <HardHat className="w-3 h-3" /> Responsável
           </label>
-          <select value={responsavelFiltro} onChange={(e) => setResponsavelFiltro(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm">
+          <select value={responsavelFiltro} onChange={(e) => setResponsavelFiltro(e.target.value)} className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm">
             <option value="todos">Todos</option>
             <option value="Construtora">Construtora</option>
             <option value="Condominio">Condomínio</option>
-            <option value="">Sem responsável</option>
+            <option value="">Sem resp.</option>
           </select>
         </div>
-        <div className="md:col-span-2">
+        <div>
           <label className="text-xs font-medium text-gray-600 flex items-center gap-1 mb-1">
-            <Search className="w-3 h-3" /> Buscar
+            <Calendar className="w-3 h-3" /> Mês
           </label>
-          <Input placeholder="Descrição, local ou número do ticket" value={busca}
-            onChange={(e) => setBusca(e.target.value)} className="text-sm" />
+          <select value={mesFiltro} onChange={(e) => setMesFiltro(e.target.value)} className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm">
+            <option value="todos">Todos</option>
+            {mesesDisponiveis.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 flex items-center gap-1 mb-1">
+            <Calendar className="w-3 h-3" /> Dia específico
+          </label>
+          <Input type="date" value={dataFiltro === 'todos' ? '' : dataFiltro} onChange={(e) => setDataFiltro(e.target.value || 'todos')} className="text-sm h-8" />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 flex items-center gap-1 mb-1">
+            <Search className="w-3 h-3" /> Nº Ticket
+          </label>
+          <Input placeholder="Ticket..." value={buscaTicket} onChange={(e) => setBuscaTicket(e.target.value)} className="text-sm h-8" />
+        </div>
+        <div className="md:col-span-2 lg:col-span-4">
+          <label className="text-xs font-medium text-gray-600 flex items-center gap-1 mb-1">
+            <Search className="w-3 h-3" /> Buscar na descrição/local
+          </label>
+          <Input placeholder="Palavra-chave..." value={busca} onChange={(e) => setBusca(e.target.value)} className="text-sm h-8" />
+        </div>
+        <div className="lg:col-span-2 flex items-end gap-3">
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" checked={somenteVencidos} onChange={(e) => setSomenteVencidos(e.target.checked)} className="w-4 h-4 accent-red-600" />
+            <AlertCircle className="w-4 h-4 text-red-600" /> Somente vencidos
+          </label>
+          <Button
+            variant="outline" size="sm"
+            onClick={() => {
+              setContratoFiltro('todos'); setStatusFiltro('todos'); setResponsavelFiltro('todos');
+              setDataFiltro('todos'); setMesFiltro('todos'); setSomenteVencidos(false);
+              setBusca(''); setBuscaTicket('');
+            }}
+          >
+            <X className="w-4 h-4 mr-1" /> Limpar
+          </Button>
         </div>
       </div>
 
-      {loading ? (
-        <div className="text-center py-12 text-gray-500">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
-          Carregando chamados...
-        </div>
-      ) : filtrados.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
-          <Filter className="w-10 h-10 mx-auto text-gray-400 mb-3" />
-          <p className="text-gray-600">Nenhum chamado encontrado com os filtros atuais.</p>
-          <Button onClick={() => setShowNovo(true)} variant="outline" className="mt-3">
-            <Plus className="w-4 h-4 mr-1" /> Criar o primeiro
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filtrados.map(c => {
-            const cfg = STATUS_CONFIG[c.status];
-            const prazoAtrasado = c.prazo && new Date(c.prazo) < new Date() && c.status !== 'concluido';
-            return (
-              <div key={c.id} onClick={() => setDetalhe(c)}
-                className="bg-white rounded-lg border border-gray-200 p-3 hover:border-orange-300 hover:shadow-sm cursor-pointer transition-all">
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.bg} ${cfg.text}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}></span>{cfg.label}
-                      </span>
-                      {c.responsavel && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                          <HardHat className="w-3 h-3" /> {c.responsavel}
+      {/* Tabela */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr className="text-left text-xs font-medium text-gray-600 uppercase">
+                <th className="px-3 py-2">Nº</th>
+                <th className="px-3 py-2">Data</th>
+                <th className="px-3 py-2">Prédio</th>
+                <th className="px-3 py-2">Local</th>
+                <th className="px-3 py-2">Descrição</th>
+                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">Resp.</th>
+                <th className="px-3 py-2">Prazo</th>
+                <th className="px-3 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={9} className="text-center py-10 text-gray-500">
+                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" /> Carregando...
+                </td></tr>
+              ) : pagina.length === 0 ? (
+                <tr><td colSpan={9} className="text-center py-10 text-gray-500">
+                  <Filter className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                  Nenhum chamado encontrado com os filtros atuais.
+                </td></tr>
+              ) : (
+                pagina.map(c => {
+                  const cfg = STATUS_CONFIG[c.status];
+                  const vencido = isVencido(c);
+                  return (
+                    <tr key={c.id} className={`border-b border-gray-100 hover:bg-orange-50/30 cursor-pointer ${vencido ? 'bg-red-50/40' : ''}`} onClick={() => setDetalhe(c)}>
+                      <td className="px-3 py-2 font-mono text-xs text-gray-600">{c.numeroTicket || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-gray-700 whitespace-nowrap">{new Date(c.createdAt).toLocaleDateString('pt-BR')}</td>
+                      <td className="px-3 py-2 text-xs text-gray-900 max-w-[180px] truncate">{contratoNome(c.contratoId)}</td>
+                      <td className="px-3 py-2 text-xs text-gray-700 max-w-[140px] truncate">{c.local}</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 max-w-[360px] truncate">{c.descricao}</td>
+                      <td className="px-3 py-2">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.bg} ${cfg.text}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}></span>{cfg.label}
                         </span>
-                      )}
-                      {c.numeroTicket && <span className="text-xs text-gray-500">#{c.numeroTicket}</span>}
-                      {prazoAtrasado && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                          <AlertCircle className="w-3 h-3" /> Atrasado
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm font-medium text-gray-900 line-clamp-1">{c.descricao}</p>
-                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-1 flex-wrap">
-                      <span className="flex items-center gap-1">
-                        <Building2 className="w-3 h-3" /> {contratoNome(c.contratoId)}
-                      </span>
-                      <span>•</span><span>{c.local}</span>
-                      {c.prazo && (
-                        <>
-                          <span>•</span>
-                          <span className={`flex items-center gap-1 ${prazoAtrasado ? 'text-red-600 font-medium' : ''}`}>
-                            <Calendar className="w-3 h-3" />
-                            {new Date(c.prazo + 'T00:00:00').toLocaleDateString('pt-BR')}
-                          </span>
-                        </>
-                      )}
-                      {c.atualizacoes.length > 0 && (
-                        <>
-                          <span>•</span>
-                          <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" /> {c.atualizacoes.length}</span>
-                        </>
-                      )}
-                      {c.fotoUrls.length > 0 && (
-                        <>
-                          <span>•</span>
-                          <span className="flex items-center gap-1"><Camera className="w-3 h-3" /> {c.fotoUrls.length}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right text-xs text-gray-400 shrink-0">
-                    {new Date(c.createdAt).toLocaleDateString('pt-BR')}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+                      </td>
+                      <td className="px-3 py-2 text-xs">{c.responsavel || '—'}</td>
+                      <td className={`px-3 py-2 text-xs whitespace-nowrap ${vencido ? 'text-red-700 font-bold' : 'text-gray-700'}`}>
+                        {c.prazo ? new Date(c.prazo + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
+                        {vencido && <AlertCircle className="w-3 h-3 inline ml-1" />}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <Eye className="w-4 h-4 text-gray-400 inline" />
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
 
+        {/* Paginação */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-gray-50 text-xs">
+            <span className="text-gray-600">
+              {startIdx + 1}–{Math.min(startIdx + itemsPerPage, filtrados.length)} de {filtrados.length}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="outline" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="px-2 text-gray-700 font-medium">{currentPage} / {totalPages}</span>
+              <Button size="sm" variant="outline" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modais */}
       {showNovo && (
-        <NovoChamadoModal contratos={contratos}
-          defaultContratoId={contratoFiltro === 'todos' ? '' : contratoFiltro}
+        <NovoChamadoModal contratos={contratos} defaultContratoId={contratoFiltro === 'todos' ? '' : contratoFiltro}
           onClose={() => setShowNovo(false)} onSalvar={criarChamado} />
       )}
       {detalhe && (
-        <DetalheChamadoModal chamado={detalhe}
-          contratoNome={contratoNome(detalhe.contratoId)}
+        <DetalheChamadoModal chamado={detalhe} contratoNome={contratoNome(detalhe.contratoId)}
+          isAdmin={isAdmin}
           onClose={() => setDetalhe(null)}
           onUpdate={(patch) => atualizarChamado(detalhe.id, patch)}
           onExcluir={() => excluirChamado(detalhe.id)}
-          onAddParecer={() => setAddUpdateFor(detalhe)} />
+          onAddParecer={() => setAddUpdateFor(detalhe)}
+          onReprogramar={() => setReprogramarFor(detalhe)}
+          onVerHistorico={() => setShowHistorico(detalhe)}
+        />
       )}
       {addUpdateFor && (
         <AddParecerModal onClose={() => setAddUpdateFor(null)}
           onSalvar={(tipo, msg) => adicionarParecer(addUpdateFor.id, tipo, msg)} />
       )}
+      {reprogramarFor && (
+        <ReprogramarModal chamado={reprogramarFor}
+          onClose={() => setReprogramarFor(null)}
+          onSalvar={(data, motivo) => salvarReprogramacao(reprogramarFor, data, motivo)} />
+      )}
+      {showHistorico && (
+        <HistoricoModal chamado={showHistorico} onClose={() => setShowHistorico(null)} />
+      )}
     </div>
   );
 }
+
+// ==================== Modais ====================
 
 function NovoChamadoModal({ contratos, defaultContratoId, onClose, onSalvar }: {
   contratos: Contrato[]; defaultContratoId: string;
@@ -372,8 +615,7 @@ function NovoChamadoModal({ contratos, defaultContratoId, onClose, onSalvar }: {
         <div className="p-4 space-y-3">
           <div>
             <label className="text-sm font-medium text-gray-700">Prédio *</label>
-            <select value={contratoId} onChange={(e) => setContratoId(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 mt-1 text-sm">
+            <select value={contratoId} onChange={(e) => setContratoId(e.target.value)} className="w-full border border-gray-300 rounded-md px-3 py-2 mt-1 text-sm">
               <option value="">— Selecione —</option>
               {contratos.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
@@ -384,8 +626,7 @@ function NovoChamadoModal({ contratos, defaultContratoId, onClose, onSalvar }: {
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700">Descrição *</label>
-            <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Descreva o problema apontado" rows={4}
+            <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Descreva o problema apontado" rows={4}
               className="w-full border border-gray-300 rounded-md px-3 py-2 mt-1 text-sm resize-none" />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -420,9 +661,7 @@ function NovoChamadoModal({ contratos, defaultContratoId, onClose, onSalvar }: {
                   <div key={i} className="relative">
                     <img src={f} className="w-full aspect-square object-cover rounded" />
                     <button onClick={() => setFotos(prev => prev.filter((_, j) => j !== i))}
-                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-0.5">
-                      <X className="w-3 h-3" />
-                    </button>
+                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-0.5"><X className="w-3 h-3" /></button>
                   </div>
                 ))}
               </div>
@@ -441,9 +680,11 @@ function NovoChamadoModal({ contratos, defaultContratoId, onClose, onSalvar }: {
   );
 }
 
-function DetalheChamadoModal({ chamado, contratoNome, onClose, onUpdate, onExcluir, onAddParecer }: {
-  chamado: Chamado; contratoNome: string; onClose: () => void;
-  onUpdate: (patch: Partial<Chamado>) => void; onExcluir: () => void; onAddParecer: () => void;
+function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate, onExcluir, onAddParecer, onReprogramar, onVerHistorico }: {
+  chamado: Chamado; contratoNome: string; isAdmin: boolean;
+  onClose: () => void; onUpdate: (patch: Partial<Chamado>) => void;
+  onExcluir: () => void; onAddParecer: () => void;
+  onReprogramar: () => void; onVerHistorico: () => void;
 }) {
   const [editMode, setEditMode] = useState(false);
   const [local, setLocal] = useState(chamado.local);
@@ -452,7 +693,6 @@ function DetalheChamadoModal({ chamado, contratoNome, onClose, onUpdate, onExclu
   const [responsavel, setResponsavel] = useState<ChamadoResponsavel>(chamado.responsavel || null);
   const [prazo, setPrazo] = useState(chamado.prazo || '');
   const [numeroTicket, setNumeroTicket] = useState(chamado.numeroTicket || '');
-  const isAdmin = authService.getUsuarioAtual()?.is_admin || false;
 
   const salvarEdicao = () => {
     onUpdate({ local, descricao, status, responsavel, prazo: prazo || null, numeroTicket });
@@ -465,7 +705,7 @@ function DetalheChamadoModal({ chamado, contratoNome, onClose, onUpdate, onExclu
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.bg} ${cfg.text}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}></span>{cfg.label}
             </span>
@@ -554,6 +794,16 @@ function DetalheChamadoModal({ chamado, contratoNome, onClose, onUpdate, onExclu
                 <Info label="Responsável" value={chamado.responsavel || '—'} />
                 <Info label="Prazo" value={chamado.prazo ? new Date(chamado.prazo + 'T00:00:00').toLocaleDateString('pt-BR') : '—'} />
                 <Info label="Nº Ticket" value={chamado.numeroTicket || '—'} />
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Button size="sm" variant="outline" onClick={onReprogramar}>
+                  <Calendar className="w-4 h-4 mr-1" /> Reprogramar
+                </Button>
+                {chamado.historicoReprogramacao.length > 0 && (
+                  <Button size="sm" variant="outline" onClick={onVerHistorico}>
+                    <History className="w-4 h-4 mr-1" /> Histórico ({chamado.historicoReprogramacao.length})
+                  </Button>
+                )}
               </div>
             </>
           )}
@@ -656,6 +906,77 @@ function AddParecerModal({ onClose, onSalvar }: {
             onClick={() => onSalvar(tipo, msg)}>
             <MessageSquare className="w-4 h-4 mr-1" /> Salvar parecer
           </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReprogramarModal({ chamado, onClose, onSalvar }: {
+  chamado: Chamado; onClose: () => void; onSalvar: (data: string, motivo: string) => void;
+}) {
+  const [novaData, setNovaData] = useState('');
+  const [motivo, setMotivo] = useState('');
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <h3 className="text-lg font-bold text-gray-900">Reprogramar prazo</h3>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5 text-gray-500" /></button>
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="p-3 bg-orange-50 border border-orange-200 rounded text-sm text-orange-800">
+            Prazo atual: <strong>{chamado.prazo ? new Date(chamado.prazo + 'T00:00:00').toLocaleDateString('pt-BR') : 'sem prazo'}</strong>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1 block">Nova data *</label>
+            <Input type="date" value={novaData} onChange={(e) => setNovaData(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1 block">Motivo *</label>
+            <textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3}
+              placeholder="Por que o prazo está sendo reprogramado?"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-200">
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button className="bg-orange-600 hover:bg-orange-700 text-white" disabled={!novaData || !motivo.trim()}
+            onClick={() => onSalvar(novaData, motivo)}>
+            <Save className="w-4 h-4 mr-1" /> Salvar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HistoricoModal({ chamado, onClose }: { chamado: Chamado; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white">
+          <h3 className="text-lg font-bold text-gray-900">Histórico de reprogramações</h3>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5 text-gray-500" /></button>
+        </div>
+        <div className="p-4 space-y-2">
+          {chamado.historicoReprogramacao.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">Nenhuma reprogramação registrada.</p>
+          ) : (
+            chamado.historicoReprogramacao.map((h, i) => (
+              <div key={i} className="p-3 rounded-md border border-orange-200 bg-orange-50">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-sm font-bold text-orange-800">
+                    Nova data: {new Date(h.date + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {new Date(h.updatedAt).toLocaleString('pt-BR')}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700">{h.reason}</p>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
