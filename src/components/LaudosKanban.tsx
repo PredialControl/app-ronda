@@ -560,8 +560,8 @@ export function LaudosKanban({ contratoSelecionado }: LaudosKanbanProps) {
                                 </div>
                               )}
                               {item.periodicidade && (
-                                <div className="text-[10px] font-medium text-white bg-purple-600 px-2 py-1 rounded border border-purple-700">
-                                  {item.periodicidade}
+                                <div className="text-xs font-semibold text-white bg-purple-600 px-2.5 py-1 rounded border border-purple-700">
+                                  Validade: {item.periodicidade}
                                 </div>
                               )}
                             </div>
