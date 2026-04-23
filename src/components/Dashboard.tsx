@@ -102,12 +102,14 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     finalizados: 0,
   });
   const [laudosStats, setLaudosStats] = useState({ total: 0, vencidos: 0, emAnalise: 0, emDia: 0 });
-  const [loadingContrato, setLoadingContrato] = useState(false);
+  const [loadingCount, setLoadingCount] = useState(0);
 
   // Fetch direto das rondas do banco com match tolerante (case-insensitive, trim)
   // — evita problemas de grafia do contrato nas rondas salvas
   const [rondasDoContrato, setRondasDoContrato] = useState<Ronda[]>([]);
   useEffect(() => {
+    if (!contrato) return;
+    setLoadingCount(n => n + 1);
     const load = async () => {
       try {
         const all = await rondaService.getAll();
@@ -129,6 +131,8 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
         setRondasDoContrato(comAreas as Ronda[]);
       } catch (e) {
         console.warn('[Dashboard] erro ao carregar rondas direto:', e);
+      } finally {
+        setLoadingCount(n => Math.max(0, n - 1));
       }
     };
     load();
@@ -153,7 +157,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
   // Carregar dados de implantação quando mudar contrato
   useEffect(() => {
     if (!contrato) return;
-    setLoadingContrato(true);
+    setLoadingCount(n => n + 1);
     const carregarImplantacao = async () => {
       try {
         // Kanban — TODOS os cards do contrato (snapshot atual, sem filtro de data)
@@ -182,7 +186,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
       } catch (err) {
         console.warn('Erro ao carregar laudos stats:', err);
       }
-      setLoadingContrato(false);
+      setLoadingCount(n => Math.max(0, n - 1));
     };
     carregarImplantacao();
   }, [contrato?.id]);
@@ -482,7 +486,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
   return (
     <div className="space-y-4 sm:space-y-8">
       {/* Overlay de loading durante troca de prédio */}
-      {loadingContrato && (
+      {loadingCount > 0 && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
           <div className="bg-gray-800 rounded-lg p-8 shadow-2xl flex flex-col items-center gap-4 border border-gray-700">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
