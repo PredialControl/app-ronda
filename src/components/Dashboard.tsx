@@ -302,7 +302,10 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
       console.log('[Status] Rondas ordenadas (asc):', rondasOrdenadas.map(r => ({data: r.data, areasCount: r.areasTecnicas?.length || 0})));
 
       rondasOrdenadas.forEach(r => {
-        console.log('[Status] Processando ronda', r.data, 'com', (r.areasTecnicas || []).length, 'areas');
+        const areasCount = (r.areasTecnicas || []).length;
+        const checkCount = ((r as any).checklistItems || []).length;
+        console.log('[Status] Processando ronda', r.data, '- areas:', areasCount, '| checklist:', checkCount);
+        // 1) Áreas técnicas clássicas
         (r.areasTecnicas || []).forEach(at => {
           const chave = (at.nome || '').trim();
           if (!chave) return;
@@ -312,6 +315,22 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
             ultimaVisita: r.data || null,
             statusUltimaVisita: at.status || 'NÃO VISITADO',
             observacoes: at.observacoes || null,
+          };
+        });
+        // 2) Checklist items (Ronda Semanal/Mensal/Bimestral) - também atualizam o equipamento
+        ((r as any).checklistItems || []).forEach((ci: any) => {
+          const chave = (ci.tipo || ci.objetivo || '').trim();
+          if (!chave) return;
+          const statusMap: Record<string, string> = {
+            'OK': 'ATIVO',
+            'NAO_OK': 'ATENÇÃO',
+          };
+          porEquipamento[chave] = {
+            id: ci.id || `${r.id}-${chave}`,
+            nome: chave,
+            ultimaVisita: r.data || ci.data || null,
+            statusUltimaVisita: statusMap[ci.status] || ci.status || 'NÃO VISITADO',
+            observacoes: ci.observacao || null,
           };
         });
       });
