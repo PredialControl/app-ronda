@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, Trash2, FileDown, Mail, Filter as FilterIcon } from 'lucide-react';
 import { Ronda, Contrato } from '@/types';
 import { parecerService } from '@/lib/parecerService';
 import { kanbanEventoService, rondaService } from '@/lib/supabaseService';
 import { supabase } from '@/lib/supabase';
+import jsPDF from 'jspdf';
+import { emailService } from '@/lib/emailService';
 
 interface AgendaCalendarioProps {
   rondas: Ronda[];
@@ -45,6 +47,10 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
   const [filtro, setFiltro] = useState<Filtro>('todos');
   const [eventos, setEventos] = useState<AgendaEvento[]>([]);
   const [loading, setLoading] = useState(false);
+  const [contratoFiltro, setContratoFiltro] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [enviandoEmail, setEnviandoEmail] = useState(false);
 
   const [showNovoModal, setShowNovoModal] = useState(false);
   const [novoEvento, setNovoEvento] = useState({
@@ -163,9 +169,16 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
   }, [contratos]);
 
   const eventosFiltrados = eventos.filter(e => {
-    if (filtro === 'todos') return true;
-    if (filtro === 'implantacao') return e.fonte === 'kanban' || e.fonte === 'manual';
-    if (filtro === 'supervisao') return e.fonte === 'ronda' || e.fonte === 'parecer';
+    if (filtro === 'implantacao' && !(e.fonte === 'kanban' || e.fonte === 'manual')) return false;
+    if (filtro === 'supervisao' && !(e.fonte === 'ronda' || e.fonte === 'parecer')) return false;
+    if (contratoFiltro) {
+      const alvo = contratos.find(c => c.id === contratoFiltro);
+      const nomeAlvo = (alvo?.nome || '').trim().toLowerCase();
+      if (e.contratoId && e.contratoId !== contratoFiltro) return false;
+      if (!e.contratoId && (e.contrato || '').trim().toLowerCase() !== nomeAlvo) return false;
+    }
+    if (startDate && e.data < startDate) return false;
+    if (endDate && e.data > endDate) return false;
     return true;
   });
 
@@ -186,6 +199,78 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
   }
 
   const hojeStr = fmtDateLocal(new Date());
+
+  const handleExportarPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('Relatório da Agenda', 14, 18);
+    doc.setFontSize(10);
+    const dtIni = startDate ? new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR') : '(início)';
+    const dtFim = endDate ? new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR') : '(fim)';
+    const contratoNome = contratoFiltro ? (contratos.find(c => c.id === contratoFiltro)?.nome || '') : 'Todos os contratos';
+    doc.text(`Período: ${dtIni} até ${dtFim}`, 14, 25);
+    doc.text(`Contrato: ${contratoNome}`, 14, 31);
+    doc.text(`Filtro: ${filtro === 'todos' ? 'Todos' : filtro === 'implantacao' ? 'Implantação' : 'Supervisão'}`, 14, 37);
+    doc.text(`Total de eventos: ${eventosFiltrados.length}`, 14, 43);
+    let y = 52;
+    const ordenados = [...eventosFiltrados].sort((a, b) => a.data.localeCompare(b.data));
+    ordenados.forEach(ev => {
+      if (y > 275) { doc.addPage(); y = 20; }
+      const statusLabel = ev.status === 'executado' ? '[EXECUTADO]' : '[PROGRAMADO]';
+      const fonteLabel = ev.fonte.toUpperCase();
+      const dt = new Date(ev.data + 'T00:00:00').toLocaleDateString('pt-BR');
+      doc.setFontSize(10);
+      doc.text(`${dt}  ${statusLabel}  [${fonteLabel}]`, 14, y);
+      y += 5;
+      doc.setFontSize(11);
+      doc.text(`  ${ev.titulo}`, 14, y);
+      y += 5;
+      if (ev.descricao) {
+        doc.setFontSize(9);
+        const lines = doc.splitTextToSize(`  ${ev.descricao}`, 180);
+        doc.text(lines, 14, y);
+        y += lines.length * 4;
+      }
+      y += 2;
+    });
+    const fname = `agenda_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fname);
+  };
+
+  const handleEnviarEmail = async () => {
+    if (!contratoFiltro) {
+      alert('Selecione um contrato no filtro antes de enviar. O email vai para os destinatários cadastrados desse contrato.');
+      return;
+    }
+    const config = emailService.obterConfiguracaoEmail(contratoFiltro);
+    if (!config || !config.destinatarios || config.destinatarios.length === 0) {
+      alert('Não há destinatários cadastrados para este contrato. Cadastre em Documentos do Condomínio → Configurar Email.');
+      return;
+    }
+    setEnviandoEmail(true);
+    try {
+      const dtIni = startDate ? new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
+      const dtFim = endDate ? new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
+      const ordenados = [...eventosFiltrados].sort((a, b) => a.data.localeCompare(b.data));
+      const linhas = ordenados.map(ev => {
+        const dt = new Date(ev.data + 'T00:00:00').toLocaleDateString('pt-BR');
+        const st = ev.status === 'executado' ? 'EXECUTADO' : 'PROGRAMADO';
+        return `${dt} - [${st}] ${ev.titulo}${ev.descricao ? ' | ' + ev.descricao : ''}`;
+      }).join('\n');
+      const texto = `Agenda do contrato ${(config as any).contratoNome || ''}\nPeríodo: ${dtIni} a ${dtFim}\nTotal de eventos: ${eventosFiltrados.length}\n\n${linhas}`;
+      const dest = config.destinatarios.filter((d: any) => d.ativo).map((d: any) => d.email);
+      if (dest.length === 0) { alert('Nenhum destinatário ativo.'); return; }
+      const subject = encodeURIComponent(`Agenda ${(config as any).contratoNome || ''} - ${dtIni} a ${dtFim}`);
+      const body = encodeURIComponent(texto);
+      window.location.href = `mailto:${dest.join(',')}?subject=${subject}&body=${body}`;
+      alert(`Email preparado no seu cliente padrão para ${dest.length} destinatário(s).`);
+    } catch (e: any) {
+      console.error('Erro ao enviar email:', e);
+      alert('Erro ao enviar email: ' + (e.message || e));
+    } finally {
+      setEnviandoEmail(false);
+    }
+  };
 
   const handleSalvarManual = async () => {
     if (!novoEvento.titulo.trim() || !novoEvento.data) return;
@@ -311,6 +396,68 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Barra de filtros extras: contrato, período, PDF, Email */}
+      <div className="flex flex-wrap items-end gap-3 mb-3 p-3 bg-gray-800 rounded-lg border border-gray-700">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-gray-400 font-semibold">Contrato</label>
+          <select
+            value={contratoFiltro}
+            onChange={(e) => setContratoFiltro(e.target.value)}
+            className="bg-gray-900 text-white border border-gray-600 rounded px-2 py-1.5 text-sm min-w-[200px]"
+          >
+            <option value="">Todos os contratos</option>
+            {contratos.map(c => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-gray-400 font-semibold">De</label>
+          <input
+            type="date"
+            value={startDate}
+            max={endDate || undefined}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="bg-gray-900 text-white border border-gray-600 rounded px-2 py-1.5 text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-gray-400 font-semibold">Até</label>
+          <input
+            type="date"
+            value={endDate}
+            min={startDate || undefined}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="bg-gray-900 text-white border border-gray-600 rounded px-2 py-1.5 text-sm"
+          />
+        </div>
+        <button
+          onClick={() => { setContratoFiltro(''); setStartDate(''); setEndDate(''); setFiltro('todos'); }}
+          className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-3 py-1.5 rounded flex items-center gap-1"
+          title="Limpar todos os filtros"
+        >
+          <FilterIcon className="w-4 h-4" /> Limpar
+        </button>
+        <div className="flex gap-2 ml-auto">
+          <button
+            onClick={handleExportarPDF}
+            disabled={eventosFiltrados.length === 0}
+            className="bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white text-sm font-semibold px-3 py-1.5 rounded flex items-center gap-1"
+            title="Exportar os eventos filtrados como PDF"
+          >
+            <FileDown className="w-4 h-4" /> Exportar PDF
+          </button>
+          <button
+            onClick={handleEnviarEmail}
+            disabled={enviandoEmail || eventosFiltrados.length === 0 || !contratoFiltro}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-sm font-semibold px-3 py-1.5 rounded flex items-center gap-1"
+            title={contratoFiltro ? 'Enviar para os destinatários cadastrados deste contrato' : 'Selecione um contrato para habilitar o envio por email'}
+          >
+            <Mail className="w-4 h-4" /> {enviandoEmail ? 'Enviando…' : 'Enviar Email'}
+          </button>
         </div>
       </div>
 
