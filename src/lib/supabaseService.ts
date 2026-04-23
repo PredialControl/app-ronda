@@ -2123,3 +2123,40 @@ export const kanbanEventoService = {
     }
   },
 };
+
+
+// ============================================================
+// kanbanItemsService - armazena o Kanban COMPLETO por contrato
+// no Supabase (JSONB). Fonte da verdade pra todos os devices/logins.
+// ============================================================
+export const kanbanItemsService = {
+  async loadByContrato(contratoId: string): Promise<any[] | null> {
+    try {
+      const { data, error } = await supabase
+        .from('kanban_items_full')
+        .select('items')
+        .eq('contrato_id', contratoId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return Array.isArray(data.items) ? data.items : null;
+    } catch (err) {
+      console.warn('[kanbanItemsService] erro ao ler:', err);
+      return null;
+    }
+  },
+
+  async saveAll(contratoId: string, items: any[]): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('kanban_items_full')
+        .upsert(
+          { contrato_id: contratoId, items, updated_at: new Date().toISOString() },
+          { onConflict: 'contrato_id' }
+        );
+      if (error) throw error;
+    } catch (err) {
+      console.warn('[kanbanItemsService] erro ao salvar:', err);
+    }
+  },
+};

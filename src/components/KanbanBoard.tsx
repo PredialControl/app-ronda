@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { KanbanPhotoUpload } from '@/components/KanbanPhotoUpload';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 import { supabase } from '@/lib/supabase';
-import { kanbanEventoService } from '@/lib/supabaseService';
+import { kanbanEventoService, kanbanItemsService } from '@/lib/supabaseService';
 
 // Função auxiliar para converter base64 para File
 const base64ToFile = (base64: string, filename: string): File => {
@@ -684,6 +684,25 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
 
   const [items, setItems] = useState<KanbanItem[]>(getInitialItems);
 
+  // Carregar do Supabase ao montar/trocar contrato (fonte da verdade)
+  useEffect(() => {
+    if (!contratoId) return;
+    (async () => {
+      try {
+        const remoteItems = await kanbanItemsService.loadByContrato(contratoId);
+        if (remoteItems && Array.isArray(remoteItems) && remoteItems.length > 0) {
+          console.log('[KanbanBoard] Items carregados do Supabase:', remoteItems.length);
+          setItems(mergeAndSort(remoteItems as KanbanItem[]));
+        } else {
+          console.log('[KanbanBoard] Nada no Supabase, usando localStorage + initialItems');
+        }
+      } catch (e) {
+        console.warn('[KanbanBoard] falha ao ler kanban_items_full, usando fallback local:', e);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contratoId]);
+
   // Salvar items no localStorage quando mudar (SEM fotos para evitar QuotaExceededError)
   useEffect(() => {
     if (contratoId && items.length > 0) {
@@ -698,7 +717,9 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
           }))
         }));
         localStorage.setItem(`kanban_items_${contratoId}`, JSON.stringify(itemsSemFotos));
-        // Sync para Supabase (para todos os devices/logins verem os mesmos eventos na Agenda)
+        // Sync FULL para Supabase (fonte da verdade para todos os devices/logins)
+        kanbanItemsService.saveAll(contratoId, itemsSemFotos);
+        // Sync da shadow table para Agenda/Dashboard (apenas campos de data/status)
         if (contratoNome) kanbanEventoService.syncContrato(contratoId, contratoNome, itemsSemFotos);
       } catch (e) {
         console.warn('⚠️ Erro ao salvar no localStorage (possivelmente cheio):', e);
