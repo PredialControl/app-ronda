@@ -28,32 +28,68 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     fotosRonda: r.fotosRonda?.length || 0
   })));
 
-  // Filtro por mês (AAAA-MM)
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+  // Filtro por PERÍODO (data inicial / final)
+  const [startDate, setStartDate] = useState<string>(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   });
 
+  // Lista de meses (YYYY-MM) tocados pela faixa — pra consultar itens_relevantes_relatorio
+  const mesesNaFaixa = useMemo(() => {
+    const [ys, ms] = startDate.split('-').map(Number);
+    const [ye, me] = endDate.split('-').map(Number);
+    const out: string[] = [];
+    let y = ys, m = ms;
+    while (y < ye || (y === ye && m <= me)) {
+      out.push(`${y}-${String(m).padStart(2, '0')}`);
+      m++;
+      if (m > 12) { m = 1; y++; }
+    }
+    return out;
+  }, [startDate, endDate]);
+
+  // Fallback para código legado que usa selectedMonth (ex: salvar novo item)
+  const selectedMonth = mesesNaFaixa[mesesNaFaixa.length - 1] || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+
   // Estados para indicadores de IMPLANTAÇÃO (kanban + laudos)
-  const [kanbanStats, setKanbanStats] = useState({ total: 0, finalizados: 0, emAndamento: 0 });
+  const [kanbanStats, setKanbanStats] = useState({
+    total: 0,
+    aguardando: 0,
+    emAndamento: 0,
+    emCorrecao: 0,
+    finalizados: 0,
+  });
   const [laudosStats, setLaudosStats] = useState({ total: 0, vencidos: 0, emAnalise: 0, emDia: 0 });
 
-  // Carregar dados de implantação (kanban + laudos) quando mudar contrato
+  // Carregar dados de implantação quando mudar contrato OU o período
   useEffect(() => {
     const carregarImplantacao = async () => {
       try {
-        // Kanban — ler kanban_eventos do contrato
+        // Kanban — filtrar pelo contrato E pelo período (qualquer data do card dentro da faixa)
         const kanbanEventos = await kanbanEventoService.getAll();
-        const doContrato = kanbanEventos.filter((ke: any) => ke.contrato_id === contrato.id);
+        const doContrato = kanbanEventos.filter((ke: any) => {
+          if (ke.contrato_id !== contrato.id) return false;
+          const datas = [ke.data_andamento, ke.data_vistoria, ke.data_recebimento, ke.data_correcao].filter(Boolean) as string[];
+          if (datas.length === 0) return false;
+          // Entra se QUALQUER data do card estiver dentro da faixa
+          return datas.some(d => d >= startDate && d <= endDate);
+        });
         setKanbanStats({
           total: doContrato.length,
-          finalizados: doContrato.filter((ke: any) => ke.status === 'finalizado').length,
+          aguardando: doContrato.filter((ke: any) => ke.status === 'aguardando').length,
           emAndamento: doContrato.filter((ke: any) => ke.status === 'em_andamento').length,
+          emCorrecao: doContrato.filter((ke: any) => ke.status === 'em_correcao').length,
+          finalizados: doContrato.filter((ke: any) => ke.status === 'finalizado').length,
         });
       } catch (err) {
         console.warn('Erro ao carregar kanban stats:', err);
       }
       try {
+        // Laudos são snapshot atual, não filtram por período
         const laudos = await laudoService.getByContrato(contrato.id);
         setLaudosStats({
           total: laudos.length,
@@ -66,39 +102,23 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
       }
     };
     carregarImplantacao();
-  }, [contrato.id]);
+  }, [contrato.id, startDate, endDate]);
 
   // Se o mês atual não tiver rondas, usar automaticamente o mês da última ronda
   // Removido useEffect que alterava o mês automaticamente se não houvesse rondas
   // para garantir que o mês atual seja sempre o padrão inicial.
 
-  // Filtrar rondas do mês/ano selecionados
+  // Filtrar rondas dentro da faixa de datas selecionada
   const rondasMes = useMemo(() => {
-    const [anoStr, mesStr] = selectedMonth.split('-');
-    const anoSelecionado = parseInt(anoStr, 10);
-    const mesSelecionado = parseInt(mesStr, 10); // 1-based (Janeiro = 1)
-
-    console.log('🔍 FILTRO RONDAS - selectedMonth:', selectedMonth);
-    console.log('🔍 FILTRO - Ano selecionado:', anoSelecionado, 'Mês selecionado:', mesSelecionado);
-    console.log('🔍 FILTRO - Total de rondas para filtrar:', rondas.length);
-
+    console.log('🔍 FILTRO RONDAS - período:', startDate, '→', endDate);
     const resultado = rondas.filter(ronda => {
-      const [anoRonda, mesRonda, diaRonda] = ronda.data.split('-').map(Number);
-      console.log(`🔍 FILTRO - Comparando ronda "${ronda.nome}": data=${ronda.data}, ano=${anoRonda}, mês=${mesRonda}`);
-
-      const match = mesRonda === mesSelecionado && anoRonda === anoSelecionado;
-      console.log(`🔍 FILTRO - Match? ${match} (mesRonda=${mesRonda} === mesSelecionado=${mesSelecionado} && anoRonda=${anoRonda} === anoSelecionado=${anoSelecionado})`);
-
-      return match;
+      if (!ronda.data) return false;
+      return ronda.data >= startDate && ronda.data <= endDate;
     });
-
-    // Ordenar por data mais recente primeiro
     resultado.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-
     console.log('🔍 FILTRO - Rondas filtradas:', resultado.length);
-    console.log('🔍 FILTRO - Rondas do mês:', resultado.map(r => ({nome: r.nome, data: r.data, areas: r.areasTecnicas?.length})));
     return resultado;
-  }, [rondas, selectedMonth]);
+  }, [rondas, startDate, endDate]);
 
   // Calcular métricas do dashboard com base no mês selecionado
   const metricas = useMemo(() => {
@@ -262,7 +282,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     });
 
     return metricas;
-  }, [rondasMes, selectedMonth]);
+  }, [rondasMes, startDate, endDate]);
 
   // Estado para lista de itens relevantes (agora do Supabase)
   const [reportItemsList, setReportItemsList] = useState<Array<{ id: string; descricao: string; data: string }>>([]);
@@ -278,7 +298,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
           .from('itens_relevantes_relatorio')
           .select('*')
           .eq('contrato_id', contrato.id)
-          .eq('mes', selectedMonth)
+          .in('mes', mesesNaFaixa)
           .order('data', { ascending: false });
 
         if (error) {
@@ -301,7 +321,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     };
 
     carregarItensRelevantes();
-  }, [contrato.id, selectedMonth]);
+  }, [contrato.id, mesesNaFaixa.join(',')]);
 
   // Função para adicionar novo item (salvando no Supabase)
   const handleAddItem = async () => {
@@ -391,15 +411,55 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
                   </select>
                 </div>
               )}
-              {/* Filtro de Mês */}
+              {/* Filtro de PERÍODO (data inicial → data final) */}
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="rounded-md bg-white/20 text-white placeholder-white/60 backdrop-blur px-2 sm:px-3 py-1.5 sm:py-2 text-sm ring-1 ring-white/30 focus:outline-none focus:ring-2 focus:ring-white transition-all"
+                  type="date"
+                  value={startDate}
+                  max={endDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="rounded-md bg-white/20 text-white backdrop-blur px-2 sm:px-3 py-1.5 sm:py-2 text-sm ring-1 ring-white/30 focus:outline-none focus:ring-2 focus:ring-white transition-all"
+                  title="Data inicial"
                 />
+                <span className="text-white text-sm">até</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={startDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="rounded-md bg-white/20 text-white backdrop-blur px-2 sm:px-3 py-1.5 sm:py-2 text-sm ring-1 ring-white/30 focus:outline-none focus:ring-2 focus:ring-white transition-all"
+                  title="Data final"
+                />
+              </div>
+              {/* Atalhos rápidos */}
+              <div className="flex items-center gap-1 flex-wrap">
+                <button
+                  onClick={() => {
+                    const now = new Date();
+                    setStartDate(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`);
+                    setEndDate(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, '0')}`);
+                  }}
+                  className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30 text-white"
+                >Este mês</button>
+                <button
+                  onClick={() => {
+                    const now = new Date();
+                    setStartDate(`${now.getFullYear()}-01-01`);
+                    setEndDate(`${now.getFullYear()}-12-31`);
+                  }}
+                  className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30 text-white"
+                >Este ano</button>
+                <button
+                  onClick={() => {
+                    const now = new Date();
+                    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    const lastDay = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0);
+                    setStartDate(`${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}-01`);
+                    setEndDate(`${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`);
+                  }}
+                  className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30 text-white"
+                >Mês passado</button>
               </div>
             </div>
           </div>
@@ -477,28 +537,53 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
         <h2 className="text-lg sm:text-xl font-bold text-gray-100">Indicadores de Implantação</h2>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-        <GlowingCard className="border-l-4 border-l-blue-500" glowColor="from-blue-500/50 via-cyan-500/50 to-blue-500/50">
+        <GlowingCard className="border-l-4 border-l-gray-400" glowColor="from-gray-400/50 via-slate-400/50 to-gray-400/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Cards no Kanban</CardTitle>
-            <KanbanIcon className="h-4 w-4 text-blue-600" />
+            <CardTitle className="text-sm font-medium text-gray-700">Aguardando</CardTitle>
+            <KanbanIcon className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{kanbanStats.total}</div>
-            <p className="text-xs text-gray-600">com data preenchida</p>
+            <div className="text-2xl font-bold text-gray-700">{kanbanStats.aguardando}</div>
+            <p className="text-xs text-gray-600">no período filtrado</p>
+          </CardContent>
+        </GlowingCard>
+
+        <GlowingCard className="border-l-4 border-l-yellow-500" glowColor="from-yellow-500/50 via-amber-500/50 to-yellow-500/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Em Andamento</CardTitle>
+            <KanbanIcon className="h-4 w-4 text-yellow-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{kanbanStats.emAndamento}</div>
+            <p className="text-xs text-gray-600">no período filtrado</p>
+          </CardContent>
+        </GlowingCard>
+
+        <GlowingCard className="border-l-4 border-l-orange-500" glowColor="from-orange-500/50 via-red-500/50 to-orange-500/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Em Correção</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{kanbanStats.emCorrecao}</div>
+            <p className="text-xs text-gray-600">no período filtrado</p>
           </CardContent>
         </GlowingCard>
 
         <GlowingCard className="border-l-4 border-l-green-500" glowColor="from-green-500/50 via-emerald-500/50 to-green-500/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Kanban Finalizados</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-700">Finalizados</CardTitle>
             <ClipboardCheck className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{kanbanStats.finalizados}</div>
-            <p className="text-xs text-gray-600">{kanbanStats.total > 0 ? `${Math.round((kanbanStats.finalizados / kanbanStats.total) * 100)}% do total` : 'nenhum card'}</p>
+            <p className="text-xs text-gray-600">{kanbanStats.total > 0 ? `${Math.round((kanbanStats.finalizados / kanbanStats.total) * 100)}% do total` : 'no período filtrado'}</p>
           </CardContent>
         </GlowingCard>
+      </div>
 
+      {/* Linha extra: Laudos (sempre snapshot atual, não filtram por período) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
         <GlowingCard className="border-l-4 border-l-red-500" glowColor="from-red-500/50 via-pink-500/50 to-red-500/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-700">Laudos Vencidos</CardTitle>
@@ -509,7 +594,6 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
             <p className="text-xs text-gray-600">de {laudosStats.total} documentos</p>
           </CardContent>
         </GlowingCard>
-
         <GlowingCard className="border-l-4 border-l-indigo-500" glowColor="from-indigo-500/50 via-violet-500/50 to-indigo-500/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-700">Laudos Em Análise</CardTitle>
@@ -517,7 +601,27 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-indigo-600">{laudosStats.emAnalise}</div>
-            <p className="text-xs text-gray-600">{laudosStats.emDia} em dia</p>
+            <p className="text-xs text-gray-600">snapshot atual</p>
+          </CardContent>
+        </GlowingCard>
+        <GlowingCard className="border-l-4 border-l-emerald-500" glowColor="from-emerald-500/50 via-green-500/50 to-emerald-500/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Laudos Em Dia</CardTitle>
+            <ClipboardCheck className="h-4 w-4 text-emerald-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">{laudosStats.emDia}</div>
+            <p className="text-xs text-gray-600">snapshot atual</p>
+          </CardContent>
+        </GlowingCard>
+        <GlowingCard className="border-l-4 border-l-blue-500" glowColor="from-blue-500/50 via-sky-500/50 to-blue-500/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-700">Total Documentos</CardTitle>
+            <FileText className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{laudosStats.total}</div>
+            <p className="text-xs text-gray-600">do prédio</p>
           </CardContent>
         </GlowingCard>
       </div>
@@ -700,7 +804,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
                       .from('itens_relevantes_relatorio')
                       .delete()
                       .eq('contrato_id', contrato.id)
-                      .eq('mes', selectedMonth);
+                      .in('mes', mesesNaFaixa);
 
                     if (error) {
                       console.error('❌ Erro ao limpar itens:', error);
