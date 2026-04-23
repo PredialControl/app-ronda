@@ -213,52 +213,45 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
         { condominio: 0, construtora: 0, outros: 0 }
       );
 
-    // Status da última visita: usar APENAS a última ronda DO MÊS FILTRADO
+    // Status da última visita de CADA equipamento — usar TODAS as rondas do contrato (não só o período)
+    // Para cada equipamento (nome), pegar o status da ronda mais recente que o visitou.
     const statusEquipamentos = (() => {
-      console.log('🔍 ===== CALCULANDO STATUS EQUIPAMENTOS =====');
-      console.log('🔍 DEBUG STATUS EQUIPAMENTOS - Rondas do mês filtrado:', rondasMes.length);
-      console.log('🔍 Mês selecionado:', selectedMonth);
-      console.log('🔍 TODAS as rondas do mês:', rondasMes.map(r => ({
-        id: r.id,
-        nome: r.nome,
-        data: r.data,
-        areasCount: r.areasTecnicas?.length || 0
-      })));
+      const porEquipamento: Record<string, { nome: string; ultimaVisita: string | null; statusUltimaVisita: string; observacoes: string | null; id: string }> = {};
 
-      const rondaMaisRecente = [...rondasMes]
-        .sort((a, b) => b.data.localeCompare(a.data))[0];
+      // Ordenar todas as rondas do MAIS ANTIGO para o MAIS RECENTE, e sobrescrever, assim no final fica o mais recente por equipamento
+      const rondasOrdenadas = [...rondas].sort((a, b) => a.data.localeCompare(b.data));
 
-      console.log('🔍 Ronda mais recente DO MÊS:', {
-        id: rondaMaisRecente?.id,
-        nome: rondaMaisRecente?.nome,
-        data: rondaMaisRecente?.data,
-        temAreasTecnicas: !!rondaMaisRecente?.areasTecnicas,
-        quantidadeAreas: rondaMaisRecente?.areasTecnicas?.length || 0
-      });
-
-      const areas = rondaMaisRecente?.areasTecnicas || [];
-      console.log('🔍 Áreas técnicas da última ronda do mês:', areas.length);
-      console.log('🔍 Detalhes das áreas:', areas);
-
-      areas.forEach((at, index) => {
-        console.log(`🔍 Área ${index + 1}:`, {
-          id: at.id,
-          nome: at.nome,
-          status: at.status,
-          observacoes: at.observacoes
+      rondasOrdenadas.forEach(r => {
+        (r.areasTecnicas || []).forEach(at => {
+          const chave = (at.nome || '').trim();
+          if (!chave) return;
+          porEquipamento[chave] = {
+            id: at.id || `${r.id}-${chave}`,
+            nome: at.nome,
+            ultimaVisita: r.data || null,
+            statusUltimaVisita: at.status || 'NÃO VISITADO',
+            observacoes: at.observacoes || null,
+          };
         });
       });
 
-      const resultado = areas.map((at) => ({
-        id: at.id,
-        nome: at.nome,
-        ultimaVisita: rondaMaisRecente?.data || null,
-        statusUltimaVisita: at.status || 'NÃO VISITADO',
-        observacoes: at.observacoes || null
-      }));
+      // Também mesclar todas as areasTecnicas do contrato (prop) que talvez não tenham visita ainda
+      areasTecnicas.forEach(at => {
+        const chave = (at.nome || '').trim();
+        if (!chave) return;
+        if (!porEquipamento[chave]) {
+          porEquipamento[chave] = {
+            id: at.id || chave,
+            nome: at.nome,
+            ultimaVisita: null,
+            statusUltimaVisita: 'NÃO VISITADO',
+            observacoes: null,
+          };
+        }
+      });
 
-      console.log('🔍 Status equipamentos RESULTADO FINAL (do mês filtrado):', resultado);
-      console.log('🔍 ===== FIM DO CÁLCULO =====');
+      const resultado = Object.values(porEquipamento).sort((a, b) => a.nome.localeCompare(b.nome));
+      console.log('🔍 Status equipamentos (merge todas as rondas):', resultado.length, 'equipamentos');
       return resultado;
     })();
 
@@ -282,7 +275,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     });
 
     return metricas;
-  }, [rondasMes, startDate, endDate]);
+  }, [rondasMes, startDate, endDate, rondas, areasTecnicas]);
 
   // Estado para lista de itens relevantes (agora do Supabase)
   const [reportItemsList, setReportItemsList] = useState<Array<{ id: string; descricao: string; data: string }>>([]);
