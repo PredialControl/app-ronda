@@ -1444,7 +1444,7 @@ function App() {
     console.log('📍 Sidebar navegando para:', destination);
 
     // Menu principal — qualquer uma destas destinations é global, independente do menuLevel
-    const mainDestinations = ['contratos', 'agenda', 'chamados', 'dashboard'];
+    const mainDestinations = ['contratos', 'agenda', 'chamados', 'dashboard', 'usuarios'];
     if (mainDestinations.includes(destination)) {
       // Sempre resetar pro menu principal — evita ficar preso em submenus
       setMenuLevel('main');
@@ -1462,6 +1462,10 @@ function App() {
         setMainSection('dashboard');
         setViewMode('dashboard');
         // NÃO auto-selecionar — usuário escolhe no dropdown dentro do dashboard
+      } else if (destination === 'usuarios') {
+        setViewMode('usuarios');
+        setContratoSelecionado(null);
+        setCurrentView('contratos');
       }
       return;
     }

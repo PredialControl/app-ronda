@@ -8,6 +8,8 @@ import { Plus, Edit2, Trash2, UserCircle, Shield, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { hash } from 'bcryptjs';
 
+type PerfilUsuario = 'master' | 'implantacao' | 'supervisor' | 'gerente_predial' | 'sindico';
+
 interface Usuario {
   id: string;
   email: string;
@@ -17,7 +19,11 @@ interface Usuario {
   ativo: boolean;
   ultimo_acesso: string | null;
   created_at: string;
+  perfil?: PerfilUsuario;
+  contratos_acesso?: string[];
 }
+
+interface Contrato { id: string; nome: string; }
 
 interface GerenciarUsuariosProps {
   usuarioLogado: any;
@@ -36,10 +42,19 @@ export function GerenciarUsuarios({ usuarioLogado }: GerenciarUsuariosProps) {
   const [formSenha, setFormSenha] = useState('');
   const [formIsAdmin, setFormIsAdmin] = useState(false);
   const [formAtivo, setFormAtivo] = useState(true);
+  const [formPerfil, setFormPerfil] = useState<PerfilUsuario>('supervisor');
+  const [formContratos, setFormContratos] = useState<string[]>([]);
+  const [contratos, setContratos] = useState<Contrato[]>([]);
 
   useEffect(() => {
     carregarUsuarios();
+    carregarContratos();
   }, []);
+
+  const carregarContratos = async () => {
+    const { data } = await supabase.from('contratos').select('id, nome').order('nome');
+    if (data) setContratos(data);
+  };
 
   const carregarUsuarios = async () => {
     setLoading(true);
@@ -63,6 +78,8 @@ export function GerenciarUsuarios({ usuarioLogado }: GerenciarUsuariosProps) {
       setFormSenha('');
       setFormIsAdmin(usuario.is_admin);
       setFormAtivo(usuario.ativo);
+      setFormPerfil((usuario.perfil as PerfilUsuario) || 'supervisor');
+      setFormContratos(usuario.contratos_acesso || []);
     } else {
       setEditando(null);
       setFormEmail('');
@@ -71,6 +88,8 @@ export function GerenciarUsuarios({ usuarioLogado }: GerenciarUsuariosProps) {
       setFormSenha('');
       setFormIsAdmin(false);
       setFormAtivo(true);
+      setFormPerfil('supervisor');
+      setFormContratos([]);
     }
     setShowModal(true);
   };
@@ -87,8 +106,10 @@ export function GerenciarUsuarios({ usuarioLogado }: GerenciarUsuariosProps) {
         const updateData: any = {
           nome: formNome,
           cargo: formCargo,
-          is_admin: formIsAdmin,
+          is_admin: formIsAdmin || formPerfil === 'master',
           ativo: formAtivo,
+          perfil: formPerfil,
+          contratos_acesso: formPerfil === 'master' ? null : formContratos,
         };
 
         // Se mudou a senha, criptografar
@@ -120,8 +141,10 @@ export function GerenciarUsuarios({ usuarioLogado }: GerenciarUsuariosProps) {
             senha_hash: senhaHash,
             nome: formNome,
             cargo: formCargo,
-            is_admin: formIsAdmin,
+            is_admin: formIsAdmin || formPerfil === 'master',
             ativo: formAtivo,
+            perfil: formPerfil,
+            contratos_acesso: formPerfil === 'master' ? null : formContratos,
           }]);
 
         if (error) throw error;
@@ -192,7 +215,12 @@ export function GerenciarUsuarios({ usuarioLogado }: GerenciarUsuariosProps) {
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="text-lg font-semibold text-white">{usuario.nome}</h3>
-                        {usuario.is_admin && (
+                        {usuario.perfil && (
+                          <span className="px-2 py-1 text-xs bg-blue-900/30 text-blue-400 rounded border border-blue-800 capitalize">
+                            {usuario.perfil.replace('_', ' ')}
+                          </span>
+                        )}
+                        {usuario.is_admin && !usuario.perfil && (
                           <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-500 rounded border border-yellow-800">
                             Admin
                           </span>
@@ -309,6 +337,44 @@ export function GerenciarUsuarios({ usuarioLogado }: GerenciarUsuariosProps) {
               />
             </div>
 
+            <div>
+              <Label className="text-gray-300">Perfil</Label>
+              <select
+                value={formPerfil}
+                onChange={(e) => setFormPerfil(e.target.value as PerfilUsuario)}
+                className="w-full bg-gray-700 border border-gray-600 text-white rounded-md px-3 py-2"
+              >
+                <option value="master">Master (acesso total + gerenciar usuários)</option>
+                <option value="implantacao">Implantação (mover cards Kanban, criar relatórios)</option>
+                <option value="supervisor">Supervisor (criar rondas, pareceres)</option>
+                <option value="gerente_predial">Gerente Predial (só abrir chamados)</option>
+                <option value="sindico">Síndico (ver tudo, abrir chamados)</option>
+              </select>
+            </div>
+
+            {formPerfil !== 'master' && contratos.length > 0 && (
+              <div>
+                <Label className="text-gray-300">Contratos acessíveis (deixe vazio = todos)</Label>
+                <div className="bg-gray-700 border border-gray-600 rounded-md p-2 max-h-48 overflow-y-auto space-y-1">
+                  {contratos.map(ct => (
+                    <label key={ct.id} className="flex items-center gap-2 text-gray-200 text-sm cursor-pointer hover:bg-gray-600 px-2 py-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={formContratos.includes(ct.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setFormContratos(prev => [...prev, ct.id]);
+                          else setFormContratos(prev => prev.filter(x => x !== ct.id));
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <span>{ct.nome}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{formContratos.length === 0 ? 'Sem marcação = acesso a todos os contratos.' : `${formContratos.length} contrato(s) selecionado(s).`}</p>
+              </div>
+            )}
+
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 text-gray-300 cursor-pointer">
                 <input
@@ -317,7 +383,7 @@ export function GerenciarUsuarios({ usuarioLogado }: GerenciarUsuariosProps) {
                   onChange={(e) => setFormIsAdmin(e.target.checked)}
                   className="w-4 h-4"
                 />
-                <span>Administrador</span>
+                <span>Administrador (legado)</span>
               </label>
 
               <label className="flex items-center gap-2 text-gray-300 cursor-pointer">

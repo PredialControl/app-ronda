@@ -42,6 +42,7 @@ interface SidebarProps {
   onBack?: () => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  isAdmin?: boolean;
 }
 
 export function Sidebar({
@@ -51,7 +52,8 @@ export function Sidebar({
   onNavigate,
   onBack,
   collapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  isAdmin = false,
 }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -61,6 +63,7 @@ export function Sidebar({
     { id: 'agenda', label: 'Agenda', icon: Calendar },
     { id: 'chamados', label: 'Chamados', icon: MessageSquare },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+    ...(isAdmin ? [{ id: 'usuarios', label: 'Usuários', icon: Shield }] : []),
   ];
 
   // Menu do contrato selecionado

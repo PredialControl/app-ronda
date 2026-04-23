@@ -53,7 +53,7 @@ export function AppLayout({
       {/* Content wrapper */}
       <div className="relative flex w-full h-full">
         {/* Sidebar */}
-        <Sidebar
+        <Sidebar isAdmin={isAdmin}
           currentLevel={menuLevel}
           contratoNome={contratoNome}
           activeItem={activeMenuItem}
@@ -83,18 +83,6 @@ export function AppLayout({
                 <span className="text-gray-400">{usuarioCargo}</span>
               </div>
 
-              {/* Admin Button */}
-              {isAdmin && onUsuarios && (
-                <Button
-                  onClick={onUsuarios}
-                  variant="outline"
-                  size="sm"
-                  className="text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/10 hover:border-yellow-500/50 px-2 lg:px-3"
-                >
-                  <User className="w-4 h-4" />
-                  <span className="hidden lg:inline ml-2">Usuários</span>
-                </Button>
-              )}
 
               {/* Coleta Inspeção */}
               {onColetaInspecao && (
