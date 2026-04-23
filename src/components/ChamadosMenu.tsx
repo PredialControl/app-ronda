@@ -40,6 +40,112 @@ interface ChamadosMenuProps {
   onNavigate?: (destination: string) => void;
 }
 
+function DonutChart({ data, size = 220, thickness = 36 }: {
+  data: Array<{ label: string; value: number; color: string }>;
+  size?: number; thickness?: number;
+}) {
+  const total = data.reduce((s, d) => s + d.value, 0);
+  if (total === 0) {
+    return (
+      <div className="flex items-center justify-center text-gray-500 text-sm" style={{ width: size, height: size }}>
+        Sem dados
+      </div>
+    );
+  }
+  const rOuter = size / 2 - 4;
+  const rInner = rOuter - thickness;
+  const cx = size / 2;
+  const cy = size / 2;
+  let cumulative = 0;
+  const arcs = data.filter(d => d.value > 0).map((d, i) => {
+    const startAngle = (cumulative / total) * 2 * Math.PI;
+    cumulative += d.value;
+    const endAngle = (cumulative / total) * 2 * Math.PI;
+    const x1o = cx + rOuter * Math.sin(startAngle);
+    const y1o = cy - rOuter * Math.cos(startAngle);
+    const x2o = cx + rOuter * Math.sin(endAngle);
+    const y2o = cy - rOuter * Math.cos(endAngle);
+    const x1i = cx + rInner * Math.sin(endAngle);
+    const y1i = cy - rInner * Math.cos(endAngle);
+    const x2i = cx + rInner * Math.sin(startAngle);
+    const y2i = cy - rInner * Math.cos(startAngle);
+    const large = endAngle - startAngle > Math.PI ? 1 : 0;
+    const pathD = [
+      `M ${x1o} ${y1o}`,
+      `A ${rOuter} ${rOuter} 0 ${large} 1 ${x2o} ${y2o}`,
+      `L ${x1i} ${y1i}`,
+      `A ${rInner} ${rInner} 0 ${large} 0 ${x2i} ${y2i}`,
+      'Z',
+    ].join(' ');
+    return <path key={i} d={pathD} fill={d.color} stroke="#111827" strokeWidth={1.5} />;
+  });
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {arcs}
+    </svg>
+  );
+}
+
+function VerticalBarChart({ data, height = 250 }: {
+  data: Array<{ label: string; value: number; color: string }>;
+  height?: number;
+}) {
+  const maxVal = Math.max(...data.map(d => d.value), 1);
+  // Gerar ticks arredondados
+  const steps = 4;
+  const niceMax = Math.ceil(maxVal / steps) * steps;
+  const ticks = Array.from({ length: steps + 1 }, (_, i) => Math.round((niceMax / steps) * (steps - i)));
+  const barAreaH = height - 30;
+  return (
+    <div className="flex flex-col">
+      <div className="flex" style={{ height: barAreaH }}>
+        {/* Eixo Y com labels */}
+        <div className="flex flex-col justify-between text-xs text-gray-500 pr-2 text-right" style={{ width: 32 }}>
+          {ticks.map((t, i) => (
+            <div key={i}>{t}</div>
+          ))}
+        </div>
+        {/* Área das barras */}
+        <div className="flex-1 relative border-l border-b border-gray-700">
+          {/* Grid lines tracejadas */}
+          {ticks.map((_, i) => (
+            <div
+              key={i}
+              className="absolute left-0 right-0 border-t border-dashed border-gray-700/60"
+              style={{ top: `${(i / steps) * 100}%` }}
+            />
+          ))}
+          {/* Barras */}
+          <div className="absolute inset-0 flex items-end justify-around px-2 gap-4">
+            {data.map((d, i) => {
+              const h = (d.value / niceMax) * 100;
+              return (
+                <div key={i} className="flex-1 max-w-[80px] flex flex-col items-center">
+                  <div
+                    className="w-full rounded-t transition-all"
+                    style={{ height: `${h}%`, backgroundColor: d.color, minHeight: d.value > 0 ? 2 : 0 }}
+                    title={`${d.label}: ${d.value}`}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      {/* Labels eixo X */}
+      <div className="flex pl-8">
+        <div className="flex-1 flex items-start justify-around px-2 gap-4 mt-2">
+          {data.map((d, i) => (
+            <div key={i} className="flex-1 max-w-[80px] text-center">
+              <span className="text-xs text-gray-400 -rotate-12 inline-block">{d.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PieChart({ data, size = 160 }: { data: Array<{ label: string; value: number; color: string }>; size?: number }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) {
@@ -372,36 +478,54 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
         })}
       </div>
 
-      {/* Graficos Pizza */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h3 className="text-sm font-bold text-gray-800 mb-2">Distribuição por Status</h3>
-          <div className="flex items-center gap-4">
-            <PieChart data={chartStatusData} />
-            <div className="flex-1 space-y-1">
+      {/* Resumo de Chamados — 3 colunas: progress bars / donut / bar chart */}
+      <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+        <h3 className="text-lg font-bold text-white mb-4">Resumo de Chamados</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+          {/* Coluna 1: Progress bars */}
+          <div className="space-y-3">
+            {chartStatusData.map((d, i) => {
+              const maxVal = Math.max(...chartStatusData.map(x => x.value), 1);
+              const pct = (d.value / maxVal) * 100;
+              return (
+                <div key={i}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-white">{d.label}</span>
+                    <span className="text-sm font-bold text-white">{d.value}</span>
+                  </div>
+                  <div className="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, backgroundColor: d.color }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Coluna 2: Donut chart + legenda */}
+          <div className="flex flex-col items-center">
+            <DonutChart data={chartStatusData} size={220} thickness={36} />
+            <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-3 text-xs">
               {chartStatusData.filter(d => d.value > 0).map((d, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs">
-                  <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: d.color }}></span>
-                  <span className="text-gray-700 flex-1">{d.label}</span>
-                  <span className="font-bold text-gray-900">{d.value}</span>
+                <div key={i} className="flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: d.color }}></span>
+                  <span className="text-gray-300">{d.label}</span>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h3 className="text-sm font-bold text-gray-800 mb-2">Responsabilidade</h3>
-          <div className="flex items-center gap-4">
-            <PieChart data={chartRespData} />
-            <div className="flex-1 space-y-1">
-              {chartRespData.filter(d => d.value > 0).map((d, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs">
-                  <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: d.color }}></span>
-                  <span className="text-gray-700 flex-1">{d.label}</span>
-                  <span className="font-bold text-gray-900">{d.value}</span>
-                </div>
-              ))}
-            </div>
+
+          {/* Coluna 3: Bar chart vertical */}
+          <div>
+            <VerticalBarChart
+              data={[
+                { label: 'Construtora', value: filtrados.filter(x => x.responsavel === 'Construtora' || !x.responsavel).length, color: '#ef4444' },
+                { label: 'Condomínio',  value: filtrados.filter(x => x.responsavel === 'Condominio').length, color: '#3b82f6' },
+              ]}
+              height={250}
+            />
           </div>
         </div>
       </div>
@@ -1076,38 +1200,27 @@ function GaleriaFotosModal({ chamado, onClose }: { chamado: Chamado; onClose: ()
         </div>
         <div className="relative w-full flex items-center justify-center">
           {fotos.length > 1 && (
-            <button
-              onClick={() => setIndiceAtual(i => (i - 1 + fotos.length) % fotos.length)}
-              className="absolute left-0 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full z-10"
-            >
+            <button onClick={() => setIndiceAtual(i => (i - 1 + fotos.length) % fotos.length)}
+              className="absolute left-0 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full z-10">
               <ChevronLeft className="w-6 h-6" />
             </button>
           )}
           <img src={fotos[indiceAtual]} className="max-w-full max-h-[70vh] object-contain rounded" />
           {fotos.length > 1 && (
-            <button
-              onClick={() => setIndiceAtual(i => (i + 1) % fotos.length)}
-              className="absolute right-0 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full z-10"
-            >
+            <button onClick={() => setIndiceAtual(i => (i + 1) % fotos.length)}
+              className="absolute right-0 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full z-10">
               <ChevronRight className="w-6 h-6" />
             </button>
           )}
         </div>
         <div className="mt-3 flex gap-2 flex-wrap justify-center">
           {fotos.map((f, i) => (
-            <button key={i} onClick={() => setIndiceAtual(i)} className={`w-16 h-16 rounded overflow-hidden border-2 ${i === indiceAtual ? 'border-blue-500' : 'border-transparent'}`}>
+            <button key={i} onClick={() => setIndiceAtual(i)}
+              className={`w-16 h-16 rounded overflow-hidden border-2 ${i === indiceAtual ? 'border-blue-500' : 'border-transparent'}`}>
               <img src={f} className="w-full h-full object-cover" />
             </button>
           ))}
         </div>
-        <a
-          href={fotos[indiceAtual]}
-          download={`chamado_${chamado.numeroTicket || chamado.id}_${indiceAtual + 1}.jpg`}
-          className="mt-3 inline-flex items-center gap-1 bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded text-sm"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Download className="w-4 h-4" /> Baixar foto atual
-        </a>
       </div>
     </div>
   );
