@@ -3,7 +3,7 @@ import {
   Plus, Search, Filter, X, Save, Trash2, Camera, MessageSquare,
   Building2, Clock, AlertCircle, HardHat, FileSpreadsheet,
   Calendar, User as UserIcon, Edit2, RefreshCw, Eye, ChevronLeft, ChevronRight,
-  History, Download
+  History, Download, PlusCircle, ClipboardList
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -221,6 +221,9 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
   const [reprogramarFor, setReprogramarFor] = useState<Chamado | null>(null);
   const [showHistorico, setShowHistorico] = useState<Chamado | null>(null);
   const [galeriaFotos, setGaleriaFotos] = useState<Chamado | null>(null);
+
+  // Sub-aba da aba Chamados: 'abrir' (form rapido) ou 'painel' (gestao)
+  const [subView, setSubView] = useState<'abrir' | 'painel'>('painel');
 
   useEffect(() => {
     (async () => {
@@ -454,6 +457,62 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
           </h2>
         </div>
       </div>
+
+      {/* Sub-abas: Abrir / Painel de Solicitacoes */}
+      <div className="flex gap-2 bg-gray-900 rounded-xl p-1.5 border border-gray-800">
+        <button
+          onClick={() => setSubView('abrir')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-sm transition-all ${
+            subView === 'abrir'
+              ? 'bg-orange-600 text-white shadow-lg'
+              : 'text-gray-400 hover:text-white hover:bg-gray-800'
+          }`}
+        >
+          <PlusCircle className="w-5 h-5" />
+          Abrir Chamado
+        </button>
+        <button
+          onClick={() => setSubView('painel')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-sm transition-all relative ${
+            subView === 'painel'
+              ? 'bg-blue-600 text-white shadow-lg'
+              : 'text-gray-400 hover:text-white hover:bg-gray-800'
+          }`}
+        >
+          <ClipboardList className="w-5 h-5" />
+          Painel de Solicitações
+          {stats.counts.aguardando_vistoria > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full min-w-[24px] h-6 px-1.5 flex items-center justify-center animate-pulse shadow-lg shadow-red-500/50">
+              {stats.counts.aguardando_vistoria}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* View "Abrir Chamado" — formulario rapido inline */}
+      {subView === 'abrir' && (
+        <div className="bg-white rounded-xl p-6 border border-gray-200 max-w-3xl mx-auto w-full">
+          <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-200">
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <PlusCircle className="w-6 h-6 text-orange-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Abrir novo chamado</h3>
+              <p className="text-xs text-gray-500">Registre um novo chamado para o prédio</p>
+            </div>
+          </div>
+          <NovoChamadoInline contratos={contratos}
+            defaultContratoId={contratoFiltro === 'todos' ? '' : contratoFiltro}
+            onSalvar={async (dados) => {
+              await criarChamado(dados);
+              setSubView('painel'); // volta ao painel apos salvar
+            }} />
+        </div>
+      )}
+
+      {subView === 'painel' && (
+      <>
+      {/* TODO conteúdo antigo do painel */}
 
       {/* Status Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
@@ -739,6 +798,8 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* Galeria de Fotos */}
       {galeriaFotos && (
@@ -778,6 +839,106 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
 }
 
 // ==================== Modais ====================
+
+// Formulario inline (sem modal) pra aba "Abrir Chamado"
+function NovoChamadoInline({ contratos, defaultContratoId, onSalvar }: {
+  contratos: Contrato[]; defaultContratoId: string;
+  onSalvar: (dados: Partial<Chamado>) => Promise<void> | void;
+}) {
+  const [contratoId, setContratoId] = useState(defaultContratoId || (contratos[0]?.id || ''));
+  const [local, setLocal] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [numeroTicket, setNumeroTicket] = useState('');
+  const [responsavel, setResponsavel] = useState<ChamadoResponsavel>('Construtora');
+  const [prazo, setPrazo] = useState('');
+  const [fotos, setFotos] = useState<string[]>([]);
+  const [salvando, setSalvando] = useState(false);
+
+  const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach(f => {
+      const reader = new FileReader();
+      reader.onloadend = () => setFotos(prev => [...prev, reader.result as string]);
+      reader.readAsDataURL(f);
+    });
+  };
+
+  const handleSalvar = async () => {
+    setSalvando(true);
+    await onSalvar({ contratoId, local, descricao, numeroTicket, responsavel, prazo: prazo || null, fotoUrls: fotos, status: 'aguardando_vistoria' });
+    setSalvando(false);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="text-sm font-semibold text-gray-700">Prédio *</label>
+        <select value={contratoId} onChange={(e) => setContratoId(e.target.value)}
+          className="w-full border border-gray-300 rounded-md px-3 py-2 mt-1 text-sm">
+          <option value="">— Selecione —</option>
+          {contratos.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="text-sm font-semibold text-gray-700">Local *</label>
+        <Input value={local} onChange={(e) => setLocal(e.target.value)} placeholder="Ex.: Apto 302, Hall 3° andar" className="mt-1" />
+      </div>
+      <div>
+        <label className="text-sm font-semibold text-gray-700">Descrição do problema *</label>
+        <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)}
+          placeholder="Descreva o problema encontrado..." rows={5}
+          className="w-full border border-gray-300 rounded-md px-3 py-2 mt-1 text-sm resize-none" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm font-semibold text-gray-700">Número do ticket</label>
+          <Input value={numeroTicket} onChange={(e) => setNumeroTicket(e.target.value)} placeholder="Opcional" className="mt-1" />
+        </div>
+        <div>
+          <label className="text-sm font-semibold text-gray-700">Prazo</label>
+          <Input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} className="mt-1" />
+        </div>
+      </div>
+      <div>
+        <label className="text-sm font-semibold text-gray-700">Responsável</label>
+        <div className="flex gap-2 mt-1">
+          {(['Construtora', 'Condominio'] as const).map(r => (
+            <button key={r} onClick={() => setResponsavel(r)}
+              className={`flex-1 px-3 py-2 rounded-md text-sm border font-medium ${
+                responsavel === r ? 'bg-orange-600 text-white border-orange-600'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
+              {r === 'Condominio' ? 'Condomínio' : r}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="text-sm font-semibold text-gray-700">Fotos</label>
+        <input type="file" accept="image/*" multiple onChange={handleFoto} className="mt-1 text-sm block" />
+        {fotos.length > 0 && (
+          <div className="grid grid-cols-4 gap-2 mt-2">
+            {fotos.map((f, i) => (
+              <div key={i} className="relative">
+                <img src={f} className="w-full aspect-square object-cover rounded" />
+                <button onClick={() => setFotos(prev => prev.filter((_, j) => j !== i))}
+                  className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-0.5">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="flex justify-end pt-3 border-t border-gray-200">
+        <Button onClick={handleSalvar} disabled={salvando || !contratoId || !local.trim() || !descricao.trim()}
+          className="bg-orange-600 hover:bg-orange-700 text-white gap-2 px-6 py-3 text-base font-semibold">
+          {salvando ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+          {salvando ? 'Salvando...' : 'Abrir chamado'}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function NovoChamadoModal({ contratos, defaultContratoId, onClose, onSalvar }: {
   contratos: Contrato[]; defaultContratoId: string;
@@ -1141,8 +1302,8 @@ function ReprogramarModal({ chamado, onClose, onSalvar }: {
   const [novaData, setNovaData] = useState('');
   const [motivo, setMotivo] = useState('');
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-gray-900/95 flex items-center justify-center z-[60] p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full border-2 border-gray-300" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h3 className="text-lg font-bold text-gray-900">Reprogramar prazo</h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5 text-gray-500" /></button>
@@ -1176,8 +1337,8 @@ function ReprogramarModal({ chamado, onClose, onSalvar }: {
 
 function HistoricoModal({ chamado, onClose }: { chamado: Chamado; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-gray-900/95 flex items-center justify-center z-[60] p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto border-2 border-gray-300" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-gray-200 sticky top-0 bg-white">
           <h3 className="text-lg font-bold text-gray-900">Historico de reprogramacoes</h3>
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5 text-gray-500" /></button>
@@ -1212,7 +1373,6 @@ function GaleriaFotosModal({ chamado, onClose }: { chamado: Chamado; onClose: ()
   const [carregando, setCarregando] = useState(false);
 
   useEffect(() => {
-    // Se nao veio fotos na listagem (lazy), busca sob demanda
     if ((chamado.fotoUrls || []).length === 0 && chamado.id) {
       setCarregando(true);
       chamadoService.getFotos(chamado.id)
@@ -1231,7 +1391,6 @@ function GaleriaFotosModal({ chamado, onClose }: { chamado: Chamado; onClose: ()
       </div>
     );
   }
-
   if (fotos.length === 0) {
     return (
       <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[80] p-4" onClick={onClose}>
@@ -1249,9 +1408,7 @@ function GaleriaFotosModal({ chamado, onClose }: { chamado: Chamado; onClose: ()
         <button onClick={onClose} className="absolute top-2 right-2 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full z-10">
           <X className="w-5 h-5" />
         </button>
-        <div className="text-white text-sm mb-2">
-          Foto {indiceAtual + 1} de {fotos.length}
-        </div>
+        <div className="text-white text-sm mb-2">Foto {indiceAtual + 1} de {fotos.length}</div>
         <div className="relative w-full flex items-center justify-center">
           {fotos.length > 1 && (
             <button onClick={() => setIndiceAtual(i => (i - 1 + fotos.length) % fotos.length)}
