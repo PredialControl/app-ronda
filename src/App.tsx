@@ -1457,6 +1457,10 @@ function App() {
       } else if (destination === 'dashboard') {
         setMainSection('dashboard');
         setViewMode('dashboard');
+        // Auto-selecionar primeiro contrato — o usuário filtra por dropdown dentro do dashboard
+        if (!contratoSelecionado && contratos.length > 0) {
+          setContratoSelecionado(contratos[0]);
+        }
       }
       return;
     }
@@ -2098,9 +2102,9 @@ function App() {
               />
             )}
 
-            {viewMode === 'dashboard' && contratoSelecionado && (
+            {viewMode === 'dashboard' && (contratoSelecionado || contratos.length > 0) && (
               <Dashboard
-                contrato={contratoSelecionado}
+                contrato={contratoSelecionado || contratos[0]}
                 rondas={rondasCompletas}
                 areasTecnicas={areasTecnicasDoContrato}
                 contratos={contratos}
