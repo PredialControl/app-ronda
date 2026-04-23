@@ -2160,3 +2160,200 @@ export const kanbanItemsService = {
     }
   },
 };
+
+
+// ============================================================
+// chamadoService - Gestao de chamados de obra
+// Inspirado em PredialControl/registro-de-chamados
+// ============================================================
+
+export type ChamadoStatus =
+  | 'itens_apontados'
+  | 'em_andamento'
+  | 'improcedente'
+  | 'aguardando_vistoria'
+  | 'concluido'
+  | 'f_indevido';
+
+export type ChamadoResponsavel = 'Condominio' | 'Construtora' | null;
+
+export type ChamadoUpdateType = 'construtora' | 'condominio' | 'engenharia';
+
+export interface ChamadoUpdate {
+  id: string;
+  type: ChamadoUpdateType;
+  message: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface ChamadoReprogramacao {
+  date: string;
+  reason: string;
+  updatedAt: string;
+}
+
+export interface Chamado {
+  id: string;
+  contratoId: string;
+  contratoNome?: string;
+  usuarioId?: string | null;
+  numeroTicket?: string | null;
+  local: string;
+  descricao: string;
+  status: ChamadoStatus;
+  responsavel?: ChamadoResponsavel;
+  prazo?: string | null;
+  reprogramacaoData?: string | null;
+  retornoConstrutora?: string | null;
+  parecerEngenharia?: string | null;
+  fotoUrls: string[];
+  historicoReprogramacao: ChamadoReprogramacao[];
+  atualizacoes: ChamadoUpdate[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+const mapChamado = (row: any, contratoNome?: string): Chamado => ({
+  id: row.id,
+  contratoId: row.contrato_id,
+  contratoNome: contratoNome,
+  usuarioId: row.usuario_id,
+  numeroTicket: row.numero_ticket,
+  local: row.local,
+  descricao: row.descricao,
+  status: row.status,
+  responsavel: row.responsavel,
+  prazo: row.prazo,
+  reprogramacaoData: row.reprogramacao_data,
+  retornoConstrutora: row.retorno_construtora,
+  parecerEngenharia: row.parecer_engenharia,
+  fotoUrls: Array.isArray(row.foto_urls) ? row.foto_urls : [],
+  historicoReprogramacao: Array.isArray(row.historico_reprogramacao) ? row.historico_reprogramacao : [],
+  atualizacoes: Array.isArray(row.atualizacoes) ? row.atualizacoes : [],
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+export const chamadoService = {
+  async getAll(): Promise<Chamado[]> {
+    try {
+      const { data, error } = await supabase
+        .from('chamados')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(r => mapChamado(r));
+    } catch (err) {
+      console.warn('[chamadoService] getAll falhou:', err);
+      return [];
+    }
+  },
+
+  async getByContrato(contratoId: string): Promise<Chamado[]> {
+    try {
+      const { data, error } = await supabase
+        .from('chamados')
+        .select('*')
+        .eq('contrato_id', contratoId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []).map(r => mapChamado(r));
+    } catch (err) {
+      console.warn('[chamadoService] getByContrato falhou:', err);
+      return [];
+    }
+  },
+
+  async create(ch: Omit<Chamado, 'id' | 'createdAt' | 'updatedAt'>): Promise<Chamado | null> {
+    try {
+      const payload = {
+        contrato_id: ch.contratoId,
+        usuario_id: ch.usuarioId || null,
+        numero_ticket: ch.numeroTicket || null,
+        local: ch.local,
+        descricao: ch.descricao,
+        status: ch.status || 'aguardando_vistoria',
+        responsavel: ch.responsavel || null,
+        prazo: ch.prazo || null,
+        reprogramacao_data: ch.reprogramacaoData || null,
+        retorno_construtora: ch.retornoConstrutora || null,
+        parecer_engenharia: ch.parecerEngenharia || null,
+        foto_urls: ch.fotoUrls || [],
+        historico_reprogramacao: ch.historicoReprogramacao || [],
+        atualizacoes: ch.atualizacoes || [],
+      };
+      const { data, error } = await supabase
+        .from('chamados')
+        .insert(payload)
+        .select('*')
+        .single();
+      if (error) throw error;
+      return mapChamado(data);
+    } catch (err) {
+      console.error('[chamadoService] create falhou:', err);
+      return null;
+    }
+  },
+
+  async update(id: string, patch: Partial<Chamado>): Promise<boolean> {
+    try {
+      const payload: any = {};
+      if (patch.local !== undefined) payload.local = patch.local;
+      if (patch.descricao !== undefined) payload.descricao = patch.descricao;
+      if (patch.status !== undefined) payload.status = patch.status;
+      if (patch.responsavel !== undefined) payload.responsavel = patch.responsavel;
+      if (patch.prazo !== undefined) payload.prazo = patch.prazo;
+      if (patch.numeroTicket !== undefined) payload.numero_ticket = patch.numeroTicket;
+      if (patch.reprogramacaoData !== undefined) payload.reprogramacao_data = patch.reprogramacaoData;
+      if (patch.retornoConstrutora !== undefined) payload.retorno_construtora = patch.retornoConstrutora;
+      if (patch.parecerEngenharia !== undefined) payload.parecer_engenharia = patch.parecerEngenharia;
+      if (patch.fotoUrls !== undefined) payload.foto_urls = patch.fotoUrls;
+      if (patch.historicoReprogramacao !== undefined) payload.historico_reprogramacao = patch.historicoReprogramacao;
+      if (patch.atualizacoes !== undefined) payload.atualizacoes = patch.atualizacoes;
+
+      const { error } = await supabase
+        .from('chamados')
+        .update(payload)
+        .eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[chamadoService] update falhou:', err);
+      return false;
+    }
+  },
+
+  async remove(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase.from('chamados').delete().eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[chamadoService] remove falhou:', err);
+      return false;
+    }
+  },
+
+  async addUpdate(id: string, update: Omit<ChamadoUpdate, 'id' | 'createdAt'>): Promise<boolean> {
+    try {
+      const { data: current } = await supabase
+        .from('chamados').select('atualizacoes').eq('id', id).single();
+      const list: ChamadoUpdate[] = Array.isArray(current?.atualizacoes) ? current.atualizacoes : [];
+      list.unshift({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        type: update.type,
+        message: update.message,
+        createdBy: update.createdBy,
+        createdAt: new Date().toISOString(),
+      });
+      const { error } = await supabase.from('chamados').update({ atualizacoes: list }).eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('[chamadoService] addUpdate falhou:', err);
+      return false;
+    }
+  },
+};
+
