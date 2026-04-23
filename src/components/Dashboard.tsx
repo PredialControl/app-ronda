@@ -103,6 +103,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     finalizados: 0,
   });
   const [laudosStats, setLaudosStats] = useState({ total: 0, vencidos: 0, emAnalise: 0, emDia: 0 });
+  const [laudosList, setLaudosList] = useState<any[]>([]);
   const [kanbanItemsList, setKanbanItemsList] = useState<any[]>([]);
   const [loadingCount, setLoadingCount] = useState(0);
 
@@ -216,6 +217,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
       }
       try {
         const laudos = await laudoService.getByContrato(contrato.id);
+        setLaudosList(laudos);
         setLaudosStats({
           total: laudos.length,
           vencidos: laudos.filter(l => l.status === 'vencidos').length,
@@ -523,21 +525,21 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
   };
 
   const handleExportarPDF = async () => {
-    const doc = new jsPDF();
+    // Landscape para ficar igual ao app (4 colunas do kanban lado a lado)
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-    // Header com logo + titulo + info (replicando o padrao dos outros PDFs)
+    // ===== HEADER (logo + titulo + infos) =====
     const drawHeader = async () => {
       const headerH = 22;
-      const logoW = pageWidth * 0.15;
-      const titleW = pageWidth * 0.55;
-      // Bordas
+      const logoW = pageWidth * 0.12;
+      const titleW = pageWidth * 0.58;
       doc.setDrawColor(0);
       doc.setLineWidth(0.3);
       doc.rect(10, 10, pageWidth - 20, headerH);
       doc.line(10 + logoW, 10, 10 + logoW, 10 + headerH);
       doc.line(10 + logoW + titleW, 10, 10 + logoW + titleW, 10 + headerH);
-      // Tentar carregar logo
       try {
         const resp = await fetch('/logo-header.png');
         if (resp.ok) {
@@ -548,260 +550,242 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
           doc.addImage(dataUrl, 'PNG', 12, 12, logoW - 4, headerH - 4);
         }
       } catch {}
-      // Titulo central
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0);
       doc.text('DASHBOARD - RELATORIO GERENCIAL', 10 + logoW + titleW / 2, 22, { align: 'center' });
-      // Info direita
-      doc.setFontSize(7);
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      doc.text('Condominio', 10 + logoW + titleW + 3, 14);
+      doc.text('Condominio:', 10 + logoW + titleW + 3, 14);
       doc.setFont('helvetica', 'normal');
-      doc.text((contrato?.nome || '—').substring(0, 35), 10 + logoW + titleW + 3, 19);
+      doc.text((contrato?.nome || '-').substring(0, 45), 10 + logoW + titleW + 3, 18);
       doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 10 + logoW + titleW + 3, 24);
       doc.text(`Periodo: ${new Date(startDate + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(endDate + 'T00:00:00').toLocaleDateString('pt-BR')}`, 10 + logoW + titleW + 3, 29);
     };
     await drawHeader();
 
     let y = 38;
-    const addSection = (titulo: string, cor: [number, number, number]) => {
-      if (y > 265) { doc.addPage(); y = 20; }
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(cor[0], cor[1], cor[2]);
-      doc.text(titulo, 14, y); y += 6;
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-    };
-    const addLine = (texto: string) => {
-      if (y > 275) { doc.addPage(); y = 20; }
-      doc.text(texto, 14, y); y += 4.5;
-    };
-    const addLines = (texto: string, maxWidth = 180) => {
-      const linhas = doc.splitTextToSize(texto, maxWidth);
-      linhas.forEach((ln: string) => addLine(ln));
-    };
 
-    // === Supervisao ===
-    addSection('INDICADORES DE SUPERVISAO', [0, 128, 0]);
-    addLine(`- Total de Visitas: ${metricas.totalRondasMes}`);
-    addLine(`- Itens Criticos: ${metricas.itensCriticos}`);
-    addLine(`- Itens de Atencao: ${metricas.itensAtencao}`);
-    addLine(`- Responsavel Construtora: ${metricas.contagemResponsavel.construtora}`);
-    addLine(`- Responsavel Condominio: ${metricas.contagemResponsavel.condominio}`);
-    addLine(`- Responsavel Outros: ${metricas.contagemResponsavel.outros}`);
-    y += 4;
-
-    // === Implantacao ===
-    addSection('INDICADORES DE IMPLANTACAO', [0, 0, 200]);
-    addLine(`- Kanban - Aguardando: ${kanbanStats.aguardando}`);
-    addLine(`- Kanban - Em Andamento: ${kanbanStats.emAndamento}`);
-    addLine(`- Kanban - Em Correcao: ${kanbanStats.emCorrecao}`);
-    addLine(`- Kanban - Finalizados: ${kanbanStats.finalizados}`);
-    addLine(`- Laudos Vencidos: ${laudosStats.vencidos} de ${laudosStats.total}`);
-    addLine(`- Laudos Em Analise: ${laudosStats.emAnalise}`);
-    addLine(`- Laudos Em Dia: ${laudosStats.emDia}`);
-    y += 4;
-
-    // === Grafico: Status do Kanban ===
-    if (y > 220) { doc.addPage(); y = 20; }
-    doc.setFontSize(11); doc.setFont('helvetica', 'bold');
-    doc.text('Grafico: Status do Kanban', 14, y); y += 6;
-    doc.setFont('helvetica', 'normal');
-    {
-      const kMax = Math.max(kanbanStats.aguardando, kanbanStats.emAndamento, kanbanStats.emCorrecao, kanbanStats.finalizados, 1);
-      const barHeight = 6; const barMaxW = 100;
-      const kbars: Array<{label: string; val: number; rgb: [number, number, number]}> = [
-        { label: 'Aguardando', val: kanbanStats.aguardando, rgb: [160, 160, 160] },
-        { label: 'Em Andamento', val: kanbanStats.emAndamento, rgb: [230, 180, 0] },
-        { label: 'Em Correcao', val: kanbanStats.emCorrecao, rgb: [220, 100, 20] },
-        { label: 'Finalizados', val: kanbanStats.finalizados, rgb: [40, 180, 40] },
-      ];
-      kbars.forEach(b => {
-        if (y > 275) { doc.addPage(); y = 20; }
-        doc.setFontSize(8);
-        doc.text(b.label, 14, y + 4);
-        doc.setDrawColor(180); doc.setFillColor(235, 235, 235);
-        doc.rect(55, y, barMaxW, barHeight, 'FD');
-        const w = (b.val / kMax) * barMaxW;
-        doc.setFillColor(b.rgb[0], b.rgb[1], b.rgb[2]);
-        if (w > 0) doc.rect(55, y, w, barHeight, 'F');
-        doc.setTextColor(0);
-        doc.text(String(b.val), 55 + barMaxW + 3, y + 4);
-        y += barHeight + 2;
+    // ===== RESUMO DO PROGRESSO (4 caixas cinzas) =====
+    const renderResumoProgresso = (titulo: string, itens: any[], colunas: Array<{key: string; label: string; rgb: [number,number,number]}>) => {
+      doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(0);
+      doc.text(titulo, 14, y); y += 5;
+      const margem = 10;
+      const gap = 3;
+      const colW = (pageWidth - margem * 2 - gap * (colunas.length - 1)) / colunas.length;
+      const boxH = 16;
+      colunas.forEach((col, idx) => {
+        const x = margem + idx * (colW + gap);
+        doc.setDrawColor(80);
+        doc.setFillColor(245, 245, 250);
+        doc.rect(x, y, colW, boxH, 'FD');
+        const count = itens.filter(i => ((i.status || '') === col.key)).length;
+        doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(80);
+        doc.text(col.label, x + colW / 2, y + 4.5, { align: 'center' });
+        doc.setFontSize(16); doc.setFont('helvetica', 'bold'); doc.setTextColor(0);
+        doc.text(String(count), x + colW / 2, y + 12, { align: 'center' });
+        doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(120);
+        doc.text('itens', x + colW / 2, y + 15.5, { align: 'center' });
       });
-      y += 2;
-      // Proporcao 100%
-      const ktot = kanbanStats.aguardando + kanbanStats.emAndamento + kanbanStats.emCorrecao + kanbanStats.finalizados;
-      if (ktot > 0) {
-        if (y > 270) { doc.addPage(); y = 20; }
-        doc.setFontSize(9);
-        doc.text('Proporcao (100%):', 14, y + 4);
-        let xx = 55;
-        kbars.forEach(b => {
-          const w = (b.val / ktot) * barMaxW;
-          if (w > 0) {
-            doc.setFillColor(b.rgb[0], b.rgb[1], b.rgb[2]);
-            doc.rect(xx, y, w, barHeight, 'F');
-            if (w > 12) {
-              doc.setTextColor(255); doc.setFontSize(7);
-              doc.text(`${Math.round(b.val/ktot*100)}%`, xx + 2, y + 4);
+      doc.setTextColor(0);
+      y += boxH + 4;
+    };
+
+    // ===== RENDERIZA KANBAN VISUAL COMPLETO (todas as pages) =====
+    const renderKanbanVisual = (itens: any[], colunas: Array<{key: string; label: string; rgb: [number,number,number]}>, mapCard: (i: any) => { badge?: string; titulo: string; extras: string[] }) => {
+      const margem = 10;
+      const gap = 3;
+      const colW = (pageWidth - margem * 2 - gap * (colunas.length - 1)) / colunas.length;
+      const headerH = 8;
+
+      // Separa por coluna
+      const porColuna: Record<string, any[]> = {};
+      colunas.forEach(c => porColuna[c.key] = []);
+      itens.forEach(it => {
+        const k = it.status || '';
+        if (porColuna[k]) porColuna[k].push(it);
+      });
+
+      // Ponteiros de índice por coluna (avançam conforme renderizamos)
+      const ptr: Record<string, number> = {};
+      colunas.forEach(c => ptr[c.key] = 0);
+
+      const temMaisCards = () => colunas.some(c => ptr[c.key] < porColuna[c.key].length);
+
+      let primeiraPagina = true;
+      while (primeiraPagina || temMaisCards()) {
+        if (!primeiraPagina) {
+          doc.addPage();
+          y = 15;
+        }
+        primeiraPagina = false;
+
+        // Headers coloridos
+        const topY = y;
+        colunas.forEach((col, idx) => {
+          const x = margem + idx * (colW + gap);
+          doc.setFillColor(col.rgb[0], col.rgb[1], col.rgb[2]);
+          doc.rect(x, y, colW, headerH, 'F');
+          doc.setTextColor(255);
+          doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+          doc.text(`${col.label} (${porColuna[col.key].length})`, x + colW / 2, y + 5.5, { align: 'center' });
+        });
+        doc.setTextColor(0);
+        y = topY + headerH + 2;
+
+        // Renderiza cards de cada coluna nessa pagina
+        let colFinalY = y;
+        colunas.forEach((col, idx) => {
+          const x = margem + idx * (colW + gap);
+          let cy = y;
+          const lista = porColuna[col.key];
+          if (lista.length === 0 && ptr[col.key] === 0) {
+            doc.setFontSize(8); doc.setFont('helvetica', 'italic'); doc.setTextColor(130);
+            doc.text('Nenhum item nesta coluna', x + colW / 2, cy + 8, { align: 'center' });
+            doc.setTextColor(0);
+            cy += 12;
+          }
+          while (ptr[col.key] < lista.length) {
+            const item = lista[ptr[col.key]];
+            const info = mapCard(item);
+            const numLinhas = 1 + info.extras.length;
+            const cardH = 6 + numLinhas * 3.5;
+            if (cy + cardH > pageHeight - 12) break; // não cabe, próxima pagina
+            // Card
+            doc.setDrawColor(200); doc.setFillColor(250, 250, 252);
+            doc.rect(x + 1, cy, colW - 2, cardH, 'FD');
+            let ly = cy + 4;
+            // Badge (category)
+            if (info.badge) {
+              const bw = doc.getTextWidth(info.badge) + 4;
+              doc.setFillColor(59, 130, 246);
+              doc.rect(x + 2, cy + 1.5, Math.min(bw, colW - 4), 3.5, 'F');
+              doc.setTextColor(255); doc.setFontSize(6); doc.setFont('helvetica', 'bold');
+              doc.text(info.badge, x + 4, cy + 4);
+              ly = cy + 8;
             }
-            xx += w;
+            // Titulo
+            doc.setTextColor(0); doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+            const titLinhas = doc.splitTextToSize(info.titulo, colW - 5);
+            doc.text(titLinhas[0] || info.titulo, x + 2, ly);
+            ly += 3.5;
+            // Extras
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(90);
+            info.extras.forEach(ex => {
+              const first = doc.splitTextToSize(ex, colW - 5)[0] || ex;
+              doc.text(first, x + 2, ly); ly += 3.3;
+            });
+            doc.setTextColor(0);
+            cy += cardH + 1.5;
+            ptr[col.key]++;
           }
+          if (cy > colFinalY) colFinalY = cy;
         });
-        doc.setTextColor(0);
-        y += barHeight + 6;
+        y = colFinalY + 4;
       }
-      y += 4;
-    }
+    };
 
-    // === Grafico: Documentos (Laudos) ===
-    if (y > 240) { doc.addPage(); y = 20; }
-    doc.setFontSize(11); doc.setFont('helvetica', 'bold');
-    doc.text('Grafico: Documentos (Laudos)', 14, y); y += 6;
-    doc.setFont('helvetica', 'normal');
-    {
-      const barHeight = 6; const barMaxW = 100;
-      const lMax = Math.max(laudosStats.vencidos, laudosStats.emAnalise, laudosStats.emDia, 1);
-      const lbars: Array<{label: string; val: number; rgb: [number, number, number]}> = [
-        { label: 'Vencidos', val: laudosStats.vencidos, rgb: [220, 50, 50] },
-        { label: 'Em Analise', val: laudosStats.emAnalise, rgb: [100, 80, 200] },
-        { label: 'Em Dia', val: laudosStats.emDia, rgb: [40, 180, 80] },
-      ];
-      lbars.forEach(b => {
-        if (y > 275) { doc.addPage(); y = 20; }
-        doc.setFontSize(8);
-        doc.text(b.label, 14, y + 4);
-        doc.setDrawColor(180); doc.setFillColor(235, 235, 235);
-        doc.rect(55, y, barMaxW, barHeight, 'FD');
-        const w = (b.val / lMax) * barMaxW;
-        doc.setFillColor(b.rgb[0], b.rgb[1], b.rgb[2]);
-        if (w > 0) doc.rect(55, y, w, barHeight, 'F');
-        doc.setTextColor(0);
-        doc.text(String(b.val), 55 + barMaxW + 3, y + 4);
-        y += barHeight + 2;
-      });
-      y += 6;
-    }
+    // ===== KANBAN IMPLANTACAO =====
+    doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 180);
+    doc.text('KANBAN - IMPLANTACAO', 14, y); y += 6;
+    doc.setTextColor(0);
 
-    // === Cards do Kanban detalhados ===
-    if (kanbanItemsList.length === 0) {
-      addSection('CARDS DO KANBAN', [50, 50, 150]);
-      addLine('(Sem cards cadastrados no Kanban deste contrato, ou os dados ainda nao foram sincronizados neste navegador.)');
-      y += 4;
-    }
-    if (kanbanItemsList.length > 0) {
-      const agrupados: Record<string, any[]> = {
-        aguardando: [], em_andamento: [], em_correcao: [], finalizado: []
-      };
-      kanbanItemsList.forEach(it => {
-        const key = (it.status || 'aguardando') as string;
-        if (!agrupados[key]) agrupados[key] = [];
-        agrupados[key].push(it);
-      });
-      const labels: Record<string, string> = {
-        aguardando: 'AGUARDANDO (VISTORIAS/EQUIPAMENTOS FALTANTES)',
-        em_andamento: 'EM ANDAMENTO',
-        em_correcao: 'EM CORRECAO',
-        finalizado: 'FINALIZADOS (JA VISTORIADOS)',
-      };
-      const cores: Record<string, [number, number, number]> = {
-        aguardando: [200, 100, 0], em_andamento: [200, 150, 0], em_correcao: [200, 50, 50], finalizado: [0, 150, 0]
-      };
-      ['aguardando', 'em_andamento', 'em_correcao', 'finalizado'].forEach(key => {
-        const lista = agrupados[key] || [];
-        if (lista.length === 0) return;
-        addSection(`${labels[key]} (${lista.length})`, cores[key]);
-        // ordenar alfabetico por title
-        lista.sort((a: any, b: any) => (a.title || '').localeCompare(b.title || ''));
-        lista.forEach((it: any) => {
-          const cat = it.category || '-';
-          addLines(`  - [${cat}] ${it.title || 'Sem titulo'}`);
-          const datas: string[] = [];
-          if (it.dataVistoria) datas.push('Vistoria: ' + new Date(it.dataVistoria + 'T00:00:00').toLocaleDateString('pt-BR'));
-          if (it.dataRecebimento) datas.push('Recebimento: ' + new Date(it.dataRecebimento + 'T00:00:00').toLocaleDateString('pt-BR'));
-          if (it.dataAndamento) datas.push('Andamento: ' + new Date(it.dataAndamento + 'T00:00:00').toLocaleDateString('pt-BR'));
-          if (it.dataCorrecao) datas.push('Correcao: ' + new Date(it.dataCorrecao + 'T00:00:00').toLocaleDateString('pt-BR'));
-          if (datas.length > 0) {
-            doc.setFontSize(8);
-            addLines('     ' + datas.join(' | '), 175);
-            doc.setFontSize(9);
-          }
-          if (it.oQueFalta) {
-            doc.setFontSize(8);
-            addLines(`     O que falta: ${it.oQueFalta}`, 175);
-            doc.setFontSize(9);
-          }
-          if (it.pendencias && it.pendencias.length > 0) {
-            doc.setFontSize(8);
-            addLine(`     Pendencias: ${it.pendencias.length}`);
-            doc.setFontSize(9);
-          }
-        });
-        y += 3;
-      });
-    }
+    const colsImpl = [
+      { key: 'aguardando',   label: 'Aguardando (MP)',           rgb: [220, 50, 50] as [number,number,number] },
+      { key: 'em_andamento', label: 'Em andamento (MP)',         rgb: [230, 180, 0] as [number,number,number] },
+      { key: 'em_correcao',  label: 'Em correcao (Construtora)', rgb: [220, 100, 20] as [number,number,number] },
+      { key: 'finalizado',   label: 'Recebido',                  rgb: [40, 180, 40] as [number,number,number] },
+    ];
 
-    // === Visitas do periodo ===
+    renderResumoProgresso('Resumo do Progresso', kanbanItemsList, colsImpl);
+
+    renderKanbanVisual(kanbanItemsList, colsImpl, (item) => ({
+      badge: item.category ? String(item.category).toUpperCase() : undefined,
+      titulo: item.title || item.titulo || 'Sem titulo',
+      extras: (() => {
+        const datas: string[] = [];
+        if (item.dataVistoria) datas.push('V:' + new Date(item.dataVistoria + 'T00:00:00').toLocaleDateString('pt-BR'));
+        if (item.dataAndamento) datas.push('A:' + new Date(item.dataAndamento + 'T00:00:00').toLocaleDateString('pt-BR'));
+        if (item.dataRecebimento) datas.push('R:' + new Date(item.dataRecebimento + 'T00:00:00').toLocaleDateString('pt-BR'));
+        return datas.length ? [datas.join(' | ')] : [];
+      })(),
+    }));
+
+    // ===== KANBAN LAUDOS =====
+    doc.addPage();
+    y = 15;
+    doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 0, 150);
+    doc.text('KANBAN - DOCUMENTOS / LAUDOS', 14, y); y += 6;
+    doc.setTextColor(0);
+
+    const colsLaud = [
+      { key: 'em-analise',         label: 'Em Analise',         rgb: [100, 80, 200] as [number,number,number] },
+      { key: 'em-dia',             label: 'Em Dia',             rgb: [40, 180, 40] as [number,number,number] },
+      { key: 'proximo-vencimento', label: 'Proximo Vencimento', rgb: [230, 180, 0] as [number,number,number] },
+      { key: 'vencidos',           label: 'Vencidos',           rgb: [220, 50, 50] as [number,number,number] },
+    ];
+
+    renderResumoProgresso('Resumo dos Laudos', laudosList, colsLaud);
+
+    renderKanbanVisual(laudosList, colsLaud, (item) => ({
+      badge: item.periodicidade ? String(item.periodicidade).toUpperCase() : undefined,
+      titulo: item.titulo || 'Sem titulo',
+      extras: item.data_vencimento ? ['Vence: ' + new Date(item.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')] : [],
+    }));
+
+    // ===== SECOES DE TEXTO EXTRAS =====
+    doc.addPage();
+    y = 15;
+
+    doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 128, 0);
+    doc.text('INDICADORES DE SUPERVISAO', 14, y); y += 6;
+    doc.setTextColor(0); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+    doc.text(`Total de Visitas: ${metricas.totalRondasMes}  |  Itens Criticos: ${metricas.itensCriticos}  |  Itens Atencao: ${metricas.itensAtencao}`, 14, y); y += 5;
+    doc.text(`Responsavel - Construtora: ${metricas.contagemResponsavel.construtora}  |  Condominio: ${metricas.contagemResponsavel.condominio}  |  Outros: ${metricas.contagemResponsavel.outros}`, 14, y); y += 10;
+
     if (rondasMes.length > 0) {
-      addSection('VISITAS DO PERIODO', [0, 100, 100]);
+      doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 100, 100);
+      doc.text('VISITAS DO PERIODO', 14, y); y += 6;
+      doc.setTextColor(0); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
       rondasMes.forEach((r: any) => {
+        if (y > pageHeight - 10) { doc.addPage(); y = 20; }
         const dt = new Date(r.data + 'T00:00:00').toLocaleDateString('pt-BR');
-        addLine(`${dt} - ${r.nome || 'Sem nome'} (${r.responsavel || '-'})`);
-      });
-      y += 4;
-      if (y > 220) { doc.addPage(); y = 20; }
-      doc.setFontSize(11); doc.setFont('helvetica', 'bold');
-      doc.text('Evolucao de Visitas (por semana)', 14, y); y += 6;
-      doc.setFont('helvetica', 'normal');
-      const porSemana: Record<string, number> = {};
-      rondasMes.forEach((r: any) => {
-        const d = new Date(r.data + 'T00:00:00');
-        const dow = d.getDay();
-        const ini = new Date(d); ini.setDate(d.getDate() - dow);
-        const key = ini.toISOString().split('T')[0];
-        porSemana[key] = (porSemana[key] || 0) + 1;
-      });
-      const entries = Object.entries(porSemana).sort((a, b) => a[0].localeCompare(b[0]));
-      const evMax = Math.max(...entries.map(e => e[1]), 1);
-      entries.forEach(([k, v]) => {
-        if (y > 275) { doc.addPage(); y = 20; }
-        const d = new Date(k + 'T00:00:00');
-        const lbl = `${d.toLocaleDateString('pt-BR')}`;
-        doc.setFontSize(8);
-        doc.text(lbl, 14, y + 4);
-        doc.setDrawColor(180); doc.setFillColor(235, 235, 235);
-        doc.rect(55, y, 100, 6, 'FD');
-        const w = (v / evMax) * 100;
-        doc.setFillColor(0, 120, 200);
-        if (w > 0) doc.rect(55, y, w, 6, 'F');
-        doc.setTextColor(0);
-        doc.text(String(v), 158, y + 4);
-        y += 8;
+        doc.text(`${dt} - ${r.nome || 'Sem nome'} (${r.responsavel || '-'})`, 14, y); y += 4.5;
       });
       y += 4;
     }
 
-    // === Status equipamentos ===
     if (metricas.statusEquipamentos && metricas.statusEquipamentos.length > 0) {
-      addSection('STATUS ULTIMA VISITA - AREAS TECNICAS', [100, 0, 100]);
+      if (y > pageHeight - 30) { doc.addPage(); y = 20; }
+      doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(100, 0, 100);
+      doc.text('STATUS ULTIMA VISITA - AREAS TECNICAS', 14, y); y += 6;
+      doc.setTextColor(0); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
       metricas.statusEquipamentos.forEach((at: any) => {
+        if (y > pageHeight - 10) { doc.addPage(); y = 20; }
         const dt = at.ultimaVisita ? new Date(at.ultimaVisita + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
-        addLine(`${at.nome || '-'} | ${dt} | ${at.statusUltimaVisita || '-'}`);
+        doc.text(`${at.nome || '-'} | ${dt} | ${at.statusUltimaVisita || '-'}`, 14, y); y += 4.5;
       });
       y += 4;
     }
 
-    // === Itens relevantes ===
     if (itensRelevantesSupervisor.length > 0) {
-      addSection('ITENS RELEVANTES (SUPERVISAO)', [80, 0, 150]);
+      if (y > pageHeight - 30) { doc.addPage(); y = 20; }
+      doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(80, 0, 150);
+      doc.text('ITENS RELEVANTES (SUPERVISAO)', 14, y); y += 6;
+      doc.setTextColor(0); doc.setFontSize(9); doc.setFont('helvetica', 'normal');
       itensRelevantesSupervisor.forEach((it: any) => {
+        if (y > pageHeight - 10) { doc.addPage(); y = 20; }
         const dt = it.data_abertura ? new Date(it.data_abertura + 'T00:00:00').toLocaleDateString('pt-BR') : (it.created_at ? new Date(it.created_at).toLocaleDateString('pt-BR') : '-');
         const st = it.status === 'concluido' ? 'CONCLUIDO' : it.status === 'em_andamento' ? 'EM ANDAMENTO' : 'PENDENTE';
         const desc = it.descricao || it.titulo || '-';
-        addLines(`${dt} [${st}] ${desc}`, 180);
+        const linhas = doc.splitTextToSize(`${dt} [${st}] ${desc}`, pageWidth - 28);
+        linhas.forEach((ln: string) => {
+          if (y > pageHeight - 10) { doc.addPage(); y = 20; }
+          doc.text(ln, 14, y); y += 4.5;
+        });
       });
     }
 
