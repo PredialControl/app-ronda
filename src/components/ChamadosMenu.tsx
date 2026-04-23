@@ -1042,192 +1042,216 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
   onExcluir: () => void; onAddParecer: () => void;
   onReprogramar: () => void; onVerHistorico: () => void;
 }) {
-  const [editMode, setEditMode] = useState(false);
-  const [local, setLocal] = useState(chamado.local);
-  const [descricao, setDescricao] = useState(chamado.descricao);
+  const [editando, setEditando] = useState(false);
   const [status, setStatus] = useState<ChamadoStatus>(chamado.status);
-  const [responsavel, setResponsavel] = useState<ChamadoResponsavel>(chamado.responsavel || null);
+  const [responsavel, setResponsavel] = useState<ChamadoResponsavel>(chamado.responsavel || 'Construtora');
   const [prazo, setPrazo] = useState(chamado.prazo || '');
   const [numeroTicket, setNumeroTicket] = useState(chamado.numeroTicket || '');
-
-  const salvarEdicao = () => {
-    onUpdate({ local, descricao, status, responsavel, prazo: prazo || null, numeroTicket });
-    setEditMode(false);
-  };
+  const [fotosOpen, setFotosOpen] = useState(false);
 
   const cfg = STATUS_CONFIG[chamado.status];
+  const vencido = !!chamado.prazo && new Date(chamado.prazo) < new Date() && chamado.status !== 'concluido' && chamado.status !== 'f_indevido';
+
+  const salvarEdicao = () => {
+    onUpdate({ status, responsavel, prazo: prazo || null, numeroTicket });
+    setEditando(false);
+  };
 
   return (
-    <div className="fixed inset-0 bg-gray-900/95 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[92vh] overflow-y-auto border-2 border-gray-300" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b-2 border-gray-200 sticky top-0 bg-white z-10 shadow-sm">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-lg font-bold text-gray-900">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-gray-700 rounded-xl bg-gray-900" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="p-4 border-b border-gray-700 flex flex-row items-center justify-between bg-gray-900">
+          <div className="flex-1">
+            <div className="text-lg font-bold text-white flex items-center gap-2">
               Detalhes do Chamado
               {chamado.numeroTicket && (
-                <span className="ml-2 text-sm bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold">
+                <span className="text-sm bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold">
                   Nº {chamado.numeroTicket}
                 </span>
               )}
-            </h3>
-            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.bg} ${cfg.text}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`}></span>{cfg.label}
-            </span>
+            </div>
+            <p className="text-gray-400 text-xs mt-1">{contratoNome}</p>
           </div>
-          <div className="flex items-center gap-1">
-            {!editMode && (
-              <Button size="sm" variant="outline" onClick={() => setEditMode(true)}>
-                <Edit2 className="w-4 h-4 mr-1" /> Editar
-              </Button>
-            )}
-            {isAdmin && (
-              <Button size="sm" variant="outline" onClick={onExcluir} className="text-red-600 hover:text-red-700">
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            )}
-            <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded ml-1">
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded">
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <div className="p-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <Info label="Prédio" value={contratoNome} />
-            <Info label="Criado em" value={new Date(chamado.createdAt).toLocaleString('pt-BR')} />
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto space-y-4 bg-gray-900 text-white">
+          {/* Localização */}
+          <div>
+            <label className="text-sm font-semibold text-white">Localização</label>
+            <p className="text-sm text-gray-300 mt-1">{chamado.local || '--'}</p>
           </div>
-          {editMode ? (
-            <>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Local</label>
-                <Input value={local} onChange={(e) => setLocal(e.target.value)} className="mt-1" />
+
+          {/* Descrição */}
+          <div>
+            <label className="text-sm font-semibold text-white">Descrição</label>
+            <p className="text-sm text-gray-300 mt-1 whitespace-pre-wrap">{chamado.descricao || '--'}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-semibold text-white">Número do Chamado</label>
+              <p className="text-sm text-blue-400 mt-1 font-bold">{chamado.numeroTicket || 'SEM Nº'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-white">Criado Por</label>
+              <p className="text-sm text-gray-300 mt-1">{(chamado as any).criadoPorNome || 'N/A'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-white">Abertura</label>
+              <p className="text-sm text-gray-300 mt-1">{new Date(chamado.createdAt).toLocaleString('pt-BR')}</p>
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-white">Responsável</label>
+              <p className="text-sm text-gray-300 mt-1">{chamado.responsavel || 'Construtora'}</p>
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-white">Prazo</label>
+              <p className={`text-sm mt-1 ${vencido ? 'text-red-400 font-bold' : 'text-gray-300'}`}>
+                {chamado.prazo ? new Date(chamado.prazo + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não definido'}
+                {vencido && <span className="ml-2">⚠️ Vencido</span>}
+              </p>
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-white">Status</label>
+              <div className="mt-1">
+                <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.text}`}>
+                  {cfg.label}
+                </span>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Descrição</label>
-                <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 mt-1 text-sm" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Nº Ticket</label>
-                  <Input value={numeroTicket} onChange={(e) => setNumeroTicket(e.target.value)} className="mt-1" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Prazo</label>
-                  <Input type="date" value={prazo || ''} onChange={(e) => setPrazo(e.target.value)} className="mt-1" />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Status</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value as ChamadoStatus)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 mt-1 text-sm">
-                  {(Object.keys(STATUS_CONFIG) as ChamadoStatus[]).map(k => (
-                    <option key={k} value={k}>{STATUS_CONFIG[k].label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Responsável</label>
-                <div className="flex gap-2 mt-1">
-                  {(['Construtora', 'Condominio'] as const).map(r => (
-                    <button key={r} onClick={() => setResponsavel(r)}
-                      className={`flex-1 px-3 py-2 rounded-md text-sm border ${
-                        responsavel === r ? 'bg-orange-600 text-white border-orange-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
-                      {r === 'Condominio' ? 'Condomínio' : r}
-                    </button>
-                  ))}
-                  <button onClick={() => setResponsavel(null)}
-                    className={`px-3 py-2 rounded-md text-sm border ${
-                      !responsavel ? 'bg-gray-200 text-gray-700 border-gray-400'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>—</button>
-                </div>
-              </div>
-              <div className="flex gap-2 justify-end pt-2">
-                <Button variant="outline" onClick={() => setEditMode(false)}>Cancelar</Button>
-                <Button className="bg-orange-600 hover:bg-orange-700 text-white" onClick={salvarEdicao}>
-                  <Save className="w-4 h-4 mr-1" /> Salvar
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <Info label="Local" value={chamado.local} />
-              <Info label="Descrição" value={chamado.descricao} pre />
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                <Info label="Responsável" value={chamado.responsavel || '—'} />
-                <Info label="Prazo" value={chamado.prazo ? new Date(chamado.prazo + 'T00:00:00').toLocaleDateString('pt-BR') : '—'} />
-                <Info label="Nº Ticket" value={chamado.numeroTicket || '—'} />
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <Button size="sm" variant="outline" onClick={onReprogramar}>
-                  <Calendar className="w-4 h-4 mr-1" /> Reprogramar
-                </Button>
-                {chamado.historicoReprogramacao.length > 0 && (
-                  <Button size="sm" variant="outline" onClick={onVerHistorico}>
-                    <History className="w-4 h-4 mr-1" /> Histórico ({chamado.historicoReprogramacao.length})
+            </div>
+          </div>
+
+          {/* Fotos */}
+          <div>
+            <label className="text-sm font-semibold text-white block mb-2">Fotos</label>
+            <Button size="sm" variant="outline" onClick={() => setFotosOpen(true)} className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700">
+              <Camera className="w-4 h-4 mr-1" /> Ver fotos
+            </Button>
+          </div>
+
+          {/* Editar (admin) */}
+          {isAdmin && (
+            <div className="border-t border-gray-700 pt-4 mt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">📝 Editar Chamado</h3>
+                {!editando && (
+                  <Button size="sm" variant="outline" onClick={() => setEditando(true)} className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700">
+                    <Edit2 className="w-4 h-4 mr-1" /> Editar
                   </Button>
                 )}
               </div>
-            </>
-          )}
-          {chamado.fotoUrls.length > 0 && (
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Fotos</label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {chamado.fotoUrls.map((f, i) => (
-                  <a key={i} href={f} target="_blank" rel="noopener noreferrer" className="block">
-                    <img src={f} className="w-full aspect-square object-cover rounded" />
-                  </a>
-                ))}
+              {editando && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-semibold text-white">Número do Chamado</label>
+                    <Input value={numeroTicket} onChange={(e) => setNumeroTicket(e.target.value)} className="mt-1 bg-gray-800 border-gray-600 text-blue-400 font-bold" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-white">Responsável</label>
+                    <div className="flex gap-2 mt-1">
+                      {(['Construtora', 'Condominio'] as const).map(r => (
+                        <button key={r} onClick={() => setResponsavel(r)}
+                          className={`flex-1 px-3 py-2 rounded-md text-sm border font-medium ${
+                            responsavel === r ? 'bg-orange-600 text-white border-orange-600'
+                              : 'bg-gray-800 text-white border-gray-600 hover:bg-gray-700'}`}>
+                          {r === 'Condominio' ? 'Condomínio' : r}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-white">Prazo</label>
+                    <Input type="date" value={prazo || ''} onChange={(e) => setPrazo(e.target.value)} className="mt-1 bg-gray-800 border-gray-600 text-white" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-white">Status</label>
+                    <select value={status} onChange={(e) => setStatus(e.target.value as ChamadoStatus)}
+                      className="w-full border border-gray-600 bg-gray-800 text-white rounded-md px-3 py-2 mt-1 text-sm">
+                      {(Object.keys(STATUS_CONFIG) as ChamadoStatus[]).map(k => (
+                        <option key={k} value={k}>{STATUS_CONFIG[k].label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="outline" onClick={() => setEditando(false)} className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700">Cancelar</Button>
+                    <Button className="bg-orange-600 hover:bg-orange-700 text-white" onClick={salvarEdicao}>
+                      <Save className="w-4 h-4 mr-1" /> Salvar alterações
+                    </Button>
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 mt-3 flex-wrap">
+                <Button size="sm" variant="outline" onClick={onReprogramar} className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700">
+                  <Calendar className="w-4 h-4 mr-1" /> Reprogramar prazo
+                </Button>
+                {chamado.historicoReprogramacao.length > 0 && (
+                  <Button size="sm" variant="outline" onClick={onVerHistorico} className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700">
+                    <History className="w-4 h-4 mr-1" /> Histórico ({chamado.historicoReprogramacao.length})
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" onClick={onExcluir} className="bg-red-900/40 border-red-700 text-red-300 hover:bg-red-900/60 ml-auto">
+                  <Trash2 className="w-4 h-4 mr-1" /> Excluir
+                </Button>
               </div>
             </div>
           )}
-          {/* Pareceres — seção destacada */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+
+          {/* Pareceres / Atualizações — igual ao outro app */}
+          <div className="border-t border-gray-700 pt-4 mt-4">
             <div className="flex items-center justify-between mb-3">
-              <label className="text-base font-bold text-gray-800 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-blue-600" />
-                Pareceres / Atualizações
-                <span className="text-xs font-normal text-gray-500">
-                  ({chamado.atualizacoes.length})
-                </span>
-              </label>
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-blue-400" />
+                Histórico de Pareceres
+                <span className="text-xs font-normal text-gray-400">({chamado.atualizacoes?.length || 0})</span>
+              </h3>
               <Button size="sm" onClick={onAddParecer} className="bg-orange-600 hover:bg-orange-700 text-white">
-                <Plus className="w-4 h-4 mr-1" /> Adicionar parecer
+                <Plus className="w-4 h-4 mr-1" /> Novo parecer
               </Button>
             </div>
-            {/* Botões rápidos pros 3 tipos — igual outro app */}
+
+            {/* Cards com contagem por tipo */}
             <div className="grid grid-cols-3 gap-2 mb-3">
               {(Object.keys(UPDATE_TYPE_CONFIG) as ChamadoUpdateType[]).map(t => {
                 const c = UPDATE_TYPE_CONFIG[t];
-                const qtd = chamado.atualizacoes.filter(u => u.type === t).length;
+                const qtd = (chamado.atualizacoes || []).filter(u => u.type === t).length;
                 return (
-                  <div key={t} className={`p-2 rounded-md border ${c.cls} text-center`}>
-                    <div className="text-xl">{c.icon}</div>
-                    <div className="text-xs font-bold">{c.label}</div>
-                    <div className="text-lg font-bold">{qtd}</div>
+                  <div key={t} className="p-3 rounded-md border border-gray-700 bg-gray-800 text-center">
+                    <div className="text-2xl">{c.icon}</div>
+                    <div className="text-xs font-bold text-white">{c.label}</div>
+                    <div className="text-xl font-bold text-white">{qtd}</div>
                   </div>
                 );
               })}
             </div>
-            {chamado.atualizacoes.length === 0 ? (
-              <p className="text-sm text-gray-500 italic text-center py-4">Nenhum parecer registrado. Clique em &quot;Adicionar parecer&quot; para registrar um retorno.</p>
+
+            {/* Lista de pareceres */}
+            {(chamado.atualizacoes || []).length === 0 ? (
+              <div className="text-center py-6 bg-gray-800/50 rounded-md border border-dashed border-gray-700">
+                <MessageSquare className="w-10 h-10 text-gray-600 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">Nenhum parecer registrado ainda.</p>
+                <p className="text-xs text-gray-500 mt-1">Clique em &quot;Novo parecer&quot; para adicionar retorno da Construtora, Condomínio ou Engenharia.</p>
+              </div>
             ) : (
               <div className="space-y-2">
-                {chamado.atualizacoes.map(u => {
-                  const uc = UPDATE_TYPE_CONFIG[u.type];
+                {(chamado.atualizacoes || []).map((u, idx) => {
+                  const uc = UPDATE_TYPE_CONFIG[u.type] || UPDATE_TYPE_CONFIG.construtora;
                   return (
-                    <div key={u.id} className={`p-3 rounded-md border-2 ${uc.cls}`}>
-                      <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                        <span className="text-sm font-bold flex items-center gap-1">
+                    <div key={u.id || idx} className="p-3 rounded-md border-2 border-gray-700 bg-gray-800">
+                      <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${uc.cls}`}>
                           <span>{uc.icon}</span> {uc.label}
                         </span>
-                        <span className="text-xs text-gray-600 flex items-center gap-2">
-                          <UserIcon className="w-3 h-3" /> {u.createdBy}
-                          <Clock className="w-3 h-3" /> {new Date(u.createdAt).toLocaleString('pt-BR')}
+                        <span className="text-xs text-gray-400 flex items-center gap-2">
+                          <UserIcon className="w-3 h-3" /> {u.createdBy || 'Sistema'}
+                          <Clock className="w-3 h-3 ml-1" /> {u.createdAt ? new Date(u.createdAt).toLocaleString('pt-BR') : '--'}
                         </span>
                       </div>
-                      <p className="text-sm whitespace-pre-wrap">{u.message}</p>
+                      <p className="text-sm text-white whitespace-pre-wrap">{u.message}</p>
                     </div>
                   );
                 })}
@@ -1236,6 +1260,11 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
           </div>
         </div>
       </div>
+
+      {/* Galeria de fotos aberta por dentro do modal */}
+      {fotosOpen && (
+        <GaleriaFotosModal chamado={chamado} onClose={() => setFotosOpen(false)} />
+      )}
     </div>
   );
 }
