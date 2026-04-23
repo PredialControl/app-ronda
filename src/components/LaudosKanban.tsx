@@ -158,18 +158,18 @@ export function LaudosKanban({ contratoSelecionado }: LaudosKanbanProps) {
   // Recalcular colunas baseado no estado atual dos items
   const getColumns = () => [
     {
-      id: 'em-dia',
-      title: 'Em Dia',
-      icon: CheckCircle,
-      color: 'bg-green-600 text-white',
-      items: items.filter(item => item.status === 'em-dia')
-    },
-    {
       id: 'em-analise',
       title: 'Em Análise',
       icon: Clock,
       color: 'bg-blue-600 text-white',
       items: items.filter(item => item.status === 'em-analise')
+    },
+    {
+      id: 'em-dia',
+      title: 'Em Dia',
+      icon: CheckCircle,
+      color: 'bg-green-600 text-white',
+      items: items.filter(item => item.status === 'em-dia')
     },
     {
       id: 'proximo-vencimento',

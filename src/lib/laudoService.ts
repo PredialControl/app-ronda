@@ -14,24 +14,21 @@ export interface Laudo {
 }
 
 const DEFAULT_LAUDOS = [
-    { titulo: 'Auto de Vistoria do Corpo de Bombeiros (AVCB)', periodicidade: 'Periódico (Variável)' },
+    { titulo: 'Auto de Vistoria do Corpo de Bombeiros (AVCB)', periodicidade: 'A cada 5 anos' },
+    { titulo: 'Laudo de Estanqueidade de Gás', periodicidade: 'A cada 3 anos' },
+    { titulo: 'Laudo de Arrancamento dos Pontos de Ancoragem', periodicidade: 'Anual' },
+    { titulo: 'Certificado de Teste e Funcionamento do SDAI', periodicidade: 'Anual' },
+    { titulo: 'Certificado de Teste e Funcionamento da Bomba de Incêndio', periodicidade: 'Anual' },
     { titulo: 'Certificado de Pressurização dos Extintores', periodicidade: 'Anual' },
-    { titulo: 'Teste Hidrostático de Extintores', periodicidade: 'A cada 5 anos' },
-    { titulo: 'Certificado Teste Hidrostático das Mangueiras', periodicidade: 'A cada 5 anos' },
-    { titulo: 'Laudo de Estanqueidade da Rede de Gás', periodicidade: 'Anual' },
+    { titulo: 'Certificado de Teste Hidrostático das Mangueiras dos Hidrantes', periodicidade: 'Anual' },
     { titulo: 'Relatório de Inspeção Anual dos Elevadores (RIA)', periodicidade: 'Anual' },
-    { titulo: 'Certificado de Funcionamento do SDAI', periodicidade: 'Anual' },
-    { titulo: 'Certificado de Funcionamento Bombas de Incêndio', periodicidade: 'Anual' },
-    { titulo: 'Certificado Desinsetização e Desratização', periodicidade: 'Semestral' },
-    { titulo: 'Laudo de SPDA', periodicidade: 'A cada 3 anos' },
-    { titulo: 'Certificado de Limpeza dos Reservatórios de Água Potável', periodicidade: 'Semestral' },
+    { titulo: 'Laudo de SPDA', periodicidade: 'Anual' },
+    { titulo: 'Plano de Manutenção Operação e Controle (PMOC)', periodicidade: 'Anual' },
+    { titulo: 'Análise de Qualidade do Ar', periodicidade: 'Anual' },
+    { titulo: 'Certificado de Limpeza dos Poços e Prumadas', periodicidade: 'Anual' },
+    { titulo: 'Certificado de Desinsetização e Desratização', periodicidade: 'Semestral' },
+    { titulo: 'Certificado de Limpeza dos Reservatórios', periodicidade: 'Semestral' },
     { titulo: 'Análise de Potabilidade', periodicidade: 'Semestral' },
-    { titulo: 'Relatório de Limpeza dos Poços e Ramais de Esgoto e Gordura', periodicidade: 'Semestral' },
-    { titulo: 'PMOC', periodicidade: 'Anual' },
-    { titulo: 'Análise de Qualidade do Ar', periodicidade: 'Semestral' },
-    { titulo: 'Certificado de Manutenção das Válvulas Redutoras de Pressão (VRPs)', periodicidade: 'Anual' },
-    { titulo: 'Certificado de Funcionamento dos Sistemas de Aquecimento de Água', periodicidade: 'Anual' },
-    { titulo: 'Ensaio de Arrancamento dos Pontos de Ancoragem', periodicidade: 'A cada 5 anos' },
 ];
 
 // Helper para localStorage
