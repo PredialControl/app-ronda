@@ -565,7 +565,7 @@ const COMISSIONAMENTO_CHECKLISTS: Record<string, { grupo: string; itens: { id: s
   // IRRIGAÇÃO (id '25' — sem checklist definido)
 };
 
-const initialItems: KanbanItem[] = [
+export const initialItems: KanbanItem[] = [
   // 1. VISTORIA
   { id: '1', title: 'ÁREAS COMUNS', category: 'VISTORIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },
   { id: '2', title: 'HALLS', category: 'VISTORIA', status: 'aguardando', createdAt: '2024-01-15', updatedAt: '2024-01-15' },

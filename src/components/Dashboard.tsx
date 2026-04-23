@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { laudoService } from '@/lib/laudoService';
 import { rondaService, areaTecnicaService, itemRelevanteService } from '@/lib/supabaseService';
 import { kanbanEventoService, kanbanItemsService } from '@/lib/supabaseService';
+import { initialItems as kanbanInitialItems } from './KanbanBoard';
 
 interface DashboardProps {
   contrato: Contrato | null;
@@ -204,7 +205,32 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
             }
           } catch {}
         }
+        // Fallback intermediario: reconstruir a partir de kanban_eventos (shadow sync)
+        if (items.length === 0) {
+          try {
+            const eventos = await kanbanEventoService.getAll();
+            const doContrato = (eventos || []).filter((ke: any) => ke.contrato_id === contrato.id);
+            if (doContrato.length > 0) {
+              items = doContrato.map((ke: any) => ({
+                id: ke.kanban_item_id || ke.id,
+                title: ke.titulo || ke.title || 'Sem titulo',
+                category: ke.categoria || ke.category || 'Geral',
+                status: ke.status || 'aguardando',
+                dataAndamento: ke.data_andamento,
+                dataVistoria: ke.data_vistoria,
+                dataRecebimento: ke.data_recebimento,
+                dataCorrecao: ke.data_correcao,
+              }));
+            }
+          } catch {}
+        }
+        // Ultimo fallback: usar a lista padrao de documentos do Kanban (65+ cards)
+        if (items.length === 0) {
+          items = kanbanInitialItems.map(i => ({ ...i }));
+          console.log('[Dashboard] Usando kanbanInitialItems como fallback:', items.length);
+        }
         console.log('[Dashboard] Kanban items deste contrato:', items.length);
+        setKanbanItemsList(items);
         setKanbanStats({
           total: items.length,
           aguardando: items.filter((it: any) => it.status === 'aguardando').length,
