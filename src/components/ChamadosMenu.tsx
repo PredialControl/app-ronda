@@ -3,7 +3,7 @@ import {
   Plus, Search, Filter, X, Save, Trash2, Camera, MessageSquare,
   Building2, Clock, AlertCircle, HardHat, FileSpreadsheet,
   Calendar, User as UserIcon, Edit2, RefreshCw, Eye, ChevronLeft, ChevronRight,
-  History, Download, PlusCircle, ClipboardList
+  History, Download, PlusCircle, ClipboardList, CheckCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -222,8 +222,12 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
   const [showHistorico, setShowHistorico] = useState<Chamado | null>(null);
   const [galeriaFotos, setGaleriaFotos] = useState<Chamado | null>(null);
 
-  // Sub-aba da aba Chamados: 'abrir' (form rapido) ou 'painel' (gestao)
-  const [subView, setSubView] = useState<'abrir' | 'painel'>('painel');
+  // Sub-aba da aba Chamados:
+  //   'abrir'        = formulario pra usuario solicitar chamado
+  //   'solicitacoes' = painel MP com solicitacoes pendentes (is_registered=false) pra registrar
+  //   'painel'       = lista/gestao dos chamados ja registrados (is_registered=true)
+  const [subView, setSubView] = useState<'abrir' | 'solicitacoes' | 'painel'>('solicitacoes');
+  const [registrarFor, setRegistrarFor] = useState<Chamado | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -259,8 +263,13 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
     return Array.from(set).sort((a, b) => b.localeCompare(a));
   }, [chamados]);
 
+  // Apenas chamados ja registrados (oficiais) vao pra listagem principal
+  const chamadosRegistrados = useMemo(() => chamados.filter(c => c.isRegistered !== false), [chamados]);
+  // Solicitacoes = chamados abertos por usuarios mas ainda nao registrados oficialmente
+  const solicitacoesPendentes = useMemo(() => chamados.filter(c => c.isRegistered === false), [chamados]);
+
   const filtrados = useMemo(() => {
-    return chamados.filter(c => {
+    return chamadosRegistrados.filter(c => {
       if (contratoFiltro !== 'todos' && c.contratoId !== contratoFiltro) return false;
       if (statusFiltro !== 'todos' && c.status !== statusFiltro) return false;
       if (responsavelFiltro !== 'todos' && (c.responsavel || '') !== responsavelFiltro) return false;
@@ -275,7 +284,7 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
       }
       return true;
     });
-  }, [chamados, contratoFiltro, statusFiltro, responsavelFiltro, dataFiltro, mesFiltro, somenteVencidos, busca, buscaTicket]);
+  }, [chamadosRegistrados, contratoFiltro, statusFiltro, responsavelFiltro, dataFiltro, mesFiltro, somenteVencidos, busca, buscaTicket]);
 
   const stats = useMemo(() => {
     const base: Record<ChamadoStatus, number> = {
@@ -332,11 +341,29 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
       fotoUrls: dados.fotoUrls || [],
       historicoReprogramacao: [],
       atualizacoes: [],
+      isRegistered: dados.isRegistered !== undefined ? dados.isRegistered : false,
+      criadoPorNome: usuario?.nome || null,
     });
     if (novo) {
       setChamados(prev => [novo, ...prev]);
       setShowNovo(false);
     } else alert('Erro ao criar chamado.');
+  };
+
+  // MP "Registra" uma solicitacao: preenche num construtora, responsavel, prazo -> vira registered
+  const registrarChamado = async (id: string, numeroTicket: string, responsavel: ChamadoResponsavel, prazo: string | null) => {
+    if (!numeroTicket.trim()) { alert('Preencha o número do chamado da construtora.'); return; }
+    const patch: Partial<Chamado> = {
+      numeroTicket: numeroTicket.trim(),
+      responsavel,
+      prazo,
+      isRegistered: true,
+    };
+    const ok = await chamadoService.update(id, patch);
+    if (ok) {
+      setChamados(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+      setRegistrarFor(null);
+    } else alert('Erro ao registrar.');
   };
 
   const atualizarChamado = async (id: string, patch: Partial<Chamado>) => {
@@ -458,7 +485,7 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
         </div>
       </div>
 
-      {/* Sub-abas: Abrir / Painel de Solicitacoes */}
+      {/* Sub-abas: Abrir / Painel de Solicitacoes / Chamados registrados */}
       <div className="flex gap-2 bg-gray-900 rounded-xl p-1.5 border border-gray-800">
         <button
           onClick={() => setSubView('abrir')}
@@ -469,25 +496,104 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
           }`}
         >
           <PlusCircle className="w-5 h-5" />
-          Abrir Chamado
+          Abrir
+        </button>
+        <button
+          onClick={() => setSubView('solicitacoes')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-sm transition-all relative ${
+            subView === 'solicitacoes'
+              ? 'bg-red-600 text-white shadow-lg'
+              : 'text-gray-400 hover:text-white hover:bg-gray-800'
+          }`}
+        >
+          <AlertCircle className="w-5 h-5" />
+          Painel de Solicitações
+          {solicitacoesPendentes.length > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full min-w-[24px] h-6 px-1.5 flex items-center justify-center animate-pulse shadow-lg shadow-red-500/50">
+              {solicitacoesPendentes.length}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setSubView('painel')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-sm transition-all relative ${
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-sm transition-all ${
             subView === 'painel'
               ? 'bg-blue-600 text-white shadow-lg'
               : 'text-gray-400 hover:text-white hover:bg-gray-800'
           }`}
         >
           <ClipboardList className="w-5 h-5" />
-          Painel de Solicitações
-          {stats.counts.aguardando_vistoria > 0 && (
-            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full min-w-[24px] h-6 px-1.5 flex items-center justify-center animate-pulse shadow-lg shadow-red-500/50">
-              {stats.counts.aguardando_vistoria}
-            </span>
-          )}
+          Chamados Registrados
         </button>
       </div>
+
+      {/* View: Painel de Solicitacoes — pendentes is_registered=false */}
+      {subView === 'solicitacoes' && (
+        <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-400" />
+                Solicitações aguardando registro
+              </h3>
+              <p className="text-xs text-gray-400 mt-1">
+                {solicitacoesPendentes.length} chamado(s) abertos por usuários aguardando a MP registrar na construtora
+              </p>
+            </div>
+          </div>
+          {solicitacoesPendentes.length === 0 ? (
+            <div className="p-10 text-center text-gray-400">
+              <CheckCircle className="w-12 h-12 mx-auto text-green-500 mb-3" />
+              <p className="text-base font-semibold text-white">Nenhuma solicitação pendente</p>
+              <p className="text-sm mt-1">Todos os chamados foram registrados.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-800">
+              {solicitacoesPendentes.map(c => (
+                <div key={c.id} className="p-4 hover:bg-gray-800/50 transition-colors">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="text-xs text-gray-400">
+                          <Building2 className="w-3 h-3 inline mr-1" />
+                          {contratoNome(c.contratoId)}
+                        </span>
+                        <span className="text-gray-500">·</span>
+                        <span className="text-xs text-gray-400">
+                          <UserIcon className="w-3 h-3 inline mr-1" />
+                          {c.criadoPorNome || 'N/A'}
+                        </span>
+                        <span className="text-gray-500">·</span>
+                        <span className="text-xs text-gray-400">
+                          <Calendar className="w-3 h-3 inline mr-1" />
+                          {new Date(c.createdAt).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                      <p className="text-sm font-semibold text-white mb-1">{c.local}</p>
+                      <p className="text-sm text-gray-300 line-clamp-2">{c.descricao}</p>
+                      {c.fotoUrls.length > 0 && (
+                        <span className="inline-flex items-center gap-1 mt-2 text-xs text-gray-400">
+                          <Camera className="w-3 h-3" /> {c.fotoUrls.length} foto(s)
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <Button size="sm" variant="outline" onClick={() => setDetalhe(c)}
+                        className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700">
+                        <Eye className="w-4 h-4 mr-1" /> Ver detalhes
+                      </Button>
+                      <Button size="sm" onClick={() => setRegistrarFor(c)}
+                        className="bg-green-600 hover:bg-green-700 text-white">
+                        <CheckCircle className="w-4 h-4 mr-1" /> Registrar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* View "Abrir Chamado" — formulario rapido inline */}
       {subView === 'abrir' && (
@@ -510,70 +616,8 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
         </div>
       )}
 
-      {subView === 'painel' && contratoFiltro === 'todos' && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold text-white">Selecione o prédio</h3>
-            <span className="text-xs text-gray-400">{contratos.length} prédios · {chamados.length} chamados no total</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {contratos
-              .map(ct => {
-                const chamadosCT = chamados.filter(c => c.contratoId === ct.id);
-                const pendentes = chamadosCT.filter(c => c.status === 'aguardando_vistoria').length;
-                return { ct, total: chamadosCT.length, pendentes };
-              })
-              .sort((a, b) => b.pendentes - a.pendentes || b.total - a.total)
-              .map(({ ct, total, pendentes }) => (
-                <button
-                  key={ct.id}
-                  onClick={() => setContratoFiltro(ct.id)}
-                  className="bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-blue-500 rounded-xl p-5 text-left transition-all group"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="p-2 bg-gray-800 group-hover:bg-blue-600/20 rounded-lg transition-colors">
-                      <Building2 className="w-6 h-6 text-gray-400 group-hover:text-blue-400" />
-                    </div>
-                  </div>
-                  {pendentes > 0 && (
-                    <div className="flex justify-center py-3">
-                      <div className="flex items-center gap-2 px-5 py-2 bg-red-500/15 text-red-400 rounded-2xl border-2 border-red-500/60 shadow-lg shadow-red-500/20 animate-pulse">
-                        <AlertCircle className="w-6 h-6" />
-                        <span className="text-2xl font-black uppercase tracking-tighter italic">
-                          {pendentes} PENDENTES
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  <h3 className="text-lg font-bold text-white line-clamp-2 mt-2">{ct.nome}</h3>
-                  <div className="mt-3 flex justify-between items-center">
-                    <span className="text-[11px] font-medium text-gray-400">
-                      Chamados totais: <span className="text-white font-bold">{total}</span>
-                    </span>
-                    <span className="text-[11px] font-bold text-blue-400 group-hover:translate-x-1 transition-transform">ABRIR →</span>
-                  </div>
-                </button>
-              ))}
-          </div>
-        </div>
-      )}
-
-      {subView === 'painel' && contratoFiltro !== 'todos' && (
+      {subView === 'painel' && (
       <>
-      {/* Botao voltar pro grid de predios */}
-      <div className="flex items-center justify-between bg-gray-900 p-3 rounded-lg border border-gray-800">
-        <button
-          onClick={() => setContratoFiltro('todos')}
-          className="flex items-center gap-2 text-sm text-gray-300 hover:text-white font-semibold"
-        >
-          <ChevronLeft className="w-5 h-5" />
-          Voltar para lista de prédios
-        </button>
-        <span className="text-sm font-bold text-white">
-          {contratoNome(contratoFiltro)} — {stats.total} chamados
-        </span>
-      </div>
-
       {/* Status Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
         {(Object.keys(STATUS_CONFIG) as ChamadoStatus[]).map(k => {
@@ -894,6 +938,72 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
       {showHistorico && (
         <HistoricoModal chamado={showHistorico} onClose={() => setShowHistorico(null)} />
       )}
+      {registrarFor && (
+        <RegistrarChamadoModal chamado={registrarFor}
+          contratoNome={contratoNome(registrarFor.contratoId)}
+          onClose={() => setRegistrarFor(null)}
+          onSalvar={(num, resp, prazo) => registrarChamado(registrarFor.id, num, resp, prazo)} />
+      )}
+    </div>
+  );
+}
+
+function RegistrarChamadoModal({ chamado, contratoNome, onClose, onSalvar }: {
+  chamado: Chamado; contratoNome: string;
+  onClose: () => void;
+  onSalvar: (numeroTicket: string, responsavel: ChamadoResponsavel, prazo: string | null) => void;
+}) {
+  const [numeroTicket, setNumeroTicket] = useState('');
+  const [responsavel, setResponsavel] = useState<ChamadoResponsavel>('Construtora');
+  const [prazo, setPrazo] = useState('');
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-gray-900 rounded-xl shadow-2xl max-w-lg w-full border border-gray-700" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-400" /> Registrar chamado
+          </h3>
+          <button onClick={onClose} className="p-1 hover:bg-gray-800 rounded"><X className="w-5 h-5 text-gray-400" /></button>
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="bg-gray-800 rounded-md p-3 border border-gray-700">
+            <p className="text-xs text-gray-400 mb-1">Solicitação original</p>
+            <p className="text-sm text-white font-semibold">{contratoNome} · {chamado.local}</p>
+            <p className="text-sm text-gray-300 line-clamp-2 mt-1">{chamado.descricao}</p>
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-white mb-1 block">Número do chamado na Construtora *</label>
+            <Input value={numeroTicket} onChange={(e) => setNumeroTicket(e.target.value)}
+              placeholder="Ex.: 123456" className="bg-gray-800 border-gray-700 text-blue-400 font-bold" autoFocus />
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-white mb-1 block">Responsável</label>
+            <div className="flex gap-2">
+              {(['Construtora', 'Condominio'] as const).map(r => (
+                <button key={r} onClick={() => setResponsavel(r)}
+                  className={`flex-1 px-3 py-2 rounded-md text-sm border font-medium ${
+                    responsavel === r ? 'bg-orange-600 text-white border-orange-600'
+                      : 'bg-gray-800 text-white border-gray-700 hover:bg-gray-700'}`}>
+                  {r === 'Condominio' ? 'Condomínio' : r}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-semibold text-white mb-1 block">Prazo (opcional)</label>
+            <Input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)}
+              className="bg-gray-800 border-gray-700 text-white" />
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-700">
+          <Button variant="outline" onClick={onClose} className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700">Cancelar</Button>
+          <Button className="bg-green-600 hover:bg-green-700 text-white" disabled={!numeroTicket.trim()}
+            onClick={() => onSalvar(numeroTicket, responsavel, prazo || null)}>
+            <CheckCircle className="w-4 h-4 mr-1" /> Registrar e mover pra gestão
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
