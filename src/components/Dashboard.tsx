@@ -130,9 +130,14 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     setLoadingCount(n => n + 1);
     const load = async () => {
       try {
-        const all = await rondaService.getAll();
+        // Query direta com colunas mínimas — resiliente caso algumas colunas novas não existam
+        const { data: all, error: errRondas } = await supabase
+          .from('rondas')
+          .select('id, nome, contrato, data, hora, responsavel, observacoes_gerais')
+          .order('data', { ascending: false });
+        if (errRondas) { console.warn('[Dashboard] erro na query rondas:', errRondas); return; }
         const nomeBusca = (contrato.nome || '').trim().toLowerCase();
-        const matched = all.filter((r: any) => (r.contrato || '').trim().toLowerCase() === nomeBusca);
+        const matched = (all || []).filter((r: any) => (r.contrato || '').trim().toLowerCase() === nomeBusca);
         console.log('[Dashboard] Rondas total no banco:', all.length, '→ do contrato', contrato.nome, ':', matched.length);
         // Carregar áreas técnicas de cada ronda em paralelo para alimentar Status de Equipamentos
         const comAreas = await Promise.all(matched.map(async (r: any) => {
