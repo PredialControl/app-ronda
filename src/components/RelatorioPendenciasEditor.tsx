@@ -3223,7 +3223,7 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                         alt={`Foto ${idx + 1}`}
                                                                                         className="w-full h-full object-cover"
                                                                                     />
-                                                                                    <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                    <div className="absolute top-1 right-1 flex gap-1 z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                                                                         <Button
                                                                                             onClick={() => setConstatacaoParaTransformar({
                                                                                                 secaoTempId: secao.tempId,
