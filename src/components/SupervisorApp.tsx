@@ -708,9 +708,9 @@ export function SupervisorApp() {
       if (tipo === 'MANUAL') return;
 
       const config = CONFIG_RONDAS[tipo];
-      // Ronda manual também conta como cumprimento (substitui a periódica)
+      // Ronda manual substitui APENAS a Semanal (não Mensal/Bimestral)
       const rondasDoTipo = rondasData
-        .filter(r => r.templateRonda === tipo || r.templateRonda === 'MANUAL' || !r.templateRonda)
+        .filter(r => r.templateRonda === tipo || (tipo === 'SEMANAL' && r.templateRonda === 'MANUAL'))
         .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
       const ultimaRonda = rondasDoTipo[0];
@@ -2959,13 +2959,17 @@ export function SupervisorApp() {
                   <div
                     key={item.id}
                     className={`rounded-lg p-3 border ${
-                      item.status === 'OK'
-                        ? 'bg-emerald-500/10 border-emerald-500/30'
-                        : 'bg-red-500/10 border-red-500/30'
+                      templateSelecionado === 'MANUAL'
+                        ? 'bg-blue-500/10 border-blue-500/30'
+                        : item.status === 'OK'
+                          ? 'bg-emerald-500/10 border-emerald-500/30'
+                          : 'bg-red-500/10 border-red-500/30'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      {item.status === 'OK' ? (
+                      {templateSelecionado === 'MANUAL' ? (
+                        <Camera className="w-5 h-5 text-blue-400 shrink-0" />
+                      ) : item.status === 'OK' ? (
                         <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
                       ) : (
                         <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
