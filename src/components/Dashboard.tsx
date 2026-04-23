@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 import { laudoService } from '@/lib/laudoService';
 import { rondaService, areaTecnicaService, itemRelevanteService } from '@/lib/supabaseService';
-import { kanbanEventoService } from '@/lib/supabaseService';
+import { kanbanEventoService, kanbanItemsService } from '@/lib/supabaseService';
 
 interface DashboardProps {
   contrato: Contrato | null;
@@ -165,7 +165,9 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
         if (!raw) return;
         const items = JSON.parse(raw);
         if (Array.isArray(items) && items.length > 0) {
+          // Sync shadow (datas/status) e full (state completo)
           kanbanEventoService.syncContrato(ct.id, ct.nome, items);
+          kanbanItemsService.saveAll(ct.id, items);
         }
       } catch {}
     });
@@ -178,17 +180,29 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     setLoadingCount(n => n + 1);
     const carregarImplantacao = async () => {
       try {
-        // Kanban — TODOS os cards do contrato (snapshot atual, sem filtro de data)
-        const kanbanEventos = await kanbanEventoService.getAll();
-        console.log('[Dashboard] kanban_eventos do Supabase:', kanbanEventos.length, 'total');
-        const doContrato = kanbanEventos.filter((ke: any) => ke.contrato_id === contrato.id);
-        console.log('[Dashboard] Cards deste contrato:', doContrato.length);
+        // Kanban — preferir kanban_items_full (state completo); fallback para kanban_eventos (shadow)
+        let items: any[] = [];
+        try {
+          const remote = await kanbanItemsService.loadByContrato(contrato.id);
+          if (remote && Array.isArray(remote)) items = remote;
+        } catch {}
+        // Se vazio no kanban_items_full, tentar ler localStorage deste device
+        if (items.length === 0) {
+          try {
+            const raw = localStorage.getItem(`kanban_items_${contrato.id}`);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) items = parsed;
+            }
+          } catch {}
+        }
+        console.log('[Dashboard] Kanban items deste contrato:', items.length);
         setKanbanStats({
-          total: doContrato.length,
-          aguardando: doContrato.filter((ke: any) => ke.status === 'aguardando').length,
-          emAndamento: doContrato.filter((ke: any) => ke.status === 'em_andamento').length,
-          emCorrecao: doContrato.filter((ke: any) => ke.status === 'em_correcao').length,
-          finalizados: doContrato.filter((ke: any) => ke.status === 'finalizado').length,
+          total: items.length,
+          aguardando: items.filter((it: any) => it.status === 'aguardando').length,
+          emAndamento: items.filter((it: any) => it.status === 'em_andamento').length,
+          emCorrecao: items.filter((it: any) => it.status === 'em_correcao').length,
+          finalizados: items.filter((it: any) => it.status === 'finalizado').length,
         });
       } catch (err) {
         console.warn('Erro ao carregar kanban stats:', err);
