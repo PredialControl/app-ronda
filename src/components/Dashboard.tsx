@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 import { laudoService } from '@/lib/laudoService';
-import { rondaService, areaTecnicaService } from '@/lib/supabaseService';
+import { rondaService, areaTecnicaService, itemRelevanteService } from '@/lib/supabaseService';
 import { kanbanEventoService } from '@/lib/supabaseService';
 
 interface DashboardProps {
@@ -104,9 +104,27 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
   const [laudosStats, setLaudosStats] = useState({ total: 0, vencidos: 0, emAnalise: 0, emDia: 0 });
   const [loadingCount, setLoadingCount] = useState(0);
 
+  // Load de Itens Relevantes da aba Supervisão
+  useEffect(() => {
+    if (!contrato) return;
+    setLoadingCount(n => n + 1);
+    (async () => {
+      try {
+        const items = await itemRelevanteService.getByContrato(contrato.nome);
+        setItensRelevantesSupervisor(items || []);
+      } catch (e) {
+        console.warn('[Dashboard] erro ao ler itens relevantes:', e);
+        setItensRelevantesSupervisor([]);
+      } finally {
+        setLoadingCount(n => Math.max(0, n - 1));
+      }
+    })();
+  }, [contrato?.id, contrato?.nome]);
+
   // Fetch direto das rondas do banco com match tolerante (case-insensitive, trim)
   // — evita problemas de grafia do contrato nas rondas salvas
   const [rondasDoContrato, setRondasDoContrato] = useState<Ronda[]>([]);
+  const [itensRelevantesSupervisor, setItensRelevantesSupervisor] = useState<any[]>([]);
   useEffect(() => {
     if (!contrato) return;
     setLoadingCount(n => n + 1);
@@ -900,119 +918,54 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
       </GlowingCard>
       <GlowingCard className="border-l-4 border-l-indigo-500" glowColor="from-indigo-500/50 via-purple-500/50 to-indigo-500/50">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <CardTitle className="flex items-center gap-2 text-gray-900 text-sm sm:text-base">
-              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 flex-shrink-0" />
-              <span className="truncate">Itens Relevantes</span>
-            </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                if (confirm('⚠️ Tem certeza que deseja limpar todos os itens relevantes?\n\nEsta ação não pode ser desfeita!')) {
-                  try {
-                    const { error } = await supabase
-                      .from('itens_relevantes_relatorio')
-                      .delete()
-                      .eq('contrato_id', contrato.id)
-                      .in('mes', mesesNaFaixa);
-
-                    if (error) {
-                      console.error('❌ Erro ao limpar itens:', error);
-                      alert('Erro ao limpar itens. Verifique o console.');
-                      return;
-                    }
-
-                    setReportItemsList([]);
-                  } catch (err) {
-                    console.error('❌ Erro ao limpar itens:', err);
-                    alert('Erro ao limpar itens. Verifique o console.');
-                  }
-                }
-              }}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-            >
-              <Trash2 className="w-4 h-4 mr-1" />
-              Limpar Tudo
-            </Button>
-          </div>
+          <CardTitle className="flex items-center gap-2 text-gray-900 text-sm sm:text-base">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 flex-shrink-0" />
+            <span>Itens Relevantes (da aba Supervisão)</span>
+          </CardTitle>
+          <p className="text-xs text-gray-500 mt-1">Somente leitura. Edite em Supervisão → Itens Relevantes.</p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Input para adicionar novo item */}
-          <div className="flex gap-2">
-            <Input
-              value={novoItem}
-              onChange={(e) => setNovoItem(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleAddItem();
-                }
-              }}
-              placeholder="Digite um item relevante e pressione Enter ou clique em Adicionar..."
-              className="flex-1"
-            />
-            <Button
-              onClick={handleAddItem}
-              disabled={!novoItem.trim()}
-              className="bg-indigo-600 hover:bg-indigo-700"
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              Adicionar
-            </Button>
-          </div>
-
-          {/* Tabela de itens */}
-          {loadingItems ? (
-            <div className="text-center py-8 text-gray-500">
-              <div className="animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-              <p className="text-sm">Carregando itens...</p>
+        <CardContent>
+          {itensRelevantesSupervisor.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md border border-dashed border-gray-300">
+              <FileText className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+              <p className="text-sm">Nenhum item relevante cadastrado para este prédio.</p>
+              <p className="text-xs text-gray-400 mt-1">Adicione em Supervisão → Itens Relevantes.</p>
             </div>
-          ) : reportItemsList.length > 0 ? (
+          ) : (
             <div className="border rounded-md overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="text-left py-2 px-3 text-gray-700 font-medium w-20">Data</th>
+                    <th className="text-left py-2 px-3 text-gray-700 font-medium w-24">Data</th>
                     <th className="text-left py-2 px-3 text-gray-700 font-medium">Descrição</th>
-                    <th className="text-right py-2 px-3 text-gray-700 font-medium w-20">Ações</th>
+                    <th className="text-left py-2 px-3 text-gray-700 font-medium w-32">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reportItemsList.map((item, index) => (
-                    <tr key={item.id} className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
-                      <td className="py-2 px-3 text-gray-600">
-                        {item.data.split('-').reverse().join('/')}
-                      </td>
-                      <td className="py-2 px-3 text-gray-900">
-                        {item.descricao}
-                      </td>
-                      <td className="py-2 px-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveItem(item.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                  {itensRelevantesSupervisor.map((item: any, index: number) => {
+                    const statusConfig: Record<string, { label: string; cls: string }> = {
+                      pendente: { label: 'Pendente', cls: 'bg-yellow-100 text-yellow-800' },
+                      em_andamento: { label: 'Em andamento', cls: 'bg-blue-100 text-blue-800' },
+                      concluido: { label: 'Concluído', cls: 'bg-green-100 text-green-800' },
+                    };
+                    const cfg = statusConfig[item.status as string] || { label: item.status || '—', cls: 'bg-gray-100 text-gray-700' };
+                    return (
+                      <tr key={item.id} className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                        <td className="py-2 px-3 text-gray-600">
+                          {item.data_abertura ? String(item.data_abertura).split('-').reverse().join('/') : (item.created_at ? new Date(item.created_at).toLocaleDateString('pt-BR') : '—')}
+                        </td>
+                        <td className="py-2 px-3 text-gray-900">{item.descricao || item.titulo || '—'}</td>
+                        <td className="py-2 px-3">
+                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${cfg.cls}`}>{cfg.label}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md border border-dashed border-gray-300">
-              <FileText className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-              <p className="text-sm">Nenhum item adicionado ainda</p>
-              <p className="text-xs text-gray-400 mt-1">Use o campo acima para adicionar itens relevantes</p>
-            </div>
           )}
-
-          <p className="text-xs text-gray-500 flex items-center justify-between">
-            <span>💡 Pressione Enter para adicionar rapidamente</span>
-            <span>Total: {reportItemsList.length} {reportItemsList.length === 1 ? 'item' : 'itens'}</span>
-          </p>
+          <p className="text-xs text-gray-500 mt-2 text-right">Total: {itensRelevantesSupervisor.length} {itensRelevantesSupervisor.length === 1 ? 'item' : 'itens'}</p>
         </CardContent>
       </GlowingCard>
     </div>
