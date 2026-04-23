@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase';
 import { laudoService } from '@/lib/laudoService';
+import { rondaService } from '@/lib/supabaseService';
 import { kanbanEventoService } from '@/lib/supabaseService';
 
 interface DashboardProps {
@@ -64,6 +65,24 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     finalizados: 0,
   });
   const [laudosStats, setLaudosStats] = useState({ total: 0, vencidos: 0, emAnalise: 0, emDia: 0 });
+
+  // Fetch direto das rondas do banco com match tolerante (case-insensitive, trim)
+  // — evita problemas de grafia do contrato nas rondas salvas
+  const [rondasDoContrato, setRondasDoContrato] = useState<Ronda[]>([]);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const all = await rondaService.getAll();
+        const nomeBusca = (contrato.nome || '').trim().toLowerCase();
+        const matched = all.filter((r: any) => (r.contrato || '').trim().toLowerCase() === nomeBusca);
+        console.log('[Dashboard] Rondas total no banco:', all.length, '→ do contrato', contrato.nome, ':', matched.length);
+        setRondasDoContrato(matched as Ronda[]);
+      } catch (e) {
+        console.warn('[Dashboard] erro ao carregar rondas direto:', e);
+      }
+    };
+    load();
+  }, [contrato.id, contrato.nome]);
 
   // Auto-sync localStorage -> Supabase uma vez ao abrir o Dashboard
   useEffect(() => {
@@ -122,14 +141,14 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
   // Filtrar rondas dentro da faixa de datas selecionada
   const rondasMes = useMemo(() => {
     console.log('🔍 FILTRO RONDAS - período:', startDate, '→', endDate);
-    const resultado = rondas.filter(ronda => {
+    const resultado = rondasDoContrato.filter(ronda => {
       if (!ronda.data) return false;
       return ronda.data >= startDate && ronda.data <= endDate;
     });
     resultado.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
     console.log('🔍 FILTRO - Rondas filtradas:', resultado.length);
     return resultado;
-  }, [rondas, startDate, endDate]);
+  }, [rondasDoContrato, startDate, endDate]);
 
   // Calcular métricas do dashboard com base no mês selecionado
   const metricas = useMemo(() => {
@@ -230,7 +249,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
       const porEquipamento: Record<string, { nome: string; ultimaVisita: string | null; statusUltimaVisita: string; observacoes: string | null; id: string }> = {};
 
       // Ordenar todas as rondas do MAIS ANTIGO para o MAIS RECENTE, e sobrescrever, assim no final fica o mais recente por equipamento
-      const rondasOrdenadas = [...rondas].sort((a, b) => a.data.localeCompare(b.data));
+      const rondasOrdenadas = [...rondasDoContrato].sort((a, b) => a.data.localeCompare(b.data));
 
       rondasOrdenadas.forEach(r => {
         (r.areasTecnicas || []).forEach(at => {
@@ -286,7 +305,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     });
 
     return metricas;
-  }, [rondasMes, startDate, endDate, rondas, areasTecnicas]);
+  }, [rondasMes, startDate, endDate, rondasDoContrato, areasTecnicas]);
 
   // Estado para lista de itens relevantes (agora do Supabase)
   const [reportItemsList, setReportItemsList] = useState<Array<{ id: string; descricao: string; data: string }>>([]);
