@@ -510,9 +510,69 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
         </div>
       )}
 
-      {subView === 'painel' && (
+      {subView === 'painel' && contratoFiltro === 'todos' && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-bold text-white">Selecione o prédio</h3>
+            <span className="text-xs text-gray-400">{contratos.length} prédios · {chamados.length} chamados no total</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {contratos
+              .map(ct => {
+                const chamadosCT = chamados.filter(c => c.contratoId === ct.id);
+                const pendentes = chamadosCT.filter(c => c.status === 'aguardando_vistoria').length;
+                return { ct, total: chamadosCT.length, pendentes };
+              })
+              .sort((a, b) => b.pendentes - a.pendentes || b.total - a.total)
+              .map(({ ct, total, pendentes }) => (
+                <button
+                  key={ct.id}
+                  onClick={() => setContratoFiltro(ct.id)}
+                  className="bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-blue-500 rounded-xl p-5 text-left transition-all group"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="p-2 bg-gray-800 group-hover:bg-blue-600/20 rounded-lg transition-colors">
+                      <Building2 className="w-6 h-6 text-gray-400 group-hover:text-blue-400" />
+                    </div>
+                  </div>
+                  {pendentes > 0 && (
+                    <div className="flex justify-center py-3">
+                      <div className="flex items-center gap-2 px-5 py-2 bg-red-500/15 text-red-400 rounded-2xl border-2 border-red-500/60 shadow-lg shadow-red-500/20 animate-pulse">
+                        <AlertCircle className="w-6 h-6" />
+                        <span className="text-2xl font-black uppercase tracking-tighter italic">
+                          {pendentes} PENDENTES
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <h3 className="text-lg font-bold text-white line-clamp-2 mt-2">{ct.nome}</h3>
+                  <div className="mt-3 flex justify-between items-center">
+                    <span className="text-[11px] font-medium text-gray-400">
+                      Chamados totais: <span className="text-white font-bold">{total}</span>
+                    </span>
+                    <span className="text-[11px] font-bold text-blue-400 group-hover:translate-x-1 transition-transform">ABRIR →</span>
+                  </div>
+                </button>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {subView === 'painel' && contratoFiltro !== 'todos' && (
       <>
-      {/* TODO conteúdo antigo do painel */}
+      {/* Botao voltar pro grid de predios */}
+      <div className="flex items-center justify-between bg-gray-900 p-3 rounded-lg border border-gray-800">
+        <button
+          onClick={() => setContratoFiltro('todos')}
+          className="flex items-center gap-2 text-sm text-gray-300 hover:text-white font-semibold"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          Voltar para lista de prédios
+        </button>
+        <span className="text-sm font-bold text-white">
+          {contratoNome(contratoFiltro)} — {stats.total} chamados
+        </span>
+      </div>
 
       {/* Status Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
