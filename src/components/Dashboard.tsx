@@ -102,6 +102,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     finalizados: 0,
   });
   const [laudosStats, setLaudosStats] = useState({ total: 0, vencidos: 0, emAnalise: 0, emDia: 0 });
+  const [loadingContrato, setLoadingContrato] = useState(false);
 
   // Fetch direto das rondas do banco com match tolerante (case-insensitive, trim)
   // — evita problemas de grafia do contrato nas rondas salvas
@@ -131,7 +132,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
       }
     };
     load();
-  }, [contrato.id, contrato.nome]);
+  }, [contrato?.id, contrato?.nome]);
 
   // Auto-sync localStorage -> Supabase uma vez ao abrir o Dashboard
   useEffect(() => {
@@ -151,6 +152,8 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
 
   // Carregar dados de implantação quando mudar contrato
   useEffect(() => {
+    if (!contrato) return;
+    setLoadingContrato(true);
     const carregarImplantacao = async () => {
       try {
         // Kanban — TODOS os cards do contrato (snapshot atual, sem filtro de data)
@@ -179,9 +182,10 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
       } catch (err) {
         console.warn('Erro ao carregar laudos stats:', err);
       }
+      setLoadingContrato(false);
     };
     carregarImplantacao();
-  }, [contrato.id]);
+  }, [contrato?.id]);
 
   // Se o mês atual não tiver rondas, usar automaticamente o mês da última ronda
   // Removido useEffect que alterava o mês automaticamente se não houvesse rondas
@@ -414,7 +418,7 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
     };
 
     carregarItensRelevantes();
-  }, [contrato.id, mesesNaFaixa.join(',')]);
+  }, [contrato?.id, mesesNaFaixa.join(',')]);
 
   // Função para adicionar novo item (salvando no Supabase)
   const handleAddItem = async () => {
@@ -477,6 +481,16 @@ export function Dashboard({ contrato, rondas, areasTecnicas, contratos, onSelect
 
   return (
     <div className="space-y-4 sm:space-y-8">
+      {/* Overlay de loading durante troca de prédio */}
+      {loadingContrato && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-gray-800 rounded-lg p-8 shadow-2xl flex flex-col items-center gap-4 border border-gray-700">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+            <p className="text-white text-lg font-semibold">Carregando dados do prédio...</p>
+            <p className="text-gray-400 text-sm">{contrato?.nome}</p>
+          </div>
+        </div>
+      )}
       {/* Hero */}
       <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-lg">
         <div className="relative p-4 sm:p-10 lg:p-12">
