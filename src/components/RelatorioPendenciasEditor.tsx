@@ -1129,6 +1129,17 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         descricao: string;
     } | null>(null);
 
+    // ============================================
+    // Mover constatação entre subseções CONSTATACAO
+    // ============================================
+    const [constatacaoParaMover, setConstatacaoParaMover] = useState<{
+        secaoTempId: string;
+        subsecaoTempId: string;
+        fotoIndex: number;
+        fotoUrl: string;
+        legenda: string;
+    } | null>(null);
+
     const handleMoverPendencia = (destinoSecaoTempId: string, destinoSubTempId?: string) => {
         if (!pendenciaParaMover) return;
         const { secaoTempId: origemSecao, subsecaoTempId: origemSub, pendenciaTempId } = pendenciaParaMover;
@@ -1250,6 +1261,87 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
         });
 
         setConstatacaoParaTransformar(null);
+    };
+
+    // ============================================
+    // Mover constatação (foto) para outra subseção CONSTATACAO
+    // ============================================
+    const handleMoverConstatacao = (destinoSecaoTempId: string, destinoSubTempId: string) => {
+        if (!constatacaoParaMover) return;
+        const { secaoTempId, subsecaoTempId, fotoIndex } = constatacaoParaMover;
+
+        if (secaoTempId === destinoSecaoTempId && subsecaoTempId === destinoSubTempId) {
+            setConstatacaoParaMover(null);
+            return;
+        }
+
+        setSecoes(prev => {
+            let movedFile: File | undefined;
+            let movedPreview: string | undefined;
+            let movedUrl: string | undefined;
+            let movedLegenda: string = '';
+
+            const semFoto = prev.map(s => {
+                if (s.tempId !== secaoTempId) return s;
+                return {
+                    ...s,
+                    subsecoes: (s.subsecoes || []).map(sub => {
+                        if (sub.tempId !== subsecaoTempId) return sub;
+                        const files = [...(sub.fotos_constatacao_files || [])];
+                        const previews = [...(sub.fotos_constatacao_previews || [])];
+                        const urls = [...(sub.fotos_constatacao || [])];
+                        const legendas = [...(sub.legendas_constatacao || [])];
+
+                        movedFile = files[fotoIndex];
+                        movedPreview = previews[fotoIndex];
+                        movedUrl = urls[fotoIndex];
+                        movedLegenda = legendas[fotoIndex] || '';
+
+                        if (files.length > fotoIndex) files.splice(fotoIndex, 1);
+                        if (previews.length > fotoIndex) previews.splice(fotoIndex, 1);
+                        if (urls.length > fotoIndex) urls.splice(fotoIndex, 1);
+                        if (legendas.length > fotoIndex) legendas.splice(fotoIndex, 1);
+
+                        return {
+                            ...sub,
+                            fotos_constatacao_files: files,
+                            fotos_constatacao_previews: previews,
+                            fotos_constatacao: urls,
+                            legendas_constatacao: legendas,
+                        };
+                    }),
+                };
+            });
+
+            return semFoto.map(s => {
+                if (s.tempId !== destinoSecaoTempId) return s;
+                return {
+                    ...s,
+                    subsecoes: (s.subsecoes || []).map(sub => {
+                        if (sub.tempId !== destinoSubTempId) return sub;
+                        const files = [...(sub.fotos_constatacao_files || [])];
+                        const previews = [...(sub.fotos_constatacao_previews || [])];
+                        const urls = [...(sub.fotos_constatacao || [])];
+                        const legendas = [...(sub.legendas_constatacao || [])];
+
+                        files.push(movedFile as File);
+                        previews.push(movedPreview as string);
+                        urls.push(movedUrl as string);
+                        legendas.push(movedLegenda);
+
+                        return {
+                            ...sub,
+                            fotos_constatacao_files: files,
+                            fotos_constatacao_previews: previews,
+                            fotos_constatacao: urls,
+                            legendas_constatacao: legendas,
+                        };
+                    }),
+                };
+            });
+        });
+
+        setConstatacaoParaMover(null);
     };
 
     // ============================================
@@ -3241,6 +3333,21 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                                                                             <MoveRight className="w-3.5 h-3.5" />
                                                                                         </Button>
                                                                                         <Button
+                                                                                            onClick={() => setConstatacaoParaMover({
+                                                                                                secaoTempId: secao.tempId,
+                                                                                                subsecaoTempId: subsecao.tempId,
+                                                                                                fotoIndex: idx,
+                                                                                                fotoUrl: preview,
+                                                                                                legenda: (subsecao.legendas_constatacao || [])[idx] || '',
+                                                                                            })}
+                                                                                            variant="ghost"
+                                                                                            size="sm"
+                                                                                            className="h-6 w-6 p-0 bg-emerald-600/80 hover:bg-emerald-600 text-white"
+                                                                                            title="Mover constatação para outra subseção"
+                                                                                        >
+                                                                                            <FolderInput className="w-3.5 h-3.5" />
+                                                                                        </Button>
+                                                                                        <Button
                                                                                             onClick={() => handleOpenImageEditorConstatacao(secao.tempId, subsecao.tempId, idx, preview)}
                                                                                             variant="ghost"
                                                                                             size="sm"
@@ -3740,6 +3847,77 @@ export function RelatorioPendenciasEditor({ contrato, relatorio, onSave, onCance
                                     </div>
                                 );
                             })}
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Modal Mover Constatação para outra subseção CONSTATAÇÃO */}
+            {constatacaoParaMover && createPortal(
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4" style={{ zIndex: 99999 }} onClick={() => { setConstatacaoParaMover(null); }}>
+                    <div className="bg-gray-800 border-2 border-emerald-500 rounded-lg p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-emerald-300 font-semibold text-lg">Mover Constatação</h3>
+                            <button onClick={() => setConstatacaoParaMover(null)} className="text-gray-400 hover:text-white">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="mb-4">
+                            <img
+                                src={constatacaoParaMover.fotoUrl}
+                                alt="Foto da constatação"
+                                className="w-full h-32 object-cover rounded-md border border-emerald-700/50"
+                            />
+                            {constatacaoParaMover.legenda && (
+                                <p className="text-emerald-200 text-xs mt-1">Legenda: {constatacaoParaMover.legenda}</p>
+                            )}
+                        </div>
+                        <p className="text-gray-500 text-xs mb-3">Selecione a subseção CONSTATAÇÃO de destino:</p>
+                        <div className="space-y-2">
+                            {(() => {
+                                const destinosDisponiveis = secoes
+                                    .map(secao => ({
+                                        secao,
+                                        subsConst: (secao.subsecoes || [])
+                                            .filter(sub => sub.tipo === 'CONSTATACAO')
+                                            .filter(sub => !(secao.tempId === constatacaoParaMover.secaoTempId && sub.tempId === constatacaoParaMover.subsecaoTempId)),
+                                    }))
+                                    .filter(({ subsConst }) => subsConst.length > 0);
+
+                                if (destinosDisponiveis.length === 0) {
+                                    return (
+                                        <div className="text-center py-6 text-gray-400 text-sm">
+                                            Não há outra subseção CONSTATAÇÃO disponível.
+                                            <br />
+                                            <span className="text-xs text-gray-500">Crie uma subseção tipo "Constatação" na seção de destino antes de mover.</span>
+                                        </div>
+                                    );
+                                }
+
+                                return destinosDisponiveis.map(({ secao, subsConst }) => (
+                                    <div key={secao.tempId} className="border border-gray-700 rounded-md overflow-hidden">
+                                        <p className="text-gray-400 text-xs font-semibold px-3 py-1.5 bg-gray-900/50">
+                                            VIII.{secao.ordem + 1} - {secao.titulo_principal || 'Sem título'}
+                                        </p>
+                                        <div className="pl-4 space-y-1 py-1">
+                                            {subsConst.map((sub) => {
+                                                const subIdx = (secao.subsecoes || []).findIndex(s => s.tempId === sub.tempId);
+                                                return (
+                                                    <button
+                                                        key={sub.tempId}
+                                                        onClick={() => handleMoverConstatacao(secao.tempId, sub.tempId)}
+                                                        className="w-full text-left px-3 py-1.5 rounded-md text-sm transition-all bg-gray-700/30 text-gray-300 hover:bg-emerald-900/30 hover:text-white border border-transparent"
+                                                    >
+                                                        {String.fromCharCode(65 + subIdx)}. {sub.titulo || 'Sem título'}
+                                                        <span className="text-gray-500 text-xs ml-2">({(sub.fotos_constatacao_previews || []).length} fotos)</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ));
+                            })()}
                         </div>
                     </div>
                 </div>,
