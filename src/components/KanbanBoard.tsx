@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { KanbanPhotoUpload } from '@/components/KanbanPhotoUpload';
 import { relatorioPendenciasService } from '@/lib/relatorioPendenciasService';
 import { supabase } from '@/lib/supabase';
+import { kanbanEventoService } from '@/lib/supabaseService';
 
 // Função auxiliar para converter base64 para File
 const base64ToFile = (base64: string, filename: string): File => {
@@ -697,6 +698,8 @@ export function KanbanBoard({ contratoId, contratoNome }: KanbanBoardProps = {})
           }))
         }));
         localStorage.setItem(`kanban_items_${contratoId}`, JSON.stringify(itemsSemFotos));
+        // Sync para Supabase (para todos os devices/logins verem os mesmos eventos na Agenda)
+        if (contratoNome) kanbanEventoService.syncContrato(contratoId, contratoNome, itemsSemFotos);
       } catch (e) {
         console.warn('⚠️ Erro ao salvar no localStorage (possivelmente cheio):', e);
         // Tentar limpar dados antigos

@@ -2051,3 +2051,75 @@ export const debugDatabase = async (): Promise<void> => {
     console.error('❌ Erro no debug do banco:', error);
   }
 };
+
+
+// ============================================================
+// kanbanEventoService - sincroniza items do Kanban para Supabase
+// para que a Agenda veja os mesmos dados em todos os devices/logins
+// ============================================================
+export interface KanbanEvento {
+  id?: string;
+  kanban_item_id: string;
+  contrato_id: string;
+  contrato_nome: string;
+  titulo: string;
+  categoria: string;
+  status: string;
+  data_andamento?: string | null;
+  data_vistoria?: string | null;
+  data_recebimento?: string | null;
+  data_correcao?: string | null;
+  updated_at?: string;
+}
+
+export const kanbanEventoService = {
+  async syncContrato(contratoId: string, contratoNome: string, items: any[]): Promise<void> {
+    try {
+      const itemsComData = items.filter((it: any) =>
+        it && (it.dataAndamento || it.dataVistoria || it.dataRecebimento || it.dataCorrecao)
+      );
+
+      const rows: KanbanEvento[] = itemsComData.map((it: any) => ({
+        kanban_item_id: String(it.id),
+        contrato_id: contratoId,
+        contrato_nome: contratoNome,
+        titulo: it.title || 'Sem titulo',
+        categoria: it.category || '',
+        status: it.status || 'aguardando',
+        data_andamento: it.dataAndamento || null,
+        data_vistoria: it.dataVistoria || null,
+        data_recebimento: it.dataRecebimento || null,
+        data_correcao: it.dataCorrecao || null,
+      }));
+
+      if (rows.length > 0) {
+        const { error: upsertErr } = await supabase
+          .from('kanban_eventos')
+          .upsert(rows, { onConflict: 'contrato_id,kanban_item_id' });
+        if (upsertErr) throw upsertErr;
+      }
+
+      const idsAtuais = itemsComData.map((it: any) => String(it.id));
+      let deleteQuery = supabase.from('kanban_eventos').delete().eq('contrato_id', contratoId);
+      if (idsAtuais.length > 0) {
+        const idsJsonArray = idsAtuais.map((id: string) => JSON.stringify(id)).join(',');
+        deleteQuery = deleteQuery.not('kanban_item_id', 'in', `(${idsJsonArray})`);
+      }
+      const { error: delErr } = await deleteQuery;
+      if (delErr) console.warn('[kanbanEventoService] erro ao limpar orfaos:', delErr);
+    } catch (err) {
+      console.warn('[kanbanEventoService] falha no sync:', err);
+    }
+  },
+
+  async getAll(): Promise<KanbanEvento[]> {
+    try {
+      const { data, error } = await supabase.from('kanban_eventos').select('*');
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.warn('[kanbanEventoService] erro ao ler:', err);
+      return [];
+    }
+  },
+};
