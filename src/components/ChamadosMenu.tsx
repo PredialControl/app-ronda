@@ -280,6 +280,8 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
     };
     const fonte = chamados.filter(c => contratoFiltro === 'todos' || c.contratoId === contratoFiltro);
     fonte.forEach(c => { base[c.status] = (base[c.status] || 0) + 1; });
+    // "Itens Apontados" é a somatoria total (todos os chamados contam como item apontado)
+    base.itens_apontados = fonte.length;
     return { counts: base, total: fonte.length };
   }, [chamados, contratoFiltro]);
 
