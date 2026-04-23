@@ -4,7 +4,7 @@ export interface Laudo {
     id: string;
     contrato_id: string;
     titulo: string;
-    status: 'em-dia' | 'proximo-vencimento' | 'vencidos';
+    status: 'em-dia' | 'proximo-vencimento' | 'vencidos' | 'em-analise';
     data_vencimento?: string;
     data_emissao?: string;
     periodicidade?: string;
