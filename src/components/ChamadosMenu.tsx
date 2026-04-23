@@ -1177,7 +1177,30 @@ function HistoricoModal({ chamado, onClose }: { chamado: Chamado; onClose: () =>
 
 function GaleriaFotosModal({ chamado, onClose }: { chamado: Chamado; onClose: () => void }) {
   const [indiceAtual, setIndiceAtual] = useState(0);
-  const fotos = chamado.fotoUrls || [];
+  const [fotos, setFotos] = useState<string[]>(chamado.fotoUrls || []);
+  const [carregando, setCarregando] = useState(false);
+
+  useEffect(() => {
+    // Se nao veio fotos na listagem (lazy), busca sob demanda
+    if ((chamado.fotoUrls || []).length === 0 && chamado.id) {
+      setCarregando(true);
+      chamadoService.getFotos(chamado.id)
+        .then(urls => { setFotos(urls); setCarregando(false); })
+        .catch(() => setCarregando(false));
+    }
+  }, [chamado.id]);
+
+  if (carregando) {
+    return (
+      <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[80] p-4" onClick={onClose}>
+        <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 text-center" onClick={(e) => e.stopPropagation()}>
+          <RefreshCw className="w-8 h-8 text-gray-500 mx-auto mb-2 animate-spin" />
+          <p className="text-gray-700">Carregando fotos...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (fotos.length === 0) {
     return (
       <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[80] p-4" onClick={onClose}>

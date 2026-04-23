@@ -2237,13 +2237,26 @@ const mapChamado = (row: any, contratoNome?: string): Chamado => ({
 
 export const chamadoService = {
   async getAll(): Promise<Chamado[]> {
+    // Paginar pra pegar todos (Supabase limita a 1000 por request) e NAO trazer fotos
+    // na lista (sao base64 gigantes — fotos vem por demanda em getFotos)
+    const COLUNAS = 'id,external_id,contrato_id,usuario_id,numero_ticket,local,descricao,status,responsavel,prazo,reprogramacao_data,retorno_construtora,parecer_engenharia,historico_reprogramacao,atualizacoes,created_at,updated_at';
+    const PAGE = 1000;
+    let all: any[] = [];
+    let from = 0;
     try {
-      const { data, error } = await supabase
-        .from('chamados')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data || []).map(r => mapChamado(r));
+      while (true) {
+        const { data, error } = await supabase
+          .from('chamados')
+          .select(COLUNAS)
+          .order('created_at', { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all = all.concat(data);
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+      return all.map(r => mapChamado({ ...r, foto_urls: [] }));
     } catch (err) {
       console.warn('[chamadoService] getAll falhou:', err);
       return [];
@@ -2251,16 +2264,32 @@ export const chamadoService = {
   },
 
   async getByContrato(contratoId: string): Promise<Chamado[]> {
+    const COLUNAS = 'id,external_id,contrato_id,usuario_id,numero_ticket,local,descricao,status,responsavel,prazo,reprogramacao_data,retorno_construtora,parecer_engenharia,historico_reprogramacao,atualizacoes,created_at,updated_at';
     try {
       const { data, error } = await supabase
         .from('chamados')
-        .select('*')
+        .select(COLUNAS)
         .eq('contrato_id', contratoId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []).map(r => mapChamado(r));
+      return (data || []).map(r => mapChamado({ ...r, foto_urls: [] }));
     } catch (err) {
       console.warn('[chamadoService] getByContrato falhou:', err);
+      return [];
+    }
+  },
+
+  async getFotos(id: string): Promise<string[]> {
+    try {
+      const { data, error } = await supabase
+        .from('chamados')
+        .select('foto_urls')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      return Array.isArray(data?.foto_urls) ? data.foto_urls : [];
+    } catch (err) {
+      console.warn('[chamadoService] getFotos falhou:', err);
       return [];
     }
   },
