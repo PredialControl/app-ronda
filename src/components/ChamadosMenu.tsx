@@ -902,8 +902,8 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
                       </td>
                       {/* Criado Por */}
                       <td className="px-3 py-3 text-xs border-x border-gray-800">
-                        <div className="text-white font-medium truncate max-w-[120px]" title={c.usuarioId || 'N/A'}>
-                          {c.usuarioId ? (c.usuarioId.substring(0, 8) + '...') : 'N/A'}
+                        <div className="text-white font-medium truncate max-w-[140px]" title={c.criadoPorNome || 'N/A'}>
+                          {c.criadoPorNome || <span className="text-gray-500 italic">N/A</span>}
                         </div>
                       </td>
                       {/* Abertura */}
@@ -1019,11 +1019,46 @@ function RegistrarChamadoModal({ chamado, contratoNome, onClose, onSalvar }: {
   const [numeroTicket, setNumeroTicket] = useState('');
   const [responsavel, setResponsavel] = useState<ChamadoResponsavel>('Construtora');
   const [prazo, setPrazo] = useState('');
+  const [fotos, setFotos] = useState<string[]>(chamado.fotoUrls || []);
+  const [carregandoFotos, setCarregandoFotos] = useState(false);
+  const [baixandoFotos, setBaixandoFotos] = useState(false);
+  const [verFotos, setVerFotos] = useState(false);
+
+  useEffect(() => {
+    if ((chamado.fotoUrls || []).length === 0 && chamado.id) {
+      setCarregandoFotos(true);
+      chamadoService.getFotos(chamado.id)
+        .then(urls => { setFotos(urls); setCarregandoFotos(false); })
+        .catch(() => setCarregandoFotos(false));
+    }
+  }, [chamado.id]);
+
+  const baixarTodasFotos = async () => {
+    if (fotos.length === 0) { alert('Esse chamado não tem fotos.'); return; }
+    setBaixandoFotos(true);
+    try {
+      for (let i = 0; i < fotos.length; i++) {
+        const url = fotos[i];
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `chamado_${chamado.numeroTicket || chamado.id.substring(0, 8)}_foto${i + 1}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        // Pequeno delay pra não travar o browser
+        await new Promise(r => setTimeout(r, 150));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao baixar fotos.');
+    }
+    setBaixandoFotos(false);
+  };
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-gray-900 rounded-xl shadow-2xl max-w-lg w-full border border-gray-700" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+      <div className="bg-gray-900 rounded-xl shadow-2xl max-w-lg w-full border border-gray-700 max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-700 sticky top-0 bg-gray-900 z-10">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-green-400" /> Registrar chamado
           </h3>
@@ -1034,6 +1069,50 @@ function RegistrarChamadoModal({ chamado, contratoNome, onClose, onSalvar }: {
             <p className="text-xs text-gray-400 mb-1">Solicitação original</p>
             <p className="text-sm text-white font-semibold">{contratoNome} · {chamado.local}</p>
             <p className="text-sm text-gray-300 line-clamp-2 mt-1">{chamado.descricao}</p>
+          </div>
+
+          {/* Fotos — botoes grandes e visiveis */}
+          <div className="bg-blue-500/10 border-2 border-blue-500/40 rounded-md p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-bold text-white flex items-center gap-1">
+                <Camera className="w-4 h-4 text-blue-400" /> Fotos do chamado
+                <span className="ml-1 text-blue-300">({carregandoFotos ? '...' : fotos.length})</span>
+              </p>
+            </div>
+            {carregandoFotos ? (
+              <div className="text-xs text-gray-300 flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 animate-spin" /> Carregando fotos...
+              </div>
+            ) : fotos.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">Sem fotos neste chamado.</p>
+            ) : (
+              <div className="space-y-2">
+                {/* Thumbnails */}
+                <div className="grid grid-cols-4 gap-2">
+                  {fotos.slice(0, 8).map((f, i) => (
+                    <a key={i} href={f} target="_blank" rel="noopener noreferrer"
+                      className="block aspect-square rounded overflow-hidden border border-blue-400/40 hover:border-blue-400 transition">
+                      <img src={f} className="w-full h-full object-cover" />
+                    </a>
+                  ))}
+                </div>
+                {/* Botoes de acao */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button size="sm" onClick={() => setVerFotos(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold w-full">
+                    <Eye className="w-4 h-4 mr-1" /> Ver em tela cheia
+                  </Button>
+                  <Button size="sm" onClick={baixarTodasFotos} disabled={baixandoFotos}
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold w-full">
+                    {baixandoFotos ? (
+                      <><RefreshCw className="w-4 h-4 mr-1 animate-spin" /> Baixando...</>
+                    ) : (
+                      <><Download className="w-4 h-4 mr-1" /> Baixar todas ({fotos.length})</>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <label className="text-sm font-semibold text-white mb-1 block">Número do chamado na Construtora *</label>
@@ -1059,14 +1138,17 @@ function RegistrarChamadoModal({ chamado, contratoNome, onClose, onSalvar }: {
               className="bg-gray-800 border-gray-700 text-white" />
           </div>
         </div>
-        <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-700">
+        <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-700 sticky bottom-0 bg-gray-900">
           <Button variant="outline" onClick={onClose} className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700">Cancelar</Button>
           <Button className="bg-green-600 hover:bg-green-700 text-white" disabled={!numeroTicket.trim()}
             onClick={() => onSalvar(numeroTicket, responsavel, prazo || null)}>
-            <CheckCircle className="w-4 h-4 mr-1" /> Registrar e mover pra gestão
+            <CheckCircle className="w-4 h-4 mr-1" /> Registrar
           </Button>
         </div>
       </div>
+      {verFotos && (
+        <GaleriaFotosModal chamado={{ ...chamado, fotoUrls: fotos }} onClose={() => setVerFotos(false)} />
+      )}
     </div>
   );
 }
@@ -1694,6 +1776,11 @@ function GaleriaFotosModal({ chamado, onClose }: { chamado: Chamado; onClose: ()
             </button>
           ))}
         </div>
+        <a href={fotos[indiceAtual]} download={`foto_${indiceAtual + 1}.jpg`}
+          className="mt-3 inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold text-sm"
+          onClick={(e) => e.stopPropagation()}>
+          <Download className="w-4 h-4" /> Baixar foto atual
+        </a>
       </div>
     </div>
   );
