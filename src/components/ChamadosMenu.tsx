@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Plus, Search, Filter, X, Save, Trash2, Camera, MessageSquare,
   Building2, Clock, AlertCircle, HardHat, FileSpreadsheet,
@@ -1163,29 +1163,73 @@ function NovoChamadoInline({ contratos, defaultContratoId, onSalvar }: {
   const [contratoId, setContratoId] = useState(defaultContratoId || (contratos[0]?.id || ''));
   const [local, setLocal] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [numeroTicket, setNumeroTicket] = useState('');
-  const [responsavel, setResponsavel] = useState<ChamadoResponsavel>('Construtora');
-  const [prazo, setPrazo] = useState('');
   const [fotos, setFotos] = useState<string[]>([]);
   const [salvando, setSalvando] = useState(false);
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
+  const galleryInputRef = React.useRef<HTMLInputElement>(null);
 
-  const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const MAX_FOTOS = 3;
+
+  // Comprime imagem grande (>1280px) pra evitar payload gigante
+  const comprimirImagem = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('erro ao ler'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('erro ao carregar imagem'));
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        const MAX = 1280;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = (h / w) * MAX; w = MAX; }
+          else       { w = (w / h) * MAX; h = MAX; }
+        }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('ctx')); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  const handleFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    files.forEach(f => {
-      const reader = new FileReader();
-      reader.onloadend = () => setFotos(prev => [...prev, reader.result as string]);
-      reader.readAsDataURL(f);
-    });
+    const espaco = MAX_FOTOS - fotos.length;
+    if (espaco <= 0) {
+      alert(`Máximo de ${MAX_FOTOS} fotos por chamado. Remova uma foto pra adicionar outra.`);
+      return;
+    }
+    const slice = files.slice(0, espaco);
+    for (const f of slice) {
+      try {
+        const dataUrl = await comprimirImagem(f);
+        setFotos(prev => [...prev, dataUrl]);
+      } catch { /* ignora */ }
+    }
+    // limpar input pra poder selecionar mesmo arquivo de novo
+    e.target.value = '';
   };
 
+  const removerFoto = (i: number) => setFotos(prev => prev.filter((_, j) => j !== i));
+
   const handleSalvar = async () => {
+    if (fotos.length === 0) {
+      alert('Adicione pelo menos 1 foto do problema.');
+      return;
+    }
     setSalvando(true);
-    await onSalvar({ contratoId, local, descricao, numeroTicket, responsavel, prazo: prazo || null, fotoUrls: fotos, status: 'aguardando_vistoria' });
+    await onSalvar({ contratoId, local, descricao, responsavel: null, prazo: null, fotoUrls: fotos, status: 'aguardando_vistoria' });
     setSalvando(false);
   };
 
+  const podeSalvar = contratoId && local.trim() && descricao.trim() && fotos.length >= 1 && !salvando;
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div>
         <label className="text-sm font-semibold text-gray-700">Prédio *</label>
         <select value={contratoId} onChange={(e) => setContratoId(e.target.value)}
@@ -1195,60 +1239,77 @@ function NovoChamadoInline({ contratos, defaultContratoId, onSalvar }: {
         </select>
       </div>
       <div>
-        <label className="text-sm font-semibold text-gray-700">Local *</label>
-        <Input value={local} onChange={(e) => setLocal(e.target.value)} placeholder="Ex.: Apto 302, Hall 3° andar" className="mt-1" />
+        <label className="text-sm font-semibold text-gray-700">Local do problema *</label>
+        <Input value={local} onChange={(e) => setLocal(e.target.value)}
+          placeholder="Ex.: Hall de entrada, Elevador 2, Apto 302" className="mt-1" />
       </div>
       <div>
-        <label className="text-sm font-semibold text-gray-700">Descrição do problema *</label>
+        <label className="text-sm font-semibold text-gray-700">Descrição *</label>
         <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)}
-          placeholder="Descreva o problema encontrado..." rows={5}
+          placeholder="Descreva o problema detalhadamente..." rows={5}
           className="w-full border border-gray-300 rounded-md px-3 py-2 mt-1 text-sm resize-none" />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-sm font-semibold text-gray-700">Número do ticket</label>
-          <Input value={numeroTicket} onChange={(e) => setNumeroTicket(e.target.value)} placeholder="Opcional" className="mt-1" />
-        </div>
-        <div>
-          <label className="text-sm font-semibold text-gray-700">Prazo</label>
-          <Input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} className="mt-1" />
-        </div>
-      </div>
+
+      {/* Fotos — obrigatorio 1 a 3, com dois botoes grandes: tirar foto / galeria */}
       <div>
-        <label className="text-sm font-semibold text-gray-700">Responsável</label>
-        <div className="flex gap-2 mt-1">
-          {(['Construtora', 'Condominio'] as const).map(r => (
-            <button key={r} onClick={() => setResponsavel(r)}
-              className={`flex-1 px-3 py-2 rounded-md text-sm border font-medium ${
-                responsavel === r ? 'bg-orange-600 text-white border-orange-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
-              {r === 'Condominio' ? 'Condomínio' : r}
-            </button>
-          ))}
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            Fotos do problema
+            <span className="text-[10px] text-red-600 font-bold uppercase tracking-widest">
+              (Obrigatório 1-{MAX_FOTOS})
+            </span>
+          </label>
+          <span className={`text-xs font-bold ${fotos.length > 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {fotos.length}/{MAX_FOTOS} fotos
+          </span>
         </div>
-      </div>
-      <div>
-        <label className="text-sm font-semibold text-gray-700">Fotos</label>
-        <input type="file" accept="image/*" multiple onChange={handleFoto} className="mt-1 text-sm block" />
+
+        {/* Previews */}
         {fotos.length > 0 && (
-          <div className="grid grid-cols-4 gap-2 mt-2">
+          <div className="grid grid-cols-3 gap-3 mb-3">
             {fotos.map((f, i) => (
-              <div key={i} className="relative">
-                <img src={f} className="w-full aspect-square object-cover rounded" />
-                <button onClick={() => setFotos(prev => prev.filter((_, j) => j !== i))}
-                  className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-0.5">
-                  <X className="w-3 h-3" />
+              <div key={i} className="relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200">
+                <img src={f} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
+                <button onClick={() => removerFoto(i)}
+                  className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-1.5 shadow-lg">
+                  <X className="w-4 h-4" />
                 </button>
               </div>
             ))}
           </div>
         )}
+
+        {/* Botoes Tirar foto / Galeria — só se ainda cabe foto */}
+        {fotos.length < MAX_FOTOS && (
+          <div className="grid grid-cols-2 gap-3">
+            <button type="button" onClick={() => cameraInputRef.current?.click()}
+              className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-blue-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group">
+              <Camera className="w-10 h-10 text-blue-500 group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-bold text-blue-600">Tirar Foto</span>
+              <span className="text-[10px] text-gray-500">Abrir câmera</span>
+            </button>
+            <button type="button" onClick={() => galleryInputRef.current?.click()}
+              className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-green-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all group">
+              <Download className="w-10 h-10 text-green-600 rotate-180 group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-bold text-green-700">Da Galeria</span>
+              <span className="text-[10px] text-gray-500">Escolher arquivo</span>
+            </button>
+          </div>
+        )}
+
+        <input type="file" accept="image/*" capture="environment"
+          ref={cameraInputRef} className="hidden" onChange={handleFoto} />
+        <input type="file" accept="image/*" multiple
+          ref={galleryInputRef} className="hidden" onChange={handleFoto} />
       </div>
+
       <div className="flex justify-end pt-3 border-t border-gray-200">
-        <Button onClick={handleSalvar} disabled={salvando || !contratoId || !local.trim() || !descricao.trim()}
-          className="bg-orange-600 hover:bg-orange-700 text-white gap-2 px-6 py-3 text-base font-semibold">
+        <Button onClick={handleSalvar} disabled={!podeSalvar}
+          className={`gap-2 px-6 py-4 text-base font-bold w-full sm:w-auto ${
+            podeSalvar ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}>
           {salvando ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-          {salvando ? 'Salvando...' : 'Abrir chamado'}
+          {salvando ? 'Enviando...' : 'Abrir Chamado'}
         </Button>
       </div>
     </div>
