@@ -41,22 +41,24 @@ interface ChamadosMenuProps {
   onNavigate?: (destination: string) => void;
 }
 
-function DonutChart({ data, size = 220, thickness = 36 }: {
+function DonutChart({ data, thickness = 36 }: {
   data: Array<{ label: string; value: number; color: string }>;
-  size?: number; thickness?: number;
+  thickness?: number;
 }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) {
     return (
-      <div className="flex items-center justify-center text-gray-500 text-sm" style={{ width: size, height: size }}>
+      <div className="flex items-center justify-center text-gray-500 text-sm aspect-square w-full max-w-[240px]">
         Sem dados
       </div>
     );
   }
-  const rOuter = size / 2 - 4;
+  // Viewbox fixo em 220x220, svg escalado com width 100%
+  const VB = 220;
+  const rOuter = VB / 2 - 4;
   const rInner = rOuter - thickness;
-  const cx = size / 2;
-  const cy = size / 2;
+  const cx = VB / 2;
+  const cy = VB / 2;
   let cumulative = 0;
   const arcs = data.filter(d => d.value > 0).map((d, i) => {
     const startAngle = (cumulative / total) * 2 * Math.PI;
@@ -81,52 +83,42 @@ function DonutChart({ data, size = 220, thickness = 36 }: {
     return <path key={i} d={pathD} fill={d.color} stroke="#111827" strokeWidth={1.5} />;
   });
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <svg viewBox={`0 0 ${VB} ${VB}`} className="w-full h-auto max-w-[240px]" preserveAspectRatio="xMidYMid meet">
       {arcs}
     </svg>
   );
 }
 
-function VerticalBarChart({ data, height = 250 }: {
+function VerticalBarChart({ data }: {
   data: Array<{ label: string; value: number; color: string }>;
-  height?: number;
 }) {
   const maxVal = Math.max(...data.map(d => d.value), 1);
-  // Gerar ticks arredondados
   const steps = 4;
-  const niceMax = Math.ceil(maxVal / steps) * steps;
+  const niceMax = Math.ceil(maxVal / steps) * steps || steps;
   const ticks = Array.from({ length: steps + 1 }, (_, i) => Math.round((niceMax / steps) * (steps - i)));
-  const barAreaH = height - 30;
   return (
-    <div className="flex flex-col">
-      <div className="flex" style={{ height: barAreaH }}>
-        {/* Eixo Y com labels */}
-        <div className="flex flex-col justify-between text-xs text-gray-500 pr-2 text-right" style={{ width: 32 }}>
-          {ticks.map((t, i) => (
-            <div key={i}>{t}</div>
-          ))}
+    <div className="flex flex-col w-full h-full min-h-[220px]">
+      <div className="flex flex-1 min-h-[180px]">
+        {/* Eixo Y */}
+        <div className="flex flex-col justify-between text-xs text-gray-500 pr-2 text-right w-8 shrink-0">
+          {ticks.map((t, i) => <div key={i}>{t}</div>)}
         </div>
-        {/* Área das barras */}
-        <div className="flex-1 relative border-l border-b border-gray-700">
-          {/* Grid lines tracejadas */}
+        {/* Area das barras */}
+        <div className="flex-1 relative border-l border-b border-gray-700 min-w-0">
+          {/* Grid */}
           {ticks.map((_, i) => (
-            <div
-              key={i}
+            <div key={i}
               className="absolute left-0 right-0 border-t border-dashed border-gray-700/60"
-              style={{ top: `${(i / steps) * 100}%` }}
-            />
+              style={{ top: `${(i / steps) * 100}%` }} />
           ))}
-          {/* Barras */}
-          <div className="absolute inset-0 flex items-end justify-around px-2 gap-4">
+          <div className="absolute inset-0 flex items-end justify-around px-2 gap-2">
             {data.map((d, i) => {
               const h = (d.value / niceMax) * 100;
               return (
-                <div key={i} className="flex-1 max-w-[80px] flex flex-col items-center">
-                  <div
-                    className="w-full rounded-t transition-all"
-                    style={{ height: `${h}%`, backgroundColor: d.color, minHeight: d.value > 0 ? 2 : 0 }}
-                    title={`${d.label}: ${d.value}`}
-                  />
+                <div key={i} className="flex-1 max-w-[70px] flex flex-col items-center">
+                  <div className="w-full rounded-t transition-all"
+                    style={{ height: `${h}%`, backgroundColor: d.color, minHeight: d.value > 0 ? 3 : 0 }}
+                    title={`${d.label}: ${d.value}`} />
                 </div>
               );
             })}
@@ -134,11 +126,12 @@ function VerticalBarChart({ data, height = 250 }: {
         </div>
       </div>
       {/* Labels eixo X */}
-      <div className="flex pl-8">
-        <div className="flex-1 flex items-start justify-around px-2 gap-4 mt-2">
+      <div className="flex pl-8 mt-1">
+        <div className="flex-1 flex items-start justify-around px-2 gap-2">
           {data.map((d, i) => (
-            <div key={i} className="flex-1 max-w-[80px] text-center">
-              <span className="text-xs text-gray-400 -rotate-12 inline-block">{d.label}</span>
+            <div key={i} className="flex-1 max-w-[70px] text-center">
+              <span className="text-[11px] text-gray-300 font-semibold truncate block">{d.label}</span>
+              <span className="text-[10px] text-gray-500">{d.value}</span>
             </div>
           ))}
         </div>
@@ -710,32 +703,30 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
       {/* Resumo de Chamados — 3 colunas: progress bars / donut / bar chart */}
       <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
         <h3 className="text-lg font-bold text-white mb-4">Resumo de Chamados</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
           {/* Coluna 1: Progress bars */}
-          <div className="space-y-3">
+          <div className="space-y-3 min-w-0">
             {chartStatusData.map((d, i) => {
               const maxVal = Math.max(...chartStatusData.map(x => x.value), 1);
               const pct = (d.value / maxVal) * 100;
               return (
-                <div key={i}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-semibold text-white">{d.label}</span>
-                    <span className="text-sm font-bold text-white">{d.value}</span>
+                <div key={i} className="min-w-0">
+                  <div className="flex items-center justify-between mb-1 gap-2">
+                    <span className="text-sm font-semibold text-white truncate">{d.label}</span>
+                    <span className="text-sm font-bold text-white shrink-0">{d.value}</span>
                   </div>
                   <div className="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, backgroundColor: d.color }}
-                    />
+                    <div className="h-full rounded-full transition-all"
+                      style={{ width: `${pct}%`, backgroundColor: d.color }} />
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Coluna 2: Donut chart + legenda (exclui "Itens Apontados" que é o total) */}
-          <div className="flex flex-col items-center">
-            <DonutChart data={chartStatusData.filter(d => d.label !== 'Itens Apontados')} size={220} thickness={36} />
+          {/* Coluna 2: Donut chart responsivo */}
+          <div className="flex flex-col items-center justify-center min-w-0">
+            <DonutChart data={chartStatusData.filter(d => d.label !== 'Itens Apontados')} thickness={36} />
             <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-3 text-xs">
               {chartStatusData.filter(d => d.value > 0 && d.label !== 'Itens Apontados').map((d, i) => (
                 <div key={i} className="flex items-center gap-1">
@@ -746,14 +737,13 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
             </div>
           </div>
 
-          {/* Coluna 3: Bar chart vertical */}
-          <div>
+          {/* Coluna 3: Bar chart vertical responsivo */}
+          <div className="min-w-0 lg:col-span-1 md:col-span-2 flex flex-col">
             <VerticalBarChart
               data={[
                 { label: 'Construtora', value: filtrados.filter(x => x.responsavel === 'Construtora' || !x.responsavel).length, color: '#ef4444' },
                 { label: 'Condomínio',  value: filtrados.filter(x => x.responsavel === 'Condominio').length, color: '#3b82f6' },
               ]}
-              height={250}
             />
           </div>
         </div>
