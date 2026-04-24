@@ -2243,7 +2243,7 @@ export const chamadoService = {
   async getAll(): Promise<Chamado[]> {
     // Paginar pra pegar todos (Supabase limita a 1000 por request) e NAO trazer fotos
     // na lista (sao base64 gigantes — fotos vem por demanda em getFotos)
-    const COLUNAS = 'id,external_id,contrato_id,usuario_id,numero_ticket,local,descricao,status,responsavel,prazo,reprogramacao_data,retorno_construtora,parecer_engenharia,historico_reprogramacao,atualizacoes,is_registered,created_at,updated_at';
+    const COLUNAS = 'id,external_id,contrato_id,usuario_id,numero_ticket,local,descricao,status,responsavel,prazo,reprogramacao_data,retorno_construtora,parecer_engenharia,historico_reprogramacao,atualizacoes,is_registered,criado_por_nome,created_at,updated_at';
     const PAGE = 1000;
     let all: any[] = [];
     let from = 0;
@@ -2268,7 +2268,7 @@ export const chamadoService = {
   },
 
   async getByContrato(contratoId: string): Promise<Chamado[]> {
-    const COLUNAS = 'id,external_id,contrato_id,usuario_id,numero_ticket,local,descricao,status,responsavel,prazo,reprogramacao_data,retorno_construtora,parecer_engenharia,historico_reprogramacao,atualizacoes,is_registered,created_at,updated_at';
+    const COLUNAS = 'id,external_id,contrato_id,usuario_id,numero_ticket,local,descricao,status,responsavel,prazo,reprogramacao_data,retorno_construtora,parecer_engenharia,historico_reprogramacao,atualizacoes,is_registered,criado_por_nome,created_at,updated_at';
     try {
       const { data, error } = await supabase
         .from('chamados')
@@ -2316,6 +2316,7 @@ export const chamadoService = {
         historico_reprogramacao: ch.historicoReprogramacao || [],
         atualizacoes: ch.atualizacoes || [],
         is_registered: ch.isRegistered === false ? false : true,
+        criado_por_nome: ch.criadoPorNome || null,
       };
       const { data, error } = await supabase
         .from('chamados')
@@ -2346,6 +2347,7 @@ export const chamadoService = {
       if (patch.historicoReprogramacao !== undefined) payload.historico_reprogramacao = patch.historicoReprogramacao;
       if (patch.atualizacoes !== undefined) payload.atualizacoes = patch.atualizacoes;
       if (patch.isRegistered !== undefined) payload.is_registered = patch.isRegistered;
+      if (patch.criadoPorNome !== undefined) payload.criado_por_nome = patch.criadoPorNome;
 
       const { error } = await supabase
         .from('chamados')
