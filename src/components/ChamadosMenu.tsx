@@ -246,11 +246,19 @@ function PieChart({ data, size = 160 }: { data: Array<{ label: string; value: nu
 export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
   const usuario = authService.getUsuarioAtual();
   const isAdmin = usuario?.is_admin || false;
+
+  // Contratos vinculados ao usuário (null = acesso total, admin/supervisor)
+  const contratosVinculados = usuario?.contratos_acesso && usuario.contratos_acesso.length > 0
+    ? usuario.contratos_acesso
+    : null;
+  // Se só tem 1 contrato, já abre fixado nele
+  const contratoUnico = contratosVinculados?.length === 1 ? contratosVinculados[0] : null;
+
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [chamados, setChamados] = useState<Chamado[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const [contratoFiltro, setContratoFiltro] = useState<string>('todos');
+  const [contratoFiltro, setContratoFiltro] = useState<string>(contratoUnico ?? 'todos');
   const [statusFiltro, setStatusFiltro] = useState<StatusFilter>('todos');
   const [busca, setBusca] = useState('');
   const [buscaTicket, setBuscaTicket] = useState('');
@@ -285,7 +293,11 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
           contratoService.getAll(),
           chamadoService.getAll(),
         ]);
-        setContratos(cs);
+        // Filtrar contratos disponíveis para este usuário
+        const contratosFiltrados = contratosVinculados
+          ? cs.filter(c => contratosVinculados.includes(c.id))
+          : cs;
+        setContratos(contratosFiltrados);
         setChamados(chs);
       } catch (e) { console.warn(e); }
       setLoading(false);
@@ -315,8 +327,9 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
   const solicitacoesPendentes = useMemo(() => chamados.filter(c => c.isRegistered === false), [chamados]);
 
   const filtrados = useMemo(() => {
-    // Tabela geral mostra TODOS (inclusive pendentes de numero). Ao registrar num, sai do Painel de Solicitacoes mas fica aqui.
     return chamados.filter(c => {
+      // Restringir pelos contratos vinculados ao usuário
+      if (contratosVinculados && !contratosVinculados.includes(c.contratoId)) return false;
       if (contratoFiltro !== 'todos' && c.contratoId !== contratoFiltro) return false;
       if (statusFiltro !== 'todos' && c.status !== statusFiltro) return false;
       if (responsavelFiltro !== 'todos' && (c.responsavel || '') !== responsavelFiltro) return false;
@@ -851,15 +864,18 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
 
       {/* Filtros */}
       <div className="bg-white rounded-xl p-3 border border-gray-200 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* Filtro de prédio — oculto se usuário só tem 1 contrato vinculado */}
+        {!contratoUnico && (
         <div className="lg:col-span-2">
           <label className="text-xs font-medium text-gray-600 flex items-center gap-1 mb-1">
             <Building2 className="w-3 h-3" /> Prédio
           </label>
           <select value={contratoFiltro} onChange={(e) => setContratoFiltro(e.target.value)} className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm">
-            <option value="todos">Todos os prédios</option>
+            {contratosVinculados ? null : <option value="todos">Todos os prédios</option>}
             {contratos.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
         </div>
+        )}
         <div>
           <label className="text-xs font-medium text-gray-600 flex items-center gap-1 mb-1">
             <HardHat className="w-3 h-3" /> Responsável

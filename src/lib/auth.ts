@@ -14,6 +14,7 @@ export interface UsuarioAutorizado {
   is_admin?: boolean;
   perfil?: PerfilUsuario;
   ultimoAcesso?: string;
+  contratos_acesso?: string[]; // IDs dos contratos que este usuário pode ver (null/vazio = todos)
 }
 
 // Lista de usuários autorizados
@@ -128,6 +129,10 @@ export class AuthService {
         ativo: usuarioDB.ativo,
         is_admin: usuarioDB.is_admin || perfil === 'master',
         perfil,
+        // Contratos vinculados: null ou array vazio = acesso a tudo (admin/supervisor)
+        contratos_acesso: (usuarioDB.contratos_acesso && usuarioDB.contratos_acesso.length > 0)
+          ? usuarioDB.contratos_acesso
+          : undefined,
       };
 
       // Criar sessão
