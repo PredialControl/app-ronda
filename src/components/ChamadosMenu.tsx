@@ -42,10 +42,13 @@ interface ChamadosMenuProps {
   onNavigate?: (destination: string) => void;
 }
 
-function DonutChart({ data, thickness = 36 }: {
-  data: Array<{ label: string; value: number; color: string }>;
+function DonutChart({ data, thickness = 36, onSliceClick, selected }: {
+  data: Array<{ label: string; value: number; color: string; key?: string }>;
   thickness?: number;
+  onSliceClick?: (key: string) => void;
+  selected?: string;
 }) {
+  const [hovered, setHovered] = useState<number | null>(null);
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) {
     return (
@@ -54,45 +57,55 @@ function DonutChart({ data, thickness = 36 }: {
       </div>
     );
   }
-  // Viewbox fixo em 220x220, svg escalado com width 100%
   const VB = 220;
-  const rOuter = VB / 2 - 4;
-  const rInner = rOuter - thickness;
-  const cx = VB / 2;
-  const cy = VB / 2;
+  const cx = VB / 2, cy = VB / 2;
   let cumulative = 0;
   const arcs = data.filter(d => d.value > 0).map((d, i) => {
     const startAngle = (cumulative / total) * 2 * Math.PI;
     cumulative += d.value;
     const endAngle = (cumulative / total) * 2 * Math.PI;
-    const x1o = cx + rOuter * Math.sin(startAngle);
-    const y1o = cy - rOuter * Math.cos(startAngle);
-    const x2o = cx + rOuter * Math.sin(endAngle);
-    const y2o = cy - rOuter * Math.cos(endAngle);
-    const x1i = cx + rInner * Math.sin(endAngle);
-    const y1i = cy - rInner * Math.cos(endAngle);
-    const x2i = cx + rInner * Math.sin(startAngle);
-    const y2i = cy - rInner * Math.cos(startAngle);
+    const isSelected = selected === d.key;
+    const isHovered = hovered === i;
+    const scale = isSelected || isHovered ? 1.06 : 1;
+    const rO = (VB / 2 - 4) * scale;
+    const rI = rO - thickness;
+    const x1o = cx + rO * Math.sin(startAngle), y1o = cy - rO * Math.cos(startAngle);
+    const x2o = cx + rO * Math.sin(endAngle),   y2o = cy - rO * Math.cos(endAngle);
+    const x1i = cx + rI * Math.sin(endAngle),   y1i = cy - rI * Math.cos(endAngle);
+    const x2i = cx + rI * Math.sin(startAngle), y2i = cy - rI * Math.cos(startAngle);
     const large = endAngle - startAngle > Math.PI ? 1 : 0;
-    const pathD = [
-      `M ${x1o} ${y1o}`,
-      `A ${rOuter} ${rOuter} 0 ${large} 1 ${x2o} ${y2o}`,
-      `L ${x1i} ${y1i}`,
-      `A ${rInner} ${rInner} 0 ${large} 0 ${x2i} ${y2i}`,
-      'Z',
-    ].join(' ');
-    return <path key={i} d={pathD} fill={d.color} stroke="#111827" strokeWidth={1.5} />;
+    const pathD = [`M \${x1o} \${y1o}`,`A \${rO} \${rO} 0 \${large} 1 \${x2o} \${y2o}`,
+      `L \${x1i} \${y1i}`,`A \${rI} \${rI} 0 \${large} 0 \${x2i} \${y2i}`,'Z'].join(' ');
+    return (
+      <path key={i} d={pathD} fill={d.color}
+        stroke={isSelected ? '#fff' : '#111827'} strokeWidth={isSelected ? 2.5 : 1.5}
+        opacity={selected && !isSelected ? 0.4 : 1}
+        style={{ cursor: onSliceClick ? 'pointer' : 'default', transition: 'opacity 0.2s' }}
+        onClick={() => onSliceClick && d.key && onSliceClick(d.key)}
+        onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
+        <title>{d.label}: {d.value}</title>
+      </path>
+    );
   });
+  const hoveredItem = hovered !== null ? data.filter(d => d.value > 0)[hovered] : null;
   return (
-    <svg viewBox={`0 0 ${VB} ${VB}`} className="w-full h-auto max-w-[240px]" preserveAspectRatio="xMidYMid meet">
-      {arcs}
-    </svg>
+    <div className="relative w-full max-w-[240px]">
+      <svg viewBox={`0 0 \${VB} \${VB}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+        {arcs}
+        {hoveredItem && (<>
+          <text x={cx} y={cy - 10} textAnchor="middle" fill="white" fontSize="13" fontWeight="bold">{hoveredItem.label}</text>
+          <text x={cx} y={cy + 12} textAnchor="middle" fill={hoveredItem.color} fontSize="16" fontWeight="bold">{hoveredItem.value}</text>
+        </>)}
+      </svg>
+    </div>
   );
 }
-
-function VerticalBarChart({ data }: {
-  data: Array<{ label: string; value: number; color: string }>;
+function VerticalBarChart({ data, onBarClick, selected }: {
+  data: Array<{ label: string; value: number; color: string; key?: string }>;
+  onBarClick?: (key: string) => void;
+  selected?: string;
 }) {
+  const [hovered, setHovered] = useState<number | null>(null);
   const maxVal = Math.max(...data.map(d => d.value), 1);
   const steps = 4;
   const niceMax = Math.ceil(maxVal / steps) * steps || steps;
@@ -100,39 +113,53 @@ function VerticalBarChart({ data }: {
   return (
     <div className="flex flex-col w-full h-full min-h-[260px]">
       <div className="flex flex-1 min-h-[220px]">
-        {/* Eixo Y */}
         <div className="flex flex-col justify-between text-xs text-gray-500 pr-2 text-right w-10 shrink-0">
           {ticks.map((t, i) => <div key={i}>{t}</div>)}
         </div>
-        {/* Area das barras */}
         <div className="flex-1 relative border-l border-b border-gray-700 min-w-0">
-          {/* Grid */}
           {ticks.map((_, i) => (
-            <div key={i}
-              className="absolute left-0 right-0 border-t border-dashed border-gray-700/40"
-              style={{ top: `${(i / steps) * 100}%` }} />
+            <div key={i} className="absolute left-0 right-0 border-t border-dashed border-gray-700/40"
+              style={{ top: `\${(i / steps) * 100}%` }} />
           ))}
           <div className="absolute inset-0 flex items-end justify-around px-6 gap-6">
             {data.map((d, i) => {
-              const h = maxVal > 0 ? (d.value / niceMax) * 100 : 0;
+              const h = (d.value / niceMax) * 100;
+              const isSelected = selected === d.key;
+              const isHovered = hovered === i;
+              const active = isSelected || isHovered;
               return (
-                <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
-                  <span className="text-xs font-bold mb-1" style={{ color: d.color }}>{d.value}</span>
-                  <div className="w-full rounded-t-md transition-all duration-500"
-                    style={{ height: `${h}%`, backgroundColor: d.color, minHeight: d.value > 0 ? 4 : 0, maxWidth: '120px' }}
-                    title={`${d.label}: ${d.value}`} />
+                <div key={i} className="flex-1 flex flex-col items-center justify-end h-full"
+                  style={{ cursor: onBarClick ? 'pointer' : 'default' }}
+                  onClick={() => onBarClick && d.key && onBarClick(d.key)}
+                  onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
+                  <span className="text-xs font-bold mb-1 transition-all" style={{ color: d.color, fontSize: active ? 14 : 12 }}>
+                    {d.value}
+                  </span>
+                  <div className="w-full rounded-t-md transition-all duration-300"
+                    style={{
+                      height: `\${h}%`, backgroundColor: d.color,
+                      minHeight: d.value > 0 ? 4 : 0, maxWidth: '140px',
+                      opacity: selected && !isSelected ? 0.4 : 1,
+                      transform: active ? 'scaleY(1.03)' : 'scaleY(1)',
+                      transformOrigin: 'bottom',
+                      boxShadow: active ? `0 0 12px \${d.color}88` : 'none',
+                    }} />
                 </div>
               );
             })}
           </div>
         </div>
       </div>
-      {/* Labels eixo X */}
       <div className="flex pl-10 mt-2">
         <div className="flex-1 flex items-start justify-around px-6 gap-6">
           {data.map((d, i) => (
-            <div key={i} className="flex-1 text-center">
-              <span className="text-xs text-gray-300 font-semibold block">{d.label}</span>
+            <div key={i} className="flex-1 text-center"
+              style={{ cursor: onBarClick ? 'pointer' : 'default' }}
+              onClick={() => onBarClick && d.key && onBarClick(d.key)}>
+              <span className="text-xs font-semibold block"
+                style={{ color: selected === d.key ? d.color : '#d1d5db' }}>
+                {d.label}
+              </span>
             </div>
           ))}
         </div>
@@ -140,7 +167,6 @@ function VerticalBarChart({ data }: {
     </div>
   );
 }
-
 function PieChart({ data, size = 160 }: { data: Array<{ label: string; value: number; color: string }>; size?: number }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) {
@@ -728,12 +754,30 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
             })}
           </div>
 
-          {/* Coluna 2: Donut chart responsivo */}
+          {/* Coluna 2: Donut chart - clicavel */}
           <div className="flex flex-col items-center justify-center min-w-0">
-            <DonutChart data={chartStatusData.filter(d => d.label !== 'Itens Apontados')} thickness={36} />
+            {statusFiltro !== 'todos' && (
+              <button onClick={() => setStatusFiltro('todos')}
+                className="mb-2 text-xs text-gray-400 hover:text-white flex items-center gap-1 border border-gray-700 px-2 py-1 rounded-full transition-colors hover:border-gray-500">
+                <X className="w-3 h-3" /> Limpar filtro status
+              </button>
+            )}
+            <DonutChart
+              data={chartStatusData.filter(d => d.label !== 'Itens Apontados').map(d => ({ ...d, key: d.label }))}
+              thickness={36}
+              selected={statusFiltro !== 'todos' ? STATUS_CONFIG[statusFiltro]?.label : undefined}
+              onSliceClick={(key) => {
+                const found = (Object.keys(STATUS_CONFIG) as ChamadoStatus[]).find(k => STATUS_CONFIG[k].label === key);
+                if (found) setStatusFiltro(s => s === found ? 'todos' : found);
+              }}
+            />
             <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-3 text-xs">
               {chartStatusData.filter(d => d.value > 0 && d.label !== 'Itens Apontados').map((d, i) => (
-                <div key={i} className="flex items-center gap-1">
+                <div key={i} className="flex items-center gap-1 cursor-pointer opacity-80 hover:opacity-100"
+                  onClick={() => {
+                    const found = (Object.keys(STATUS_CONFIG) as ChamadoStatus[]).find(k => STATUS_CONFIG[k].label === d.label);
+                    if (found) setStatusFiltro(s => s === found ? 'todos' : found);
+                  }}>
                   <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: d.color }}></span>
                   <span className="text-gray-300">{d.label}</span>
                 </div>
@@ -741,12 +785,20 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
             </div>
           </div>
 
-          {/* Coluna 3: Bar chart vertical responsivo */}
+          {/* Coluna 3: Bar chart - clicavel */}
           <div className="min-w-0 lg:col-span-1 md:col-span-2 flex flex-col">
+            {responsavelFiltro !== 'todos' && (
+              <button onClick={() => setResponsavelFiltro('todos')}
+                className="mb-2 self-center text-xs text-gray-400 hover:text-white flex items-center gap-1 border border-gray-700 px-2 py-1 rounded-full transition-colors hover:border-gray-500">
+                <X className="w-3 h-3" /> Limpar filtro responsável
+              </button>
+            )}
             <VerticalBarChart
+              selected={responsavelFiltro !== 'todos' ? responsavelFiltro : undefined}
+              onBarClick={(key) => setResponsavelFiltro(r => r === key ? 'todos' : key)}
               data={[
-                { label: 'Construtora', value: filtrados.filter(x => x.responsavel === 'Construtora' || !x.responsavel).length, color: '#ef4444' },
-                { label: 'Condomínio',  value: filtrados.filter(x => x.responsavel === 'Condominio').length, color: '#3b82f6' },
+                { label: 'Construtora', key: 'Construtora', value: filtrados.filter(x => x.responsavel === 'Construtora' || !x.responsavel).length, color: '#ef4444' },
+                { label: 'Condomínio', key: 'Condominio', value: filtrados.filter(x => x.responsavel === 'Condominio').length, color: '#3b82f6' },
               ]}
             />
           </div>
@@ -1423,6 +1475,12 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
   const vencido = !!chamado.prazo && new Date(chamado.prazo) < new Date() && chamado.status !== 'concluido' && chamado.status !== 'f_indevido';
 
   // Trava o scroll da página e garante que o modal aparece no topo
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     document.body.style.overflow = 'hidden';
