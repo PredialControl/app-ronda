@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Plus, Search, Filter, X, Save, Trash2, Camera, MessageSquare,
   Building2, Clock, AlertCircle, HardHat, FileSpreadsheet,
@@ -1430,8 +1431,8 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
     setEditando(false);
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" onClick={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl border border-gray-700 rounded-xl bg-gray-900" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex-shrink-0 p-4 border-b border-gray-700 flex flex-row items-center justify-between bg-gray-900 rounded-t-xl">
@@ -1658,7 +1659,8 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
       {fotosOpen && (
         <GaleriaFotosModal chamado={chamado} onClose={() => setFotosOpen(false)} />
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
 
