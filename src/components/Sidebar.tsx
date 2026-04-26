@@ -162,9 +162,8 @@ export function Sidebar({
             <div className="flex items-center gap-3">
               <img
                 src="/logo-mp-full.svg"
-                alt="Manutenção Predial"
+                alt="ManuFlow"
                 className="h-11 w-auto"
-                style={{ filter: 'brightness(1.6) saturate(1.1)' }}
               />
             </div>
           )}
