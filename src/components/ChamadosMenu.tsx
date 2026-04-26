@@ -1418,6 +1418,13 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
   const cfg = STATUS_CONFIG[chamado.status];
   const vencido = !!chamado.prazo && new Date(chamado.prazo) < new Date() && chamado.status !== 'concluido' && chamado.status !== 'f_indevido';
 
+  // Trava o scroll da página e garante que o modal aparece no topo
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
   const salvarEdicao = () => {
     onUpdate({ status, responsavel, prazo: prazo || null, numeroTicket });
     setEditando(false);
