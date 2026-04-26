@@ -42,7 +42,7 @@ interface ChamadosMenuProps {
   onNavigate?: (destination: string) => void;
 }
 
-function DonutChart({ data, thickness = 36, onSliceClick, selected }: {
+function DonutChart({ data, thickness = 40, onSliceClick, selected }: {
   data: Array<{ label: string; value: number; color: string; key?: string }>;
   thickness?: number;
   onSliceClick?: (key: string) => void;
@@ -50,56 +50,79 @@ function DonutChart({ data, thickness = 36, onSliceClick, selected }: {
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
   const total = data.reduce((s, d) => s + d.value, 0);
+  const VB = 220;
+  const cx = VB / 2;
+  const cy = VB / 2;
+
+  const makeArc = (startA: number, endA: number, rO: number, rI: number): string => {
+    const x1o = cx + rO * Math.sin(startA);
+    const y1o = cy - rO * Math.cos(startA);
+    const x2o = cx + rO * Math.sin(endA);
+    const y2o = cy - rO * Math.cos(endA);
+    const x1i = cx + rI * Math.sin(endA);
+    const y1i = cy - rI * Math.cos(endA);
+    const x2i = cx + rI * Math.sin(startA);
+    const y2i = cy - rI * Math.cos(startA);
+    const large = endA - startA > Math.PI ? 1 : 0;
+    return [
+      'M', x1o, y1o,
+      'A', rO, rO, 0, large, 1, x2o, y2o,
+      'L', x1i, y1i,
+      'A', rI, rI, 0, large, 0, x2i, y2i,
+      'Z'
+    ].join(' ');
+  };
+
   if (total === 0) {
     return (
-      <div className="flex items-center justify-center text-gray-500 text-sm w-full h-full">
-        Sem dados
-      </div>
+      <svg viewBox={'0 0 ' + VB + ' ' + VB} width="100%" height="100%">
+        <text x={cx} y={cy} textAnchor="middle" fill="#6b7280" fontSize="14">Sem dados</text>
+      </svg>
     );
   }
-  const VB = 220;
-  const cx = VB / 2, cy = VB / 2;
+
   let cumulative = 0;
-  const arcs = data.filter(d => d.value > 0).map((d, i) => {
+  const filtered = data.filter(d => d.value > 0);
+  const arcs = filtered.map((d, i) => {
     const startAngle = (cumulative / total) * 2 * Math.PI;
     cumulative += d.value;
     const endAngle = (cumulative / total) * 2 * Math.PI;
     const isSelected = selected === d.key;
     const isHovered = hovered === i;
-    const scale = isSelected || isHovered ? 1.06 : 1;
-    const rO = (VB / 2 - 4) * scale;
+    const boost = isSelected || isHovered ? 1.06 : 1;
+    const rO = (VB / 2 - 6) * boost;
     const rI = rO - thickness;
-    const x1o = cx + rO * Math.sin(startAngle), y1o = cy - rO * Math.cos(startAngle);
-    const x2o = cx + rO * Math.sin(endAngle),   y2o = cy - rO * Math.cos(endAngle);
-    const x1i = cx + rI * Math.sin(endAngle),   y1i = cy - rI * Math.cos(endAngle);
-    const x2i = cx + rI * Math.sin(startAngle), y2i = cy - rI * Math.cos(startAngle);
-    const large = endAngle - startAngle > Math.PI ? 1 : 0;
-    const pathD = [`M \${x1o} \${y1o}`,`A \${rO} \${rO} 0 \${large} 1 \${x2o} \${y2o}`,
-      `L \${x1i} \${y1i}`,`A \${rI} \${rI} 0 \${large} 0 \${x2i} \${y2i}`,'Z'].join(' ');
+    const pathD = makeArc(startAngle, endAngle, rO, rI);
     return (
-      <path key={i} d={pathD} fill={d.color}
-        stroke={isSelected ? '#fff' : '#111827'} strokeWidth={isSelected ? 2.5 : 1.5}
-        opacity={selected && !isSelected ? 0.4 : 1}
-        style={{ cursor: onSliceClick ? 'pointer' : 'default', transition: 'opacity 0.2s' }}
+      <path
+        key={i}
+        d={pathD}
+        fill={d.color}
+        stroke={isSelected ? '#ffffff' : '#111827'}
+        strokeWidth={isSelected ? 2.5 : 1.5}
+        opacity={selected && !isSelected ? 0.35 : 1}
+        style={{ cursor: onSliceClick ? 'pointer' : 'default', transition: 'all 0.2s' }}
         onClick={() => onSliceClick && d.key && onSliceClick(d.key)}
-        onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
+        onMouseEnter={() => setHovered(i)}
+        onMouseLeave={() => setHovered(null)}
+      >
         <title>{d.label}: {d.value}</title>
       </path>
     );
   });
-  const hoveredItem = hovered !== null ? data.filter(d => d.value > 0)[hovered] : null;
+
+  const hoveredItem = hovered !== null ? filtered[hovered] : null;
   return (
-    <div className="relative w-full h-full">
-      <svg viewBox={`0 0 ${VB} ${VB}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-        {arcs}
-        <text x={cx} y={cy - 8} textAnchor="middle" fill={hoveredItem ? hoveredItem.color : '#9ca3af'} fontSize="13" fontWeight="bold">
-          {hoveredItem ? hoveredItem.label : 'Total'}
-        </text>
-        <text x={cx} y={cy + 16} textAnchor="middle" fill="white" fontSize="22" fontWeight="bold">
-          {hoveredItem ? hoveredItem.value : total}
-        </text>
-      </svg>
-    </div>
+    <svg viewBox={'0 0 ' + VB + ' ' + VB} width="100%" height="100%" style={{ display: 'block' }}>
+      {arcs}
+      <text x={cx} y={cy - 10} textAnchor="middle" fontSize="12" fontWeight="600"
+        fill={hoveredItem ? hoveredItem.color : '#9ca3af'}>
+        {hoveredItem ? hoveredItem.label : 'Total'}
+      </text>
+      <text x={cx} y={cy + 18} textAnchor="middle" fontSize="26" fontWeight="bold" fill="white">
+        {hoveredItem ? hoveredItem.value : total}
+      </text>
+    </svg>
   );
 }
 function VerticalBarChart({ data, onBarClick, selected }: {
@@ -121,7 +144,7 @@ function VerticalBarChart({ data, onBarClick, selected }: {
         <div className="flex-1 relative border-l border-b border-gray-700 min-w-0">
           {ticks.map((_, i) => (
             <div key={i} className="absolute left-0 right-0 border-t border-dashed border-gray-700/40"
-              style={{ top: `\${(i / steps) * 100}%` }} />
+              style={{ top: String((i / steps) * 100) + '%' }} />
           ))}
           <div className="absolute inset-0 flex items-end justify-around px-6 gap-6">
             {data.map((d, i) => {
@@ -139,12 +162,14 @@ function VerticalBarChart({ data, onBarClick, selected }: {
                   </span>
                   <div className="w-full rounded-t-md transition-all duration-300"
                     style={{
-                      height: `\${h}%`, backgroundColor: d.color,
-                      minHeight: d.value > 0 ? 4 : 0, maxWidth: '140px',
-                      opacity: selected && !isSelected ? 0.4 : 1,
+                      height: String(h) + '%',
+                      backgroundColor: d.color,
+                      minHeight: d.value > 0 ? 8 : 0,
+                      maxWidth: '140px',
+                      opacity: selected && !isSelected ? 0.35 : 1,
                       transform: active ? 'scaleY(1.03)' : 'scaleY(1)',
                       transformOrigin: 'bottom',
-                      boxShadow: active ? `0 0 12px \${d.color}88` : 'none',
+                      boxShadow: active ? ('0 0 14px ' + d.color + 'aa') : 'none',
                     }} />
                 </div>
               );
