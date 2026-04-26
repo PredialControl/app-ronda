@@ -158,48 +158,32 @@ export function Sidebar({
       {/* Header */}
       <div className="p-4 border-b border-white/10">
         <div className="flex items-center justify-between">
-          {!collapsed && (
-            <div className="flex items-center gap-2">
-              {/* ManuFlow logo inline */}
-              <svg viewBox="0 0 56 56" width="44" height="44" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="lgSide" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#3b82f6"/>
-                    <stop offset="100%" stopColor="#06d6a0"/>
-                  </linearGradient>
-                </defs>
-                <path d="M4 46 L4 18 L18 34 L32 18 L32 46" stroke="url(#lgSide)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
-                <line x1="36" y1="24" x2="52" y2="24" stroke="url(#lgSide)" strokeWidth="4" strokeLinecap="round"/>
-                <line x1="36" y1="32" x2="49" y2="32" stroke="url(#lgSide)" strokeWidth="4" strokeLinecap="round"/>
-                <line x1="36" y1="40" x2="45" y2="40" stroke="url(#lgSide)" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M46 16 L54 24 L46 32" stroke="#06d6a0" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-              </svg>
-              <div>
-                <div className="flex items-baseline gap-1 leading-none">
-                  <span style={{ fontWeight: 900, fontSize: 18, color: '#ffffff', letterSpacing: 1 }}>MANU</span>
-                  <span style={{ fontWeight: 900, fontSize: 18, color: '#06d6a0', letterSpacing: 1 }}>FLOW</span>
-                </div>
-                <div style={{ fontSize: 9, color: '#6b7280', letterSpacing: 1, marginTop: 2 }}>MANUTENÇÃO PREDIAL</div>
+          {/* Logo — ícone sempre visível, texto só expandido */}
+          <div className="flex items-center gap-2">
+            <svg viewBox="0 0 70 52" width={collapsed ? 40 : 48} height={collapsed ? 30 : 36} fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="lgMF" x1="0" y1="0" x2="70" y2="52" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#2563eb"/>
+                  <stop offset="55%" stopColor="#3b82f6"/>
+                  <stop offset="100%" stopColor="#06d6a0"/>
+                </linearGradient>
+              </defs>
+              {/* M shape — left arch */}
+              <path d="M2 48 L2 14 C2 14 10 26 16 34 C22 26 30 14 30 14 L30 48" stroke="url(#lgMF)" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+              {/* Flow lines */}
+              <line x1="35" y1="20" x2="58" y2="20" stroke="url(#lgMF)" strokeWidth="5" strokeLinecap="round"/>
+              <line x1="35" y1="30" x2="54" y2="30" stroke="url(#lgMF)" strokeWidth="5" strokeLinecap="round"/>
+              <line x1="35" y1="40" x2="49" y2="40" stroke="url(#lgMF)" strokeWidth="5" strokeLinecap="round"/>
+              {/* Arrow */}
+              <path d="M52 12 L62 22 L52 32" stroke="#06d6a0" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {!collapsed && (
+              <div className="flex items-baseline gap-0.5 leading-none">
+                <span style={{ fontWeight: 900, fontSize: 20, color: '#ffffff', letterSpacing: 1.5 }}>MANU</span>
+                <span style={{ fontWeight: 900, fontSize: 20, color: '#06d6a0', letterSpacing: 1.5 }}>FLOW</span>
               </div>
-            </div>
-          )}
-          {collapsed && (
-            <div className="mx-auto">
-              <svg viewBox="0 0 56 56" width="36" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="lgCol" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#3b82f6"/>
-                    <stop offset="100%" stopColor="#06d6a0"/>
-                  </linearGradient>
-                </defs>
-                <path d="M4 46 L4 18 L18 34 L32 18 L32 46" stroke="url(#lgCol)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
-                <line x1="36" y1="24" x2="52" y2="24" stroke="url(#lgCol)" strokeWidth="4" strokeLinecap="round"/>
-                <line x1="36" y1="32" x2="49" y2="32" stroke="url(#lgCol)" strokeWidth="4" strokeLinecap="round"/>
-                <line x1="36" y1="40" x2="45" y2="40" stroke="url(#lgCol)" strokeWidth="4" strokeLinecap="round"/>
-                <path d="M46 16 L54 24 L46 32" stroke="#06d6a0" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-              </svg>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
