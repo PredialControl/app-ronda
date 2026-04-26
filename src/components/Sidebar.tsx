@@ -159,21 +159,45 @@ export function Sidebar({
       <div className="p-4 border-b border-white/10">
         <div className="flex items-center justify-between">
           {!collapsed && (
-            <div className="flex items-center gap-3">
-              <img
-                src="/logo-mp-full.svg"
-                alt="ManuFlow"
-                className="h-11 w-auto"
-              />
+            <div className="flex items-center gap-2">
+              {/* ManuFlow logo inline */}
+              <svg viewBox="0 0 56 56" width="44" height="44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="lgSide" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#3b82f6"/>
+                    <stop offset="100%" stopColor="#06d6a0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M4 46 L4 18 L18 34 L32 18 L32 46" stroke="url(#lgSide)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
+                <line x1="36" y1="24" x2="52" y2="24" stroke="url(#lgSide)" strokeWidth="4" strokeLinecap="round"/>
+                <line x1="36" y1="32" x2="49" y2="32" stroke="url(#lgSide)" strokeWidth="4" strokeLinecap="round"/>
+                <line x1="36" y1="40" x2="45" y2="40" stroke="url(#lgSide)" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M46 16 L54 24 L46 32" stroke="#06d6a0" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              </svg>
+              <div>
+                <div className="flex items-baseline gap-1 leading-none">
+                  <span style={{ fontWeight: 900, fontSize: 18, color: '#ffffff', letterSpacing: 1 }}>MANU</span>
+                  <span style={{ fontWeight: 900, fontSize: 18, color: '#06d6a0', letterSpacing: 1 }}>FLOW</span>
+                </div>
+                <div style={{ fontSize: 9, color: '#6b7280', letterSpacing: 1, marginTop: 2 }}>MANUTENÇÃO PREDIAL</div>
+              </div>
             </div>
           )}
           {collapsed && (
-            <div className="w-10 h-10 mx-auto rounded-xl overflow-hidden">
-              <img
-                src="/logo-mp-icon.svg"
-                alt="MP"
-                className="w-10 h-10"
-              />
+            <div className="mx-auto">
+              <svg viewBox="0 0 56 56" width="36" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="lgCol" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#3b82f6"/>
+                    <stop offset="100%" stopColor="#06d6a0"/>
+                  </linearGradient>
+                </defs>
+                <path d="M4 46 L4 18 L18 34 L32 18 L32 46" stroke="url(#lgCol)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
+                <line x1="36" y1="24" x2="52" y2="24" stroke="url(#lgCol)" strokeWidth="4" strokeLinecap="round"/>
+                <line x1="36" y1="32" x2="49" y2="32" stroke="url(#lgCol)" strokeWidth="4" strokeLinecap="round"/>
+                <line x1="36" y1="40" x2="45" y2="40" stroke="url(#lgCol)" strokeWidth="4" strokeLinecap="round"/>
+                <path d="M46 16 L54 24 L46 32" stroke="#06d6a0" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              </svg>
             </div>
           )}
         </div>
