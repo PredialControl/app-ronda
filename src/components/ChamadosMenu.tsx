@@ -1424,8 +1424,8 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-gray-700 rounded-xl bg-gray-900" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/80 backdrop-blur-sm py-4 px-2 sm:px-4">
+      <div className="w-full max-w-3xl flex flex-col shadow-2xl border border-gray-700 rounded-xl bg-gray-900 my-auto" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="p-4 border-b border-gray-700 flex flex-row items-center justify-between bg-gray-900">
           <div className="flex-1">
@@ -1445,7 +1445,7 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto space-y-4 bg-gray-900 text-white">
+        <div className="p-6 space-y-4 bg-gray-900 text-white">
           {/* Localização */}
           <div>
             <label className="text-sm font-semibold text-white">Localização</label>
@@ -1498,6 +1498,83 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
             <Button size="sm" variant="outline" onClick={() => setFotosOpen(true)} className="bg-gray-800 border-gray-600 text-white hover:bg-gray-700">
               <Camera className="w-4 h-4 mr-1" /> Ver fotos
             </Button>
+          </div>
+
+          {/* Linha do Tempo do Chamado */}
+          <div className="border-t border-gray-700 pt-4 mt-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Clock className="w-4 h-4 text-gray-400" />
+                Linha do Tempo do Chamado
+              </h3>
+              <Button size="sm" onClick={onAddParecer} className="bg-green-600 hover:bg-green-700 text-white text-xs px-3">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar Atualização
+              </Button>
+            </div>
+
+            <div className="relative">
+              <div className="absolute left-5 top-3 bottom-3 w-0.5 bg-gray-700" />
+              <div className="space-y-3">
+
+                {/* Abertura */}
+                <div className="relative flex gap-3 items-start">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-700 border-[3px] border-gray-900 flex items-center justify-center z-10">
+                    <ClipboardList className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 bg-green-900/30 border border-green-800/50 rounded-lg p-3 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                      <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Abertura</span>
+                      <span className="text-xs text-gray-400">
+                        {chamado.createdAt ? new Date(chamado.createdAt).toLocaleString('pt-BR') : '--'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-white">
+                      <span className="font-semibold">{chamado.criadoPorNome || 'Usuário'}</span> solicitou abertura de chamado
+                    </p>
+                    {chamado.local && (
+                      <p className="text-xs text-gray-400 mt-1">📍 {chamado.local}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Pareceres */}
+                {(chamado.atualizacoes || []).map((u, idx) => {
+                  const typeMap: Record<string, { bg: string; border: string; label: string; labelColor: string; iconBg: string; Icon: React.ElementType }> = {
+                    construtora: { bg: 'bg-orange-900/30', border: 'border-orange-800/50', label: 'Construtora', labelColor: 'text-orange-400', iconBg: 'bg-orange-700', Icon: HardHat },
+                    condominio:  { bg: 'bg-blue-900/30',   border: 'border-blue-800/50',   label: 'Condomínio',  labelColor: 'text-blue-400',   iconBg: 'bg-blue-700',   Icon: Building2 },
+                    engenharia:  { bg: 'bg-purple-900/30', border: 'border-purple-800/50', label: 'Engenharia',  labelColor: 'text-purple-400', iconBg: 'bg-purple-700', Icon: AlertCircle },
+                  };
+                  const tc = typeMap[u.type] || typeMap.construtora;
+                  const Icon = tc.Icon;
+                  return (
+                    <div key={u.id || idx} className="relative flex gap-3 items-start">
+                      <div className={`flex-shrink-0 w-10 h-10 rounded-full ${tc.iconBg} border-[3px] border-gray-900 flex items-center justify-center z-10`}>
+                        <Icon className="w-4 h-4 text-white" />
+                      </div>
+                      <div className={`flex-1 ${tc.bg} border ${tc.border} rounded-lg p-3 min-w-0`}>
+                        <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                          <span className={`text-xs font-bold ${tc.labelColor} uppercase tracking-widest`}>{tc.label}</span>
+                          <span className="text-xs text-gray-400">
+                            {u.createdAt ? new Date(u.createdAt).toLocaleString('pt-BR') : '--'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">{u.message}</p>
+                        {u.createdBy && u.createdBy !== 'Sistema' && (
+                          <p className="text-xs text-gray-500 mt-1.5">— {u.createdBy}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {(chamado.atualizacoes || []).length === 0 && (
+                  <div className="flex gap-3 items-center pl-12 py-2 text-sm text-gray-500 italic">
+                    Nenhum parecer registrado ainda.
+                  </div>
+                )}
+
+              </div>
+            </div>
           </div>
 
           {/* Editar (admin) */}
@@ -1567,63 +1644,6 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
             </div>
           )}
 
-          {/* Pareceres / Atualizações — igual ao outro app */}
-          <div className="border-t border-gray-700 pt-4 mt-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-blue-400" />
-                Histórico de Pareceres
-                <span className="text-xs font-normal text-gray-400">({chamado.atualizacoes?.length || 0})</span>
-              </h3>
-              <Button size="sm" onClick={onAddParecer} className="bg-orange-600 hover:bg-orange-700 text-white">
-                <Plus className="w-4 h-4 mr-1" /> Novo parecer
-              </Button>
-            </div>
-
-            {/* Cards com contagem por tipo */}
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {(Object.keys(UPDATE_TYPE_CONFIG) as ChamadoUpdateType[]).map(t => {
-                const c = UPDATE_TYPE_CONFIG[t];
-                const qtd = (chamado.atualizacoes || []).filter(u => u.type === t).length;
-                return (
-                  <div key={t} className="p-3 rounded-md border border-gray-700 bg-gray-800 text-center">
-                    <div className="text-2xl">{c.icon}</div>
-                    <div className="text-xs font-bold text-white">{c.label}</div>
-                    <div className="text-xl font-bold text-white">{qtd}</div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Lista de pareceres */}
-            {(chamado.atualizacoes || []).length === 0 ? (
-              <div className="text-center py-6 bg-gray-800/50 rounded-md border border-dashed border-gray-700">
-                <MessageSquare className="w-10 h-10 text-gray-600 mx-auto mb-2" />
-                <p className="text-sm text-gray-400">Nenhum parecer registrado ainda.</p>
-                <p className="text-xs text-gray-500 mt-1">Clique em &quot;Novo parecer&quot; para adicionar retorno da Construtora, Condomínio ou Engenharia.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {(chamado.atualizacoes || []).map((u, idx) => {
-                  const uc = UPDATE_TYPE_CONFIG[u.type] || UPDATE_TYPE_CONFIG.construtora;
-                  return (
-                    <div key={u.id || idx} className="p-3 rounded-md border-2 border-gray-700 bg-gray-800">
-                      <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${uc.cls}`}>
-                          <span>{uc.icon}</span> {uc.label}
-                        </span>
-                        <span className="text-xs text-gray-400 flex items-center gap-2">
-                          <UserIcon className="w-3 h-3" /> {u.createdBy || 'Sistema'}
-                          <Clock className="w-3 h-3 ml-1" /> {u.createdAt ? new Date(u.createdAt).toLocaleString('pt-BR') : '--'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-white whitespace-pre-wrap">{u.message}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -1836,3 +1856,5 @@ function GaleriaFotosModal({ chamado, onClose }: { chamado: Chamado; onClose: ()
     </div>
   );
 }
+
+export default ChamadosMenu;

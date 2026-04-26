@@ -265,7 +265,7 @@ function compressImage(file: File | Blob): Promise<string> {
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
-        const MAX = 800;
+        const MAX = 600; // Reduzido de 800 para economizar memória
         let w = img.width, h = img.height;
         if (w > MAX || h > MAX) {
           if (w > h) { h = (h * MAX) / w; w = MAX; }
@@ -274,7 +274,7 @@ function compressImage(file: File | Blob): Promise<string> {
         canvas.width = w;
         canvas.height = h;
         canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
-        const result = canvas.toDataURL('image/jpeg', 0.6);
+        const result = canvas.toDataURL('image/jpeg', 0.5); // Reduzido de 0.6 para economizar memória
         URL.revokeObjectURL(img.src);
         resolve(result);
       } catch (err) {
@@ -284,6 +284,41 @@ function compressImage(file: File | Blob): Promise<string> {
     img.onerror = () => reject(new Error('Falha ao carregar imagem'));
     img.src = URL.createObjectURL(file);
   });
+}
+
+// ============================================================================
+// SALVAR NA GALERIA DO CELULAR
+// ============================================================================
+
+async function salvarNaGaleria(fotoBase64: string, nomeArquivo: string): Promise<void> {
+  try {
+    // Converter base64 para blob
+    const res = await fetch(fotoBase64);
+    const blob = await res.blob();
+    const file = new File([blob], `${nomeArquivo}.jpg`, { type: 'image/jpeg' });
+
+    // Tentar Web Share API (iOS e Android modernos)
+    if (navigator.share && (navigator as any).canShare?.({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: nomeArquivo,
+      });
+      return;
+    }
+
+    // Fallback: download direto (Android Chrome)
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${nomeArquivo}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (err: any) {
+    // Silencioso — não bloquear o fluxo se falhar
+    console.warn('[GALERIA] Falha ao salvar:', err?.message);
+  }
 }
 
 // ============================================================================
@@ -451,6 +486,25 @@ async function syncItemsToSupabase(
         for (const item of pendenciaItems) {
           try {
             onProgress?.(processed, pending.length, `Enviando: ${item.local}...`);
+
+            // Verificar se já existe pendência igual (evitar duplicatas no re-sync)
+            const { data: existente } = await supabase
+              .from('relatorio_pendencias')
+              .select('id')
+              .eq('secao_id', secao.id)
+              .eq('local', item.local)
+              .eq('descricao', item.descricao)
+              .limit(1);
+
+            if (existente && existente.length > 0) {
+              console.log(`[SYNC] Pendência já existe, pulando: ${item.local}`);
+              await dbMarkSynced(item.id);
+              syncedCount++;
+              processed++;
+              onProgress?.(processed, pending.length, '');
+              continue;
+            }
+
             const fotoUrl = await uploadFotoItem(item, relatorioId!);
 
             pendenciasExistentes++;
@@ -907,6 +961,10 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
       // Salvar local para este card
       await dbSaveSetting(`local-${selectedCard.title}`, localValue.trim());
 
+      // Salvar foto na galeria do celular (em background, não bloqueia)
+      const nomeGaleria = `coleta-${selectedCard.title.replace(/\s+/g, '-')}-${Date.now()}`;
+      salvarNaGaleria(fotoBase64, nomeGaleria);
+
       // Atualizar estado
       setCardItems(prev => [...prev, newItem]);
       setAllContratoItems(prev => [...prev, newItem]);
@@ -1157,6 +1215,29 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
           >
             <RefreshCw size={16} className={`mr-2 ${isResetting ? 'animate-spin' : ''}`} />
             {isResetting ? syncProgress : 'Re-sincronizar Tudo (itens faltando no PC)'}
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!confirm('Apagar itens JÁ sincronizados do celular para liberar memória?\n\nItens pendentes NÃO serão apagados.')) return;
+              const db = await dbOpen();
+              const tx = db.transaction('items', 'readwrite');
+              const store = tx.objectStore('items');
+              const all: InspectionItem[] = await new Promise((res, rej) => {
+                const r = store.getAll(); r.onsuccess = () => res(r.result as InspectionItem[]); r.onerror = () => rej(r.error);
+              });
+              let removidos = 0;
+              for (const item of all) {
+                if (item.synced) { store.delete(item.id); removidos++; }
+              }
+              await new Promise(res => { tx.oncomplete = res; });
+              await loadPendingSyncCount();
+              if (selectedContrato) await loadAllContratoItems();
+              alert(`✅ ${removidos} itens sincronizados removidos do celular. Memória liberada!`);
+            }}
+            className="w-full bg-gray-600 hover:bg-gray-500 h-10 text-xs"
+          >
+            <Trash2 size={14} className="mr-2" />
+            Liberar Memória (apagar itens já sincronizados)
           </Button>
         </div>
       </div>

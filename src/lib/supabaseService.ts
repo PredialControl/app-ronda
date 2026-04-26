@@ -2216,28 +2216,70 @@ export interface Chamado {
   updatedAt: string;
 }
 
-const mapChamado = (row: any, contratoNome?: string): Chamado => ({
-  id: row.id,
-  contratoId: row.contrato_id,
-  contratoNome: contratoNome,
-  usuarioId: row.usuario_id,
-  numeroTicket: row.numero_ticket,
-  local: row.local,
-  descricao: row.descricao,
-  status: row.status,
-  responsavel: row.responsavel,
-  prazo: row.prazo,
-  reprogramacaoData: row.reprogramacao_data,
-  retornoConstrutora: row.retorno_construtora,
-  parecerEngenharia: row.parecer_engenharia,
-  fotoUrls: Array.isArray(row.foto_urls) ? row.foto_urls : [],
-  historicoReprogramacao: Array.isArray(row.historico_reprogramacao) ? row.historico_reprogramacao : [],
-  atualizacoes: Array.isArray(row.atualizacoes) ? row.atualizacoes : [],
-  isRegistered: row.is_registered !== false,
-  criadoPorNome: row.criado_por_nome || null,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-});
+const mapChamado = (row: any, contratoNome?: string): Chamado => {
+  // Começa com as atualizacoes do novo formato
+  let atualizacoes: ChamadoUpdate[] = Array.isArray(row.atualizacoes) ? row.atualizacoes : [];
+
+  // Migração automática dos campos legados (retorno_construtora, parecer_engenharia)
+  // para o array atualizacoes, sem duplicar se já existir
+  if (row.retorno_construtora) {
+    const jaExiste = atualizacoes.some(
+      a => a.type === 'construtora' && a.message === row.retorno_construtora
+    );
+    if (!jaExiste) {
+      atualizacoes = [
+        {
+          id: `legacy-construtora-${row.id}`,
+          type: 'construtora' as ChamadoUpdateType,
+          message: row.retorno_construtora,
+          createdAt: row.updated_at || row.created_at,
+          createdBy: 'Construtora (importado)',
+        },
+        ...atualizacoes,
+      ];
+    }
+  }
+  if (row.parecer_engenharia) {
+    const jaExiste = atualizacoes.some(
+      a => a.type === 'engenharia' && a.message === row.parecer_engenharia
+    );
+    if (!jaExiste) {
+      atualizacoes = [
+        {
+          id: `legacy-engenharia-${row.id}`,
+          type: 'engenharia' as ChamadoUpdateType,
+          message: row.parecer_engenharia,
+          createdAt: row.updated_at || row.created_at,
+          createdBy: 'Engenharia (importado)',
+        },
+        ...atualizacoes,
+      ];
+    }
+  }
+
+  return {
+    id: row.id,
+    contratoId: row.contrato_id,
+    contratoNome: contratoNome,
+    usuarioId: row.usuario_id,
+    numeroTicket: row.numero_ticket,
+    local: row.local,
+    descricao: row.descricao,
+    status: row.status,
+    responsavel: row.responsavel,
+    prazo: row.prazo,
+    reprogramacaoData: row.reprogramacao_data,
+    retornoConstrutora: row.retorno_construtora,
+    parecerEngenharia: row.parecer_engenharia,
+    fotoUrls: Array.isArray(row.foto_urls) ? row.foto_urls : [],
+    historicoReprogramacao: Array.isArray(row.historico_reprogramacao) ? row.historico_reprogramacao : [],
+    atualizacoes,
+    isRegistered: row.is_registered !== false,
+    criadoPorNome: row.criado_por_nome || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+};
 
 export const chamadoService = {
   async getAll(): Promise<Chamado[]> {
@@ -2393,4 +2435,3 @@ export const chamadoService = {
     }
   },
 };
-

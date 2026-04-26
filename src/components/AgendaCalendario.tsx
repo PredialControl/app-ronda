@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, Trash2, FileDown, Mail, Filter as FilterIcon } from 'lucide-react';
 import { Ronda, Contrato } from '@/types';
 import { parecerService } from '@/lib/parecerService';
-import { kanbanEventoService, rondaService } from '@/lib/supabaseService';
+import { kanbanEventoService, rondaService, visitaService } from '@/lib/supabaseService';
 import { supabase } from '@/lib/supabase';
 import jsPDF from 'jspdf';
 import { emailService } from '@/lib/emailService';
@@ -12,7 +12,7 @@ interface AgendaCalendarioProps {
   contratos: Contrato[];
 }
 
-type Fonte = 'kanban' | 'ronda' | 'parecer' | 'manual';
+type Fonte = 'kanban' | 'ronda' | 'parecer' | 'manual' | 'visita';
 type StatusEvento = 'programado' | 'executado';
 type Filtro = 'todos' | 'implantacao' | 'supervisao';
 
@@ -33,6 +33,7 @@ const CORES = {
   ronda:   { solid: 'bg-yellow-500 text-black font-bold',        outline: 'border-yellow-400 text-yellow-100 font-bold',     dot: 'bg-yellow-500', label: 'Ronda (Supervisão)' },
   parecer: { solid: 'bg-green-600 text-white font-semibold',     outline: 'border-green-500 text-green-200 font-semibold',   dot: 'bg-green-600',  label: 'Parecer Técnico (Supervisão)' },
   manual:  { solid: 'bg-red-600 text-white font-semibold',       outline: 'border-red-500 text-red-200 font-semibold',       dot: 'bg-red-600',    label: 'Manual' },
+  visita:  { solid: 'bg-purple-600 text-white font-semibold',    outline: 'border-purple-500 text-purple-200 font-semibold', dot: 'bg-purple-600', label: 'Visita (Supervisão)' },
 } as const;
 
 const NOMES_MES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -157,6 +158,26 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
         console.warn('[Agenda] tabela agenda_eventos pode não existir ainda:', e);
       }
 
+      // 5) VISITAS DE SUPERVISÃO (visitas_realizadas)
+      try {
+        const visitas = await visitaService.getAll();
+        visitas.forEach((v: any) => {
+          if (!v.data) return;
+          lista.push({
+            id: `visita-${v.id}`,
+            data: v.data,
+            titulo: `${v.tipo || 'Visita'}: ${v.contrato_nome || 'Sem contrato'}`,
+            descricao: v.descricao || v.local || undefined,
+            fonte: 'visita',
+            status: 'executado',
+            contrato: v.contrato_nome || undefined,
+            sourceId: v.id,
+          });
+        });
+      } catch (e) {
+        console.warn('[Agenda] falha lendo visitas_realizadas:', e);
+      }
+
       setEventos(lista);
     } finally {
       setLoading(false);
@@ -170,7 +191,7 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
 
   const eventosFiltrados = eventos.filter(e => {
     if (filtro === 'implantacao' && !(e.fonte === 'kanban' || e.fonte === 'manual')) return false;
-    if (filtro === 'supervisao' && !(e.fonte === 'ronda' || e.fonte === 'parecer')) return false;
+    if (filtro === 'supervisao' && !(e.fonte === 'ronda' || e.fonte === 'parecer' || e.fonte === 'visita')) return false;
     if (contratoFiltro) {
       const alvo = contratos.find(c => c.id === contratoFiltro);
       const nomeAlvo = (alvo?.nome || '').trim().toLowerCase();
@@ -694,15 +715,13 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
                           {ev.contrato && !ev.descricao?.includes(ev.contrato) && (
                             <div className="text-xs mt-1 opacity-75">Contrato: {ev.contrato}</div>
                           )}
+              
                         </div>
-                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                          <span className="text-[10px] uppercase font-bold tracking-wider opacity-80">{cor.label}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            exec ? 'bg-black/30' : 'bg-white/10'
-                          }`}>
-                            {exec ? '✓ Executado' : '○ Programado'}
+                        {ev.status === 'programado' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-white/20 whitespace-nowrap">
+                            Agendado
                           </span>
-                        </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -715,3 +734,5 @@ export function AgendaCalendario({ rondas, contratos }: AgendaCalendarioProps) {
     </div>
   );
 }
+
+export default AgendaCalendario;
