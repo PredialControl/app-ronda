@@ -98,10 +98,10 @@ function VerticalBarChart({ data }: {
   const niceMax = Math.ceil(maxVal / steps) * steps || steps;
   const ticks = Array.from({ length: steps + 1 }, (_, i) => Math.round((niceMax / steps) * (steps - i)));
   return (
-    <div className="flex flex-col w-full h-full min-h-[220px]">
-      <div className="flex flex-1 min-h-[180px]">
+    <div className="flex flex-col w-full h-full min-h-[260px]">
+      <div className="flex flex-1 min-h-[220px]">
         {/* Eixo Y */}
-        <div className="flex flex-col justify-between text-xs text-gray-500 pr-2 text-right w-8 shrink-0">
+        <div className="flex flex-col justify-between text-xs text-gray-500 pr-2 text-right w-10 shrink-0">
           {ticks.map((t, i) => <div key={i}>{t}</div>)}
         </div>
         {/* Area das barras */}
@@ -109,16 +109,17 @@ function VerticalBarChart({ data }: {
           {/* Grid */}
           {ticks.map((_, i) => (
             <div key={i}
-              className="absolute left-0 right-0 border-t border-dashed border-gray-700/60"
+              className="absolute left-0 right-0 border-t border-dashed border-gray-700/40"
               style={{ top: `${(i / steps) * 100}%` }} />
           ))}
-          <div className="absolute inset-0 flex items-end justify-around px-2 gap-2">
+          <div className="absolute inset-0 flex items-end justify-around px-6 gap-6">
             {data.map((d, i) => {
-              const h = (d.value / niceMax) * 100;
+              const h = maxVal > 0 ? (d.value / niceMax) * 100 : 0;
               return (
-                <div key={i} className="flex-1 max-w-[70px] flex flex-col items-center">
-                  <div className="w-full rounded-t transition-all"
-                    style={{ height: `${h}%`, backgroundColor: d.color, minHeight: d.value > 0 ? 3 : 0 }}
+                <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
+                  <span className="text-xs font-bold mb-1" style={{ color: d.color }}>{d.value}</span>
+                  <div className="w-full rounded-t-md transition-all duration-500"
+                    style={{ height: `${h}%`, backgroundColor: d.color, minHeight: d.value > 0 ? 4 : 0, maxWidth: '120px' }}
                     title={`${d.label}: ${d.value}`} />
                 </div>
               );
@@ -127,12 +128,11 @@ function VerticalBarChart({ data }: {
         </div>
       </div>
       {/* Labels eixo X */}
-      <div className="flex pl-8 mt-1">
-        <div className="flex-1 flex items-start justify-around px-2 gap-2">
+      <div className="flex pl-10 mt-2">
+        <div className="flex-1 flex items-start justify-around px-6 gap-6">
           {data.map((d, i) => (
-            <div key={i} className="flex-1 max-w-[70px] text-center">
-              <span className="text-[11px] text-gray-300 font-semibold truncate block">{d.label}</span>
-              <span className="text-[10px] text-gray-500">{d.value}</span>
+            <div key={i} className="flex-1 text-center">
+              <span className="text-xs text-gray-300 font-semibold block">{d.label}</span>
             </div>
           ))}
         </div>
@@ -679,7 +679,10 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
         {(Object.keys(STATUS_CONFIG) as ChamadoStatus[]).map(k => {
           const cfg = STATUS_CONFIG[k];
-          const n = stats.counts[k];
+          // Conta a partir dos chamados filtrados (responde a todos os filtros ativos)
+          const n = k === 'itens_apontados'
+            ? filtrados.length
+            : filtrados.filter(c => c.status === k).length;
           const active = statusFiltro === k;
           return (
             <button
@@ -687,15 +690,15 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
               onClick={() => setStatusFiltro(s => s === k ? 'todos' : k)}
               className={`text-left p-3 rounded-lg border transition-all ${
                 active
-                  ? 'border-orange-500 ring-2 ring-orange-500/30 ' + cfg.bg
-                  : 'border-gray-200 bg-white hover:border-gray-300'
+                  ? cfg.bg + ' ring-2 ring-white/20'
+                  : 'border-gray-700 bg-gray-800 hover:border-gray-600'
               }`}
             >
               <div className="flex items-center gap-2 mb-1">
                 <span className={`inline-block w-2 h-2 rounded-full ${cfg.dot}`}></span>
                 <span className={`text-xs font-medium ${cfg.text}`}>{cfg.label}</span>
               </div>
-              <div className="text-2xl font-bold text-gray-900">{n}</div>
+              <div className="text-2xl font-bold text-white">{n}</div>
             </button>
           );
         })}
