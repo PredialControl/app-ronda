@@ -61,8 +61,15 @@ function App() {
   const [isOutroItemModalOpen, setIsOutroItemModalOpen] = useState(false);
   const [isEditarRondaModalOpen, setIsEditarRondaModalOpen] = useState(false);
 
+  // Detectar modo especial via URL (?app=chamados abre direto nos chamados)
+  const appMode = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('app') || null
+    : null;
+
   const [currentView, setCurrentView] = useState<'contratos' | 'rondas'>('contratos');
-  const [mainSection, setMainSection] = useState<'contratos' | 'agenda' | 'chamados' | 'dashboard'>('contratos');
+  const [mainSection, setMainSection] = useState<'contratos' | 'agenda' | 'chamados' | 'dashboard'>(
+    appMode === 'chamados' ? 'chamados' : 'contratos'
+  );
   const [contratoSelecionado, setContratoSelecionado] = useState<Contrato | null>(null);
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const [viewMode, setViewMode] = useState<'tabela' | 'visualizar' | 'nova' | 'dashboard' | 'kanban' | 'laudos' | 'parecer' | 'relatorios-pendencias' | 'itens-compilados' | 'coleta' | 'coleta-inspecao' | 'usuarios' | 'menu' | 'contrato-detalhe' | 'plano-manutencao' | 'itens-relevantes'>('menu');
@@ -299,6 +306,11 @@ function App() {
   const handleLoginSuccess = (usuario: any) => {
     setUsuarioLogado(usuario);
     setIsAutenticado(true);
+    // Se veio pelo link ?app=chamados, vai direto pra chamados
+    if (appMode === 'chamados') {
+      setMainSection('chamados');
+      setViewMode('menu');
+    }
     console.log('✅ Login realizado com sucesso:', usuario.nome);
   };
 
