@@ -169,6 +169,28 @@ async function dbGetPendingSync(): Promise<InspectionItem[]> {
   });
 }
 
+async function dbResetAllItemsToUnsynced(): Promise<number> {
+  const db = await dbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('items', 'readwrite');
+    const store = tx.objectStore('items');
+    const req = store.getAll();
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const all = req.result as InspectionItem[];
+      let count = 0;
+      all.forEach(item => {
+        item.synced = false;
+        item.status = 'PENDENTE';
+        store.put(item);
+        count++;
+      });
+      tx.oncomplete = () => resolve(count);
+      tx.onerror = () => reject(tx.error);
+    };
+  });
+}
+
 async function dbMarkSynced(id: string): Promise<void> {
   const db = await dbOpen();
   return new Promise((resolve, reject) => {
@@ -629,6 +651,7 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
   const [autoMic, setAutoMic] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -977,6 +1000,67 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
   };
 
   // ============================================================================
+  // FORCE RE-SYNC (re-envia todos os itens, incluindo já sincronizados)
+  // ============================================================================
+
+  const handleForceResync = async () => {
+    if (!navigator.onLine) {
+      alert('Sem conexão com a internet. Tente quando estiver online.');
+      return;
+    }
+
+    const confirmed = confirm(
+      'Isso vai re-enviar TODOS os itens para o servidor, incluindo os já sincronizados.\n\n' +
+      'Use essa opção quando itens coletados no celular não aparecem no App Ronda do PC.\n\n' +
+      'Deseja continuar?'
+    );
+    if (!confirmed) return;
+
+    setIsResetting(true);
+    setSyncStatus('syncing');
+    setSyncProgress('Preparando re-sincronização...');
+
+    try {
+      const total = await dbResetAllItemsToUnsynced();
+      setSyncProgress(`${total} itens marcados para reenvio...`);
+      await loadPendingSyncCount();
+
+      const result = await syncItemsToSupabase((current, tot, detail) => {
+        setSyncProgress(detail || `Re-sincronizando ${current}/${tot}...`);
+      });
+
+      if (result.errors === 0) {
+        setSyncStatus('success');
+        setSyncProgress(`✅ ${result.synced} itens re-sincronizados com sucesso!`);
+      } else {
+        setSyncStatus('error');
+        setSyncProgress(`${result.synced} ok, ${result.errors} com erro`);
+        if (result.errorDetails.length > 0) {
+          setTimeout(() => {
+            alert(`Erros na re-sincronização:\n\n${result.errorDetails.join('\n')}`);
+          }, 300);
+        }
+      }
+
+      await loadPendingSyncCount();
+      if (selectedContrato) await loadAllContratoItems();
+      if (selectedContrato && selectedCard) await loadCardItems();
+
+      setTimeout(() => {
+        setSyncStatus('idle');
+        setSyncProgress('');
+      }, 6000);
+    } catch (e: any) {
+      setSyncStatus('error');
+      setSyncProgress('Erro na re-sincronização');
+      alert(`Erro: ${e.message || e}`);
+      setTimeout(() => { setSyncStatus('idle'); setSyncProgress(''); }, 5000);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  // ============================================================================
   // CATEGORY LABELS (formatados)
   // ============================================================================
 
@@ -1054,19 +1138,27 @@ export function ColetaInspecao({ onVoltar, onLogout, usuario }: ColetaInspecaoPr
           )}
         </div>
 
-        {/* Bottom: Sync */}
-        {pendingSyncCount > 0 && (
-          <div className="bg-gray-800 p-4 border-t border-gray-700">
+        {/* Bottom: Sync + Force Re-sync */}
+        <div className="bg-gray-800 p-4 border-t border-gray-700 space-y-2">
+          {pendingSyncCount > 0 && (
             <Button
               onClick={handleSync}
-              disabled={!isOnline || syncStatus === 'syncing'}
+              disabled={!isOnline || syncStatus === 'syncing' || isResetting}
               className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-base"
             >
-              <RefreshCw size={18} className={`mr-2 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
-              {syncStatus === 'syncing' ? syncProgress : `Sincronizar (${pendingSyncCount} itens)`}
+              <RefreshCw size={18} className={`mr-2 ${syncStatus === 'syncing' && !isResetting ? 'animate-spin' : ''}`} />
+              {syncStatus === 'syncing' && !isResetting ? syncProgress : `Sincronizar (${pendingSyncCount} itens)`}
             </Button>
-          </div>
-        )}
+          )}
+          <Button
+            onClick={handleForceResync}
+            disabled={!isOnline || syncStatus === 'syncing' || isResetting}
+            className="w-full bg-orange-600 hover:bg-orange-700 h-11 text-sm"
+          >
+            <RefreshCw size={16} className={`mr-2 ${isResetting ? 'animate-spin' : ''}`} />
+            {isResetting ? syncProgress : 'Re-sincronizar Tudo (itens faltando no PC)'}
+          </Button>
+        </div>
       </div>
     );
   }
