@@ -1424,10 +1424,10 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/80 backdrop-blur-sm py-4 px-2 sm:px-4">
-      <div className="w-full max-w-3xl flex flex-col shadow-2xl border border-gray-700 rounded-xl bg-gray-900 my-auto" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl border border-gray-700 rounded-xl bg-gray-900" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="p-4 border-b border-gray-700 flex flex-row items-center justify-between bg-gray-900">
+        <div className="flex-shrink-0 p-4 border-b border-gray-700 flex flex-row items-center justify-between bg-gray-900 rounded-t-xl">
           <div className="flex-1">
             <div className="text-lg font-bold text-white flex items-center gap-2">
               Detalhes do Chamado
@@ -1444,8 +1444,8 @@ function DetalheChamadoModal({ chamado, contratoNome, isAdmin, onClose, onUpdate
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-4 bg-gray-900 text-white">
+        {/* Content — rola aqui dentro, não atrás do modal */}
+        <div className="p-6 space-y-4 bg-gray-900 text-white overflow-y-auto flex-1">
           {/* Localização */}
           <div>
             <label className="text-sm font-semibold text-white">Localização</label>
