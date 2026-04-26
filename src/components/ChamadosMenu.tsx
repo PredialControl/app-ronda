@@ -52,7 +52,7 @@ function DonutChart({ data, thickness = 36, onSliceClick, selected }: {
   const total = data.reduce((s, d) => s + d.value, 0);
   if (total === 0) {
     return (
-      <div className="flex items-center justify-center text-gray-500 text-sm aspect-square w-full max-w-[240px]">
+      <div className="flex items-center justify-center text-gray-500 text-sm w-full h-full">
         Sem dados
       </div>
     );
@@ -89,13 +89,15 @@ function DonutChart({ data, thickness = 36, onSliceClick, selected }: {
   });
   const hoveredItem = hovered !== null ? data.filter(d => d.value > 0)[hovered] : null;
   return (
-    <div className="relative w-full max-w-[240px]">
-      <svg viewBox={`0 0 \${VB} \${VB}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+    <div className="relative w-full h-full">
+      <svg viewBox={`0 0 ${VB} ${VB}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
         {arcs}
-        {hoveredItem && (<>
-          <text x={cx} y={cy - 10} textAnchor="middle" fill="white" fontSize="13" fontWeight="bold">{hoveredItem.label}</text>
-          <text x={cx} y={cy + 12} textAnchor="middle" fill={hoveredItem.color} fontSize="16" fontWeight="bold">{hoveredItem.value}</text>
-        </>)}
+        <text x={cx} y={cy - 8} textAnchor="middle" fill={hoveredItem ? hoveredItem.color : '#9ca3af'} fontSize="13" fontWeight="bold">
+          {hoveredItem ? hoveredItem.label : 'Total'}
+        </text>
+        <text x={cx} y={cy + 16} textAnchor="middle" fill="white" fontSize="22" fontWeight="bold">
+          {hoveredItem ? hoveredItem.value : total}
+        </text>
       </svg>
     </div>
   );
@@ -730,77 +732,94 @@ export function ChamadosMenu({ onNavigate: _onNavigate }: ChamadosMenuProps) {
         })}
       </div>
 
-      {/* Resumo de Chamados — 3 colunas: progress bars / donut / bar chart */}
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
-        <h3 className="text-lg font-bold text-white mb-4">Resumo de Chamados</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-          {/* Coluna 1: Progress bars */}
-          <div className="space-y-3 min-w-0">
-            {chartStatusData.map((d, i) => {
-              const maxVal = Math.max(...chartStatusData.map(x => x.value), 1);
-              const pct = (d.value / maxVal) * 100;
-              return (
-                <div key={i} className="min-w-0">
-                  <div className="flex items-center justify-between mb-1 gap-2">
-                    <span className="text-sm font-semibold text-white truncate">{d.label}</span>
-                    <span className="text-sm font-bold text-white shrink-0">{d.value}</span>
-                  </div>
-                  <div className="w-full bg-gray-800 rounded-full h-1.5 overflow-hidden">
-                    <div className="h-full rounded-full transition-all"
-                      style={{ width: `${pct}%`, backgroundColor: d.color }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      {/* Resumo de Chamados — 2 linhas: status / responsável+donut */}
+      <div className="bg-gray-900 rounded-xl border border-gray-800 p-5 space-y-6">
+        <h3 className="text-lg font-bold text-white">Resumo de Chamados</h3>
 
-          {/* Coluna 2: Donut chart - clicavel */}
-          <div className="flex flex-col items-center justify-center min-w-0">
-            {statusFiltro !== 'todos' && (
-              <button onClick={() => setStatusFiltro('todos')}
-                className="mb-2 text-xs text-gray-400 hover:text-white flex items-center gap-1 border border-gray-700 px-2 py-1 rounded-full transition-colors hover:border-gray-500">
-                <X className="w-3 h-3" /> Limpar filtro status
-              </button>
-            )}
-            <DonutChart
-              data={chartStatusData.filter(d => d.label !== 'Itens Apontados').map(d => ({ ...d, key: d.label }))}
-              thickness={36}
-              selected={statusFiltro !== 'todos' ? STATUS_CONFIG[statusFiltro]?.label : undefined}
-              onSliceClick={(key) => {
-                const found = (Object.keys(STATUS_CONFIG) as ChamadoStatus[]).find(k => STATUS_CONFIG[k].label === key);
-                if (found) setStatusFiltro(s => s === found ? 'todos' : found);
-              }}
-            />
-            <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 mt-3 text-xs">
+        {/* Linha 1: Progress bars por status */}
+        <div className="space-y-2">
+          {chartStatusData.map((d, i) => {
+            const maxVal = Math.max(...chartStatusData.map(x => x.value), 1);
+            const pct = (d.value / maxVal) * 100;
+            const isActive = statusFiltro !== 'todos' && STATUS_CONFIG[statusFiltro as ChamadoStatus]?.label === d.label;
+            return (
+              <div key={i} className={`cursor-pointer rounded-lg px-3 py-2 transition-all ${isActive ? 'bg-gray-800 ring-1 ring-white/20' : 'hover:bg-gray-800/50'}`}
+                onClick={() => {
+                  const found = (Object.keys(STATUS_CONFIG) as ChamadoStatus[]).find(k => STATUS_CONFIG[k].label === d.label);
+                  if (found) setStatusFiltro(s => s === found ? 'todos' : found);
+                }}>
+                <div className="flex items-center justify-between mb-1.5 gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                    <span className="text-sm font-medium text-gray-200">{d.label}</span>
+                  </div>
+                  <span className="text-sm font-bold text-white shrink-0">{d.value}</span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%`, backgroundColor: d.color, opacity: statusFiltro !== 'todos' && !isActive ? 0.35 : 1 }} />
+                </div>
+              </div>
+            );
+          })}
+          {statusFiltro !== 'todos' && (
+            <button onClick={() => setStatusFiltro('todos')}
+              className="mt-1 text-xs text-gray-400 hover:text-white flex items-center gap-1 border border-gray-700 px-3 py-1.5 rounded-full transition-colors hover:border-gray-500">
+              <X className="w-3 h-3" /> Limpar filtro de status
+            </button>
+          )}
+        </div>
+
+        {/* Linha 2: Donut (status) + Barras (responsável) lado a lado */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Donut */}
+          <div className="flex flex-col items-center">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Status (clique para filtrar)</p>
+            <div className="w-[220px] h-[220px] shrink-0">
+              <DonutChart
+                data={chartStatusData.filter(d => d.label !== 'Itens Apontados').map(d => ({ ...d, key: d.label }))}
+                thickness={42}
+                selected={statusFiltro !== 'todos' ? STATUS_CONFIG[statusFiltro as ChamadoStatus]?.label : undefined}
+                onSliceClick={(key) => {
+                  const found = (Object.keys(STATUS_CONFIG) as ChamadoStatus[]).find(k => STATUS_CONFIG[k].label === key);
+                  if (found) setStatusFiltro(s => s === found ? 'todos' : found);
+                }}
+              />
+            </div>
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 mt-3">
               {chartStatusData.filter(d => d.value > 0 && d.label !== 'Itens Apontados').map((d, i) => (
-                <div key={i} className="flex items-center gap-1 cursor-pointer opacity-80 hover:opacity-100"
+                <button key={i} className="flex items-center gap-1.5 text-xs hover:opacity-100 transition-opacity"
+                  style={{ opacity: statusFiltro !== 'todos' && STATUS_CONFIG[statusFiltro as ChamadoStatus]?.label !== d.label ? 0.4 : 1 }}
                   onClick={() => {
                     const found = (Object.keys(STATUS_CONFIG) as ChamadoStatus[]).find(k => STATUS_CONFIG[k].label === d.label);
                     if (found) setStatusFiltro(s => s === found ? 'todos' : found);
                   }}>
-                  <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: d.color }}></span>
+                  <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: d.color }} />
                   <span className="text-gray-300">{d.label}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>
 
-          {/* Coluna 3: Bar chart - clicavel */}
-          <div className="min-w-0 lg:col-span-1 md:col-span-2 flex flex-col">
+          {/* Barras responsável */}
+          <div className="flex flex-col">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 text-center">Responsável (clique para filtrar)</p>
+            <div className="flex-1" style={{ minHeight: 220 }}>
+              <VerticalBarChart
+                selected={responsavelFiltro !== 'todos' ? responsavelFiltro : undefined}
+                onBarClick={(key) => setResponsavelFiltro(r => r === key ? 'todos' : key)}
+                data={[
+                  { label: 'Construtora', key: 'Construtora', value: filtrados.filter(x => x.responsavel === 'Construtora' || !x.responsavel).length, color: '#ef4444' },
+                  { label: 'Condomínio', key: 'Condominio', value: filtrados.filter(x => x.responsavel === 'Condominio').length, color: '#3b82f6' },
+                ]}
+              />
+            </div>
             {responsavelFiltro !== 'todos' && (
               <button onClick={() => setResponsavelFiltro('todos')}
-                className="mb-2 self-center text-xs text-gray-400 hover:text-white flex items-center gap-1 border border-gray-700 px-2 py-1 rounded-full transition-colors hover:border-gray-500">
+                className="mt-2 self-center text-xs text-gray-400 hover:text-white flex items-center gap-1 border border-gray-700 px-3 py-1.5 rounded-full transition-colors hover:border-gray-500">
                 <X className="w-3 h-3" /> Limpar filtro responsável
               </button>
             )}
-            <VerticalBarChart
-              selected={responsavelFiltro !== 'todos' ? responsavelFiltro : undefined}
-              onBarClick={(key) => setResponsavelFiltro(r => r === key ? 'todos' : key)}
-              data={[
-                { label: 'Construtora', key: 'Construtora', value: filtrados.filter(x => x.responsavel === 'Construtora' || !x.responsavel).length, color: '#ef4444' },
-                { label: 'Condomínio', key: 'Condominio', value: filtrados.filter(x => x.responsavel === 'Condominio').length, color: '#3b82f6' },
-              ]}
-            />
           </div>
         </div>
       </div>
@@ -1897,25 +1916,18 @@ function GaleriaFotosModal({ chamado, onClose }: { chamado: Chamado; onClose: ()
         <div className="relative w-full flex items-center justify-center">
           {fotos.length > 1 && (
             <button onClick={() => setIndiceAtual(i => (i - 1 + fotos.length) % fotos.length)}
-              className="absolute left-0 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full z-10">
-              <ChevronLeft className="w-6 h-6" />
+              className="absolute left-0 bg-white/20 hover:bg-white/30 text-white p-2 rounded-r-full z-10">
+              <ChevronLeft className="w-5 h-5" />
             </button>
           )}
-          <img src={fotos[indiceAtual]} className="max-w-full max-h-[70vh] object-contain rounded" />
+          <img src={fotos[indiceAtual]} alt={`Foto ${indiceAtual + 1}`}
+            className="max-h-[75vh] max-w-full object-contain rounded-lg shadow-2xl" />
           {fotos.length > 1 && (
             <button onClick={() => setIndiceAtual(i => (i + 1) % fotos.length)}
-              className="absolute right-0 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full z-10">
-              <ChevronRight className="w-6 h-6" />
+              className="absolute right-0 bg-white/20 hover:bg-white/30 text-white p-2 rounded-l-full z-10">
+              <ChevronRight className="w-5 h-5" />
             </button>
           )}
-        </div>
-        <div className="mt-3 flex gap-2 flex-wrap justify-center">
-          {fotos.map((f, i) => (
-            <button key={i} onClick={() => setIndiceAtual(i)}
-              className={`w-16 h-16 rounded overflow-hidden border-2 ${i === indiceAtual ? 'border-blue-500' : 'border-transparent'}`}>
-              <img src={f} className="w-full h-full object-cover" />
-            </button>
-          ))}
         </div>
         <a href={fotos[indiceAtual]} download={`foto_${indiceAtual + 1}.jpg`}
           className="mt-3 inline-flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold text-sm"
